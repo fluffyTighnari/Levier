@@ -1,3 +1,5 @@
+<!-- Middleware — standardized file header convention. -->
+
 # Middleware 文件头规范
 
 | 项目 | 内容 |
