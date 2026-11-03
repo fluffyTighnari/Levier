@@ -3,10 +3,14 @@
 
 SHELL := /bin/sh
 GO ?= go
+
+# Optional local-only overrides (git-ignored).
+-include .env.local
+export
 BIN_DIR := bin
 GO_FILES := $(shell find . -name '*.go' -not -path './workflow_engine/*' -not -path './vendor/*')
 
-.PHONY: all build test lint fmt fmt-check vet run clean dev-up dev-down proto harness-test
+.PHONY: all build test lint fmt fmt-check vet run clean dev-up dev-down migrate proto harness-test
 
 all: build
 
@@ -33,6 +37,9 @@ fmt:
 
 run:
 	$(GO) run ./cmd/middleware
+
+migrate:
+	$(GO) run ./cmd/migrate -config config.example.yaml
 
 clean:
 	rm -rf $(BIN_DIR)

@@ -18,6 +18,7 @@ import (
 	"syscall"
 
 	"github.com/fluffyTighnari/middleware/internal/config"
+	"github.com/fluffyTighnari/middleware/internal/db"
 	"github.com/fluffyTighnari/middleware/internal/observe"
 )
 
@@ -48,7 +49,20 @@ func main() {
 	)
 	defer stop()
 
-	logger.Info("middleware starting", "config", *configPath)
+	pool, err := db.Open(ctx, db.Config{
+		URL:            cfg.Database.URL,
+		MaxConns:       cfg.Database.MaxConns,
+		MinConns:       cfg.Database.MinConns,
+		ConnectTimeout: cfg.Database.ConnectTimeout.Std(),
+		HealthTimeout:  cfg.Database.HealthTimeout.Std(),
+	})
+	if err != nil {
+		logger.Error("connect database failed", "err", err)
+		os.Exit(1)
+	}
+	defer pool.Close()
+
+	logger.Info("middleware starting", "config", *configPath, "database", "connected")
 	<-ctx.Done()
 	logger.Info("middleware stopped")
 }
