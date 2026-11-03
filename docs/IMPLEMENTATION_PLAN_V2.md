@@ -132,12 +132,12 @@ internal/control ──► internal/workflow (PostgreSQL run_tasks, SKIP LOCKED)
 - [x] **P0-05 工程骨架与 CI**
   - 初始化根 git（当前目录无 `.git`）；根 `go.mod`、`cmd/middleware`、`internal/*`、`proto/`、`harness/`、`Makefile`、lint、CI。
   - 验收：`make build/test/lint` 可跑；空二进制可启动并优雅退出；根模块不 import 旧 `workflow_engine`。
-  - 完成记录：根 commit `d0c712a`；Go/Python 骨架、CI、`docs/CODE_STYLE.md` 文件头规范已加入；`make lint/test/build` 全绿；二进制 SIGTERM 退出码 0。
+  - 完成记录：根 commit `d0c712a`；Go/Python 骨架、CI、`docs/CODE_STYLE.md` 文件头规范已加入；`make lint/test/build` 全绿；二进制 SIGTERM 退出码 0。报告：`docs/reports/P0-05.md`。
 
 - [x] **P0-06 配置与基础库**
   - `internal/config`（YAML + env + 校验）、`internal/id`（ULID）、`internal/errs`（§4.5 错误码）、`internal/clock`、slog 初始化。
   - 验收：非法配置启动失败并指出路径；错误码表全覆盖；时间可注入。
-  - 完成记录：`config.example.yaml`；config 默认值/env/严格字段/校验；ULID；错误码/retryable/HTTP 映射；Fake clock；slog 字段常量；`make test/lint` 全绿，二进制加载配置后 SIGTERM 退出码 0。
+  - 完成记录：`config.example.yaml`；config 默认值/env/严格字段/校验；ULID；错误码/retryable/HTTP 映射；Fake clock；slog 字段常量；`make test/lint` 全绿，二进制加载配置后 SIGTERM 退出码 0。报告：`docs/reports/P0-06.md`。
 
 - [ ] **P0-07 PostgreSQL 基础与迁移**
   - `internal/db`：`pgx` 连接池、超时、健康检查；版本化 SQL 迁移（`schema_migrations`）；`docker-compose` 起 PostgreSQL 16；`make dev`。
@@ -453,11 +453,14 @@ internal/control ──► internal/workflow (PostgreSQL run_tasks, SKIP LOCKED)
 
 1. **开工前**：改动 >2 个文件时，先给 ≤1 页设计说明：文件、接口、测试点、风险。
 2. **实现**：只做一个 `Px-yy`；不提前做后续步骤；不顺手重构无关代码。
-3. **自检**：`make test`、`make lint`、该步验收命令；输出附在审查消息。
-4. **提交审查**：`git diff --stat`、关键 diff、测试输出、已知风险；等待确认后再进入下一步。
-5. **Gate**：每阶段结束跑验收，更新本清单勾选状态；设计冲突先改 `DESIGN.md` 再改代码。
+3. **写报告**：在 `docs/reports/Px-yy.md` 记录新增/修改文件、关键决策、验证命令与结果、风险、下一步；模板见 `docs/reports/TEMPLATE.md`。
+4. **自检**：`make test`、`make lint`、该步验收命令；输出附在审查消息与报告中。
+5. **提交审查**：`git diff --stat`、关键 diff、测试输出、已知风险、报告链接；等待确认后再进入下一步。
+6. **Gate**：每阶段结束跑验收，更新本清单勾选状态；设计冲突先改 `DESIGN.md` 再改代码。
 
-**DoD：** 代码 + 单测 + 必要集成测试 + 文档 + 无未登记 TODO + 无敏感信息日志 + 可重复验收命令。
+**DoD：** 代码 + 单测 + 必要集成测试 + 文档 + 实施报告 + 无未登记 TODO + 无敏感信息日志 + 可重复验收命令。
+
+> 报告规则：从 P0-05 起，每轮必须在同一提交/同一轮内新增 `docs/reports/Px-yy.md`；没有报告不得进入下一步。
 
 ---
 
