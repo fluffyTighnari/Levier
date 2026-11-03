@@ -1,0 +1,31 @@
+# Middleware — example runtime configuration.
+# Copyright 2026 The Middleware Authors.
+
+http:
+  addr: ":8080"
+  read_timeout: "15s"
+  write_timeout: "30s"
+  shutdown_timeout: "10s"
+
+grpc:
+  addr: ":9090"
+  max_recv_msg_bytes: 16777216
+  max_send_msg_bytes: 16777216
+  shutdown_timeout: "10s"
+
+database:
+  url: "postgres://middleware:middleware@localhost:5432/middleware?sslmode=disable"
+  max_conns: 20
+  min_conns: 2
+  connect_timeout: "5s"
+  health_timeout: "2s"
+
+workflow:
+  workers: 4
+  lease_ttl: "30s"
+  poll_interval: "200ms"
+  max_attempts: 5
+
+log:
+  level: "info"
+  format: "json"

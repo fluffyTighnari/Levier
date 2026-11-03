@@ -4,7 +4,7 @@
 |---|---|
 | 计划版本 | V2.0 |
 | 日期 | 2026-11-03 |
-| 状态 | P0-01–P0-05 已完成，待审；根模块与 CI 骨架已提交；取代 `IMPLEMENTATION_PLAN.md` v0.3 |
+| 状态 | P0-01–P0-06 已完成，待审；配置/基础库已实现；取代 `IMPLEMENTATION_PLAN.md` v0.3 |
 | 依据 | `docs/DESIGN.md` v0.1、`docs/WORKFLOW_ENGINE_AUDIT.md` |
 | 总步骤 | 72 个审查单元 |
 | 用法 | 一次只做一个 `Px-yy`；产出、验收、diff 都确认后再进入下一步 |
@@ -134,9 +134,10 @@ internal/control ──► internal/workflow (PostgreSQL run_tasks, SKIP LOCKED)
   - 验收：`make build/test/lint` 可跑；空二进制可启动并优雅退出；根模块不 import 旧 `workflow_engine`。
   - 完成记录：根 commit `d0c712a`；Go/Python 骨架、CI、`docs/CODE_STYLE.md` 文件头规范已加入；`make lint/test/build` 全绿；二进制 SIGTERM 退出码 0。
 
-- [ ] **P0-06 配置与基础库**
-  - `internal/config`（YAML + env + 校验）、`internal/id`（ULID）、`internal/errs`（§4.5 错误码）、`internal/clock`、slog/OTel 初始化。
+- [x] **P0-06 配置与基础库**
+  - `internal/config`（YAML + env + 校验）、`internal/id`（ULID）、`internal/errs`（§4.5 错误码）、`internal/clock`、slog 初始化。
   - 验收：非法配置启动失败并指出路径；错误码表全覆盖；时间可注入。
+  - 完成记录：`config.example.yaml`；config 默认值/env/严格字段/校验；ULID；错误码/retryable/HTTP 映射；Fake clock；slog 字段常量；`make test/lint` 全绿，二进制加载配置后 SIGTERM 退出码 0。
 
 - [ ] **P0-07 PostgreSQL 基础与迁移**
   - `internal/db`：`pgx` 连接池、超时、健康检查；版本化 SQL 迁移（`schema_migrations`）；`docker-compose` 起 PostgreSQL 16；`make dev`。
