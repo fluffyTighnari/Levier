@@ -1,0 +1,33 @@
+# Middleware — repository ignore rules.
+# Copyright 2026 The Middleware Authors.
+
+# OS / IDE / sync metadata
+.DS_Store
+.idea/
+.stfolder/
+
+# Archived nested engine: read-only, keeps its own git history.
+/workflow_engine/
+
+# Build and runtime output
+/bin/
+/dist/
+/data/
+/logs/
+*.db
+*.sqlite
+*.sqlite3
+
+# Secrets
+.env
+.env.*
+!.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+
+# Go
+vendor/

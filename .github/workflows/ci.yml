@@ -1,0 +1,34 @@
+# Middleware — continuous integration.
+# Copyright 2026 The Middleware Authors.
+
+name: ci
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  go:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.26.x"
+          cache: true
+      - run: make lint
+      - run: make test
+      - run: make build
+
+  python:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python -m compileall harness/src
+      - run: PYTHONPATH=harness/src python -m unittest discover -s harness/tests -v
