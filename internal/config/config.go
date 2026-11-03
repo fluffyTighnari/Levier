@@ -13,6 +13,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"time"
 
 	"gopkg.in/yaml.v3"
 )
@@ -70,26 +71,26 @@ func Default() Config {
 	return Config{
 		HTTP: HTTPConfig{
 			Addr:            ":8080",
-			ReadTimeout:     Duration(15_000_000_000),
-			WriteTimeout:    Duration(30_000_000_000),
-			ShutdownTimeout: Duration(10_000_000_000),
+			ReadTimeout:     Duration(15 * time.Second),
+			WriteTimeout:    Duration(30 * time.Second),
+			ShutdownTimeout: Duration(10 * time.Second),
 		},
 		GRPC: GRPCConfig{
 			Addr:            ":9090",
 			MaxRecvMsgBytes: 16 << 20,
 			MaxSendMsgBytes: 16 << 20,
-			ShutdownTimeout: Duration(10_000_000_000),
+			ShutdownTimeout: Duration(10 * time.Second),
 		},
 		Database: DatabaseConfig{
 			MaxConns:       20,
 			MinConns:       2,
-			ConnectTimeout: Duration(5_000_000_000),
-			HealthTimeout:  Duration(2_000_000_000),
+			ConnectTimeout: Duration(5 * time.Second),
+			HealthTimeout:  Duration(2 * time.Second),
 		},
 		Workflow: WorkflowConfig{
 			Workers:      4,
-			LeaseTTL:     Duration(30_000_000_000),
-			PollInterval: Duration(200_000_000),
+			LeaseTTL:     Duration(30 * time.Second),
+			PollInterval: Duration(200 * time.Millisecond),
 			MaxAttempts:  5,
 		},
 		Log: LogConfig{
@@ -258,11 +259,11 @@ func durationOverride(lookup func(string) (string, bool), key string, dst *Durat
 	if !ok {
 		return nil
 	}
-	parsed, err := timeParseDuration(value)
+	parsed, err := time.ParseDuration(value)
 	if err != nil {
 		return fmt.Errorf("%s: %w", key, err)
 	}
-	*dst = parsed
+	*dst = Duration(parsed)
 	return nil
 }
 
