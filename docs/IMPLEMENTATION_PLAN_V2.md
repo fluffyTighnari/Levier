@@ -4,7 +4,7 @@
 |---|---|
 | 计划版本 | V2.0 |
 | 日期 | 2026-11-03 |
-| 状态 | P0-01–P0-04 已完成，待审；DESIGN 已并入 ADR 变更；取代 `IMPLEMENTATION_PLAN.md` v0.3 |
+| 状态 | P0-01–P0-05 已完成，待审；根模块与 CI 骨架已提交；取代 `IMPLEMENTATION_PLAN.md` v0.3 |
 | 依据 | `docs/DESIGN.md` v0.1、`docs/WORKFLOW_ENGINE_AUDIT.md` |
 | 总步骤 | 72 个审查单元 |
 | 用法 | 一次只做一个 `Px-yy`；产出、验收、diff 都确认后再进入下一步 |
@@ -129,9 +129,10 @@ internal/control ──► internal/workflow (PostgreSQL run_tasks, SKIP LOCKED)
   - 验收：范围、验收、工期确认；D1–D17 全部有结论；DESIGN 与 ADR 无冲突。
   - 完成记录：ADR-0003 已产出；`DESIGN.md` 升级 v0.2，加入 RunTaskQueue、`McpBinding`、`lease_epoch`、`(run_id,attempt,seq)`、复合 watermark、`/admin/apps`；里程碑以 V2 为准。
 
-- [ ] **P0-05 工程骨架与 CI**
+- [x] **P0-05 工程骨架与 CI**
   - 初始化根 git（当前目录无 `.git`）；根 `go.mod`、`cmd/middleware`、`internal/*`、`proto/`、`harness/`、`Makefile`、lint、CI。
   - 验收：`make build/test/lint` 可跑；空二进制可启动并优雅退出；根模块不 import 旧 `workflow_engine`。
+  - 完成记录：根 commit `d0c712a`；Go/Python 骨架、CI、`docs/CODE_STYLE.md` 文件头规范已加入；`make lint/test/build` 全绿；二进制 SIGTERM 退出码 0。
 
 - [ ] **P0-06 配置与基础库**
   - `internal/config`（YAML + env + 校验）、`internal/id`（ULID）、`internal/errs`（§4.5 错误码）、`internal/clock`、slog/OTel 初始化。
