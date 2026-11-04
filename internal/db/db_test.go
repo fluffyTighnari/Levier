@@ -24,6 +24,9 @@ func TestOpenRequiresURL(t *testing.T) {
 }
 
 func TestMigrateIsIdempotent(t *testing.T) {
+	if os.Getenv("MIDDLEWARE_TEST_POSTGRES") != "1" {
+		t.Skip("MIDDLEWARE_TEST_POSTGRES is not set to 1")
+	}
 	dsn := os.Getenv("MIDDLEWARE_TEST_DATABASE_URL")
 	if dsn == "" {
 		t.Skip("MIDDLEWARE_TEST_DATABASE_URL is not set")

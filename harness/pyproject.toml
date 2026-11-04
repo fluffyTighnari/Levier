@@ -10,7 +10,10 @@ name = "middleware-harness"
 version = "0.1.0"
 description = "Stripped-down Python harness for the middleware agent runtime"
 requires-python = ">=3.12"
-dependencies = []
+dependencies = [
+    "protobuf>=7.36.2",
+    "grpcio>=1.75.0",
+]
 
 [tool.setuptools.packages.find]
 where = ["src"]

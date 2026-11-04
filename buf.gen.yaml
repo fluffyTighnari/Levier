@@ -1,0 +1,17 @@
+# Middleware — buf code generation.
+# Copyright 2026 The Middleware Authors.
+
+version: v2
+plugins:
+  - local: protoc-gen-go
+    out: gen
+    opt: paths=source_relative
+  - local: protoc-gen-go-grpc
+    out: gen
+    opt: paths=source_relative
+  - remote: buf.build/protocolbuffers/python
+    out: harness/src/gen
+  - remote: buf.build/grpc/python
+    out: harness/src/gen
+  - remote: buf.build/protocolbuffers/pyi
+    out: harness/src/gen

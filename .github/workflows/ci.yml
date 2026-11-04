@@ -23,6 +23,23 @@ jobs:
       - run: make test
       - run: make build
 
+  proto:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.26.x"
+          cache: true
+      - run: |
+          go install github.com/bufbuild/buf/cmd/buf@v1.75.0
+          go install google.golang.org/protobuf/cmd/protoc-gen-go@v1.36.12
+          go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.6.2
+      - run: make proto-lint
+      - run: make proto-check
+
   python:
     runs-on: ubuntu-latest
     steps:
@@ -31,4 +48,4 @@ jobs:
         with:
           python-version: "3.12"
       - run: python -m compileall harness/src
-      - run: PYTHONPATH=harness/src python -m unittest discover -s harness/tests -v
+      - run: PYTHONPATH=harness/src/gen:harness/src python -m unittest discover -s harness/tests -v

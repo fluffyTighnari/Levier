@@ -3,6 +3,8 @@
 
 SHELL := /bin/sh
 GO ?= go
+BUF ?= $(HOME)/go/bin/buf
+PROTOC_BIN ?= $(HOME)/go/bin
 
 # Optional local-only overrides (git-ignored).
 -include .env.local
@@ -10,7 +12,7 @@ export
 BIN_DIR := bin
 GO_FILES := $(shell find . -name '*.go' -not -path './workflow_engine/*' -not -path './vendor/*')
 
-.PHONY: all build test lint fmt fmt-check vet run clean dev-up dev-down migrate proto harness-test
+.PHONY: all build test lint fmt fmt-check vet run clean dev-up dev-down migrate proto proto-check proto-lint harness-test
 
 all: build
 
@@ -51,8 +53,16 @@ dev-down:
 	docker compose down
 
 proto:
-	@command -v buf >/dev/null 2>&1 || { echo "buf is not installed"; exit 1; }
-	buf generate
+	@command -v $(BUF) >/dev/null 2>&1 || { echo "buf is not installed"; exit 1; }
+	PATH="$(PROTOC_BIN):$$PATH" $(BUF) generate
+
+proto-check: proto
+	@git diff --exit-code -- gen harness/src/gen
+
+proto-lint:
+	$(BUF) lint
+	$(BUF) build -o /dev/null
+	$(BUF) breaking --against '.git#branch=main'
 
 harness-test:
-	PYTHONPATH=harness/src python3 -m unittest discover -s harness/tests -v
+	PYTHONPATH=harness/src/gen:harness/src python3 -m unittest discover -s harness/tests -v
