@@ -1,0 +1,507 @@
+# Middleware — App HTTP API v1 (OpenAPI 3.1 skeleton).
+# Copyright 2026 The Middleware Authors.
+
+openapi: 3.1.0
+info:
+  title: Middleware App API
+  version: "1.0.0"
+  description: |
+    App-facing HTTP API for run submission, event replay, cancellation,
+    sessions, and App/Tool/MCP registration. The WebSocket contract is
+    documented separately at `/api/v1/ws`.
+servers:
+  - url: /api/v1
+security:
+  - bearerAuth: []
+paths:
+  /admin/apps:
+    post:
+      summary: Create an App and return its API key once
+      operationId: createApp
+      security:
+        - adminToken: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AppUpsertRequest'
+      responses:
+        "201":
+          description: App created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateAppResponse'
+        default:
+          $ref: '#/components/responses/Error'
+  /apps:
+    post:
+      summary: Update the authenticated App
+      operationId: updateApp
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AppUpsertRequest'
+      responses:
+        "200":
+          description: App updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AppView'
+        default:
+          $ref: '#/components/responses/Error'
+  /apps/{app_id}:
+    get:
+      summary: Read an App registration
+      operationId: getApp
+      parameters:
+        - $ref: '#/components/parameters/AppID'
+      responses:
+        "200":
+          description: App registration
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AppView'
+        default:
+          $ref: '#/components/responses/Error'
+  /runs:
+    post:
+      summary: Submit a run
+      operationId: createRun
+      parameters:
+        - name: Idempotency-Key
+          in: header
+          required: false
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateRunRequest'
+      responses:
+        "202":
+          description: Run accepted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateRunResponse'
+        default:
+          $ref: '#/components/responses/Error'
+  /runs/{run_id}:
+    get:
+      summary: Read run status
+      operationId: getRun
+      parameters:
+        - $ref: '#/components/parameters/RunID'
+      responses:
+        "200":
+          description: Run projection
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RunView'
+        default:
+          $ref: '#/components/responses/Error'
+  /runs/{run_id}/events:
+    get:
+      summary: Replay persisted run events
+      operationId: listRunEvents
+      parameters:
+        - $ref: '#/components/parameters/RunID'
+        - $ref: '#/components/parameters/AfterAttempt'
+        - $ref: '#/components/parameters/AfterSeq'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        "200":
+          description: Persisted events
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EventListResponse'
+        default:
+          $ref: '#/components/responses/Error'
+  /runs/{run_id}/cancel:
+    post:
+      summary: Cancel a run
+      operationId: cancelRun
+      parameters:
+        - $ref: '#/components/parameters/RunID'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CancelRunRequest'
+      responses:
+        "200":
+          description: Cancellation accepted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CancelRunResponse'
+        default:
+          $ref: '#/components/responses/Error'
+  /sessions/{session_id}:
+    get:
+      summary: Read a longterm session
+      operationId: getSession
+      parameters:
+        - $ref: '#/components/parameters/SessionID'
+      responses:
+        "200":
+          description: Session projection
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SessionView'
+        default:
+          $ref: '#/components/responses/Error'
+  /sessions/{session_id}/events:
+    get:
+      summary: Replay persisted session events across runs
+      operationId: listSessionEvents
+      parameters:
+        - $ref: '#/components/parameters/SessionID'
+        - $ref: '#/components/parameters/AfterAttempt'
+        - $ref: '#/components/parameters/AfterSeq'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        "200":
+          description: Persisted events
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EventListResponse'
+        default:
+          $ref: '#/components/responses/Error'
+  /ws:
+    get:
+      summary: App WebSocket (protocol v1)
+      description: |
+        Upgrade to the App WebSocket. Client sends hello/subscribe/
+        local_tool_result/ping; server sends event/local_tool_call/
+        run_completed/caught_up/pong/error.
+      operationId: appWebSocket
+      responses:
+        "101":
+          description: Switching Protocols
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+    adminToken:
+      type: http
+      scheme: bearer
+  parameters:
+    AppID:
+      name: app_id
+      in: path
+      required: true
+      schema:
+        type: string
+    RunID:
+      name: run_id
+      in: path
+      required: true
+      schema:
+        type: string
+    SessionID:
+      name: session_id
+      in: path
+      required: true
+      schema:
+        type: string
+    AfterAttempt:
+      name: after_attempt
+      in: query
+      required: false
+      schema:
+        type: integer
+        format: int32
+        minimum: 0
+    AfterSeq:
+      name: after_seq
+      in: query
+      required: false
+      schema:
+        type: integer
+        format: int64
+        minimum: 0
+    Limit:
+      name: limit
+      in: query
+      required: false
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 1000
+  responses:
+    Error:
+      description: Structured middleware error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+  schemas:
+    ErrorResponse:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: object
+          required: [code, message]
+          properties:
+            code:
+              type: string
+            message:
+              type: string
+            retryable:
+              type: boolean
+            request_id:
+              type: string
+    ChatMessage:
+      type: object
+      required: [role, content]
+      properties:
+        role:
+          type: string
+        content:
+          type: string
+        name:
+          type: string
+    StrategyRequest:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+        params:
+          type: object
+          additionalProperties: true
+    ModelRequest:
+      type: object
+      required: [provider, model]
+      properties:
+        provider:
+          type: string
+        model:
+          type: string
+        params:
+          type: object
+          additionalProperties:
+            type: string
+    TimeoutRequest:
+      type: object
+      properties:
+        run_ms:
+          type: integer
+          format: int64
+          minimum: 0
+        tool_ms:
+          type: integer
+          format: int64
+          minimum: 0
+    CreateRunRequest:
+      type: object
+      required: [runtime, strategy, input, model]
+      properties:
+        app_id:
+          type: string
+        runtime:
+          type: string
+          enum: [normal, sandbox, longterm]
+        strategy:
+          $ref: '#/components/schemas/StrategyRequest'
+        input:
+          type: array
+          items:
+            $ref: '#/components/schemas/ChatMessage'
+        session_id:
+          type: string
+        model:
+          $ref: '#/components/schemas/ModelRequest'
+        timeouts:
+          $ref: '#/components/schemas/TimeoutRequest'
+    CreateRunResponse:
+      type: object
+      required: [run_id, status, ws_url, ws_token]
+      properties:
+        run_id:
+          type: string
+        status:
+          type: string
+        ws_url:
+          type: string
+        ws_token:
+          type: string
+    RunView:
+      type: object
+      required: [run_id, app_id, runtime, strategy, status, attempt, created_at, updated_at]
+      properties:
+        run_id:
+          type: string
+        app_id:
+          type: string
+        runtime:
+          type: string
+        strategy:
+          $ref: '#/components/schemas/StrategyRequest'
+        status:
+          type: string
+        attempt:
+          type: integer
+          format: int32
+        session_id:
+          type: string
+        trace_id:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+    RunEventView:
+      type: object
+      required: [run_id, attempt, seq, source, event_type, ts_ms]
+      properties:
+        run_id:
+          type: string
+        attempt:
+          type: integer
+          format: int32
+        seq:
+          type: integer
+          format: int64
+        source:
+          type: string
+          enum: [daemon, mw]
+        event_type:
+          type: string
+        data:
+          type: object
+          additionalProperties: true
+        ts_ms:
+          type: integer
+          format: int64
+    EventListResponse:
+      type: object
+      required: [events, caught_up]
+      properties:
+        events:
+          type: array
+          items:
+            $ref: '#/components/schemas/RunEventView'
+        caught_up:
+          type: boolean
+        next_attempt:
+          type: integer
+          format: int32
+        next_seq:
+          type: integer
+          format: int64
+    CancelRunRequest:
+      type: object
+      properties:
+        reason:
+          type: string
+    CancelRunResponse:
+      type: object
+      required: [run_id, status]
+      properties:
+        run_id:
+          type: string
+        status:
+          type: string
+    SessionView:
+      type: object
+      required: [session_id, app_id, status, event_attempt, event_watermark, created_at, updated_at]
+      properties:
+        session_id:
+          type: string
+        app_id:
+          type: string
+        status:
+          type: string
+        current_run_id:
+          type: string
+        event_attempt:
+          type: integer
+          format: int32
+        event_watermark:
+          type: integer
+          format: int64
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        expires_at:
+          type: string
+          format: date-time
+    ToolDefinition:
+      type: object
+      required: [name, schema]
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        schema:
+          type: object
+          additionalProperties: true
+        timeout_ms:
+          type: integer
+          format: int64
+          minimum: 0
+    AppUpsertRequest:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+        multiagent:
+          type: boolean
+        tools:
+          type: array
+          items:
+            $ref: '#/components/schemas/ToolDefinition'
+        mcp_refs:
+          type: array
+          items:
+            type: string
+    AppView:
+      type: object
+      required: [app_id, name, multiagent, status, created_at, updated_at]
+      properties:
+        app_id:
+          type: string
+        name:
+          type: string
+        multiagent:
+          type: boolean
+        status:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+    CreateAppResponse:
+      type: object
+      required: [app, api_key]
+      properties:
+        app:
+          $ref: '#/components/schemas/AppView'
+        api_key:
+          type: string
