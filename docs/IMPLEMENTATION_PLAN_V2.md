@@ -4,7 +4,7 @@
 |---|---|
 | 计划版本 | V2.0 |
 | 日期 | 2026-11-03 |
-| 状态 | P0-01–P0-07 已完成，待审；G0 待确认；取代 `IMPLEMENTATION_PLAN.md` v0.3 |
+| 状态 | P0-01–P0-07、P1-08 已完成，待审；G0/G1 部分待确认；取代 `IMPLEMENTATION_PLAN.md` v0.3 |
 | 依据 | `docs/DESIGN.md` v0.1、`docs/WORKFLOW_ENGINE_AUDIT.md` |
 | 总步骤 | 72 个审查单元 |
 | 用法 | 一次只做一个 `Px-yy`；产出、验收、diff 都确认后再进入下一步 |
@@ -148,9 +148,10 @@ internal/control ──► internal/workflow (PostgreSQL run_tasks, SKIP LOCKED)
 
 ### P1 契约（P1-08–P1-13）
 
-- [ ] **P1-08 proto v1 定稿**
+- [x] **P1-08 proto v1 定稿**
   - `proto/middleware/runtime/v1/runtime.proto`；加入 D4/D5/D17 变更：`RunningRun{run_id, lease_epoch}`、`Envelope.attempt`、`Envelope.lease_epoch`、`TaskAssign.mcp_bindings`、`McpBinding`、`Event.source`（attempt/epoch 只在 Envelope，不重复）。
   - 验收：`buf lint/build` 通过；与 DESIGN 的差异逐条记录。
+  - 完成记录：`buf lint`/`buf build` 通过；`buf.yaml` 记录对称 Envelope 与 enum 短名的 lint 例外。报告：`docs/reports/P1-08.md`。
 
 - [ ] **P1-09 双端代码生成**
   - Go + Python stub；`make proto`；CI 检查生成物漂移。

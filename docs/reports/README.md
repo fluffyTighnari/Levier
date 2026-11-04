@@ -13,6 +13,7 @@
 | P0-05 | `docs/reports/P0-05.md` | 已提交 |
 | P0-06 | `docs/reports/P0-06.md` | 已提交 |
 | P0-07 | `docs/reports/P0-07.md` | 已提交 |
+| P1-08 | `docs/reports/P1-08.md` | 已提交 |
 
 模板：`docs/reports/TEMPLATE.md`。
 

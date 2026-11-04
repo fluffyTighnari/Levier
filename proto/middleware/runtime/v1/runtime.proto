@@ -1,0 +1,321 @@
+// Middleware — RuntimeChannel v1 contract.
+// Copyright 2026 The Middleware Authors.
+
+syntax = "proto3";
+
+package middleware.runtime.v1;
+
+import "google/protobuf/struct.proto";
+
+option go_package = "github.com/fluffyTighnari/middleware/gen/middleware/runtime/v1;runtimev1";
+
+// RuntimeService carries all daemon control and data messages over one
+// bidirectional stream.
+service RuntimeService {
+  // Channel is the single long-lived stream established by a daemon.
+  rpc Channel(stream Envelope) returns (stream Envelope);
+}
+
+// Envelope is the common wrapper for every RuntimeChannel message.
+message Envelope {
+  // msg_id is the unique message identifier (ULID).
+  string msg_id = 1;
+  // correlation_id is the request msg_id for response messages.
+  string correlation_id = 2;
+  // run_id is the owning run; empty for Hello and Heartbeat.
+  string run_id = 3;
+  // ts_ms is the sender timestamp in Unix milliseconds.
+  int64 ts_ms = 4;
+  // attempt is the run execution attempt.
+  int32 attempt = 5;
+  // lease_epoch guards run state and events from stale daemons.
+  int64 lease_epoch = 6;
+
+  // payload is exactly one RuntimeChannel message.
+  oneof payload {
+    // hello is sent by the daemon after connecting.
+    Hello hello = 10;
+    // heartbeat is sent every 10 seconds.
+    Heartbeat heartbeat = 11;
+    // task_assign is sent by middleware to start a run.
+    TaskAssign task_assign = 12;
+    // task_ack acknowledges a TaskAssign.
+    TaskAck task_ack = 13;
+    // event reports run progress.
+    Event event = 14;
+    // tool_call_request asks middleware to execute a tool.
+    ToolCallRequest tool_call_request = 15;
+    // tool_call_result returns a tool result.
+    ToolCallResult tool_call_result = 16;
+    // cancel asks the daemon to stop a run.
+    Cancel cancel = 17;
+    // reconcile asks the daemon to cancel runs middleware considers dead.
+    Reconcile reconcile = 18;
+    // checkpoint carries a longterm run snapshot.
+    Checkpoint checkpoint = 19;
+    // error reports a protocol or runtime error.
+    ErrorReport error = 20;
+  }
+}
+
+// RuntimeType identifies the execution placement of a daemon.
+enum RuntimeType {
+  // RUNTIME_TYPE_UNSPECIFIED is the default zero value.
+  RUNTIME_TYPE_UNSPECIFIED = 0;
+  // NORMAL runs on a shared long-lived daemon.
+  NORMAL = 1;
+  // SANDBOX runs in an isolated pod.
+  SANDBOX = 2;
+  // LONGTERM runs with session checkpoint support.
+  LONGTERM = 3;
+}
+
+// Hello is the first message sent by a daemon after connecting.
+message Hello {
+  // daemon_id is the pre-provisioned daemon identifier.
+  string daemon_id = 1;
+  // auth_token is the pre-provisioned daemon token.
+  string auth_token = 2;
+  // runtime_type is the daemon placement type.
+  RuntimeType runtime_type = 3;
+  // max_concurrent_runs is the advertised capacity.
+  int32 max_concurrent_runs = 4;
+  // supported_strategies lists strategies the harness can run.
+  repeated string supported_strategies = 5;
+  // version is the harness version.
+  string version = 6;
+  // labels are scheduler labels such as pool and region.
+  map<string, string> labels = 7;
+  // running_runs lists runs still executing after a reconnect.
+  repeated RunningRun running_runs = 8;
+}
+
+// RunningRun identifies a run and its ownership generation.
+message RunningRun {
+  // run_id is the run identifier.
+  string run_id = 1;
+  // lease_epoch is the daemon's ownership generation for the run.
+  int64 lease_epoch = 2;
+}
+
+// Reconcile tells a daemon which runs middleware considers dead.
+message Reconcile {
+  // cancel_run_ids are runs that must be cancelled by the daemon.
+  repeated string cancel_run_ids = 1;
+}
+
+// Heartbeat reports daemon liveness and load.
+message Heartbeat {
+  // running_count is the number of runs currently executing.
+  int32 running_count = 1;
+  // cpu_load is the daemon CPU load.
+  double cpu_load = 2;
+  // mem_mb is the daemon memory usage in megabytes.
+  double mem_mb = 3;
+}
+
+// TaskAssign starts one run on a daemon.
+message TaskAssign {
+  // run_id is the run identifier.
+  string run_id = 1;
+  // app_id is the owning application identifier.
+  string app_id = 2;
+  // strategy is the execution strategy name.
+  string strategy = 3;
+  // strategy_params are strategy-specific parameters.
+  google.protobuf.Struct strategy_params = 4;
+  // input is the initial conversation.
+  repeated ChatMessage input = 5;
+  // model is the resolved model profile.
+  ModelProfile model = 6;
+  // tools is the merged local/global tool manifest.
+  repeated ToolManifest tools = 7;
+  // mcp_bindings are resolved MCP connection descriptions.
+  repeated McpBinding mcp_bindings = 8;
+  // timeouts are the run and tool timeouts.
+  TimeoutProfile timeouts = 9;
+  // session_id is the longterm session identifier.
+  string session_id = 10;
+  // resume_from is an optional longterm checkpoint.
+  Checkpoint resume_from = 11;
+  // trace_context is a W3C traceparent value.
+  string trace_context = 12;
+}
+
+// ChatMessage is one conversation message.
+message ChatMessage {
+  // role is one of system, user, assistant, or tool.
+  string role = 1;
+  // content is the v1 text content.
+  string content = 2;
+  // name is an optional tool or participant name.
+  string name = 3;
+}
+
+// ModelProfile describes the model and provider credentials.
+message ModelProfile {
+  // provider is the model provider name.
+  string provider = 1;
+  // model is the provider model identifier.
+  string model = 2;
+  // api_key is resolved by middleware for v1.
+  string api_key = 3;
+  // base_url is an optional provider endpoint.
+  string base_url = 4;
+  // params are provider-specific parameters.
+  map<string, string> params = 5;
+}
+
+// ToolScope tells the daemon where a tool is executed.
+enum ToolScope {
+  // TOOL_SCOPE_UNSPECIFIED is the default zero value.
+  TOOL_SCOPE_UNSPECIFIED = 0;
+  // LOCAL is executed by the app through middleware.
+  LOCAL = 1;
+  // GLOBAL is executed by the middleware gateway.
+  GLOBAL = 2;
+}
+
+// ToolManifest describes one tool exposed to the model.
+message ToolManifest {
+  // name is the tool name.
+  string name = 1;
+  // description is the model-visible description.
+  string description = 2;
+  // input_schema_json is a JSON Schema document.
+  string input_schema_json = 3;
+  // scope is for daemon observability; routing happens in middleware.
+  ToolScope scope = 4;
+}
+
+// McpBinding describes one resolved MCP connection.
+message McpBinding {
+  // server_name is the registered MCP server name.
+  string server_name = 1;
+  // transport is stdio, sse, or streamable_http.
+  string transport = 2;
+  // command is the stdio executable.
+  string command = 3;
+  // args are stdio executable arguments.
+  repeated string args = 4;
+  // env is the stdio environment.
+  map<string, string> env = 5;
+  // url is the SSE or streamable HTTP endpoint.
+  string url = 6;
+  // headers are HTTP headers for SSE or streamable HTTP.
+  map<string, string> headers = 7;
+  // allowed_tools is an optional tool allowlist.
+  repeated string allowed_tools = 8;
+  // namespace is the tool-name prefix, e.g. mcp__server__.
+  string namespace = 9;
+}
+
+// TimeoutProfile contains run and tool deadlines.
+message TimeoutProfile {
+  // run_timeout_ms is the total run deadline.
+  int64 run_timeout_ms = 1;
+  // tool_timeout_ms is the default tool deadline.
+  int64 tool_timeout_ms = 2;
+}
+
+// TaskAck acknowledges a TaskAssign within five seconds.
+message TaskAck {
+  // accepted reports whether the daemon accepted the run.
+  bool accepted = 1;
+  // reason describes a rejection.
+  string reason = 2;
+}
+
+// EventType classifies run progress events.
+enum EventType {
+  // EVENT_TYPE_UNSPECIFIED is the default zero value.
+  EVENT_TYPE_UNSPECIFIED = 0;
+  // RUN_STATUS reports a run status change.
+  RUN_STATUS = 1;
+  // MESSAGE_DELTA is an ephemeral token delta.
+  MESSAGE_DELTA = 2;
+  // MESSAGE_COMPLETED is a complete assistant or tool message.
+  MESSAGE_COMPLETED = 3;
+  // TOOL_CALL_BEGIN starts one tool call.
+  TOOL_CALL_BEGIN = 4;
+  // TOOL_CALL_END finishes one tool call.
+  TOOL_CALL_END = 5;
+  // USAGE reports token usage.
+  USAGE = 6;
+  // ERROR reports a run-level error.
+  ERROR = 7;
+  // CHECKPOINT_SAVED reports a saved checkpoint.
+  CHECKPOINT_SAVED = 8;
+}
+
+// Event is one run progress event.
+message Event {
+  // seq is monotonic for persistent events; ephemeral events use zero.
+  int64 seq = 1;
+  // type classifies the event.
+  EventType type = 2;
+  // ephemeral events are forwarded but not persisted.
+  bool ephemeral = 3;
+  // data is event-specific structured payload.
+  google.protobuf.Struct data = 4;
+  // source is daemon or mw.
+  string source = 5;
+}
+
+// ToolCallRequest asks middleware to execute one tool invocation.
+message ToolCallRequest {
+  // invocation_id is the idempotency key generated by the daemon.
+  string invocation_id = 1;
+  // tool_name is the requested tool.
+  string tool_name = 2;
+  // arguments_json is a JSON object encoded as a string.
+  string arguments_json = 3;
+  // timeout_ms is the tool deadline.
+  int64 timeout_ms = 4;
+}
+
+// ToolCallResult returns one tool invocation result.
+message ToolCallResult {
+  // invocation_id matches the request.
+  string invocation_id = 1;
+  // ok reports success.
+  bool ok = 2;
+  // result_json is the successful result payload.
+  string result_json = 3;
+  // error describes a failed invocation.
+  ErrorInfo error = 4;
+}
+
+// ErrorInfo is a structured error.
+message ErrorInfo {
+  // code is a middleware error code.
+  string code = 1;
+  // message is a human-readable explanation.
+  string message = 2;
+  // retryable reports whether the caller may retry.
+  bool retryable = 3;
+}
+
+// Cancel asks a daemon to stop a run.
+message Cancel {
+  // reason is user, timeout, reconcile, or daemon_lost.
+  string reason = 1;
+}
+
+// Checkpoint is a longterm run snapshot.
+message Checkpoint {
+  // session_id is the longterm session identifier.
+  string session_id = 1;
+  // event_seq_watermark is the highest covered persistent event seq.
+  int64 event_seq_watermark = 2;
+  // state is opaque harness state.
+  bytes state = 3;
+}
+
+// ErrorReport reports a protocol or runtime error.
+message ErrorReport {
+  // code is a middleware error code.
+  string code = 1;
+  // message is a human-readable explanation.
+  string message = 2;
+}

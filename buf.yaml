@@ -1,0 +1,21 @@
+# Middleware — buf module and lint policy.
+# Copyright 2026 The Middleware Authors.
+
+version: v2
+modules:
+  - path: proto
+lint:
+  use:
+    - STANDARD
+  except:
+    # The RuntimeChannel intentionally uses one symmetric Envelope on both
+    # sides of the stream; separate Request/Response messages add no value.
+    - RPC_REQUEST_RESPONSE_UNIQUE
+    - RPC_REQUEST_STANDARD_NAME
+    - RPC_RESPONSE_STANDARD_NAME
+    # EventType / ToolScope / RuntimeType values are referenced by their
+    # short names in the design and generated clients.
+    - ENUM_VALUE_PREFIX
+breaking:
+  use:
+    - FILE

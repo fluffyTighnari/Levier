@@ -2,6 +2,14 @@
 
 # Protobuf contracts
 
-`proto/middleware/runtime/v1/runtime.proto` is introduced in P1-08.
+- `proto/middleware/runtime/v1/runtime.proto` — RuntimeChannel v1.
+- `buf.yaml` — module, lint, and breaking-change policy.
 
-Generated Go/Python stubs are produced by `buf generate`; do not edit them by hand.
+Run:
+
+```sh
+buf lint
+buf build
+```
+
+Generated Go/Python stubs are produced in P1-09; do not edit generated files by hand.
