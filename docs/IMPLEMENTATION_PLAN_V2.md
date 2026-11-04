@@ -4,7 +4,7 @@
 |---|---|
 | 计划版本 | V2.0 |
 | 日期 | 2026-11-03 |
-| 状态 | P0-01–P0-07、P1-08–P1-09 已完成，待审；G0/G1 部分待确认；取代 `IMPLEMENTATION_PLAN.md` v0.3 |
+| 状态 | P0-01–P0-07、P1-08–P1-10 已完成，待审；G0/G1 部分待确认；取代 `IMPLEMENTATION_PLAN.md` v0.3 |
 | 依据 | `docs/DESIGN.md` v0.1、`docs/WORKFLOW_ENGINE_AUDIT.md` |
 | 总步骤 | 72 个审查单元 |
 | 用法 | 一次只做一个 `Px-yy`；产出、验收、diff 都确认后再进入下一步 |
@@ -158,9 +158,10 @@ internal/control ──► internal/workflow (PostgreSQL run_tasks, SKIP LOCKED)
   - 验收：生成后工作区干净；Go/Python 均可 import/编译。
   - 完成记录：`gen/` Go stub + `harness/src/gen` Python stub；`make proto-lint/proto-check` 通过；CI 增加 proto job；报告：`docs/reports/P1-09.md`。
 
-- [ ] **P1-10 协议辅助层**
+- [x] **P1-10 协议辅助层**
   - `internal/protocol`：Envelope builder/validator、correlation、oneof、大小上限、错误映射。
   - 验收：非法 envelope 表驱动测试；全部消息有 builder。
+  - 完成记录：`New/NewRun/NewResponse`、`SetCorrelation`、`Validate`、`CheckSize`、MW/daemon seq 规则、`BAD_ENVELOPE` 映射；报告：`docs/reports/P1-10.md`。
 
 - [ ] **P1-11 App 契约类型**
   - HTTP DTO、WS 消息类型、版本握手、OpenAPI 骨架。
