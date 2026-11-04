@@ -4,7 +4,7 @@
 |---|---|
 | 计划版本 | V2.0 |
 | 日期 | 2026-11-03 |
-| 状态 | P0-01–P0-07、P1-08–P1-11 已完成，待审；G0/G1 部分待确认；取代 `IMPLEMENTATION_PLAN.md` v0.3 |
+| 状态 | P0-01–P0-07、P1-08–P1-12 已完成，待审；G0/G1 部分待确认；取代 `IMPLEMENTATION_PLAN.md` v0.3 |
 | 依据 | `docs/DESIGN.md` v0.1、`docs/WORKFLOW_ENGINE_AUDIT.md` |
 | 总步骤 | 72 个审查单元 |
 | 用法 | 一次只做一个 `Px-yy`；产出、验收、diff 都确认后再进入下一步 |
@@ -168,9 +168,10 @@ internal/control ──► internal/workflow (PostgreSQL run_tasks, SKIP LOCKED)
   - 验收：marshal/unmarshal 黄金测试；字段与 DESIGN §4.2/4.3 对齐。
   - 完成记录：`internal/httpapi` DTO/WS 类型/校验；`docs/api/openapi.yaml` 3.1 骨架；报告：`docs/reports/P1-11.md`。
 
-- [ ] **P1-12 Go Fake Daemon**
+- [x] **P1-12 Go Fake Daemon**
   - 测试用 `RuntimeService.Channel`：可编排 accept/reject/event/toolcall/断线/延迟。
   - 验收：能驱动完整消息序列；支持故障注入。
+  - 完成记录：`internal/testutil/fakedaemon` client-side fake；AutoEcho/拒绝/工具闭环/断线测试通过；报告：`docs/reports/P1-12.md`。
 
 - [ ] **P1-13 契约冻结**
   - `tests/contract/`：Go↔Python Envelope 黄金文件、buf breaking 基线、字段兼容规则。
