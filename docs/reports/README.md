@@ -21,6 +21,7 @@
 | P1-13 | `docs/reports/P1-13.md` | 已提交（G1 待确认） |
 | P2-14 | `docs/reports/P2-14.md` | 已提交 |
 | P2-15 | `docs/reports/P2-15.md` | 已提交 |
+| P2-16 | `docs/reports/P2-16.md` | 已提交 |
 
 模板：`docs/reports/TEMPLATE.md`。
 
