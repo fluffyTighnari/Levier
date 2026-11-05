@@ -1,0 +1,188 @@
+{
+  "description": "RuntimeChannel v1 cross-language golden envelopes.",
+  "messages": [
+    {
+      "msg_id": "01ARZ3NDEKTSV4RRFFQ69G5FAV",
+      "ts_ms": "1730000000000",
+      "hello": {
+        "daemon_id": "daemon-1",
+        "auth_token": "token",
+        "runtime_type": "NORMAL",
+        "max_concurrent_runs": 4,
+        "supported_strategies": [
+          "react",
+          "echo"
+        ],
+        "version": "0.1.0",
+        "labels": {
+          "pool": "test"
+        },
+        "running_runs": [
+          {
+            "run_id": "run-1",
+            "lease_epoch": "1"
+          }
+        ]
+      }
+    },
+    {
+      "msg_id": "01ARZ3NDEKTSV4RRFFQ69G5FAW",
+      "ts_ms": "1730000000000",
+      "heartbeat": {
+        "running_count": 1,
+        "cpu_load": 0.2,
+        "mem_mb": 128
+      }
+    },
+    {
+      "msg_id": "01ARZ3NDEKTSV4RRFFQ69G5FAX",
+      "run_id": "run-1",
+      "ts_ms": "1730000000000",
+      "attempt": 1,
+      "lease_epoch": "1",
+      "task_assign": {
+        "run_id": "run-1",
+        "app_id": "app-1",
+        "strategy": "react",
+        "strategy_params": {
+          "max_steps": 32
+        },
+        "input": [
+          {
+            "role": "user",
+            "content": "hi"
+          }
+        ],
+        "model": {
+          "provider": "openai",
+          "model": "gpt-test",
+          "params": {
+            "temperature": "0.7"
+          }
+        },
+        "tools": [
+          {
+            "name": "echo",
+            "description": "echo",
+            "input_schema_json": "{}",
+            "scope": "LOCAL"
+          }
+        ],
+        "mcp_bindings": [
+          {
+            "server_name": "fs",
+            "transport": "stdio",
+            "command": "mcp-fs",
+            "args": [
+              "--root",
+              "/tmp"
+            ],
+            "env": {
+              "MODE": "test"
+            },
+            "allowed_tools": [
+              "read"
+            ],
+            "namespace": "mcp__fs__"
+          }
+        ],
+        "timeouts": {
+          "run_timeout_ms": "1800000",
+          "tool_timeout_ms": "60000"
+        },
+        "trace_context": "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01"
+      }
+    },
+    {
+      "msg_id": "01ARZ3NDEKTSV4RRFFQ69G5FAY",
+      "correlation_id": "01ARZ3NDEKTSV4RRFFQ69G5FAX",
+      "run_id": "run-1",
+      "ts_ms": "1730000000000",
+      "attempt": 1,
+      "lease_epoch": "1",
+      "task_ack": {
+        "accepted": true
+      }
+    },
+    {
+      "msg_id": "01ARZ3NDEKTSV4RRFFQ69G5FAZ",
+      "run_id": "run-1",
+      "ts_ms": "1730000000000",
+      "attempt": 1,
+      "lease_epoch": "1",
+      "event": {
+        "seq": "1",
+        "type": "RUN_STATUS",
+        "source": "daemon",
+        "data": {
+          "status": "running"
+        }
+      }
+    },
+    {
+      "msg_id": "01ARZ3NDEKTSV4RRFFQ69G5FB0",
+      "run_id": "run-1",
+      "ts_ms": "1730000000000",
+      "attempt": 1,
+      "lease_epoch": "1",
+      "tool_call_request": {
+        "invocation_id": "01ARZ3NDEKTSV4RRFFQ69G5FB6",
+        "tool_name": "echo",
+        "arguments_json": "{}",
+        "timeout_ms": "60000"
+      }
+    },
+    {
+      "msg_id": "01ARZ3NDEKTSV4RRFFQ69G5FB1",
+      "correlation_id": "01ARZ3NDEKTSV4RRFFQ69G5FB0",
+      "run_id": "run-1",
+      "ts_ms": "1730000000000",
+      "attempt": 1,
+      "lease_epoch": "1",
+      "tool_call_result": {
+        "invocation_id": "01ARZ3NDEKTSV4RRFFQ69G5FB6",
+        "ok": true,
+        "result_json": "{}"
+      }
+    },
+    {
+      "msg_id": "01ARZ3NDEKTSV4RRFFQ69G5FB2",
+      "run_id": "run-1",
+      "ts_ms": "1730000000000",
+      "attempt": 1,
+      "lease_epoch": "1",
+      "cancel": {
+        "reason": "user"
+      }
+    },
+    {
+      "msg_id": "01ARZ3NDEKTSV4RRFFQ69G5FB3",
+      "ts_ms": "1730000000000",
+      "reconcile": {
+        "cancel_run_ids": [
+          "run-1",
+          "run-2"
+        ]
+      }
+    },
+    {
+      "msg_id": "01ARZ3NDEKTSV4RRFFQ69G5FB4",
+      "run_id": "run-1",
+      "ts_ms": "1730000000000",
+      "attempt": 2,
+      "lease_epoch": "2",
+      "checkpoint": {
+        "session_id": "s-1",
+        "event_seq_watermark": "42"
+      }
+    },
+    {
+      "msg_id": "01ARZ3NDEKTSV4RRFFQ69G5FB5",
+      "ts_ms": "1730000000000",
+      "error": {
+        "code": "BAD_ENVELOPE",
+        "message": "bad envelope"
+      }
+    }
+  ]
+}

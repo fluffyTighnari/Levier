@@ -4,7 +4,7 @@
 |---|---|
 | 计划版本 | V2.0 |
 | 日期 | 2026-11-03 |
-| 状态 | P0-01–P0-07、P1-08–P1-12 已完成，待审；G0/G1 部分待确认；取代 `IMPLEMENTATION_PLAN.md` v0.3 |
+| 状态 | P0-01–P0-07、P1-08–P1-13 已完成；G1 待确认；取代 `IMPLEMENTATION_PLAN.md` v0.3 |
 | 依据 | `docs/DESIGN.md` v0.1、`docs/WORKFLOW_ENGINE_AUDIT.md` |
 | 总步骤 | 72 个审查单元 |
 | 用法 | 一次只做一个 `Px-yy`；产出、验收、diff 都确认后再进入下一步 |
@@ -173,9 +173,10 @@ internal/control ──► internal/workflow (PostgreSQL run_tasks, SKIP LOCKED)
   - 验收：能驱动完整消息序列；支持故障注入。
   - 完成记录：`internal/testutil/fakedaemon` client-side fake；AutoEcho/拒绝/工具闭环/断线测试通过；报告：`docs/reports/P1-12.md`。
 
-- [ ] **P1-13 契约冻结**
+- [x] **P1-13 契约冻结**
   - `tests/contract/`：Go↔Python Envelope 黄金文件、buf breaking 基线、字段兼容规则。
   - 验收：双端 round-trip 一致；破坏性变更 CI 拦截。
+  - 完成记录：11 条 golden Envelope；Go `TestContractGolden` + Python `ContractGoldenTest` 通过；`docs/CONTRACT.md` 固化兼容规则；`make contract-check` 接入；报告：`docs/reports/P1-13.md`。
 
 **G1 审查物：** proto diff、生成物、协议单测、跨语言黄金文件。
 

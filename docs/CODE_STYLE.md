@@ -83,3 +83,8 @@ Copyright 2026 The Middleware Authors.
 ## 6. 生成文件
 
 `buf generate`、`go generate` 产出的文件由生成器保留自己的头；不要手工添加或修改。
+
+## 7. JSON 数据文件
+
+JSON 不支持注释。JSON fixture/数据文件不强制顶部注释，但必须有相邻 README 说明用途与来源。
+测试黄金样本属于此类例外。

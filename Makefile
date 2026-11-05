@@ -3,6 +3,7 @@
 
 SHELL := /bin/sh
 GO ?= go
+PYTHON ?= python3
 BUF ?= $(HOME)/go/bin/buf
 PROTOC_BIN ?= $(HOME)/go/bin
 
@@ -12,7 +13,7 @@ export
 BIN_DIR := bin
 GO_FILES := $(shell find . -name '*.go' -not -path './workflow_engine/*' -not -path './vendor/*')
 
-.PHONY: all build test lint fmt fmt-check vet run clean dev-up dev-down migrate proto proto-check proto-lint harness-test
+.PHONY: all build test lint fmt fmt-check vet run clean dev-up dev-down migrate proto proto-check proto-lint contract-check harness-test
 
 all: build
 
@@ -64,5 +65,9 @@ proto-lint:
 	$(BUF) build -o /dev/null
 	$(BUF) breaking --against '.git#branch=main'
 
+contract-check: proto-lint
+	$(GO) test ./internal/protocol -run TestContractGolden -v
+	PYTHONPATH=harness/src/gen:harness/src $(PYTHON) tests/contract/test_contract.py -v
+
 harness-test:
-	PYTHONPATH=harness/src/gen:harness/src python3 -m unittest discover -s harness/tests -v
+	PYTHONPATH=harness/src/gen:harness/src $(PYTHON) -m unittest discover -s harness/tests -v
