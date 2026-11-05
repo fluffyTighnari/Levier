@@ -4,7 +4,7 @@
 |---|---|
 | 计划版本 | V2.0 |
 | 日期 | 2026-11-03 |
-| 状态 | P0–P1 完成；P2-14–P2-20 已完成；取代 `IMPLEMENTATION_PLAN.md` v0.3 |
+| 状态 | P0–P1 完成；P2-14–P2-21 已完成；取代 `IMPLEMENTATION_PLAN.md` v0.3 |
 | 依据 | `docs/DESIGN.md` v0.1、`docs/WORKFLOW_ENGINE_AUDIT.md` |
 | 总步骤 | 72 个审查单元 |
 | 用法 | 一次只做一个 `Px-yy`；产出、验收、diff 都确认后再进入下一步 |
@@ -218,9 +218,10 @@ internal/control ──► internal/workflow (PostgreSQL run_tasks, SKIP LOCKED)
   - 验收：慢 handler 自动续租；Stop 不丢已 Claim 任务；panic 不杀进程。
   - 完成记录：`Worker`/`Pool`、heartbeat、panic 恢复、DeadLetter、优雅停机；真实 PG 并发/慢 handler 测试；报告：`docs/reports/P2-20.md`。
 
-- [ ] **P2-21 故障与属性测试**
+- [x] **P2-21 故障与属性测试**
   - 双 worker、进程崩溃、重复投递、时钟跳变、PostgreSQL 死锁/连接池耗尽、取消/完成竞态。
   - 验收：无任务丢失/双执行；失败可复现；测试可重复。
+  - 完成记录：延迟/崩溃恢复/单次执行/取消后不执行/Nack-Cancel 竞态/连接池耗尽；`-race` 通过；报告：`docs/reports/P2-21.md`。
 
 - [ ] **P2-22 指标、基准与 Gate**
   - 队列深度、最老任务年龄、Claim 延迟、Ack/Nack/Dead、租约丢失；1k 任务/秒基准。
