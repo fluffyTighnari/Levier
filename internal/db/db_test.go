@@ -7,14 +7,7 @@ package db
 
 import (
 	"context"
-	"os"
-	"strings"
 	"testing"
-
-	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgxpool"
-
-	"github.com/fluffyTighnari/middleware/internal/id"
 )
 
 func TestOpenRequiresURL(t *testing.T) {
@@ -24,36 +17,8 @@ func TestOpenRequiresURL(t *testing.T) {
 }
 
 func TestMigrateIsIdempotent(t *testing.T) {
-	if os.Getenv("MIDDLEWARE_TEST_POSTGRES") != "1" {
-		t.Skip("MIDDLEWARE_TEST_POSTGRES is not set to 1")
-	}
-	dsn := os.Getenv("MIDDLEWARE_TEST_DATABASE_URL")
-	if dsn == "" {
-		t.Skip("MIDDLEWARE_TEST_DATABASE_URL is not set")
-	}
-
+	pool := testPool(t)
 	ctx := context.Background()
-	schema := strings.ToLower("mw_test_" + id.New())
-
-	poolConfig, err := pgxpool.ParseConfig(dsn)
-	if err != nil {
-		t.Fatalf("ParseConfig() error = %v", err)
-	}
-	poolConfig.ConnConfig.RuntimeParams["search_path"] = schema
-
-	pool, err := pgxpool.NewWithConfig(ctx, poolConfig)
-	if err != nil {
-		t.Fatalf("NewWithConfig() error = %v", err)
-	}
-	defer pool.Close()
-
-	quotedSchema := pgx.Identifier{schema}.Sanitize()
-	if _, err := pool.Exec(ctx, "CREATE SCHEMA "+quotedSchema); err != nil {
-		t.Fatalf("create schema: %v", err)
-	}
-	defer func() {
-		_, _ = pool.Exec(context.Background(), "DROP SCHEMA "+quotedSchema+" CASCADE")
-	}()
 
 	if err := Migrate(ctx, pool); err != nil {
 		t.Fatalf("first Migrate() error = %v", err)
@@ -66,13 +31,13 @@ func TestMigrateIsIdempotent(t *testing.T) {
 	if err := pool.QueryRow(ctx, "SELECT count(*) FROM schema_migrations").Scan(&applied); err != nil {
 		t.Fatalf("count schema_migrations: %v", err)
 	}
-	if applied != 1 {
-		t.Fatalf("applied migrations = %d, want 1", applied)
+	if applied != 2 {
+		t.Fatalf("applied migrations = %d, want 2", applied)
 	}
 
 	for _, table := range []string{"runs", "run_events", "run_tasks"} {
 		var exists bool
-		if err := pool.QueryRow(ctx, "SELECT to_regclass($1) IS NOT NULL", schema+"."+table).Scan(&exists); err != nil {
+		if err := pool.QueryRow(ctx, "SELECT to_regclass($1) IS NOT NULL", table).Scan(&exists); err != nil {
 			t.Fatalf("check table %s: %v", table, err)
 		}
 		if !exists {
