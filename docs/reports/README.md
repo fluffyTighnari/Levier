@@ -24,6 +24,7 @@
 | P2-16 | `docs/reports/P2-16.md` | 已提交 |
 | P2-17 | `docs/reports/P2-17.md` | 已提交 |
 | P2-18 | `docs/reports/P2-18.md` | 已提交 |
+| P2-19 | `docs/reports/P2-19.md` | 已提交 |
 
 模板：`docs/reports/TEMPLATE.md`。
 

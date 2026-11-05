@@ -49,6 +49,9 @@ type Store interface {
 	// ReapExpired returns expired leases to PENDING or DEAD.
 	ReapExpired(ctx context.Context, now time.Time, limit int) (int, error)
 
+	// ListDead returns dead-letter tasks ordered by most recently updated.
+	ListDead(ctx context.Context, limit int) ([]Task, error)
+
 	// Stats returns queue depth and age metrics.
 	Stats(ctx context.Context) (Stats, error)
 }
