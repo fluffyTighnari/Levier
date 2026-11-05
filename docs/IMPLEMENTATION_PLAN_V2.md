@@ -4,7 +4,7 @@
 |---|---|
 | 计划版本 | V2.0 |
 | 日期 | 2026-11-03 |
-| 状态 | P0–P1 完成；P2-14–P2-17 已完成；取代 `IMPLEMENTATION_PLAN.md` v0.3 |
+| 状态 | P0–P1 完成；P2-14–P2-18 已完成；取代 `IMPLEMENTATION_PLAN.md` v0.3 |
 | 依据 | `docs/DESIGN.md` v0.1、`docs/WORKFLOW_ENGINE_AUDIT.md` |
 | 总步骤 | 72 个审查单元 |
 | 用法 | 一次只做一个 `Px-yy`；产出、验收、diff 都确认后再进入下一步 |
@@ -203,9 +203,10 @@ internal/control ──► internal/workflow (PostgreSQL run_tasks, SKIP LOCKED)
   - 验收：双 worker 不重复 Claim；旧 token 写入返回 `ErrLeaseLost`；Nack 保留 attempt。
   - 完成记录：Claim/Extend/Ack/Nack/Fail + fencing；8 并发 Claim 无重复；真实 PG 测试通过；报告：`docs/reports/P2-17.md`。
 
-- [ ] **P2-18 取消与竞态**
+- [x] **P2-18 取消与竞态**
   - `CancelRun`：PENDING→CANCELLED；LEASED→CANCELLED 且 token++；handler 可感知。
   - 验收：Cancel 与 Ack 竞态只产生一个终态；取消后不再被 Claim。
+  - 完成记录：`CancelRun/CancelTask`、token fencing、Ack/Cancel 竞态测试；真实 PG 通过；报告：`docs/reports/P2-18.md`。
 
 - [ ] **P2-19 延迟、退避、回收、DLQ**
   - `available_at`、指数退避、租约回收器、MaxAttempts、毒任务进 DEAD、启动恢复。

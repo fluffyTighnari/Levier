@@ -216,6 +216,11 @@ func (s *PostgresStore) leaseFailure(ctx context.Context, lease Lease) error {
 		return fmt.Errorf("inspect task lease: %w", err)
 	}
 	if Status(status).Terminal() {
+		// A successful terminal write keeps the fencing token unchanged;
+		// a cancel/reap increments it, so the old owner lost its lease.
+		if lease.Token != uint64(token) {
+			return fmt.Errorf("%w: task=%s owner=%q token=%d", ErrLeaseLost, status, owner, token)
+		}
 		return fmt.Errorf("%w: task is %s", ErrTaskTerminal, status)
 	}
 	return fmt.Errorf("%w: task=%s owner=%q token=%d", ErrLeaseLost, status, owner, token)
