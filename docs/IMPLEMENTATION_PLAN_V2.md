@@ -4,7 +4,7 @@
 |---|---|
 | 计划版本 | V2.0 |
 | 日期 | 2026-11-03 |
-| 状态 | P0-01–P0-07、P1-08–P1-13 已完成；G1 待确认；取代 `IMPLEMENTATION_PLAN.md` v0.3 |
+| 状态 | P0–P1 完成；G1 按 continue 视为通过；P2-14 已完成；取代 `IMPLEMENTATION_PLAN.md` v0.3 |
 | 依据 | `docs/DESIGN.md` v0.1、`docs/WORKFLOW_ENGINE_AUDIT.md` |
 | 总步骤 | 72 个审查单元 |
 | 用法 | 一次只做一个 `Px-yy`；产出、验收、diff 都确认后再进入下一步 |
@@ -182,10 +182,11 @@ internal/control ──► internal/workflow (PostgreSQL run_tasks, SKIP LOCKED)
 
 ### P2 新 Workflow Engine（P2-14–P2-22）
 
-- [ ] **P2-14 Task 模型与 API**
+- [x] **P2-14 Task 模型与 API**
   - `internal/workflow`：Task/TaskType/Status/Lease/Outcome、Store 接口、Handler、错误分类。
   - TaskType：`RUN_DISPATCH`、`RUN_RETRY`、`RUN_TIMEOUT`、`RUN_RECONCILE`。
   - 验收：状态图与 API 评审通过；错误可区分 retryable/permanent/lease lost。
+  - 完成记录：Task/Store/Handler/DeadLetter 契约、`RetryAfter`/`Permanent` 分类、Task 校验测试；报告：`docs/reports/P2-14.md`。
 
 - [ ] **P2-15 PostgreSQL schema**
   - `run_tasks`、部分唯一索引、就绪/租约索引、`schema_migrations`；字段：`available_at/attempt/max_attempts/lease_owner/lease_token/lease_expires_at/last_error/payload JSONB`。
