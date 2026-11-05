@@ -4,7 +4,7 @@
 |---|---|
 | 计划版本 | V2.0 |
 | 日期 | 2026-11-03 |
-| 状态 | P0–P1 完成；P2-14–P2-19 已完成；取代 `IMPLEMENTATION_PLAN.md` v0.3 |
+| 状态 | P0–P1 完成；P2-14–P2-20 已完成；取代 `IMPLEMENTATION_PLAN.md` v0.3 |
 | 依据 | `docs/DESIGN.md` v0.1、`docs/WORKFLOW_ENGINE_AUDIT.md` |
 | 总步骤 | 72 个审查单元 |
 | 用法 | 一次只做一个 `Px-yy`；产出、验收、diff 都确认后再进入下一步 |
@@ -213,9 +213,10 @@ internal/control ──► internal/workflow (PostgreSQL run_tasks, SKIP LOCKED)
   - 验收：假时钟延迟 ≤1s；过期租约回收；超限进 DLQ；启动扫描不重复。
   - 完成记录：`Backoff`、`ReapExpired`、`ListDead`、`Stats`；真实 PG 回收/DLQ 测试；启动 Run 扫描留 P6-51；报告：`docs/reports/P2-19.md`。
 
-- [ ] **P2-20 Worker 与 Pool**
+- [x] **P2-20 Worker 与 Pool**
   - 轮询循环、Handler、heartbeat、panic 恢复、优雅停机、并发上限。
   - 验收：慢 handler 自动续租；Stop 不丢已 Claim 任务；panic 不杀进程。
+  - 完成记录：`Worker`/`Pool`、heartbeat、panic 恢复、DeadLetter、优雅停机；真实 PG 并发/慢 handler 测试；报告：`docs/reports/P2-20.md`。
 
 - [ ] **P2-21 故障与属性测试**
   - 双 worker、进程崩溃、重复投递、时钟跳变、PostgreSQL 死锁/连接池耗尽、取消/完成竞态。
