@@ -4,7 +4,7 @@
 |---|---|
 | 计划版本 | V2.0 |
 | 日期 | 2026-11-03 |
-| 状态 | P0–P1 完成；P2-14–P2-16 已完成；取代 `IMPLEMENTATION_PLAN.md` v0.3 |
+| 状态 | P0–P1 完成；P2-14–P2-17 已完成；取代 `IMPLEMENTATION_PLAN.md` v0.3 |
 | 依据 | `docs/DESIGN.md` v0.1、`docs/WORKFLOW_ENGINE_AUDIT.md` |
 | 总步骤 | 72 个审查单元 |
 | 用法 | 一次只做一个 `Px-yy`；产出、验收、diff 都确认后再进入下一步 |
@@ -198,9 +198,10 @@ internal/control ──► internal/workflow (PostgreSQL run_tasks, SKIP LOCKED)
   - 验收：重复入队返回既有任务；并发入队无重复；事务回滚不留任务。
   - 完成记录：`PostgresStore.Enqueue/EnqueueTx`、partial unique conflict、normalize、真实 PG 幂等/事务测试；报告：`docs/reports/P2-16.md`。
 
-- [ ] **P2-17 Claim/Lease/Ack/Nack**
+- [x] **P2-17 Claim/Lease/Ack/Nack**
   - `FOR UPDATE SKIP LOCKED` + `UPDATE ... RETURNING` 选任务；`lease_token++`；`Extend/Ack/Nack` 校验 owner+token。
   - 验收：双 worker 不重复 Claim；旧 token 写入返回 `ErrLeaseLost`；Nack 保留 attempt。
+  - 完成记录：Claim/Extend/Ack/Nack/Fail + fencing；8 并发 Claim 无重复；真实 PG 测试通过；报告：`docs/reports/P2-17.md`。
 
 - [ ] **P2-18 取消与竞态**
   - `CancelRun`：PENDING→CANCELLED；LEASED→CANCELLED 且 token++；handler 可感知。
