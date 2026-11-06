@@ -1,8 +1,8 @@
 """Middleware — LLM provider interface.
 
-Defines the minimal provider contract used by the ReAct strategy. Concrete
-providers, streaming deltas, and provider-specific error mapping arrive in
-P3-28.
+Defines the provider contract consumed by the ReAct strategy, including
+per-run model configuration, streaming deltas, and normalized provider
+errors.
 
 Copyright 2026 The Middleware Authors.
 """
@@ -59,6 +59,28 @@ class Message:
         return cls(role=message.role, content=message.content, name=message.name)
 
 
+@dataclass(frozen=True)
+class ModelConfig:
+    """Per-run model and credential settings."""
+
+    provider: str = ""
+    model: str = ""
+    api_key: str = ""
+    base_url: str = ""
+    params: dict[str, str] = field(default_factory=dict)
+
+    @classmethod
+    def from_profile(cls, profile: runtime_pb2.ModelProfile) -> "ModelConfig":
+        """Convert a TaskAssign model profile."""
+        return cls(
+            provider=profile.provider,
+            model=profile.model,
+            api_key=profile.api_key,
+            base_url=profile.base_url,
+            params=dict(profile.params),
+        )
+
+
 @dataclass
 class LLMResponse:
     """One provider completion."""
@@ -74,6 +96,30 @@ class LLMResponse:
         return bool(self.content or self.tool_calls)
 
 
+class LLMError(RuntimeError):
+    """Normalized provider error."""
+
+    def __init__(
+        self,
+        code: str,
+        message: str,
+        *,
+        retryable: bool,
+        status: int = 0,
+    ) -> None:
+        super().__init__(message)
+        self.code = code
+        self.retryable = retryable
+        self.status = status
+
+
+class DeltaCallback(Protocol):
+    """Receives streamed text increments."""
+
+    async def __call__(self, text: str) -> None:
+        """Handle one text delta."""
+
+
 class LLMProvider(Protocol):
     """Provider contract consumed by the ReAct strategy."""
 
@@ -81,5 +127,8 @@ class LLMProvider(Protocol):
         self,
         messages: Sequence[Message],
         tools: Sequence[ToolSpec],
+        model: ModelConfig,
+        *,
+        on_delta: DeltaCallback | None = None,
     ) -> LLMResponse:
-        """Return one completion for the current conversation."""
+        """Return one completion, optionally streaming text deltas."""

@@ -20,9 +20,10 @@ from middleware_harness import __version__
 from middleware_harness.channel import ChannelClient, ChannelConfig
 from middleware_harness.config import ConfigError, Settings, load_settings
 from middleware_harness.health import HealthState
+from middleware_harness.llm import AnthropicProvider
 from middleware_harness.logging import configure_logging, get_logger
 from middleware_harness.runtime import ManagerConfig, RunManager
-from middleware_harness.strategies import EchoStrategy
+from middleware_harness.strategies import EchoStrategy, ReactStrategy, StrategyRouter
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -65,6 +66,9 @@ def main(argv: Sequence[str] | None = None) -> int:
         asyncio.run(_run(settings, health))
     except KeyboardInterrupt:
         pass
+    except ConfigError as exc:
+        print(f"harness config error: {exc}", file=sys.stderr)
+        return 1
     logger.info("harness stopped")
     return 0
 
@@ -84,13 +88,14 @@ async def _run(settings: Settings, health: HealthState) -> None:
             tls=settings.middleware.tls,
         ),
     )
+    runner, supported = _build_runner(settings)
     manager = RunManager(
         sender=client,
         config=ManagerConfig(
             max_concurrent_runs=settings.daemon.max_concurrent_runs,
-            supported_strategies=("echo",),
+            supported_strategies=supported,
         ),
-        runner=EchoStrategy(),
+        runner=runner,
     )
     client.on_message = manager.handle
     client.running_runs = manager.running_runs
@@ -104,6 +109,21 @@ async def _run(settings: Settings, health: HealthState) -> None:
         await manager.close()
         await client.stop()
         health.set_ready(False)
+
+
+def _build_runner(settings: Settings) -> tuple[StrategyRouter, tuple[str, ...]]:
+    """Build the strategy registry from daemon configuration."""
+    available = {
+        "echo": EchoStrategy(),
+        "react": ReactStrategy(AnthropicProvider()),
+    }
+    unknown = [name for name in settings.daemon.strategies if name not in available]
+    if unknown:
+        raise ConfigError(f"unsupported strategies: {', '.join(unknown)}")
+    names = tuple(dict.fromkeys(settings.daemon.strategies))
+    if not names:
+        raise ConfigError("daemon.strategies must not be empty")
+    return StrategyRouter({name: available[name] for name in names}), names
 
 
 async def _wait_for_shutdown() -> None:

@@ -33,6 +33,7 @@
 | P3-25 | `docs/reports/P3-25.md` | 已提交 |
 | P3-26 | `docs/reports/P3-26.md` | 已提交 |
 | P3-27 | `docs/reports/P3-27.md` | 已提交 |
+| P3-28 | `docs/reports/P3-28.md` | 已提交 |
 
 模板：`docs/reports/TEMPLATE.md`。
 

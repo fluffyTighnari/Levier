@@ -1,7 +1,7 @@
 """Middleware — ReAct strategy.
 
 Runs a bounded model/tool loop inside the daemon. The provider and tool
-executor are injected so P3-28 and P3-29 can supply real implementations.
+executor are injected so tests and P3-29 can supply implementations.
 
 Copyright 2026 The Middleware Authors.
 """
@@ -18,7 +18,16 @@ from google.protobuf import struct_pb2
 from middleware.runtime.v1 import runtime_pb2
 
 from middleware_harness.ids import new_ulid
-from middleware_harness.llm.base import LLMProvider, LLMResponse, Message, ToolCall, ToolSpec
+from middleware_harness.llm.base import (
+    DeltaCallback,
+    LLMError,
+    LLMProvider,
+    LLMResponse,
+    Message,
+    ModelConfig,
+    ToolCall,
+    ToolSpec,
+)
 from middleware_harness.runtime.run import RunContext
 from middleware_harness.tools.base import ToolExecutor, ToolResult, UnavailableToolExecutor
 
@@ -57,16 +66,40 @@ class ReactStrategy:
 
         messages = [Message.from_proto(message) for message in ctx.assign.input]
         tools = [ToolSpec.from_manifest(manifest) for manifest in ctx.assign.tools]
+        model = ModelConfig.from_profile(ctx.assign.model)
 
         for step in range(1, max_steps + 1):
             if ctx.cancelled:
                 return "cancelled"
+
+            message_id = new_ulid()
+            streamed = False
+
+            async def on_delta(text: str) -> None:
+                nonlocal streamed
+                streamed = True
+                await ctx.emit(
+                    runtime_pb2.EventType.MESSAGE_DELTA,
+                    {"message_id": message_id, "delta": text, "step": step},
+                    ephemeral=True,
+                )
+
             try:
-                response = await _complete(self.provider, messages, tools, step_timeout_ms)
+                response = await _complete(
+                    self.provider,
+                    messages,
+                    tools,
+                    model,
+                    step_timeout_ms,
+                    on_delta,
+                )
             except asyncio.CancelledError:
                 raise
             except asyncio.TimeoutError:
                 await self._emit_error(ctx, "STEP_TIMEOUT", f"step {step} timed out")
+                return "failed"
+            except LLMError as exc:
+                await self._emit_error(ctx, exc.code, str(exc), retryable=exc.retryable)
                 return "failed"
             except Exception as exc:
                 await self._emit_error(ctx, "LLM_ERROR", str(exc))
@@ -74,8 +107,8 @@ class ReactStrategy:
 
             if response.usage:
                 await ctx.emit(runtime_pb2.EventType.USAGE, dict(response.usage))
-            if response.has_output:
-                await self._emit_message(ctx, response, step)
+            if response.has_output or streamed:
+                await self._emit_message(ctx, response, step, message_id)
 
             messages.append(_assistant_message(response))
 
@@ -136,9 +169,15 @@ class ReactStrategy:
         await ctx.emit(runtime_pb2.EventType.TOOL_CALL_END, data)
         return result
 
-    async def _emit_message(self, ctx: RunContext, response: LLMResponse, step: int) -> None:
+    async def _emit_message(
+        self,
+        ctx: RunContext,
+        response: LLMResponse,
+        step: int,
+        message_id: str,
+    ) -> None:
         data: dict[str, Any] = {
-            "message_id": new_ulid(),
+            "message_id": message_id,
             "role": "assistant",
             "content": response.content,
             "step": step,
@@ -156,10 +195,17 @@ class ReactStrategy:
             ]
         await ctx.emit(runtime_pb2.EventType.MESSAGE_COMPLETED, data)
 
-    async def _emit_error(self, ctx: RunContext, code: str, message: str) -> None:
+    async def _emit_error(
+        self,
+        ctx: RunContext,
+        code: str,
+        message: str,
+        *,
+        retryable: bool = False,
+    ) -> None:
         await ctx.emit(
             runtime_pb2.EventType.ERROR,
-            {"code": code, "message": message},
+            {"code": code, "message": message, "retryable": retryable},
         )
 
 
@@ -167,9 +213,11 @@ async def _complete(
     provider: LLMProvider,
     messages: Sequence[Message],
     tools: Sequence[ToolSpec],
+    model: ModelConfig,
     timeout_ms: int,
+    on_delta: DeltaCallback,
 ) -> LLMResponse:
-    call = provider.complete(messages, tools)
+    call = provider.complete(messages, tools, model, on_delta=on_delta)
     if timeout_ms <= 0:
         return await call
     return await asyncio.wait_for(call, timeout_ms / 1000)

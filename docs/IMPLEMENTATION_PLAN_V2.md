@@ -4,7 +4,7 @@
 |---|---|
 | 计划版本 | V2.0 |
 | 日期 | 2026-11-03 |
-| 状态 | P0–P2 完成；G2 通过；P3-23–P3-27 Harness 基础完成；取代 `IMPLEMENTATION_PLAN.md` v0.3 |
+| 状态 | P0–P2 完成；G2 通过；P3-23–P3-28 Harness 基础完成；取代 `IMPLEMENTATION_PLAN.md` v0.3 |
 | 依据 | `docs/DESIGN.md` v0.1、`docs/WORKFLOW_ENGINE_AUDIT.md` |
 | 总步骤 | 72 个审查单元 |
 | 用法 | 一次只做一个 `Px-yy`；产出、验收、diff 都确认后再进入下一步 |
@@ -257,9 +257,10 @@ internal/control ──► internal/workflow (PostgreSQL run_tasks, SKIP LOCKED)
   - 验收：假 LLM 下多步 ReAct 单测；取消可中断。
   - 完成记录：`ReactStrategy`、`LLMProvider`、`ToolExecutor`；max_steps/step 超时/工具回灌/错误事件；7 个 ReAct 测试、32 个 Python 测试通过；报告：`docs/reports/P3-27.md`。
 
-- [ ] **P3-28 LLM 适配**
+- [x] **P3-28 LLM 适配**
   - provider 抽象、首个 provider（Anthropic/OpenAI 二选一）、流式 delta、USAGE、错误映射。
   - 验收：假流式响应产生正确事件；retryable 分类正确。
+  - 完成记录：`AnthropicProvider`、`UrllibTransport`、`ModelConfig`、`LLMError`、`StrategyRouter`；SSE/JSON 解析、delta/USAGE/错误映射；8 个 provider 测试、42 个 Python 测试通过；报告：`docs/reports/P3-28.md`。
 
 - [ ] **P3-29 工具与 MCP Provider**
   - `ToolCallRequest/Result` 客户端、工具清单、超时；`McpToolProvider`（v1 in-process）；`mcp_bindings`/`allowed_tools`/命名空间；stdio/SSE/streamable_http。

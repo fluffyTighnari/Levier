@@ -12,7 +12,7 @@ import unittest
 from middleware.runtime.v1 import runtime_pb2
 
 from middleware_harness.channel.envelope import new_envelope, response_envelope
-from middleware_harness.llm.base import LLMResponse, Message, ToolCall, ToolSpec
+from middleware_harness.llm.base import LLMResponse, Message, ModelConfig, ToolCall, ToolSpec
 from middleware_harness.runtime import ManagerConfig, RunManager
 from middleware_harness.strategies import ReactStrategy
 from middleware_harness.tools.base import ToolResult
@@ -34,8 +34,9 @@ class ScriptedProvider:
         self.responses = list(responses)
         self.calls: list[tuple[list[Message], list[ToolSpec]]] = []
 
-    async def complete(self, messages, tools) -> LLMResponse:
+    async def complete(self, messages, tools, model, *, on_delta=None) -> LLMResponse:
         self.calls.append((list(messages), list(tools)))
+        self.model = model
         response = self.responses.pop(0)
         if isinstance(response, Exception):
             raise response
@@ -46,16 +47,28 @@ class BlockingProvider:
     def __init__(self) -> None:
         self.started = asyncio.Event()
 
-    async def complete(self, messages, tools) -> LLMResponse:
+    async def complete(self, messages, tools, model, *, on_delta=None) -> LLMResponse:
         self.started.set()
         await asyncio.Event().wait()
         return LLMResponse(content="never")
 
 
 class SlowProvider:
-    async def complete(self, messages, tools) -> LLMResponse:
+    async def complete(self, messages, tools, model, *, on_delta=None) -> LLMResponse:
         await asyncio.sleep(1)
         return LLMResponse(content="late")
+
+
+class StreamingProvider:
+    async def complete(self, messages, tools, model, *, on_delta=None) -> LLMResponse:
+        for text in ("Hel", "lo"):
+            if on_delta is not None:
+                await on_delta(text)
+        return LLMResponse(
+            content="Hello",
+            usage={"input_tokens": 4, "output_tokens": 2},
+            model=model.model,
+        )
 
 
 class FakeTools:
@@ -81,6 +94,11 @@ def assign_envelope(
             runtime_pb2.ChatMessage(role="system", content="be brief"),
             runtime_pb2.ChatMessage(role="user", content="hello"),
         ],
+        model=runtime_pb2.ModelProfile(
+            provider="anthropic",
+            model="claude-test",
+            api_key="test-key",
+        ),
         tools=[
             runtime_pb2.ToolManifest(
                 name=name,
@@ -264,6 +282,45 @@ class ReactStrategyTest(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(error.event.data.fields["code"].string_value, "LLM_ERROR")
         self.assertEqual(error.event.data.fields["message"].string_value, "boom")
         self.assertEqual(events[-1].event.data.fields["status"].string_value, "failed")
+
+    async def test_react_streams_delta_events(self) -> None:
+        sender = await self.start(StreamingProvider())
+
+        events = self.events(sender)
+        deltas = [
+            event for event in events
+            if event.event.type == runtime_pb2.EventType.MESSAGE_DELTA
+        ]
+        self.assertEqual(
+            [event.event.data.fields["delta"].string_value for event in deltas],
+            ["Hel", "lo"],
+        )
+        self.assertTrue(all(event.event.ephemeral for event in deltas))
+        self.assertTrue(all(event.event.seq == 0 for event in deltas))
+        self.assertTrue(all(event.event.source == "daemon" for event in deltas))
+        message = next(
+            event for event in events
+            if event.event.type == runtime_pb2.EventType.MESSAGE_COMPLETED
+        )
+        self.assertEqual(message.event.data.fields["content"].string_value, "Hello")
+        self.assertEqual(
+            message.event.data.fields["message_id"].string_value,
+            deltas[0].event.data.fields["message_id"].string_value,
+        )
+        persistent = [event.event.seq for event in events if not event.event.ephemeral]
+        self.assertEqual(persistent, [1, 2, 3, 4])
+
+    async def test_react_passes_model_config(self) -> None:
+        provider = ScriptedProvider([LLMResponse(content="ok")])
+        await self.start(provider)
+        self.assertEqual(
+            provider.model,
+            ModelConfig(
+                provider="anthropic",
+                model="claude-test",
+                api_key="test-key",
+            ),
+        )
 
     async def test_react_cancel_interrupts(self) -> None:
         provider = BlockingProvider()
