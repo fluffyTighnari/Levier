@@ -31,6 +31,12 @@
 
 模板：`docs/reports/TEMPLATE.md`。
 
+## 专题报告
+
+| 报告 | 内容 |
+|---|---|
+| `docs/reports/WORKFLOW_TRACE.md` | Workflow 层全量逐函数追踪、输入输出、竞态与测试说明 |
+
 **规则：**
 
 1. 报告在代码/文档提交的同一轮完成，不能事后补写。
