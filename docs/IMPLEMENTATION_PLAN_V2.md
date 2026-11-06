@@ -277,9 +277,10 @@ internal/control ──► internal/workflow (PostgreSQL run_tasks, SKIP LOCKED)
 
 ### P4 M1 垂直切片（P4-31–P4-36）
 
-- [ ] **P4-31 最小 RunStore**
+- [x] **P4-31 最小 RunStore**
   - 同库 PostgreSQL：`apps/daemons/runs/run_events` 最小列 + 索引；CreateRun/GetRun/AppendEvent。
   - 验收：重复事件不重复插入；状态可查；重启后仍在。
+  - 完成记录：迁移 0003、`internal/runstore` Store、幂等 CreateRun/AppendEvent、事件水位投影；PostgreSQL 集成测试通过；报告：`docs/reports/P4-31.md`。
 
 - [ ] **P4-32 最小 DaemonHub**
   - 连接注册、Hello 鉴权、Send、断线清理、心跳。

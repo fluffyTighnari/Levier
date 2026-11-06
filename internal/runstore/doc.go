@@ -1,4 +1,4 @@
-// Package runstore persists runs, events, sessions, and checkpoints.
+// Package runstore persists apps, runs, and append-only run events.
 //
 // Middleware — internal/runstore
 // Copyright 2026 The Middleware Authors.
