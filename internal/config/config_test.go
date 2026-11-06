@@ -47,6 +47,20 @@ func TestParseDefaultsAndOverrides(t *testing.T) {
 	}
 }
 
+func TestParseDaemonTokens(t *testing.T) {
+	cfg, err := Parse([]byte(strings.Replace(validYAML,
+		"grpc:\n  addr: \":19090\"",
+		"grpc:\n  addr: \":19090\"\n  daemon_tokens:\n    daemon-1: \"token-1\"",
+		1,
+	)))
+	if err != nil {
+		t.Fatalf("Parse() error = %v", err)
+	}
+	if cfg.GRPC.DaemonTokens["daemon-1"] != "token-1" {
+		t.Fatalf("DaemonTokens = %+v", cfg.GRPC.DaemonTokens)
+	}
+}
+
 func TestParseRejectsUnknownField(t *testing.T) {
 	_, err := Parse([]byte(validYAML + "\nunknown: true\n"))
 	if err == nil || !strings.Contains(err.Error(), "field unknown not found") {

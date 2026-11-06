@@ -37,10 +37,11 @@ type HTTPConfig struct {
 
 // GRPCConfig configures the daemon-facing gRPC server.
 type GRPCConfig struct {
-	Addr            string   `yaml:"addr"`
-	MaxRecvMsgBytes int      `yaml:"max_recv_msg_bytes"`
-	MaxSendMsgBytes int      `yaml:"max_send_msg_bytes"`
-	ShutdownTimeout Duration `yaml:"shutdown_timeout"`
+	Addr            string            `yaml:"addr"`
+	MaxRecvMsgBytes int               `yaml:"max_recv_msg_bytes"`
+	MaxSendMsgBytes int               `yaml:"max_send_msg_bytes"`
+	ShutdownTimeout Duration          `yaml:"shutdown_timeout"`
+	DaemonTokens    map[string]string `yaml:"daemon_tokens"`
 }
 
 // DatabaseConfig configures the PostgreSQL connection pool.

@@ -282,9 +282,10 @@ internal/control ──► internal/workflow (PostgreSQL run_tasks, SKIP LOCKED)
   - 验收：重复事件不重复插入；状态可查；重启后仍在。
   - 完成记录：迁移 0003、`internal/runstore` Store、幂等 CreateRun/AppendEvent、事件水位投影；PostgreSQL 集成测试通过；报告：`docs/reports/P4-31.md`。
 
-- [ ] **P4-32 最小 DaemonHub**
+- [x] **P4-32 最小 DaemonHub**
   - 连接注册、Hello 鉴权、Send、断线清理、心跳。
   - 验收：未 Hello 3s 断开；重复 daemon_id 策略明确。
+  - 完成记录：`internal/connection.DaemonHub`、grpc `daemon_tokens`、出站缓冲/心跳/清理、`PickHealthy`；`cmd/middleware` 已启动 gRPC；6 个连接测试通过；报告：`docs/reports/P4-32.md`。
 
 - [ ] **P4-33 最小 Control**
   - 领取 `RUN_DISPATCH`、按 runtime 选 daemon、TaskAssign、5s TaskAck、状态迁移。

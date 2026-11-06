@@ -38,6 +38,7 @@
 | P3-30 | `docs/reports/P3-30.md` | 已提交 |
 | G3 | `docs/reports/G3.md` | 已提交 |
 | P4-31 | `docs/reports/P4-31.md` | 已提交 |
+| P4-32 | `docs/reports/P4-32.md` | 已提交 |
 
 模板：`docs/reports/TEMPLATE.md`。
 

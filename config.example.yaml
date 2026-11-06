@@ -12,6 +12,8 @@ grpc:
   max_recv_msg_bytes: 16777216
   max_send_msg_bytes: 16777216
   shutdown_timeout: "10s"
+  daemon_tokens:
+    daemon-local-1: "change-me"
 
 database:
   url: "postgres://middleware:middleware@localhost:5432/middleware?sslmode=disable"

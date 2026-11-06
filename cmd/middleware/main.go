@@ -2,22 +2,27 @@
 //
 // Middleware — cmd/middleware
 //
-// The current entry point loads and validates configuration, initializes
-// structured logging, waits for a termination signal, and exits cleanly.
-// Business packages are wired in later steps of the V2 plan.
+// Loads configuration and starts the daemon-facing gRPC RuntimeService.
+// Scheduling, HTTP, and control-plane wiring land in later V2 steps.
 //
 // Copyright 2026 The Middleware Authors.
 package main
 
 import (
 	"context"
+	"crypto/subtle"
 	"flag"
 	"log/slog"
+	"net"
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
+
+	"google.golang.org/grpc"
 
 	"github.com/fluffyTighnari/middleware/internal/config"
+	"github.com/fluffyTighnari/middleware/internal/connection"
 	"github.com/fluffyTighnari/middleware/internal/db"
 	"github.com/fluffyTighnari/middleware/internal/observe"
 )
@@ -62,7 +67,55 @@ func main() {
 	}
 	defer pool.Close()
 
-	logger.Info("middleware starting", "config", *configPath, "database", "connected")
+	hub := connection.New(connection.Config{
+		Authenticate: daemonAuthenticator(cfg.GRPC.DaemonTokens),
+	})
+	defer hub.Close()
+
+	listener, err := net.Listen("tcp", cfg.GRPC.Addr)
+	if err != nil {
+		logger.Error("listen grpc failed", "addr", cfg.GRPC.Addr, "err", err)
+		os.Exit(1)
+	}
+	grpcServer := grpc.NewServer(
+		grpc.MaxRecvMsgSize(cfg.GRPC.MaxRecvMsgBytes),
+		grpc.MaxSendMsgSize(cfg.GRPC.MaxSendMsgBytes),
+	)
+	hub.Register(grpcServer)
+	go func() {
+		if err := grpcServer.Serve(listener); err != nil {
+			logger.Error("grpc server stopped", "err", err)
+		}
+	}()
+
+	logger.Info("middleware starting",
+		"config", *configPath,
+		"database", "connected",
+		"grpc_addr", cfg.GRPC.Addr,
+	)
 	<-ctx.Done()
+
+	hub.Close()
+	stopped := make(chan struct{})
+	go func() {
+		grpcServer.GracefulStop()
+		close(stopped)
+	}()
+	select {
+	case <-stopped:
+	case <-time.After(cfg.GRPC.ShutdownTimeout.Std()):
+		grpcServer.Stop()
+	}
+	_ = listener.Close()
 	logger.Info("middleware stopped")
+}
+
+func daemonAuthenticator(tokens map[string]string) connection.Authenticator {
+	return func(daemonID, token string) bool {
+		expected, ok := tokens[daemonID]
+		if !ok {
+			return false
+		}
+		return subtle.ConstantTimeCompare([]byte(expected), []byte(token)) == 1
+	}
 }
