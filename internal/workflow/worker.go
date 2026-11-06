@@ -45,6 +45,7 @@ type Worker struct {
 	store      Store
 	handler    Handler
 	cfg        WorkerConfig
+	metrics    *Metrics
 	deadLetter DeadLetterHandler
 	onError    func(error)
 
@@ -87,9 +88,22 @@ func NewWorker(store Store, handler Handler, cfg WorkerConfig) *Worker {
 		store:   store,
 		handler: handler,
 		cfg:     cfg,
+		metrics: NewMetrics(),
 		stopCh:  make(chan struct{}),
 		doneCh:  make(chan struct{}),
 	}
+}
+
+// SetMetrics replaces the worker metrics registry.
+func (w *Worker) SetMetrics(metrics *Metrics) {
+	if metrics != nil {
+		w.metrics = metrics
+	}
+}
+
+// Metrics returns the worker metrics registry.
+func (w *Worker) Metrics() *Metrics {
+	return w.metrics
 }
 
 // SetDeadLetterHandler installs the DEAD-task callback.
@@ -152,6 +166,7 @@ func (w *Worker) Stop() {
 // ProcessOne claims and handles at most one task. It returns false when no
 // task is ready.
 func (w *Worker) ProcessOne(ctx context.Context) (bool, error) {
+	claimStarted := time.Now()
 	task, lease, err := w.store.Claim(ctx, w.cfg.Owner, w.cfg.LeaseTTL)
 	if errors.Is(err, ErrNoTask) {
 		return false, nil
@@ -159,6 +174,7 @@ func (w *Worker) ProcessOne(ctx context.Context) (bool, error) {
 	if err != nil {
 		return false, err
 	}
+	w.metrics.recordClaim(time.Since(claimStarted))
 
 	handlerCtx, cancel := context.WithCancel(ctx)
 	defer cancel()
@@ -167,7 +183,9 @@ func (w *Worker) ProcessOne(ctx context.Context) (bool, error) {
 	heartbeatDone := make(chan struct{})
 	go w.heartbeat(handlerCtx, lease, cancel, stopHeartbeat, heartbeatDone)
 
+	handlerStarted := time.Now()
 	handlerErr := w.safeHandle(handlerCtx, task, lease)
+	w.metrics.recordHandler(time.Since(handlerStarted))
 	close(stopHeartbeat)
 	<-heartbeatDone
 
@@ -206,6 +224,7 @@ func (w *Worker) run(ctx context.Context) {
 func (w *Worker) safeHandle(ctx context.Context, task Task, lease Lease) (err error) {
 	defer func() {
 		if recovered := recover(); recovered != nil {
+			w.metrics.Panics.Add(1)
 			err = fmt.Errorf("handler panic: %v", recovered)
 		}
 	}()
@@ -214,9 +233,16 @@ func (w *Worker) safeHandle(ctx context.Context, task Task, lease Lease) (err er
 
 func (w *Worker) finish(ctx context.Context, task Task, lease Lease, handlerErr error) error {
 	if handlerErr == nil {
-		if err := w.store.Ack(ctx, task, lease); err != nil && !isTerminalLeaseError(err) {
-			return err
+		if err := w.store.Ack(ctx, task, lease); err != nil {
+			if !isTerminalLeaseError(err) {
+				return err
+			}
+			if errors.Is(err, ErrLeaseLost) {
+				w.metrics.LeaseLost.Add(1)
+			}
+			return nil
 		}
+		w.metrics.Acks.Add(1)
 		return nil
 	}
 
@@ -225,8 +251,13 @@ func (w *Worker) finish(ctx context.Context, task Task, lease Lease, handlerErr 
 			if !isTerminalLeaseError(err) {
 				return err
 			}
+			if errors.Is(err, ErrLeaseLost) {
+				w.metrics.LeaseLost.Add(1)
+			}
 			return nil
 		}
+		w.metrics.Fails.Add(1)
+		w.metrics.Dead.Add(1)
 		w.notifyDead(ctx, task, handlerErr)
 		return nil
 	}
@@ -240,9 +271,14 @@ func (w *Worker) finish(ctx context.Context, task Task, lease Lease, handlerErr 
 		if !isTerminalLeaseError(err) {
 			return err
 		}
+		if errors.Is(err, ErrLeaseLost) {
+			w.metrics.LeaseLost.Add(1)
+		}
 		return nil
 	}
+	w.metrics.Nacks.Add(1)
 	if task.Attempt >= task.MaxAttempts {
+		w.metrics.Dead.Add(1)
 		w.notifyDead(ctx, task, handlerErr)
 	}
 	return nil
@@ -265,6 +301,9 @@ func (w *Worker) heartbeat(ctx context.Context, lease Lease, cancel context.Canc
 			return
 		case <-ticker.C:
 			if _, err := w.store.Extend(ctx, lease, w.cfg.LeaseTTL); err != nil {
+				if errors.Is(err, ErrLeaseLost) {
+					w.metrics.LeaseLost.Add(1)
+				}
 				cancel()
 				return
 			}

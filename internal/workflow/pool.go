@@ -6,13 +6,16 @@
 package workflow
 
 import (
+	"context"
 	"fmt"
 	"sync"
 )
 
 // Pool manages a fixed set of workers.
 type Pool struct {
+	store      Store
 	workers    []*Worker
+	metrics    *Metrics
 	deadLetter DeadLetterHandler
 	onError    func(error)
 
@@ -28,18 +31,41 @@ func NewPool(store Store, handler Handler, workerCount int, cfg WorkerConfig) *P
 	if cfg.Owner == "" {
 		cfg.Owner = "pool"
 	}
+	metrics := NewMetrics()
 	workers := make([]*Worker, workerCount)
 	for i := range workers {
 		workerCfg := cfg
 		workerCfg.Owner = fmt.Sprintf("%s-worker-%d", cfg.Owner, i+1)
 		workers[i] = NewWorker(store, handler, workerCfg)
+		workers[i].SetMetrics(metrics)
 	}
-	return &Pool{workers: workers}
+	return &Pool{store: store, workers: workers, metrics: metrics}
 }
 
 // Size returns the number of workers.
 func (p *Pool) Size() int {
 	return len(p.workers)
+}
+
+// SetMetrics replaces the pool metrics registry.
+func (p *Pool) SetMetrics(metrics *Metrics) {
+	if metrics == nil {
+		return
+	}
+	p.metrics = metrics
+	for _, worker := range p.workers {
+		worker.SetMetrics(metrics)
+	}
+}
+
+// Metrics returns the pool metrics registry.
+func (p *Pool) Metrics() *Metrics {
+	return p.metrics
+}
+
+// Stats returns the current queue stats from the store.
+func (p *Pool) Stats(ctx context.Context) (Stats, error) {
+	return p.store.Stats(ctx)
 }
 
 // SetDeadLetterHandler installs the DEAD callback on every worker.

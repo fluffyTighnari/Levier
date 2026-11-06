@@ -170,7 +170,7 @@ func TestClaimValidation(t *testing.T) {
 	}
 }
 
-func insertRunForTest(t *testing.T, pool *pgxpool.Pool, runID string) {
+func insertRunForTest(t testing.TB, pool *pgxpool.Pool, runID string) {
 	t.Helper()
 	_, err := pool.Exec(context.Background(), "INSERT INTO runs (run_id, app_id, status) VALUES ($1, 'app-1', 'queued')", runID)
 	if err != nil {

@@ -19,7 +19,7 @@ import (
 	"github.com/fluffyTighnari/middleware/internal/id"
 )
 
-func testStorePool(t *testing.T) *pgxpool.Pool {
+func testStorePool(t testing.TB) *pgxpool.Pool {
 	t.Helper()
 	if os.Getenv("MIDDLEWARE_TEST_POSTGRES") != "1" {
 		t.Skip("MIDDLEWARE_TEST_POSTGRES is not set to 1")

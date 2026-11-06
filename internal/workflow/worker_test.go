@@ -45,6 +45,10 @@ func TestWorkerProcessOneAck(t *testing.T) {
 	if Status(status) != StatusDone {
 		t.Fatalf("status = %s, want DONE", status)
 	}
+	snapshot := worker.Metrics().Snapshot()
+	if snapshot.Claims != 1 || snapshot.Handled != 1 || snapshot.Acks != 1 {
+		t.Fatalf("worker metrics = %+v", snapshot)
+	}
 }
 
 func TestWorkerProcessOneNoTask(t *testing.T) {
@@ -262,6 +266,13 @@ func TestPoolRunsConcurrently(t *testing.T) {
 	}
 	if done != n {
 		t.Fatalf("done = %d, want %d", done, n)
+	}
+	stats, err := workerPool.Stats(ctx)
+	if err != nil {
+		t.Fatalf("Pool.Stats() error = %v", err)
+	}
+	if stats.Total != n || stats.ByStatus[StatusDone] != n {
+		t.Fatalf("Pool.Stats() = %+v", stats)
 	}
 }
 
