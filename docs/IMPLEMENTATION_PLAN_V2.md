@@ -4,7 +4,7 @@
 |---|---|
 | 计划版本 | V2.0 |
 | 日期 | 2026-11-03 |
-| 状态 | P0–P2 完成；G2 通过；P3-23–P3-26 Harness 基础完成；取代 `IMPLEMENTATION_PLAN.md` v0.3 |
+| 状态 | P0–P2 完成；G2 通过；P3-23–P3-27 Harness 基础完成；取代 `IMPLEMENTATION_PLAN.md` v0.3 |
 | 依据 | `docs/DESIGN.md` v0.1、`docs/WORKFLOW_ENGINE_AUDIT.md` |
 | 总步骤 | 72 个审查单元 |
 | 用法 | 一次只做一个 `Px-yy`；产出、验收、diff 都确认后再进入下一步 |
@@ -252,9 +252,10 @@ internal/control ──► internal/workflow (PostgreSQL run_tasks, SKIP LOCKED)
   - 验收：echo 策略跑通；错误映射正确。
   - 完成记录：`Strategy` 协议、`EchoStrategy`、默认 runner 切换；echo 事件序列 seq 1/2/3；25 个 Python 测试通过；报告：`docs/reports/P3-26.md`。
 
-- [ ] **P3-27 ReAct 循环**
+- [x] **P3-27 ReAct 循环**
   - `react`：消息构建、step 循环、max_steps、工具调用插入、终态事件。
   - 验收：假 LLM 下多步 ReAct 单测；取消可中断。
+  - 完成记录：`ReactStrategy`、`LLMProvider`、`ToolExecutor`；max_steps/step 超时/工具回灌/错误事件；7 个 ReAct 测试、32 个 Python 测试通过；报告：`docs/reports/P3-27.md`。
 
 - [ ] **P3-28 LLM 适配**
   - provider 抽象、首个 provider（Anthropic/OpenAI 二选一）、流式 delta、USAGE、错误映射。
