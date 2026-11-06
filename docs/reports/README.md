@@ -27,7 +27,8 @@
 | P2-19 | `docs/reports/P2-19.md` | 已提交 |
 | P2-20 | `docs/reports/P2-20.md` | 已提交 |
 | P2-21 | `docs/reports/P2-21.md` | 已提交 |
-| P2-22 | `docs/reports/P2-22.md` | 已提交（G2 吞吐待复测） |
+| P2-22 | `docs/reports/P2-22.md` | 已提交（G2 通过） |
+| P3-23 | `docs/reports/P3-23.md` | 已提交 |
 
 模板：`docs/reports/TEMPLATE.md`。
 

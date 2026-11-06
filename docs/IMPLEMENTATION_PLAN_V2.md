@@ -4,7 +4,7 @@
 |---|---|
 | 计划版本 | V2.0 |
 | 日期 | 2026-11-03 |
-| 状态 | P0–P2 完成；G2 通过（本机 Enqueue 约 9.1k/s、ClaimAck 约 1.82k/s）；取代 `IMPLEMENTATION_PLAN.md` v0.3 |
+| 状态 | P0–P2 完成；G2 通过；P3-23 Harness 骨架完成；取代 `IMPLEMENTATION_PLAN.md` v0.3 |
 | 依据 | `docs/DESIGN.md` v0.1、`docs/WORKFLOW_ENGINE_AUDIT.md` |
 | 总步骤 | 72 个审查单元 |
 | 用法 | 一次只做一个 `Px-yy`；产出、验收、diff 都确认后再进入下一步 |
@@ -232,9 +232,10 @@ internal/control ──► internal/workflow (PostgreSQL run_tasks, SKIP LOCKED)
 
 ### P3 新 Harness（P3-23–P3-30）
 
-- [ ] **P3-23 Harness 骨架**
+- [x] **P3-23 Harness 骨架**
   - `harness/`：pyproject、配置、结构化日志、健康检查、入口。
   - 验收：可安装/启动；配置非法即失败。
+  - 完成记录：YAML 配置/env/SecretToken、JSON 日志、HealthState、`--check`/SIGTERM；11 个 Python 测试通过；报告：`docs/reports/P3-23.md`。
 
 - [ ] **P3-24 Channel 客户端**
   - gRPC 连接、Hello 鉴权、心跳、重连退避、收发循环、correlation 管理。
