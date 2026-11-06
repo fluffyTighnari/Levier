@@ -1,0 +1,21 @@
+# Middleware — docker build context exclusions.
+# Copyright 2026 The Middleware Authors.
+
+.git
+.idea
+.venv
+.venv*
+**/.venv
+**/__pycache__
+**/*.pyc
+**/*.egg-info
+bin
+dist
+workflow_engine
+logs
+data
+*.db
+*.sqlite
+*.sqlite3
+.env
+.env.*

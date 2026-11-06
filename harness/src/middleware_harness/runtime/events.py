@@ -69,3 +69,27 @@ class EventWriter:
             lease_epoch=self.lease_epoch,
         )
         await self.sender.send(envelope)
+
+    async def emit_checkpoint(
+        self,
+        session_id: str,
+        state: bytes,
+        *,
+        watermark: int | None = None,
+    ) -> int:
+        """Send one checkpoint covering the current persistent event seq."""
+        covered = self.seq if watermark is None else watermark
+        checkpoint = runtime_pb2.Checkpoint(
+            session_id=session_id,
+            event_seq_watermark=covered,
+            state=state,
+        )
+        envelope = new_envelope(
+            checkpoint,
+            "checkpoint",
+            run_id=self.run_id,
+            attempt=self.attempt,
+            lease_epoch=self.lease_epoch,
+        )
+        await self.sender.send(envelope)
+        return covered

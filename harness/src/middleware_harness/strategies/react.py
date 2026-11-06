@@ -28,6 +28,7 @@ from middleware_harness.llm.base import (
     ToolCall,
     ToolSpec,
 )
+from middleware_harness.runtime.checkpoint import capture
 from middleware_harness.runtime.run import RunContext
 from middleware_harness.tools.base import ToolProvider, ToolResult, as_tool_provider
 
@@ -65,12 +66,31 @@ class ReactStrategy:
         tool_timeout_ms = ctx.assign.timeouts.tool_timeout_ms or self.default_tool_timeout_ms
 
         messages = [Message.from_proto(message) for message in ctx.assign.input]
+        start_step = 1
+        current_step = 0
+        completed_step = 0
+        if ctx.resume is not None:
+            if ctx.resume.strategy != self.name:
+                await self._emit_error(
+                    ctx,
+                    "CHECKPOINT_STRATEGY_MISMATCH",
+                    f"checkpoint strategy {ctx.resume.strategy!r} does not match {self.name!r}",
+                )
+                return "failed"
+            if ctx.resume.messages:
+                messages = list(ctx.resume.messages)
+            start_step = max(1, ctx.resume.step + 1)
+            current_step = ctx.resume.step
+            completed_step = ctx.resume.step
+
         tools = [ToolSpec.from_manifest(manifest) for manifest in ctx.assign.tools]
         model = ModelConfig.from_profile(ctx.assign.model)
 
+        saved_on_cancel = False
         try:
             tools.extend(await self.tools.open(ctx))
-            for step in range(1, max_steps + 1):
+            for step in range(start_step, max_steps + 1):
+                current_step = step
                 if ctx.cancelled:
                     return "cancelled"
 
@@ -124,17 +144,52 @@ class ReactStrategy:
                     result = await self._run_tool(ctx, call, tool_timeout_ms)
                     messages.append(_tool_message(call, result))
 
+                completed_step = current_step
+                if ctx.checkpoint_due():
+                    await self._save_checkpoint(ctx, messages, current_step)
+
             await self._emit_error(
                 ctx,
                 "MAX_STEPS_EXCEEDED",
                 f"react loop exceeded {max_steps} steps",
             )
             return "failed"
+        except asyncio.CancelledError:
+            if ctx.assign.session_id and completed_step > 0:
+                try:
+                    await self._save_checkpoint(ctx, messages, completed_step)
+                    saved_on_cancel = True
+                except Exception:
+                    pass
+            raise
         finally:
+            if not saved_on_cancel and ctx.assign.session_id and current_step > 0:
+                try:
+                    await self._save_checkpoint(ctx, messages, current_step)
+                except Exception:
+                    pass
             try:
                 await self.tools.close(ctx)
             except Exception:
                 pass
+
+    async def _save_checkpoint(
+        self,
+        ctx: RunContext,
+        messages: Sequence[Message],
+        step: int,
+    ) -> None:
+        if not ctx.assign.session_id:
+            return
+        await ctx.save_checkpoint(capture(
+            session_id=ctx.assign.session_id,
+            run_id=ctx.run_id,
+            attempt=ctx.attempt,
+            strategy=self.name,
+            step=step,
+            messages=list(messages),
+            last_event_seq=ctx.events.seq,
+        ))
 
     async def __call__(self, ctx: RunContext) -> str:
         """Allow the strategy to be used as a RunManager runner."""

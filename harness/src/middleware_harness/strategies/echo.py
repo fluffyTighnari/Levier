@@ -11,6 +11,8 @@ from __future__ import annotations
 from middleware.runtime.v1 import runtime_pb2
 
 from middleware_harness.ids import new_ulid
+from middleware_harness.llm.base import Message
+from middleware_harness.runtime.checkpoint import capture
 from middleware_harness.runtime.run import RunContext
 
 
@@ -22,6 +24,8 @@ class EchoStrategy:
     async def run(self, ctx: RunContext) -> str:
         if ctx.cancelled:
             return "cancelled"
+        if ctx.resume is not None:
+            return "completed"
 
         content = "echo"
         if ctx.assign.input:
@@ -35,6 +39,18 @@ class EchoStrategy:
                 "content": content,
             },
         )
+        if ctx.assign.session_id:
+            messages = [Message.from_proto(message) for message in ctx.assign.input]
+            messages.append(Message(role="assistant", content=content))
+            await ctx.save_checkpoint(capture(
+                session_id=ctx.assign.session_id,
+                run_id=ctx.run_id,
+                attempt=ctx.attempt,
+                strategy=self.name,
+                step=1,
+                messages=messages,
+                last_event_seq=ctx.events.seq,
+            ))
         return "completed"
 
     async def __call__(self, ctx: RunContext) -> str:

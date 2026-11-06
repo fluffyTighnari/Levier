@@ -12,6 +12,7 @@ from typing import Any, Protocol, Sequence
 
 from middleware.runtime.v1 import runtime_pb2
 
+from middleware_harness.runtime.checkpoint import CheckpointError, CheckpointState
 from middleware_harness.runtime.events import EventSender, EventWriter
 from middleware_harness.runtime.run import RunContext
 from middleware_harness.strategies.echo import EchoStrategy
@@ -37,6 +38,8 @@ class ManagerConfig:
 
     max_concurrent_runs: int = 4
     supported_strategies: Sequence[str] = ("react", "echo")
+    checkpoint_every_events: int = 20
+    checkpoint_every_seconds: float = 60.0
 
 
 class RunManager:
@@ -89,6 +92,11 @@ class RunManager:
             await self._send_ack(envelope, accepted=False, reason="capacity")
             return
 
+        resume, reason = self._resume_state(assign)
+        if reason:
+            await self._send_ack(envelope, accepted=False, reason=reason)
+            return
+
         await self._send_ack(envelope, accepted=True)
         events = EventWriter(self.sender, assign.run_id, envelope.attempt, envelope.lease_epoch)
         ctx = RunContext(
@@ -96,6 +104,9 @@ class RunManager:
             attempt=envelope.attempt,
             lease_epoch=envelope.lease_epoch,
             events=events,
+            resume=resume,
+            checkpoint_every_events=self.config.checkpoint_every_events,
+            checkpoint_every_seconds=self.config.checkpoint_every_seconds,
         )
         self.active[assign.run_id] = ctx
         await ctx.emit(
@@ -103,6 +114,25 @@ class RunManager:
             {"status": "running"},
         )
         ctx.task = asyncio.create_task(self._execute(ctx), name=f"run-{assign.run_id}")
+
+    def _resume_state(self, assign: runtime_pb2.TaskAssign) -> tuple[CheckpointState | None, str]:
+        """Decode resume_from and verify it belongs to this assignment."""
+        data = assign.resume_from.state
+        if not data:
+            return None, ""
+        try:
+            state = CheckpointState.decode(data)
+        except CheckpointError as exc:
+            return None, f"invalid checkpoint: {exc}"
+        if state.run_id != assign.run_id:
+            return None, "checkpoint run_id mismatch"
+        if not assign.session_id:
+            return None, "resume_from requires session_id"
+        if state.session_id != assign.session_id:
+            return None, "checkpoint session_id mismatch"
+        if state.strategy != assign.strategy:
+            return None, "checkpoint strategy mismatch"
+        return state, ""
 
     def _validation_error(
         self,
