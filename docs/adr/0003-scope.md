@@ -5,7 +5,7 @@
 | 状态 | 提议（P0-04） |
 | 日期 | 2026-11-03 |
 | 决策者 | middleware 项目 |
-| 关联 | `docs/DESIGN.md` v0.2、`docs/adr/0001-workflow-engine.md`、`docs/adr/0002-harness.md`、`docs/IMPLEMENTATION_PLAN_V2.md` |
+| 关联 | `docs/DESIGN.md` v0.2、`docs/adr/0001-workflow-engine.md`、`docs/adr/0002-harness.md`、`docs/adr/0004-mcp-ownership.md`、`docs/IMPLEMENTATION_PLAN_V2.md` |
 
 ---
 
@@ -58,7 +58,7 @@ v1 **不追求**多实例 HA、跨 region、多语言 Harness、中央 MCP Hub�
 | Control | 调度、TaskAssign、Ack、重试、取消、超时、对账、重启恢复 |
 | Connection | DaemonHub gRPC、AppHub WS、背压、心跳、local tool 挂起表 |
 | Gateway | local/global 工具路由、`invocation_id` 幂等、`builtin:http`/`builtin:webhook` |
-| Harness | Channel、echo/react、OpenAI-compatible LLM、工具闭环、MCP Provider、checkpoint |
+| Harness | Channel、echo/react、LLM、工具闭环、MCP 客户端、checkpoint |
 | 可观测 | 结构化日志、metrics、trace、事件回放 |
 | 安全 | App API key、ws_token、daemon token、工具 ACL、密钥脱敏 |
 
@@ -123,7 +123,7 @@ POST /runs
 - AppHub WS fanout、`subscribe(last_attempt,last_seq)`、`caught_up`。
 - local tool 闭环、`APP_UNREACHABLE` 快速失败。
 - global `builtin:http` / `builtin:webhook`。
-- `McpToolProvider` + `mcp_bindings` + `allowed_tools` + 命名空间。
+- 独立 `mcp_runtime` + `mcp_bindings` + `allowed_tools` + 命名空间。
 - 完整 Register：App/Tool/MCP、ACL、`AssembleTaskMaterials`。
 - HTTP events 补拉、OpenAPI、ws_token。
 
@@ -136,7 +136,7 @@ POST /runs
   → LLM 发起 global http tool
   → MW 进程内执行
   → LLM 发起 mcp__server__tool
-  → Harness McpToolProvider 执行
+  → Harness 经 McpRuntimeClient 调 mcp_runtime 执行
   → MESSAGE_COMPLETED / USAGE / completed
 ```
 
@@ -250,7 +250,7 @@ longterm run
 4. Harness 进程内持有 LLM/MCP 凭据；v1 接受该风险。
 5. App 通过 API key 认证；首次注册用 `/admin/apps` bootstrap。
 6. Harness 只实现 Python；其他语言不在 v1。
-7. MCP 连接由 Harness 内部 `McpToolProvider` 建立；总控不持有连接。
+7. MCP 连接由独立 `mcp_runtime` 建立；总控不持有连接。
 8. 旧 `workflow_engine` 已归档，不进入新构建。
 
 ---
@@ -275,7 +275,7 @@ longterm run
 | D14 模块 | 根模块 + `internal/workflow` + `harness/` | 本 ADR |
 | D15 工具链 | Go 1.26 / Python 3.12 / PG 16+ | 本 ADR |
 | D16 旧能力 | 归档 DAG/Effect/Saga | `docs/ARCHIVE.md` |
-| D17 MCP | Harness `McpToolProvider`，总控只存目录/ACL | ADR-0002 |
+| D17 MCP | 独立 `mcp_runtime`，总控只存目录/ACL | ADR-0002、ADR-0004 |
 
 ---
 

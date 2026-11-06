@@ -2,10 +2,10 @@
 
 | 项目 | 内容 |
 |---|---|
-| 状态 | 提议（P0-03） |
+| 状态 | 提议（P0-03；MCP 章节按 ADR-0004 修订） |
 | 日期 | 2026-11-03 |
 | 决策者 | middleware 项目 |
-| 关联 | `docs/DESIGN.md`、`docs/IMPLEMENTATION_PLAN_V2.md`、`docs/adr/0001-workflow-engine.md` |
+| 关联 | `docs/DESIGN.md`、`docs/IMPLEMENTATION_PLAN_V2.md`、`docs/adr/0001-workflow-engine.md`、`docs/adr/0004-mcp-ownership.md` |
 
 ---
 
@@ -35,7 +35,7 @@ middleware 不执行 Agent 的推理循环。它把 Run 分配给一个 Python H
 - LLM 先实现 **OpenAI-compatible Chat Completions**，Anthropic 作为第二适配器；内部统一归一化事件。
 - 工具调用：
   - 非 MCP 工具 → 发 `ToolCallRequest` 给 middleware，等待 `ToolCallResult`；
-  - MCP 工具 → 由 Harness 内部的 `McpToolProvider` 直连 MCP server，不经过 middleware；总控只下发 `mcp_bindings`。
+  - MCP 工具 → 由独立 `mcp_runtime` 进程连接 MCP server；Harness 通过 `McpRuntimeClient` 调用；总控只下发 `mcp_bindings`。
 - v1 工具调用串行执行；不并行调用多个工具。
 - Longterm 使用 checkpoint/resume；normal/sandbox 不使用 checkpoint。
 - 不支持多 Agent、插件市场、GUI、向量记忆、复杂 Plan&Execute、跨 runtime 子 Agent。
@@ -64,7 +64,7 @@ middleware 不执行 Agent 的推理循环。它把 Run 分配给一个 Python H
 - 不做向量数据库/长期记忆。
 - 不做 `plan_execute`（接口保留，v1 不实现）。
 - 不做模型路由/多 provider 自动 fallback；provider 由 TaskAssign 指定。
-- 不做 MCP server 生命周期托管；只连接 TaskAssign 下发的 `mcp_bindings`。
+- 不做 MCP server 生命周期托管；MCP 连接由独立 `mcp_runtime` 负责。
 - 不做 middleware 的调度/重试决策；只上报错误与可重试性。
 - 不保证 exactly-once；工具调用依赖 invocation_id 幂等。
 
@@ -91,7 +91,7 @@ middleware 不执行 Agent 的推理循环。它把 Run 分配给一个 Python H
 │    ├─ Strategy (react/echo)                  │
 │    ├─ LLMClient                              │
 │    ├─ ToolBridge (middleware)                │
-│    ├─ McpManager                             │
+│    ├─ McpRuntimeClient                       │
 │    ├─ EventWriter (seq/attempt/epoch)        │
 │    └─ CheckpointStore                        │
 └──────────────────────────────────────────────┘
@@ -102,7 +102,7 @@ middleware 不执行 Agent 的推理循环。它把 Run 分配给一个 Python H
 - 一个进程一个 asyncio event loop。
 - `RunManager` 用 `asyncio.Semaphore(max_concurrent_runs)` 限制并发；默认 4。
 - 每个 Run 一个 `asyncio.Task`；Run 之间不共享可变业务状态。
-- 每个 Run 独立 MCP 连接/工具清单；避免跨 Run 污染。
+- 每个 Run 独立 MCP session/工具清单；Runtime 负责隔离，避免跨 Run 污染。
 - 工具调用在 Run 内串行；v1 不做并行 tool calls。
 
 ### 4.2 包结构
@@ -135,7 +135,7 @@ harness/
 │   ├── tools/
 │   │   ├── bridge.py          # ToolCallRequest/Result
 │   │   ├── manifest.py        # 工具清单合并/命名空间
-│   │   └── mcp_provider.py    # McpToolProvider + tool discovery
+│   │   └── mcp_client.py      # McpRuntimeClient + tool discovery
 │   └── checkpoint.py
 └── tests/
     ├── unit/
@@ -197,7 +197,7 @@ harness/
 1. 停止接受新的 TaskAssign（可选：先发送一个 draining 心跳/状态）。
 2. 对每个 Run 触发 Cancel 或 checkpoint（longterm）。
 3. 发送终态事件后关闭 gRPC。
-4. 关闭 MCP 连接、HTTP 客户端、DB/文件句柄。
+4. 关闭 MCP session、HTTP 客户端、DB/文件句柄。
 
 > v1 没有单独的 draining 消息；可通过部署侧先停止分配（Control 标记 daemon draining）再发 SIGTERM。
 
@@ -383,7 +383,9 @@ class LLMClient(Protocol):
 - 默认每个工具最多重试 2 次；仍失败则把错误作为 tool result 回给模型。
 - v1 不并行调用多个工具。
 
-### 9.2 MCP 归属：声明在总控，连接在执行层
+### 9.2 MCP 归属：声明在总控，连接在独立 McpRuntime
+
+> 本节按 ADR-0004 修订：MCP Runtime 是独立进程，不是 Harness 内部类，也不在 `harness/` 目录内。
 
 MCP 的职责必须拆成两半：
 
@@ -391,11 +393,11 @@ MCP 的职责必须拆成两半：
 |---|---|---|
 | MCP 目录、App 引用、ACL、凭据引用 | Register / Control | 总控只存“声明”和“授权结果” |
 | `mcp_bindings` 组装 | Control | 下发连接描述，不下发活连接 |
-| MCP 连接、stdio 进程、`tools/list`、`tools/call` | Harness | 由 `McpToolProvider` 负责 |
-| 工具循环 / 结果回填 LLM | Harness | MCP 是 Harness 工具子系统的一种 Provider |
+| MCP 连接、stdio 进程、`tools/list`、`tools/call` | `mcp_runtime` 独立进程 | 与 Harness 同层的执行侧组件 |
+| 工具循环 / 结果回填 LLM | Harness | 通过 `McpRuntimeClient` 调用 Runtime |
 | 中央审计/限流/共享连接 | 未来独立 MCP Hub（v2） | 不在 middleware 主进程内 |
 
-**结论：MCP 连接归属第三层 Harness，不新增第四层。** App 只在总控声明 `mcp_refs`；middleware 只维护目录/ACL/bindings；Harness 的 `McpToolProvider` 负责连接。
+**结论：MCP 连接归属执行层的独立 `mcp_runtime` 进程，不进入 Middleware，也不是 Harness 进程内的一个类。** App 只在总控声明 `mcp_refs`；middleware 只维护目录/ACL/bindings；Harness 通过本地 RPC 调用 Runtime。
 
 `TaskAssign.mcp_bindings` 的字段（proto 只传描述，不传连接对象）：
 
@@ -408,54 +410,49 @@ allowed_tools[]      # 空 = 全部；非空 = 白名单
 namespace            # 默认 mcp__<server_name>__
 ```
 
-### 9.3 McpToolProvider 接口
+### 9.3 McpRuntime 契约
 
-```python
-class McpToolProvider(Protocol):
-    async def open(self, binding: McpBinding) -> McpSession: ...
-    async def list_tools(self, session: McpSession) -> list[ToolSpec]: ...
-    async def call_tool(
-        self,
-        session: McpSession,
-        name: str,
-        arguments: dict,
-        timeout_ms: int,
-    ) -> ToolResult: ...
-    async def close(self, session: McpSession) -> None: ...
+`mcp_runtime` 通过本地 JSON-RPC（v1 默认 Unix domain socket）暴露：
+
+```text
+mcp.health() -> {status, version}
+mcp.open(binding) -> {session_id, tools[]}
+mcp.call(session_id, tool_name, arguments_json, timeout_ms) -> {ok, result_json, error}
+mcp.close(session_id) -> {}
 ```
 
-- v1 提供 `InProcessMcpProvider`，直接使用 Python MCP SDK。
-- 每个 Run 独立 `McpSession`；不跨 Run 复用，避免状态/凭据串扰。
-- 每个 Run 启动时连接 `mcp_bindings`，调用 `tools/list`，按 `allowed_tools` 过滤。
+- Harness 侧只实现 `McpRuntimeClient`，不导入 MCP SDK，不直接启动 MCP server。
+- v1 提供独立 Python `mcp_runtime` 进程；单客户端调试可用 stdio，生产默认 Unix socket。
+- 同一 host/pod 的多个 Harness 可以共享一个 Runtime。
+- 每个 Run 使用独立 session；不跨 Run 复用，避免状态/凭据串扰。
+- 每个 session 打开时连接 `mcp_bindings`，调用 `tools/list`，按 `allowed_tools` 过滤。
 - **命名空间**：`mcp__<server_name>__<tool_name>`；server_name 做字符清洗。
-- LLM 调用 `mcp__...` 时，Harness 通过 `McpToolProvider` 执行，不经过 middleware。
+- LLM 调用 `mcp__...` 时，Harness 通过 `McpRuntimeClient` 执行，不经过 middleware。
 - MCP 工具也发 `TOOL_CALL_BEGIN/END` 事件，`source=mcp`，便于观测。
 - MCP 连接失败/初始化失败：
   - 记录 `ERROR`；
   - 不阻塞整个 Run 的其他工具；
   - 对应工具不出现在工具清单中，或调用时返回工具错误。
-- MCP 凭据只在内存中使用；不写日志、不进 checkpoint。
+- MCP 凭据只在 Runtime 内存中使用；不写日志、不进 checkpoint。
 
 ### 9.4 多 Harness 与未来 MCP Hub
 
-- **v1（Python）**：`InProcessMcpProvider`，零额外进程。
-- **第二种语言的 Harness**：使用 Harness 层内的本地 `mcp-sidecar`，实现同一 `McpToolProvider` 契约：
-  - `Open/ListTools/CallTool/Close`；
-  - 与 Harness 同 pod、同生命周期；
-  - 不是新的平台层，只是 Harness 层的部署细节。
+- **v1（Python）**：独立 `mcp_runtime` 进程，Harness 只持客户端，零 MCP SDK 依赖。
+- **第二种语言的 Harness**：连接同一 `mcp_runtime` 契约，不重复实现 MCP。
+- **部署**：Runtime 与 Harness 同 pod/同 host，共享 Unix socket；不是新的控制面层。
 - **未来中央 MCP Hub**：只有满足以下条件才引入：
-  - 多语言 Harness 不愿各自维护 sidecar；
+  - 多语言 Harness 不愿各自维护 Runtime；
   - MCP server 昂贵，需要跨 App/Run 共享连接；
   - 需要总控级审计、限流、配额、工具白名单强制执行；
   - sandbox 不允许直接访问 MCP，必须走受控出口。
-  - 引入时是独立数据面服务（显式 ADR），Harness 侧只增加 `RemoteMcpProvider`，三层结构不变。
+  - 引入时是独立数据面服务（显式 ADR），Harness 侧只替换 `McpRuntimeClient` 的远程实现，三层结构不变。
 
 **明确拒绝：** 把 MCP 连接放进 middleware 的 Tool Gateway。Tool Gateway 只路由 local/global 工具；把 MCP 塞进去会让 middleware 变成数据面，并破坏 sandbox/stdio 的放置模型。
 
 ### 9.5 工具清单合并
 
 1. TaskAssign.tools（MW 已合并 local/global）。
-2. MCP 工具（`McpToolProvider` 发现，命名空间化）。
+2. MCP 工具（`mcp_runtime` 发现，命名空间化）。
 3. 若 MCP 工具名与 MW 工具名冲突，MCP 前缀保证不冲突。
 4. 工具 schema 转成 provider 原生格式；MCP 的 inputSchema 直接使用。
 
@@ -638,7 +635,7 @@ logging:
 - [ ] echo 策略完成一次 Run，事件 seq 连续（仅持久化事件）。
 - [ ] react 策略在假 LLM 下完成多步工具调用。
 - [ ] local/global 工具经 middleware 闭环；重试复用 invocation_id。
-- [ ] MCP 连接只在 Harness 层的 `McpToolProvider` 内建立；middleware 不持有连接。
+- [ ] MCP 连接只在独立 `mcp_runtime` 内建立；middleware 不持有连接。
 - [ ] MCP 工具命名空间正确，stdio/HTTP 至少各通一条。
 - [ ] `mcp_bindings` 的 `allowed_tools` 生效，未授权工具不可见/不可调用。
 - [ ] Cancel 能中断 LLM 流和工具等待，并发出 cancelled 终态。
@@ -672,7 +669,7 @@ logging:
 |---|---|
 | §3.1 `McpServerDef` | 增加 `allowed_tools_json`；连接仍不存 |
 | §4.1 `TaskAssign.mcp_bindings` | 改为 `repeated McpBinding mcp_bindings`，含 `allowed_tools`、`namespace` |
-| §5.3 MCP 行 | 改为“Harness 内部 `McpToolProvider` 直连，配置来自 `mcp_bindings`” |
+| §5.3 MCP 行 | 改为“独立 `mcp_runtime` 直连，配置来自 `mcp_bindings`” |
 | §9.2 `AssembleTaskMaterials` | 返回 `mcp_bindings[]`，含 ACL 过滤后的 `allowed_tools` |
 | §13.2 凭据 | 明确只到 Harness；总控不持有连接 |
 | §17 Q2 | 明确为“独立数据面服务”，不是 middleware 主进程 |

@@ -7,7 +7,8 @@ runs executed by a stripped-down Python harness.
 
 - Go 1.26 single binary for Register / Control / Gateway / Connection.
 - PostgreSQL 16+ for RunStore and the RunTaskQueue.
-- Python 3.12 harness for ReAct, LLM adapters, tools, MCP, and checkpoints.
+- Python harness for ReAct, LLM adapters, tools, and checkpoints.
+- Independent `mcp_runtime` process for MCP connections; the harness only holds a client.
 - Design baseline: `docs/DESIGN.md` v0.2.
 - Execution plan: `docs/IMPLEMENTATION_PLAN_V2.md`.
 

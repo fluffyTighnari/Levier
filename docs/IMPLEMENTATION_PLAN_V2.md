@@ -44,7 +44,7 @@
 | D14 | 模块 | 根模块 `middleware`；新 Workflow 在 `internal/workflow`；Harness 在 `harness/` |
 | D15 | 工具链 | Go 1.26 + Python 3.12；CI 锁定版本 |
 | D16 | 旧能力 | DAG/Effect/Saga 打 tag 归档，主分支不保留 |
-| D17 | MCP 归属 | 总控只存目录/ACL/`mcp_bindings`；连接由 Harness 内部 `McpToolProvider` 负责；多语言用 Harness 本地 sidecar；中央 MCP Hub 留 v2 |
+| D17 | MCP 归属 | 总控只存目录/ACL/`mcp_bindings`；连接由独立 `mcp_runtime` 进程负责；Harness 只持客户端；中央 MCP Hub 留 v2 |
 
 ---
 
@@ -67,7 +67,7 @@ internal/control ──► internal/workflow (PostgreSQL run_tasks, SKIP LOCKED)
  │           │
  │           ▼
  │      Python Harness (harness/)
- │        ├─ McpToolProvider ──► MCP servers（直连，连接只在 Harness 层）
+ │        └─ McpRuntimeClient ──► mcp_runtime（独立进程）──► MCP servers
  │        └─ ToolBridge ──► internal/gateway（local/global）
  │
  └──► internal/gateway (local/global 工具路由 + 幂等)
@@ -120,7 +120,7 @@ internal/control ──► internal/workflow (PostgreSQL run_tasks, SKIP LOCKED)
 - [x] **P0-03 精简 Harness ADR**
   - `docs/adr/0002-harness.md`：保留/裁剪能力矩阵、Python 版本、依赖、目录、与 MW 契约。
   - 验收：`react` + `echo` 为 v1 唯一策略；`plan_execute`/多 Agent/插件/GUI 明确不做。
-  - 完成记录：ADR 已产出；确定 asyncio + grpc.aio、OpenAI-compatible 优先、持久事件才消耗 seq、checkpoint 复合 watermark；MCP 归属 Harness 内部 `McpToolProvider`，总控只存目录/ACL/`mcp_bindings`。
+  - 完成记录：ADR 已产出；确定 asyncio + grpc.aio、OpenAI-compatible 优先、持久事件才消耗 seq、checkpoint 复合 watermark；MCP 归属独立 `mcp_runtime` 进程，总控只存目录/ACL/`mcp_bindings`。
 
 - [x] **P0-04 锁定 v1 范围与验收**
   - `docs/adr/0003-scope.md`：M1–M4 范围、M5 后置、生产 PostgreSQL、单 MW 实例、非目标。
@@ -262,10 +262,10 @@ internal/control ──► internal/workflow (PostgreSQL run_tasks, SKIP LOCKED)
   - 验收：假流式响应产生正确事件；retryable 分类正确。
   - 完成记录：`AnthropicProvider`、`UrllibTransport`、`ModelConfig`、`LLMError`、`StrategyRouter`；SSE/JSON 解析、delta/USAGE/错误映射；8 个 provider 测试、42 个 Python 测试通过；报告：`docs/reports/P3-28.md`。
 
-- [ ] **P3-29 工具与 MCP Provider**
-  - `ToolCallRequest/Result` 客户端、工具清单、超时；`McpToolProvider`（v1 in-process）；`mcp_bindings`/`allowed_tools`/命名空间；stdio/SSE/streamable_http。
-  - 连接只在 Harness 层建立；middleware 不持有 MCP 连接。
-  - 验收：local/global 工具闭环；MCP 连接/失败/白名单测试；未来 sidecar 契约不变。
+- [ ] **P3-29 工具与 MCP Runtime**
+  - `ToolCallRequest/Result` 客户端、工具清单、超时；独立 `mcp_runtime/` 进程 + 本地 JSON-RPC；Harness 只实现 `McpRuntimeClient`；`mcp_bindings`/`allowed_tools`/命名空间；stdio/SSE/streamable_http。
+  - 连接只在 `mcp_runtime` 建立；middleware 和 Harness 都不持有 MCP 连接。
+  - 验收：local/global 工具闭环；Runtime 启动/健康/退出；MCP 连接/失败/白名单/session 隔离测试；未来 remote client 契约不变。
 
 - [ ] **P3-30 Checkpoint、打包与 Gate**
   - checkpoint 编码/上报/`resume_from`、容器基础镜像、集成测试。
@@ -514,7 +514,7 @@ internal/control ──► internal/workflow (PostgreSQL run_tasks, SKIP LOCKED)
 | 旧引擎归档不彻底 | 误 import/两套模型 | P0-01 从构建路径移除；CI 禁止旧包 |
 | 租约/取消竞态 | 双执行/状态回退 | token fencing + 单终态测试；P2-18/P2-21 |
 | Harness 裁剪过度/不足 | M2 返工 | P0-03 能力矩阵冻结；P3 分层验收 |
-| 多 Harness 重复实现 MCP | 行为不一致、维护成本上升 | 共享 `McpToolProvider` 契约；v1 in-process；第二语言用 Harness 本地 sidecar，不新增层 |
+| 多 Harness 重复实现 MCP | 行为不一致、维护成本上升 | 共享独立 `mcp_runtime` 进程和 JSON-RPC 契约；Harness 只持客户端 |
 | 密钥下发 | daemon 内存泄露 | 网络可信 + 脱敏 + 审计；v2 短期凭据代理 |
 | sandbox egress | 数据外渗 | 记录残余风险；P10-70 白名单验证 |
 | 范围蔓延 | 里程碑失控 | 严格按 P0-04 非目标；新需求进 backlog |

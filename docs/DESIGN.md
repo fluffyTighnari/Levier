@@ -6,7 +6,7 @@
 | 状态 | 评审中 |
 | 日期 | 2026-11-03 |
 
-> v0.2 变更：Workflow 改为 PostgreSQL RunTaskQueue；Harness 改为精简重写；MCP 连接归属 Harness 的 `McpToolProvider`；事件主键改为 `(run_id, attempt, seq)`；Run 增加 `lease_epoch`；Session 使用复合 watermark。详见 `docs/adr/0001-workflow-engine.md`、`docs/adr/0002-harness.md`、`docs/IMPLEMENTATION_PLAN_V2.md`。
+> v0.2 变更：Workflow 改为 PostgreSQL RunTaskQueue；Harness 改为精简重写；MCP 连接归属独立 `mcp_runtime` 进程；事件主键改为 `(run_id, attempt, seq)`；Run 增加 `lease_epoch`；Session 使用复合 watermark。详见 `docs/adr/0001-workflow-engine.md`、`docs/adr/0002-harness.md`、`docs/adr/0004-mcp-ownership.md`、`docs/IMPLEMENTATION_PLAN_V2.md`。
 
 ---
 
@@ -15,7 +15,7 @@
 | # | 决策 | 结论 | 权衡 |
 |---|---|---|---|
 | ADR-1 | Daemon 通道 | gRPC 双向 stream，单连接承载全部消息，回调拓扑消除 | 放弃无连接简单性，换统一契约与背压能力 |
-| ADR-2 | MCP 托管 | Harness 内部 `McpToolProvider` 持有连接；Register 只存目录/ACL，Control 下发 `mcp_bindings` | 放弃 MCP 统一审计/共享，换 middleware 零进程管理负担；多语言 Harness 用本地 sidecar |
+| ADR-2 | MCP 托管 | 独立 `mcp_runtime` 进程持有连接；Harness 通过 `McpRuntimeClient` 调用；Register 只存目录/ACL，Control 下发 `mcp_bindings` | 放弃 MCP 统一审计/共享，换 middleware 零连接负担；多语言 Harness 共享 Runtime 契约 |
 | ADR-3 | 首期形态 | 单进程模块化单体，四平面 = Go package；排期以 V2 为准 | 放弃分布式弹性，换全链路先跑通 |
 | ADR-4 | 编排边界 | Workflow 只编排 Run 级生命周期；ReAct/Plan&Execute 内层循环归 Daemon | 避免内层循环过 MQ 导致延迟与状态爆炸 |
 | ADR-5 | 消息主干 | PostgreSQL RunTaskQueue = 唯一持久化骨架；Connection Plane = 边缘投递适配层 | 消除"双消息系统"分裂 |
@@ -115,7 +115,7 @@
 |---|---|---|
 | **App** | app_id, name(唯一), api_key_hash, multiagent, status | 业务 Agent 服务 |
 | **ToolDef** | tool_id, scope(local/global), app_id(local 时非空), name, description, schema_json, executor_ref(global), timeout_ms, acl | 工具定义；local 归 App 执行，global 归 Gateway 执行 |
-| **McpServerDef** | mcp_id, name(唯一), transport(stdio/sse/streamable_http), config_json, auth_ref, allowed_tools_json | 仅存目录；连接由 Harness 的 `McpToolProvider` 建立 |
+| **McpServerDef** | mcp_id, name(唯一), transport(stdio/sse/streamable_http), config_json, auth_ref, allowed_tools_json | 仅存目录；连接由独立 `mcp_runtime` 建立 |
 | **Daemon** | daemon_id, runtime_type, max_concurrency, labels, status, last_heartbeat_at | 注册中心视图；运行中实例 |
 | **Run** | run_id, app_id, idempotency_key((app_id,key) 唯一), runtime, strategy, params, status, attempt, session_id?, timeouts, trace_id, assigned_daemon_id, lease_epoch, assigned_at | 一次执行的权威记录 |
 | **RunTask** | task_id, run_id, type, status, available_at, attempt, max_attempts, lease_owner, lease_token, lease_expires_at | PostgreSQL RunTaskQueue；只承载 dispatch/retry/timeout/reconcile |
@@ -626,7 +626,7 @@ App          MW-HTTP      Control      Workflow     DaemonHub     Daemon        
 |---|---|---|---|
 | local | daemon → MW Gateway → App WS → App 执行 → 原路闭环 | Gateway 计时（默认 60s，ToolDef 可配） | App 侧幂等（§4.3） |
 | global | daemon → MW Gateway → 进程内 executor → 闭环 | Gateway 计时（默认 30s） | v1 executor：`builtin:http`（HTTP 请求模板）、`builtin:webhook`；**不执行不可信代码** |
-| MCP | Harness 内部 `McpToolProvider` 直连 | Harness 自治 | 不经过 MW；配置来自 TaskAssign.mcp_bindings；总控不持有连接 |
+| MCP | 独立 `mcp_runtime` 直连 | Runtime 自治 | Harness 通过本地 RPC 调用；配置来自 TaskAssign.mcp_bindings；总控不持有连接 |
 
 工具解析规则：按 `tool_name` 查 ToolDef；**local 遮蔽同名 global**（TaskAssign 组装时已按此规则合并，daemon 无感知）。
 
@@ -727,7 +727,7 @@ v2 候选：`builtin:expression`（表达式求值）、沙箱化脚本执行（
 
 - **App 注册**：`POST /apps` 幂等 upsert（按 name）；携带 local ToolDef 列表、mcp_refs（按 name 引用 McpServerDef）、multiagent 标志。返回 api_key（仅注册时明文返回一次，库存 hash）。
 - **Tool 注册**：global 工具独立管理接口（运维侧）：`POST /admin/tools`；local 工具随 App 注册全量替换（版本 +1）。
-- **MCP 注册**：`POST /admin/mcp`；`config_json` 中凭据以 `auth_ref` 占位符（如 `${secret:github_token}`）存储；`allowed_tools_json` 控制工具白名单。连接由 Harness 的 `McpToolProvider` 建立，Register 不持有连接。
+- **MCP 注册**：`POST /admin/mcp`；`config_json` 中凭据以 `auth_ref` 占位符（如 `${secret:github_token}`）存储；`allowed_tools_json` 控制工具白名单。连接由独立 `mcp_runtime` 建立，Register 不持有连接。
 - **Daemon 注册**：预分配模式 —— 运维在配置表中创建 daemon_id + auth_token；daemon 启动持令牌 Hello。**不支持**运行时自助注册（v1 简化，避免注册风暴与伪造）。
 
 ### 9.2 TaskAssign 材料组装（Register 提供给 Control 的查询）
@@ -847,7 +847,7 @@ Daemon 重连 `Hello.running_runs`（`run_id + lease_epoch`）≠ MW 视角时�
 
 - LLM api_key、MCP 凭据：存储于 MW 配置/密钥介质，注册表只存 `auth_ref`；TaskAssign 组装时解析注入（明文过 gRPC）。
 - ⚠️ **v1 风险**：凭据到达 Harness 进程内存。缓解：v1 网络层可信（同集群/同 VPC，可选 mTLS）；v2 引入短期凭据代理（Harness 不持长期密钥）。
-- MCP 连接只由 Harness 的 `McpToolProvider` 建立；middleware 不持有连接、不代理工具结果。
+- MCP 连接只由独立 `mcp_runtime` 建立；middleware 不持有连接、不代理工具结果。
 - api_key 仅注册时明文返回一次。
 
 ### 13.3 隔离
@@ -895,7 +895,8 @@ Daemon 重连 `Hello.running_runs`（`run_id + lease_epoch`）≠ MW 视角时�
 middleware/
 ├── cmd/middleware/main.go        # 装配：config → store → planes → http/grpc server
 ├── proto/middleware/runtime/v1/  # proto + 生成代码
-├── harness/                      # 精简 Python Harness（含 McpToolProvider）
+├── harness/                      # 精简 Python Harness（只含 McpRuntimeClient）
+├── mcp_runtime/                  # 独立 MCP Runtime 进程（连接/session/tools）
 ├── internal/
 │   ├── config/                   # YAML 配置加载
 │   ├── db/                       # PostgreSQL 连接池 + 版本化迁移
@@ -987,7 +988,7 @@ type Scheduler interface {
 | 里程碑 | 内容 | 验收标准 |
 |---|---|---|
 | **M1 契约与骨架** | proto 定稿生成；PostgreSQL RunTaskQueue；runstore + register + DaemonHub + 最简调度；精简 Harness（Channel + echo） | echo run E2E：App→MW→Workflow→Harness→固定回复→事件落库可查 |
-| **M2 工具与推送** | AppHub WS fanout；local tool 闭环；global `builtin:http`；HTTP events 补拉；`McpToolProvider` | 一次真实 react run 含 local+global 工具调用全链路通过 |
+| **M2 工具与推送** | AppHub WS fanout；local tool 闭环；global `builtin:http`；HTTP events 补拉；独立 `mcp_runtime` | 一次真实 react run 含 local+global 工具调用全链路通过 |
 | **M3 韧性** | 取消/超时层级/重投退避/对账/幂等去重；metrics + trace | 故障矩阵 12.1 逐条演练通过 |
 | **M4 longterm** | Session/Checkpoint/续跑/会话 API/GC；复合 watermark | 跨进程重启的会话恢复演示 |
 | **M5 sandbox** | Harness 镜像、Deployment 预热池、NetworkPolicy、跑后重建 | 不可信输入在隔离 pod 执行，egress 拦截验证 |

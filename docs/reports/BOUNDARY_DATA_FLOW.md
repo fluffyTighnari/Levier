@@ -283,7 +283,7 @@ Daemon 不根据 `scope` 决定路由；它把所有非 MCP 工具统一通过 T
 | `allowed_tools` | 工具白名单 |
 | `namespace` | 默认 `mcp__<server_name>__` |
 
-`McpBinding` 包含凭据；Daemon 只在内存使用，不写日志/checkpoint。MW 不持有 MCP 连接。
+`McpBinding` 包含凭据；Harness 只把描述转交独立 `mcp_runtime`，Runtime 只在内存使用，不写日志/checkpoint。MW 和 Harness 都不持有 MCP 连接。
 
 **TimeoutProfile**
 
