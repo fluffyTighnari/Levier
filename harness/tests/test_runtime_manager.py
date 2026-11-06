@@ -11,7 +11,7 @@ import unittest
 from middleware.runtime.v1 import runtime_pb2
 
 from middleware_harness.channel.envelope import new_envelope, response_envelope
-from middleware_harness.runtime import ManagerConfig, RunManager
+from middleware_harness.runtime import ManagerConfig, NoopRunner, RunManager
 from middleware_harness.runtime.run import RunContext
 
 
@@ -64,7 +64,7 @@ class RunManagerTest(unittest.IsolatedAsyncioTestCase):
 
     async def test_accept_and_complete(self) -> None:
         sender = FakeSender()
-        self.manager = RunManager(sender)
+        self.manager = RunManager(sender, runner=NoopRunner())
         assign = assign_envelope()
         await self.manager.handle(assign)
         await self.wait_until(lambda: self.manager.running_count() == 0)

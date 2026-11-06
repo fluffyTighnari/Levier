@@ -14,6 +14,7 @@ from middleware.runtime.v1 import runtime_pb2
 
 from middleware_harness.runtime.events import EventSender, EventWriter
 from middleware_harness.runtime.run import RunContext
+from middleware_harness.strategies.echo import EchoStrategy
 
 
 class Runner(Protocol):
@@ -50,7 +51,7 @@ class RunManager:
     ) -> None:
         self.sender = sender
         self.config = config or ManagerConfig()
-        self.runner = runner or NoopRunner()
+        self.runner = runner or EchoStrategy()
         self.logger = logger or logging.getLogger("middleware_harness.runtime")
         self.active: dict[str, RunContext] = {}
         self._closing = False

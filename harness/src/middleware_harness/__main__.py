@@ -21,7 +21,8 @@ from middleware_harness.channel import ChannelClient, ChannelConfig
 from middleware_harness.config import ConfigError, Settings, load_settings
 from middleware_harness.health import HealthState
 from middleware_harness.logging import configure_logging, get_logger
-from middleware_harness.runtime import ManagerConfig, NoopRunner, RunManager
+from middleware_harness.runtime import ManagerConfig, RunManager
+from middleware_harness.strategies import EchoStrategy
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -87,9 +88,9 @@ async def _run(settings: Settings, health: HealthState) -> None:
         sender=client,
         config=ManagerConfig(
             max_concurrent_runs=settings.daemon.max_concurrent_runs,
-            supported_strategies=tuple(settings.daemon.strategies),
+            supported_strategies=("echo",),
         ),
-        runner=NoopRunner(),
+        runner=EchoStrategy(),
     )
     client.on_message = manager.handle
     client.running_runs = manager.running_runs

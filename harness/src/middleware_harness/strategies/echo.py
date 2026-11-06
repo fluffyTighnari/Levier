@@ -1,0 +1,42 @@
+"""Middleware — echo strategy.
+
+Returns the last user message without calling an LLM. It is the first
+end-to-end strategy for M1 and contract tests.
+
+Copyright 2026 The Middleware Authors.
+"""
+
+from __future__ import annotations
+
+from middleware.runtime.v1 import runtime_pb2
+
+from middleware_harness.ids import new_ulid
+from middleware_harness.runtime.run import RunContext
+
+
+class EchoStrategy:
+    """Emit one assistant message and complete the run."""
+
+    name = "echo"
+
+    async def run(self, ctx: RunContext) -> str:
+        if ctx.cancelled:
+            return "cancelled"
+
+        content = "echo"
+        if ctx.assign.input:
+            content = ctx.assign.input[-1].content or content
+
+        await ctx.emit(
+            runtime_pb2.EventType.MESSAGE_COMPLETED,
+            {
+                "message_id": new_ulid(),
+                "role": "assistant",
+                "content": content,
+            },
+        )
+        return "completed"
+
+    async def __call__(self, ctx: RunContext) -> str:
+        """Allow the strategy to be used as a RunManager runner."""
+        return await self.run(ctx)
