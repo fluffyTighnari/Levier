@@ -1,0 +1,21 @@
+# Middleware — independent MCP runtime package metadata.
+# Copyright 2026 The Middleware Authors.
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "middleware-mcp-runtime"
+version = "0.1.0"
+description = "Independent MCP runtime process for the middleware execution layer"
+requires-python = ">=3.12"
+dependencies = [
+    "mcp>=2.3.0",
+]
+
+[project.scripts]
+middleware-mcp-runtime = "mcp_runtime.__main__:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]

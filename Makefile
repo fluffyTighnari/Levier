@@ -4,6 +4,7 @@
 SHELL := /bin/sh
 GO ?= go
 PYTHON ?= $(if $(wildcard harness/.venv/bin/python),harness/.venv/bin/python,python3)
+MCP_PYTHON ?= $(if $(wildcard mcp_runtime/.venv/bin/python),mcp_runtime/.venv/bin/python,python3)
 BUF ?= $(HOME)/go/bin/buf
 PROTOC_BIN ?= $(HOME)/go/bin
 
@@ -13,7 +14,7 @@ export
 BIN_DIR := bin
 GO_FILES := $(shell find . -name '*.go' -not -path './workflow_engine/*' -not -path './vendor/*')
 
-.PHONY: all build test lint fmt fmt-check vet run clean dev-up dev-down migrate proto proto-check proto-lint contract-check harness-test
+.PHONY: all build test lint fmt fmt-check vet run clean dev-up dev-down migrate proto proto-check proto-lint contract-check harness-test mcp-runtime-test
 
 all: build
 
@@ -71,3 +72,6 @@ contract-check: proto-lint
 
 harness-test:
 	PYTHONPATH=harness/src/gen:harness/src $(PYTHON) -m unittest discover -s harness/tests -v
+
+mcp-runtime-test:
+	PYTHONPATH=mcp_runtime/src $(MCP_PYTHON) -m unittest discover -s mcp_runtime/tests -v

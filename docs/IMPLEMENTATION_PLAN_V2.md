@@ -4,7 +4,7 @@
 |---|---|
 | 计划版本 | V2.0 |
 | 日期 | 2026-11-03 |
-| 状态 | P0–P2 完成；G2 通过；P3-23–P3-28 Harness 基础完成；取代 `IMPLEMENTATION_PLAN.md` v0.3 |
+| 状态 | P0–P2 完成；G2 通过；P3-23–P3-29 Harness 与 MCP Runtime 基础完成；取代 `IMPLEMENTATION_PLAN.md` v0.3 |
 | 依据 | `docs/DESIGN.md` v0.1、`docs/WORKFLOW_ENGINE_AUDIT.md` |
 | 总步骤 | 72 个审查单元 |
 | 用法 | 一次只做一个 `Px-yy`；产出、验收、diff 都确认后再进入下一步 |
@@ -262,10 +262,11 @@ internal/control ──► internal/workflow (PostgreSQL run_tasks, SKIP LOCKED)
   - 验收：假流式响应产生正确事件；retryable 分类正确。
   - 完成记录：`AnthropicProvider`、`UrllibTransport`、`ModelConfig`、`LLMError`、`StrategyRouter`；SSE/JSON 解析、delta/USAGE/错误映射；8 个 provider 测试、42 个 Python 测试通过；报告：`docs/reports/P3-28.md`。
 
-- [ ] **P3-29 工具与 MCP Runtime**
+- [x] **P3-29 工具与 MCP Runtime**
   - `ToolCallRequest/Result` 客户端、工具清单、超时；独立 `mcp_runtime/` 进程 + 本地 JSON-RPC；Harness 只实现 `McpRuntimeClient`；`mcp_bindings`/`allowed_tools`/命名空间；stdio/SSE/streamable_http。
   - 连接只在 `mcp_runtime` 建立；middleware 和 Harness 都不持有 MCP 连接。
   - 验收：local/global 工具闭环；Runtime 启动/健康/退出；MCP 连接/失败/白名单/session 隔离测试；未来 remote client 契约不变。
+  - 完成记录：`mcp_runtime` 独立进程、JSON-RPC、SessionManager、SdkConnector；Harness `McpRuntimeClient`/`ToolBridge`/`ToolRouter`；56 个 Harness 测试、17 个 Runtime 测试；报告：`docs/reports/P3-29.md`。
 
 - [ ] **P3-30 Checkpoint、打包与 Gate**
   - checkpoint 编码/上报/`resume_from`、容器基础镜像、集成测试。

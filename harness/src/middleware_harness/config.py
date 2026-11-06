@@ -62,6 +62,13 @@ class DaemonSettings:
 
 
 @dataclass
+class McpRuntimeSettings:
+    """Independent MCP runtime connection settings."""
+
+    socket: str = ""
+
+
+@dataclass
 class LoggingSettings:
     """Structured logging settings."""
 
@@ -77,6 +84,7 @@ class Settings:
     daemon: DaemonSettings = field(default_factory=lambda: DaemonSettings(
         id="", auth_token=SecretToken("")
     ))
+    mcp_runtime: McpRuntimeSettings = field(default_factory=McpRuntimeSettings)
     logging: LoggingSettings = field(default_factory=LoggingSettings)
 
     def summary(self) -> dict[str, Any]:
@@ -89,6 +97,7 @@ class Settings:
             "max_concurrent_runs": self.daemon.max_concurrent_runs,
             "strategies": list(self.daemon.strategies),
             "labels": dict(self.daemon.labels),
+            "mcp_runtime_socket": self.mcp_runtime.socket,
             "log_level": self.logging.level,
             "log_format": self.logging.format,
         }
@@ -137,6 +146,11 @@ def _parse_settings(data: dict[str, Any]) -> Settings:
         labels=_string_map(daemon_data, "daemon.labels"),
     )
 
+    mcp_data = _section(data, "mcp_runtime")
+    mcp_runtime = McpRuntimeSettings(
+        socket=_string(mcp_data, "mcp_runtime.socket", "", required=False),
+    )
+
     logging_data = _section(data, "logging")
     level = _string(logging_data, "logging.level", "info", required=False)
     if level not in LOG_LEVELS:
@@ -148,6 +162,7 @@ def _parse_settings(data: dict[str, Any]) -> Settings:
     return Settings(
         middleware=middleware,
         daemon=daemon,
+        mcp_runtime=mcp_runtime,
         logging=LoggingSettings(level=level, format=log_format),
     )
 
@@ -252,13 +267,22 @@ def _apply_env(data: dict[str, Any], env: Mapping[str, str]) -> None:
     _set_list(data, "daemon", "strategies", env.get("HARNESS_DAEMON_STRATEGIES"))
     _set_map(data, "daemon", "labels", env.get("HARNESS_DAEMON_LABELS"))
 
+    _set(data, "mcp_runtime", "socket", env.get("HARNESS_MCP_RUNTIME_SOCKET"))
+
     _set(data, "logging", "level", env.get("HARNESS_LOGGING_LEVEL"))
     _set(data, "logging", "format", env.get("HARNESS_LOGGING_FORMAT"))
 
 
+def _env_section(data: dict[str, Any], section: str) -> dict[str, Any]:
+    value = data.setdefault(section, {})
+    if not isinstance(value, dict):
+        raise ConfigError(f"config section {section!r} must be a mapping")
+    return value
+
+
 def _set(data: dict[str, Any], section: str, key: str, value: str | None) -> None:
     if value is not None:
-        _section(data, section)[key] = value
+        _env_section(data, section)[key] = value
 
 
 def _set_bool(data: dict[str, Any], section: str, key: str, value: str | None) -> None:
@@ -267,7 +291,7 @@ def _set_bool(data: dict[str, Any], section: str, key: str, value: str | None) -
     normalized = value.strip().lower()
     if normalized not in {"1", "0", "true", "false", "yes", "no"}:
         raise ConfigError(f"{section}.{key} must be a boolean, got {value!r}")
-    _section(data, section)[key] = normalized in {"1", "true", "yes"}
+    _env_section(data, section)[key] = normalized in {"1", "true", "yes"}
 
 
 def _set_int(data: dict[str, Any], section: str, key: str, value: str | None) -> None:
@@ -277,14 +301,14 @@ def _set_int(data: dict[str, Any], section: str, key: str, value: str | None) ->
         parsed = int(value)
     except ValueError as exc:
         raise ConfigError(f"{section}.{key} must be an integer, got {value!r}") from exc
-    _section(data, section)[key] = parsed
+    _env_section(data, section)[key] = parsed
 
 
 def _set_list(data: dict[str, Any], section: str, key: str, value: str | None) -> None:
     if value is None:
         return
     items = [item.strip() for item in value.split(",") if item.strip()]
-    _section(data, section)[key] = items
+    _env_section(data, section)[key] = items
 
 
 def _set_map(data: dict[str, Any], section: str, key: str, value: str | None) -> None:
@@ -298,4 +322,4 @@ def _set_map(data: dict[str, Any], section: str, key: str, value: str | None) ->
             raise ConfigError(f"{section}.{key} entries must be key=value, got {pair!r}")
         map_key, map_value = pair.split("=", 1)
         result[map_key.strip()] = map_value.strip()
-    _section(data, section)[key] = result
+    _env_section(data, section)[key] = result

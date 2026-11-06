@@ -5,6 +5,9 @@ middleware:
   address: "127.0.0.1:9090"
   tls: false
 
+mcp_runtime:
+  socket: "/tmp/middleware-mcp.sock"
+
 daemon:
   id: "daemon-local-1"
   auth_token: "change-me"

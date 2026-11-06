@@ -127,6 +127,60 @@ class ChannelClientTest(unittest.IsolatedAsyncioTestCase):
         )
         self.assertEqual(inbound.task_assign.run_id, "run-1")
 
+    async def test_request_resolves_correlated_tool_result(self) -> None:
+        await self.client.start()
+        await self.client.wait_connected(2.0)
+
+        request = runtime_pb2.ToolCallRequest(
+            invocation_id="inv-1",
+            tool_name="add",
+            arguments_json='{"a":1}',
+            timeout_ms=500,
+        )
+        pending = asyncio.create_task(self.client.request(
+            request,
+            "tool_call_request",
+            run_id="run-1",
+            attempt=1,
+            lease_epoch=1,
+            timeout=1.0,
+        ))
+        sent = await wait_for(
+            self.service.received,
+            lambda envelope: envelope.WhichOneof("payload") == "tool_call_request",
+        )
+        self.assertEqual(sent.tool_call_request.tool_name, "add")
+
+        result = runtime_pb2.ToolCallResult(
+            invocation_id="inv-1",
+            ok=True,
+            result_json="2",
+        )
+        await self.service.outgoing.put(new_envelope(
+            result,
+            "tool_call_result",
+            correlation_id=sent.msg_id,
+            run_id="run-1",
+            attempt=1,
+            lease_epoch=1,
+        ))
+        response = await pending
+        self.assertEqual(response.tool_call_result.result_json, "2")
+        self.assertTrue(self.incoming.empty())
+
+    async def test_request_timeout(self) -> None:
+        await self.client.start()
+        await self.client.wait_connected(2.0)
+        with self.assertRaises(asyncio.TimeoutError):
+            await self.client.request(
+                runtime_pb2.ToolCallRequest(invocation_id="inv-1", tool_name="add"),
+                "tool_call_request",
+                run_id="run-1",
+                attempt=1,
+                lease_epoch=1,
+                timeout=0.01,
+            )
+
     async def test_heartbeat(self) -> None:
         await self.client.start()
         await self.client.wait_connected(2.0)

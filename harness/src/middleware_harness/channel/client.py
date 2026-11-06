@@ -67,6 +67,7 @@ class ChannelClient:
         self._stopped = asyncio.Event()
         self._runner: asyncio.Task[None] | None = None
         self._call: Any = None
+        self._pending: dict[str, asyncio.Future[runtime_pb2.Envelope]] = {}
 
     @property
     def connected(self) -> bool:
@@ -92,6 +93,33 @@ class ChannelClient:
     async def send_response(self, request: runtime_pb2.Envelope, payload: Any, field: str) -> None:
         """Queue a response correlated to request.msg_id."""
         await self.send(response_envelope(request, payload, field))
+
+    async def request(
+        self,
+        payload: Any,
+        field: str,
+        *,
+        run_id: str = "",
+        attempt: int = 0,
+        lease_epoch: int = 0,
+        timeout: float = 30.0,
+    ) -> runtime_pb2.Envelope:
+        """Send one request and wait for its correlated response envelope."""
+        envelope = new_envelope(
+            payload,
+            field,
+            run_id=run_id,
+            attempt=attempt,
+            lease_epoch=lease_epoch,
+        )
+        loop = asyncio.get_running_loop()
+        future: asyncio.Future[runtime_pb2.Envelope] = loop.create_future()
+        self._pending[envelope.msg_id] = future
+        try:
+            await self.send(envelope)
+            return await asyncio.wait_for(future, timeout)
+        finally:
+            self._pending.pop(envelope.msg_id, None)
 
     async def stop(self) -> None:
         """Stop reconnecting and close the stream."""
@@ -151,6 +179,7 @@ class ChannelClient:
                 await asyncio.gather(writer, heartbeat, return_exceptions=True)
                 self._connected.clear()
                 self._call = None
+                self._fail_pending(ConnectionError("runtime channel disconnected"))
         finally:
             await channel.close()
             self._connected.clear()
@@ -196,6 +225,11 @@ class ChannelClient:
             await self.send(new_envelope(heartbeat, "heartbeat"))
 
     async def _dispatch(self, envelope: runtime_pb2.Envelope) -> None:
+        if envelope.WhichOneof("payload") == "tool_call_result":
+            future = self._pending.get(envelope.correlation_id)
+            if future is not None and not future.done():
+                future.set_result(envelope)
+                return
         if self.on_message is None:
             return
         try:
@@ -207,6 +241,14 @@ class ChannelClient:
                 "daemon_id": self.config.daemon_id,
                 "error": str(exc),
             })
+
+
+    def _fail_pending(self, exc: BaseException) -> None:
+        pending = list(self._pending.values())
+        self._pending.clear()
+        for future in pending:
+            if not future.done():
+                future.set_exception(exc)
 
 
 def _runtime_type(value: str) -> int:

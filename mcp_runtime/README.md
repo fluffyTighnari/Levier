@@ -22,7 +22,30 @@ Middleware Register/Control  ── TaskAssign.mcp_bindings ──► Harness
 - Tool names are namespaced as `mcp__<server_name>__<tool_name>`.
 - `allowed_tools` is enforced by the runtime.
 
-## Status
+## Run
 
-Design and process skeleton are defined in `docs/adr/0004-mcp-ownership.md`.
-Implementation lands in P3-29.
+From `mcp_runtime/`:
+
+```sh
+uv sync --locked
+PYTHONPATH=src .venv/bin/python -m mcp_runtime \
+  --socket /tmp/middleware-mcp.sock
+```
+
+Single-client debug mode:
+
+```sh
+PYTHONPATH=src .venv/bin/python -m mcp_runtime --stdio
+```
+
+## Tests
+
+```sh
+make mcp-runtime-test
+```
+
+The runtime includes a real stdio integration test using a small MCP server.
+SSE and streamable HTTP transport selection is covered with fakes; live
+network servers are a follow-up integration test.
+
+Design: `docs/adr/0004-mcp-ownership.md`.

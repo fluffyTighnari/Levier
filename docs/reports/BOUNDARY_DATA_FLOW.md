@@ -490,8 +490,10 @@ ToolCallResult：
 
 当前状态：
 
-- Daemon 侧还没有 ToolBridge（P3-29）。
-- MW 侧还没有 Tool Gateway（P7）。
+- Daemon 侧 `ToolBridge` 已实现（P3-29），发 ToolCallRequest 并按 correlation 等 ToolCallResult。
+- MW 侧还没有 Tool Gateway（P7），因此 local/global 工具闭环仍缺服务端。
+- MCP 工具不走 RuntimeChannel：Harness `ToolRouter` 通过 `McpRuntimeClient` 调独立 `mcp_runtime` 进程；mcp_runtime 再连 MCP server。
+- `mcp_runtime` 使用本地 Unix socket JSON-RPC；Middleware 不持有 MCP 连接。
 
 ### 4.7 Cancel
 

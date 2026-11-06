@@ -29,7 +29,7 @@ from middleware_harness.llm.base import (
     ToolSpec,
 )
 from middleware_harness.runtime.run import RunContext
-from middleware_harness.tools.base import ToolExecutor, ToolResult, UnavailableToolExecutor
+from middleware_harness.tools.base import ToolProvider, ToolResult, as_tool_provider
 
 _DEFAULT_MAX_STEPS = 32
 _DEFAULT_STEP_TIMEOUT_MS = 120_000
@@ -44,13 +44,13 @@ class ReactStrategy:
     def __init__(
         self,
         provider: LLMProvider,
-        tools: ToolExecutor | None = None,
+        tools: ToolProvider | object | None = None,
         *,
         default_step_timeout_ms: int = _DEFAULT_STEP_TIMEOUT_MS,
         default_tool_timeout_ms: int = _DEFAULT_TOOL_TIMEOUT_MS,
     ) -> None:
         self.provider = provider
-        self.tools = tools or UnavailableToolExecutor()
+        self.tools = as_tool_provider(tools)
         self.default_step_timeout_ms = default_step_timeout_ms
         self.default_tool_timeout_ms = default_tool_timeout_ms
 
@@ -68,66 +68,73 @@ class ReactStrategy:
         tools = [ToolSpec.from_manifest(manifest) for manifest in ctx.assign.tools]
         model = ModelConfig.from_profile(ctx.assign.model)
 
-        for step in range(1, max_steps + 1):
-            if ctx.cancelled:
-                return "cancelled"
-
-            message_id = new_ulid()
-            streamed = False
-
-            async def on_delta(text: str) -> None:
-                nonlocal streamed
-                streamed = True
-                await ctx.emit(
-                    runtime_pb2.EventType.MESSAGE_DELTA,
-                    {"message_id": message_id, "delta": text, "step": step},
-                    ephemeral=True,
-                )
-
-            try:
-                response = await _complete(
-                    self.provider,
-                    messages,
-                    tools,
-                    model,
-                    step_timeout_ms,
-                    on_delta,
-                )
-            except asyncio.CancelledError:
-                raise
-            except asyncio.TimeoutError:
-                await self._emit_error(ctx, "STEP_TIMEOUT", f"step {step} timed out")
-                return "failed"
-            except LLMError as exc:
-                await self._emit_error(ctx, exc.code, str(exc), retryable=exc.retryable)
-                return "failed"
-            except Exception as exc:
-                await self._emit_error(ctx, "LLM_ERROR", str(exc))
-                return "failed"
-
-            if response.usage:
-                await ctx.emit(runtime_pb2.EventType.USAGE, dict(response.usage))
-            if response.has_output or streamed:
-                await self._emit_message(ctx, response, step, message_id)
-
-            messages.append(_assistant_message(response))
-
-            if not response.tool_calls:
-                return "completed"
-
-            for call in response.tool_calls:
+        try:
+            tools.extend(await self.tools.open(ctx))
+            for step in range(1, max_steps + 1):
                 if ctx.cancelled:
                     return "cancelled"
-                call = replace(call, invocation_id=call.invocation_id or new_ulid())
-                result = await self._run_tool(ctx, call, tool_timeout_ms)
-                messages.append(_tool_message(call, result))
 
-        await self._emit_error(
-            ctx,
-            "MAX_STEPS_EXCEEDED",
-            f"react loop exceeded {max_steps} steps",
-        )
-        return "failed"
+                message_id = new_ulid()
+                streamed = False
+
+                async def on_delta(text: str) -> None:
+                    nonlocal streamed
+                    streamed = True
+                    await ctx.emit(
+                        runtime_pb2.EventType.MESSAGE_DELTA,
+                        {"message_id": message_id, "delta": text, "step": step},
+                        ephemeral=True,
+                    )
+
+                try:
+                    response = await _complete(
+                        self.provider,
+                        messages,
+                        tools,
+                        model,
+                        step_timeout_ms,
+                        on_delta,
+                    )
+                except asyncio.CancelledError:
+                    raise
+                except asyncio.TimeoutError:
+                    await self._emit_error(ctx, "STEP_TIMEOUT", f"step {step} timed out")
+                    return "failed"
+                except LLMError as exc:
+                    await self._emit_error(ctx, exc.code, str(exc), retryable=exc.retryable)
+                    return "failed"
+                except Exception as exc:
+                    await self._emit_error(ctx, "LLM_ERROR", str(exc))
+                    return "failed"
+
+                if response.usage:
+                    await ctx.emit(runtime_pb2.EventType.USAGE, dict(response.usage))
+                if response.has_output or streamed:
+                    await self._emit_message(ctx, response, step, message_id)
+
+                messages.append(_assistant_message(response))
+
+                if not response.tool_calls:
+                    return "completed"
+
+                for call in response.tool_calls:
+                    if ctx.cancelled:
+                        return "cancelled"
+                    call = replace(call, invocation_id=call.invocation_id or new_ulid())
+                    result = await self._run_tool(ctx, call, tool_timeout_ms)
+                    messages.append(_tool_message(call, result))
+
+            await self._emit_error(
+                ctx,
+                "MAX_STEPS_EXCEEDED",
+                f"react loop exceeded {max_steps} steps",
+            )
+            return "failed"
+        finally:
+            try:
+                await self.tools.close(ctx)
+            except Exception:
+                pass
 
     async def __call__(self, ctx: RunContext) -> str:
         """Allow the strategy to be used as a RunManager runner."""
@@ -144,7 +151,7 @@ class ReactStrategy:
         )
         started = time.monotonic()
         try:
-            result = await self.tools(ctx, call, timeout_ms)
+            result = await self.tools.call(ctx, call, timeout_ms)
         except asyncio.CancelledError:
             raise
         except Exception as exc:

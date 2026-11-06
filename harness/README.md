@@ -47,4 +47,10 @@ PYTHONPATH=src:src/gen .venv/bin/python -m middleware_harness \
 ```
 
 RuntimeChannel, ReAct, LLM, and tools are added in P3-24 onward. The
-standalone MCP runtime is added in P3-29.
+standalone MCP runtime is a separate process; start it with:
+
+```sh
+cd mcp_runtime
+uv sync --locked
+PYTHONPATH=src .venv/bin/python -m mcp_runtime --socket /tmp/middleware-mcp.sock
+```

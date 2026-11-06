@@ -22,8 +22,11 @@ from middleware_harness.config import ConfigError, Settings, load_settings
 from middleware_harness.health import HealthState
 from middleware_harness.llm import AnthropicProvider
 from middleware_harness.logging import configure_logging, get_logger
+from middleware_harness.mcp import McpRuntimeClient
 from middleware_harness.runtime import ManagerConfig, RunManager
 from middleware_harness.strategies import EchoStrategy, ReactStrategy, StrategyRouter
+from middleware_harness.tools.bridge import ToolBridge
+from middleware_harness.tools.router import ToolRouter
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -88,7 +91,7 @@ async def _run(settings: Settings, health: HealthState) -> None:
             tls=settings.middleware.tls,
         ),
     )
-    runner, supported = _build_runner(settings)
+    runner, supported, mcp_client = _build_runner(settings, client)
     manager = RunManager(
         sender=client,
         config=ManagerConfig(
@@ -107,15 +110,26 @@ async def _run(settings: Settings, health: HealthState) -> None:
     finally:
         health.set_check("middleware", client.connected)
         await manager.close()
+        if mcp_client is not None:
+            await mcp_client.close()
         await client.stop()
         health.set_ready(False)
 
 
-def _build_runner(settings: Settings) -> tuple[StrategyRouter, tuple[str, ...]]:
-    """Build the strategy registry from daemon configuration."""
+def _build_runner(
+    settings: Settings,
+    channel: ChannelClient,
+) -> tuple[StrategyRouter, tuple[str, ...], McpRuntimeClient | None]:
+    """Build the strategy registry and tool sources from configuration."""
+    mcp_client = (
+        McpRuntimeClient(settings.mcp_runtime.socket)
+        if settings.mcp_runtime.socket
+        else None
+    )
+    tools = ToolRouter(bridge=ToolBridge(channel), mcp=mcp_client)
     available = {
         "echo": EchoStrategy(),
-        "react": ReactStrategy(AnthropicProvider()),
+        "react": ReactStrategy(AnthropicProvider(), tools),
     }
     unknown = [name for name in settings.daemon.strategies if name not in available]
     if unknown:
@@ -123,7 +137,7 @@ def _build_runner(settings: Settings) -> tuple[StrategyRouter, tuple[str, ...]]:
     names = tuple(dict.fromkeys(settings.daemon.strategies))
     if not names:
         raise ConfigError("daemon.strategies must not be empty")
-    return StrategyRouter({name: available[name] for name in names}), names
+    return StrategyRouter({name: available[name] for name in names}), names, mcp_client
 
 
 async def _wait_for_shutdown() -> None:

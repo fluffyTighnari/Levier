@@ -27,6 +27,8 @@ class RunContext:
     task: asyncio.Task[Any] | None = None
     started_at: datetime = field(default_factory=lambda: datetime.now(tz=timezone.utc))
     outcome: str = ""
+    tool_sessions: list[str] = field(default_factory=list)
+    tool_routes: dict[str, str] = field(default_factory=dict)
 
     @property
     def run_id(self) -> str:

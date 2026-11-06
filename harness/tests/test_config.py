@@ -56,6 +56,19 @@ class ConfigTest(unittest.TestCase):
         self.assertEqual(settings.daemon.labels["region"], "cn1")
         self.assertEqual(settings.logging.level, "debug")
 
+    def test_mcp_runtime_socket(self) -> None:
+        settings = load_settings(self.write_config(
+            VALID_YAML + "mcp_runtime:\n  socket: \"/tmp/test-mcp.sock\"\n"
+        ))
+        self.assertEqual(settings.mcp_runtime.socket, "/tmp/test-mcp.sock")
+        self.assertEqual(settings.summary()["mcp_runtime_socket"], "/tmp/test-mcp.sock")
+
+        overridden = load_settings(
+            self.write_config(VALID_YAML),
+            environ={"HARNESS_MCP_RUNTIME_SOCKET": "/run/mcp.sock"},
+        )
+        self.assertEqual(overridden.mcp_runtime.socket, "/run/mcp.sock")
+
     def test_invalid_capacity(self) -> None:
         with self.assertRaises(ConfigError):
             load_settings(
