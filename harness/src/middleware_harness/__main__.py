@@ -21,6 +21,7 @@ from middleware_harness.channel import ChannelClient, ChannelConfig
 from middleware_harness.config import ConfigError, Settings, load_settings
 from middleware_harness.health import HealthState
 from middleware_harness.logging import configure_logging, get_logger
+from middleware_harness.runtime import ManagerConfig, NoopRunner, RunManager
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -81,24 +82,27 @@ async def _run(settings: Settings, health: HealthState) -> None:
             labels=dict(settings.daemon.labels),
             tls=settings.middleware.tls,
         ),
-        on_message=_log_inbound,
     )
+    manager = RunManager(
+        sender=client,
+        config=ManagerConfig(
+            max_concurrent_runs=settings.daemon.max_concurrent_runs,
+            supported_strategies=tuple(settings.daemon.strategies),
+        ),
+        runner=NoopRunner(),
+    )
+    client.on_message = manager.handle
+    client.running_runs = manager.running_runs
+    client.running_count = manager.running_count
+
     await client.start()
     try:
         await _wait_for_shutdown()
     finally:
         health.set_check("middleware", client.connected)
+        await manager.close()
         await client.stop()
         health.set_ready(False)
-
-
-async def _log_inbound(envelope: object) -> None:
-    """Log inbound envelope type until task lifecycle handlers exist."""
-    payload = getattr(envelope, "WhichOneof", lambda _: None)("payload")
-    get_logger("middleware_harness.channel").info(
-        "runtime message received",
-        extra={"payload_type": payload, "run_id": getattr(envelope, "run_id", "")},
-    )
 
 
 async def _wait_for_shutdown() -> None:
