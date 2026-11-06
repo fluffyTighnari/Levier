@@ -3,7 +3,7 @@
 
 SHELL := /bin/sh
 GO ?= go
-PYTHON ?= python3
+PYTHON ?= $(if $(wildcard .venv312/bin/python),.venv312/bin/python,python3)
 BUF ?= $(HOME)/go/bin/buf
 PROTOC_BIN ?= $(HOME)/go/bin
 

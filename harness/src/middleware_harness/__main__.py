@@ -17,7 +17,8 @@ import sys
 from typing import Sequence
 
 from middleware_harness import __version__
-from middleware_harness.config import ConfigError, load_settings
+from middleware_harness.channel import ChannelClient, ChannelConfig
+from middleware_harness.config import ConfigError, Settings, load_settings
 from middleware_harness.health import HealthState
 from middleware_harness.logging import configure_logging, get_logger
 
@@ -59,11 +60,45 @@ def main(argv: Sequence[str] | None = None) -> int:
         return 0
 
     try:
-        asyncio.run(_wait_for_shutdown())
+        asyncio.run(_run(settings, health))
     except KeyboardInterrupt:
         pass
     logger.info("harness stopped")
     return 0
+
+
+async def _run(settings: Settings, health: HealthState) -> None:
+    """Start the RuntimeChannel client and wait for shutdown."""
+    client = ChannelClient(
+        ChannelConfig(
+            address=settings.middleware.address,
+            daemon_id=settings.daemon.id,
+            auth_token=settings.daemon.auth_token.get_secret_value(),
+            runtime_type=settings.daemon.runtime_type,
+            max_concurrent_runs=settings.daemon.max_concurrent_runs,
+            strategies=list(settings.daemon.strategies),
+            version=__version__,
+            labels=dict(settings.daemon.labels),
+            tls=settings.middleware.tls,
+        ),
+        on_message=_log_inbound,
+    )
+    await client.start()
+    try:
+        await _wait_for_shutdown()
+    finally:
+        health.set_check("middleware", client.connected)
+        await client.stop()
+        health.set_ready(False)
+
+
+async def _log_inbound(envelope: object) -> None:
+    """Log inbound envelope type until task lifecycle handlers exist."""
+    payload = getattr(envelope, "WhichOneof", lambda _: None)("payload")
+    get_logger("middleware_harness.channel").info(
+        "runtime message received",
+        extra={"payload_type": payload, "run_id": getattr(envelope, "run_id", "")},
+    )
 
 
 async def _wait_for_shutdown() -> None:

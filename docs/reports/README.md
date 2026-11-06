@@ -29,6 +29,7 @@
 | P2-21 | `docs/reports/P2-21.md` | 已提交 |
 | P2-22 | `docs/reports/P2-22.md` | 已提交（G2 通过） |
 | P3-23 | `docs/reports/P3-23.md` | 已提交 |
+| P3-24 | `docs/reports/P3-24.md` | 已提交 |
 
 模板：`docs/reports/TEMPLATE.md`。
 
