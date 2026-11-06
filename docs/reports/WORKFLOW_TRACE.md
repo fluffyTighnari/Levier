@@ -389,25 +389,93 @@ Pool **不自动运行 ReapExpired**。需要维护循环单独调用。
 
 ---
 
-## 4. 端到端流程
+## 4. 端到端流程（逐步骤）
 
-### 4.1 入队
+> 先明确一个前提：下面的流程是 **Workflow 库内部的完整流程**。
+> `Control`、`Handler`、`cmd/middleware` 目前还没有接入，因此这些步骤描述的是“调用方正确接线后会发生什么”，不是当前主程序已经在跑的链路。
 
-```text
-Control
-  → PostgresStore.Enqueue(task)
-  → normalizeForEnqueue
-      - 补 ID/状态/默认次数/时间
-      - 拒绝非 PENDING、attempt>0、预置租约
-      - Task.Validate
-  → JSON 编码 payload
-  → INSERT ... ON CONFLICT ... RETURNING
-      - 成功：新 Task
-      - 冲突：查询同 Run+类型的 PENDING/LEASED
-  → 返回 Task
-```
+### 4.0 一次正常运行的行状态变化
 
-同事务版本：
+以 `RUN_DISPATCH` 为例，假设 `MaxAttempts=5`：
+
+| 步骤 | status | attempt | lease_owner | lease_token | lease_expires_at | available_at |
+|---|---|---:|---|---:|---|---|
+| `Enqueue` 后 | PENDING | 0 | `''` | 0 | NULL | 当前时间 |
+| `Claim` 后 | LEASED | 1 | `worker-1` | 1 | 当前时间 + TTL | 不变 |
+| `Extend` 后 | LEASED | 1 | `worker-1` | 1 | 新的当前时间 + TTL | 不变 |
+| `Ack` 后 | DONE | 1 | `''` | 1 | NULL | 不变 |
+
+失败重试：
+
+| 步骤 | status | attempt | lease_owner | lease_token | lease_expires_at | available_at |
+|---|---|---:|---|---:|---|---|
+| 第一次 `Claim` | LEASED | 1 | `worker-1` | 1 | 当前时间 + TTL | 不变 |
+| `Nack`（未达上限） | PENDING | 1 | `''` | 1 | NULL | `retryAt` |
+| 第二次 `Claim` | LEASED | 2 | `worker-2` | 2 | 当前时间 + TTL | 不变 |
+| `Nack`（达到上限） | DEAD | 2 | `''` | 2 | NULL | 保持原值 |
+
+这张表是后面所有流程的“行状态基准”。
+
+### 4.1 入队：`Enqueue`
+
+**入口**
+
+- 文件：`internal/workflow/postgres.go`
+- 函数：`PostgresStore.Enqueue`
+- 调用方：Control（未来）或测试
+- 输入：一个 `Task`
+- 输出：数据库里的一行任务，或既有活跃任务，或错误
+
+**完整步骤**
+
+1. 检查 `PostgresStore` 和底层连接池不为空；否则返回 `workflow: postgres pool is nil`。
+2. 调用 `enqueue`。
+3. `normalizeForEnqueue` 做入队前归一化：
+   1. 取当前 UTC 时间。
+   2. `ID` 为空则生成 ULID。
+   3. `Status` 为空则设为 `PENDING`。
+   4. 如果 `Status != PENDING`，返回 `ErrInvalidTask`。
+   5. 如果 `Attempt != 0`，返回 `ErrInvalidTask`。
+   6. 如果已有 `LeaseOwner`、`LeaseToken`、`LeaseExpiresAt`，返回 `ErrInvalidTask`。
+   7. `MaxAttempts <= 0` 时按 TaskType 默认值补齐。
+   8. `AvailableAt` 为空则设为当前时间。
+   9. `CreatedAt` / `UpdatedAt` 为空则设为当前时间。
+   10. 调用 `Task.Validate`，校验 ULID、Run、类型、状态、attempt 范围等。
+4. `Payload` 为 nil 时替换成空对象 `{}`。
+5. 用 `encoding/json` 把 payload 编码成 JSON。
+6. 执行 `INSERT ... ON CONFLICT ... DO NOTHING RETURNING ...`：
+   - `status` 固定写 `PENDING`
+   - `attempt` 固定写 `0`
+   - `lease_owner=''`
+   - `lease_token=0`
+   - `lease_expires_at=NULL`
+   - `last_error=''`
+7. `RETURNING` 成功：
+   - `scanTask` 扫描 14 列。
+   - 返回新建的 `Task`。
+8. `RETURNING` 没有行（说明冲突）：
+   - 调用 `getActiveTask` 查询同 `(run_id, task_type)` 的 `PENDING/LEASED` 任务。
+   - 查到则返回既有任务。
+9. 如果冲突任务在“插入失败”和“查询既有任务”之间消失了：
+   - 循环最多 2 次。
+   - 两次都消失，返回 `enqueue task: active task disappeared`。
+10. 其他数据库错误原样包装返回。
+
+**关键细节**
+
+- `Enqueue` 不会创建 `runs` 行；`run_tasks.run_id` 有外键，Run 不存在会失败。
+- 冲突时返回的既有任务可能是 `LEASED`，不一定是 `PENDING`。
+- 同一 Run + 同一 TaskType 同时只允许一个活跃任务。
+- 任务进入 `DONE/DEAD/CANCELLED` 后，再入队会创建新任务。
+- `payload` 只能是 JSON 对象；编码失败返回 `ErrInvalidTask`。
+
+**同事务入口**
+
+- 函数：`PostgresStore.EnqueueTx`
+- 输入：`pgx.Tx` + `Task`
+- 行为与 `Enqueue` 相同，只是使用事务执行。
+- 它**不提交**事务；提交/回滚由调用方决定。
+- 正确用法：
 
 ```text
 BEGIN
@@ -416,59 +484,492 @@ BEGIN
 COMMIT
 ```
 
-回滚时 Run 和 Task 都不存在。
+如果回滚，Run 和 Task 都不会留下。
 
-### 4.2 领取 → 执行 → 完成
+### 4.2 领取：`Claim`
 
-```text
-Worker.run
-  → ProcessOne
-  → Store.Claim(owner, ttl)
-      - SELECT ... FOR UPDATE SKIP LOCKED
-      - UPDATE status=LEASED, token++, attempt++
-  → 启动 heartbeat goroutine
-  → Handler.Handle(task, lease)
-  → 停止 heartbeat
-  → finish
-      - nil → Ack
-      - Permanent → Fail + DeadLetter
-      - 其他 → Nack + Backoff
-```
+**入口**
 
-### 4.3 重试
+- 文件：`internal/workflow/postgres_lease.go`
+- 函数：`PostgresStore.Claim`
+- 调用方：Worker
+- 输入：`owner`、`ttl`
+- 输出：`Task` + `Lease`，或 `ErrNoTask`
 
-- `Nack` 用 SQL 的 `CASE` 判断 `attempt < max_attempts`。
-- 未超限：PENDING，`available_at=retryAt`，attempt 保留。
-- 超限：DEAD，写 `last_error`。
-- Worker 在 Nack 成功后，如果 `task.Attempt >= task.MaxAttempts`，调用 DeadLetter。
+**完整步骤**
 
-### 4.4 取消
+1. 检查连接池。
+2. `owner` 为空返回 `ErrInvalidTask`。
+3. `ttl <= 0` 时使用 30 秒。
+4. 执行一条 SQL：
+   - CTE `candidate` 从 `run_tasks` 选一行：
+     - `status='PENDING'`
+     - `available_at <= now()`
+     - `attempt < max_attempts`
+     - 按 `available_at, created_at` 排序
+     - `FOR UPDATE SKIP LOCKED`
+     - `LIMIT 1`
+   - 对 candidate 执行 UPDATE：
+     - `status='LEASED'`
+     - `lease_owner=owner`
+     - `lease_token = lease_token + 1`
+     - `lease_expires_at = now() + ttl`
+     - `attempt = attempt + 1`
+     - `updated_at=now()`
+   - `RETURNING` 所有任务列。
+5. 如果 `RETURNING` 没有行：
+   - 返回 `ErrNoTask`。
+6. 如果 SQL 错误：
+   - 返回 `claim task: ...`。
+7. 成功：
+   - `scanTask` 转成 `Task`。
+   - 构造 `Lease{TaskID, Owner, Token, ExpiresAt}`。
+   - 返回给 Worker。
 
-```text
-Control.CancelRun / CancelTask
-  → UPDATE active rows
-  → status=CANCELLED
-  → LEASED 时 token++
-  → 清空 owner/expiry
-  → 旧 worker 的 Extend/Ack/Nack/Fail 返回 ErrLeaseLost
-```
+**关键细节**
 
-### 4.5 过期回收
+- `Claim` 不检查 `lease_expires_at`；过期回收是 `ReapExpired` 的职责。
+- `attempt` 和 `lease_token` 都在 Claim 时递增。
+- `available_at` 是延迟任务的关键；未到时间的任务不会被选中。
+- 多 worker 同时 Claim 时，`SKIP LOCKED` 让它们领取不同行，不互相等待。
+- 没有可领取任务时返回 `ErrNoTask`，不是错误日志级别的事件。
+- `Claim` 不执行 Handler，也不启动心跳。
 
-```text
-维护循环.ReapExpired(now, limit)
-  → SELECT expired LEASED FOR UPDATE SKIP LOCKED
-  → attempt>=max ? DEAD : PENDING
-  → token++
-  → 清空 owner/expiry
-  → 旧 worker 的写入返回 ErrLeaseLost
-```
+### 4.3 Worker 主循环：`Start` → `run`
 
-### 4.6 查询
+**入口**
 
-- `Stats`：按状态/类型计数，最老 PENDING。
-- `ListDead`：DEAD 任务，按更新时间倒序。
-- `Metrics.Snapshot`：进程内计数与平均耗时。
+- 文件：`internal/workflow/worker.go`
+- 函数：`Worker.Start`、`Worker.run`
+- 输入：无（配置已在 `NewWorker` 中确定）
+- 输出：持续 Claim 并执行，直到 Stop 或 context 取消
+
+**完整步骤**
+
+1. `NewWorker` 补默认配置：
+   - owner 默认 `worker`
+   - LeaseTTL 默认 30s
+   - PollInterval 默认 200ms
+   - HeartbeatInterval 默认 `LeaseTTL/3`，且不小于 10ms
+   - RetryBase 默认 2s
+   - RetryMax 默认 5min
+   - ShutdownTimeout 默认 5s
+2. `Worker.Start`：
+   - 加锁检查是否已启动。
+   - 创建可取消 context。
+   - 启动一个 goroutine 执行 `run`。
+   - 关闭 `doneCh` 表示循环结束。
+   - Worker 不可重启。
+3. `run` 每轮：
+   1. 先检查 `stopCh` 是否关闭。
+   2. 再检查 context 是否取消。
+   3. 调用 `ProcessOne`。
+   4. 如果 `ProcessOne` 返回错误：
+      - 调用 `OnError`（如果设置）。
+      - 等待 `PollInterval`；收到 stop/ctx 则退出。
+      - 继续下一轮。
+   5. 如果 `ProcessOne` 返回 `processed=false`：
+      - 等待 `PollInterval`。
+   6. 如果处理了任务，立即进入下一轮 Claim，不额外等待。
+
+**关键细节**
+
+- `run` 不会主动调用 `ReapExpired`；过期回收需要外部维护循环。
+- `run` 不会调用 `CancelRun`；取消是 Control 的职责。
+- `OnError` 只接收循环/存储层错误，不接收 Handler 的业务错误。
+- `Stop` 关闭 stopCh；如果当前正在 Handler 中，`run` 会等 Handler 返回后才退出。
+
+### 4.4 执行一个任务：`ProcessOne`
+
+**入口**
+
+- 文件：`internal/workflow/worker.go`
+- 函数：`Worker.ProcessOne`
+- 输入：context
+- 输出：`(是否处理了任务, error)`
+
+**完整步骤**
+
+1. 记录 Claim 开始时间。
+2. 调用 `Store.Claim(owner, LeaseTTL)`。
+3. 如果返回 `ErrNoTask`：
+   - 返回 `(false, nil)`。
+4. 如果返回其他错误：
+   - 返回 `(false, err)`。
+5. Claim 成功：
+   - 记录 Claim 耗时到 Metrics。
+6. 创建 `handlerCtx`（从当前 context 派生，可取消）。
+7. 创建 `stopHeartbeat`、`heartbeatDone` 两个 channel。
+8. 启动 heartbeat goroutine。
+9. 记录 Handler 开始时间。
+10. 调用 `safeHandle(handlerCtx, task, lease)`。
+11. 记录 Handler 耗时。
+12. 关闭 `stopHeartbeat`，等待 heartbeat goroutine 退出。
+13. 调用 `finish(ctx, task, lease, handlerErr)`。
+    - 注意：这里传入的是外层的 `ctx`，不是 `handlerCtx`。
+14. 如果 `finish` 返回错误：
+    - 返回 `(true, err)`。
+15. 否则返回 `(true, nil)`。
+
+**关键细节**
+
+- `ProcessOne` 一次只处理一个任务。
+- 心跳是在 Handler 开始前启动的，但第一次 `Extend` 要等到 heartbeat interval 到点。
+- Handler 返回后，会先停止心跳，再 Ack/Nack/Fail，避免完成动作和续租互相干扰。
+- `finish` 使用外层 context；如果 Stop 超时取消了外层 context，Ack/Nack/Fail 可能失败，任务会留在 LEASED，等待 ReapExpired。
+- `ProcessOne` 不调用 `CancelRun`、`ReapExpired`、`Stats`。
+
+### 4.5 成功路径：`Handler` 返回 `nil` → `Ack`
+
+**入口**
+
+- 文件：`internal/workflow/worker.go`
+- 函数：`Worker.finish` → `PostgresStore.Ack`
+
+**完整步骤**
+
+1. `handlerErr == nil`。
+2. 调用 `Store.Ack(task, lease)`。
+3. `Ack` 先校验：
+   - `lease.TaskID/Owner/Token` 非空。
+   - `task.ID` 非空。
+   - `task.ID == lease.TaskID`。
+4. 执行 SQL：
+   - `status='DONE'`
+   - `lease_owner=''`
+   - `lease_expires_at=NULL`
+   - `last_error=''`
+   - `updated_at=now()`
+   - 条件：`status='LEASED' AND lease_owner=$2 AND lease_token=$3`
+5. 如果更新 0 行：
+   - 调用 `leaseFailure`。
+   - 任务不存在 → `ErrTaskNotFound`
+   - 任务终态且 token 相同 → `ErrTaskTerminal`
+   - 任务终态且 token 不同 → `ErrLeaseLost`
+   - 任务活跃但 owner/token 不匹配 → `ErrLeaseLost`
+6. `Ack` 成功：
+   - Worker `Acks++`
+   - 不调用 DeadLetter
+   - 不改变 `attempt`
+7. 如果错误是 `ErrLeaseLost/ErrTaskTerminal/ErrTaskNotFound`：
+   - Worker 视为可接受（任务已经被别人完成/取消/回收），不向 OnError 上报。
+   - 其中 `ErrLeaseLost` 会 `LeaseLost++`。
+8. 其他错误：
+   - 返回给 `ProcessOne`，再交给 `run` 的 OnError。
+
+### 4.6 可重试失败：`Handler` 返回普通错误 → `Nack`
+
+**入口**
+
+- 文件：`internal/workflow/worker.go`
+- 函数：`Worker.finish` → `PostgresStore.Nack`
+
+**完整步骤**
+
+1. `handlerErr != nil` 且不是 `Permanent`。
+2. 检查是否有显式 `RetryAfter` 延迟：
+   - 有：使用提供的延迟。
+   - 没有：`Backoff(task.Attempt, RetryBase, RetryMax)`。
+3. 计算 `retryAt = 当前 UTC 时间 + delay`。
+4. 调用 `Store.Nack(task, lease, retryAt, handlerErr)`。
+5. `Nack` 先做与 Ack 相同的 task/lease 校验。
+6. 执行 SQL：
+   - `status = CASE WHEN attempt < max_attempts THEN 'PENDING' ELSE 'DEAD' END`
+   - `available_at = CASE WHEN attempt < max_attempts THEN $4 ELSE available_at END`
+   - `lease_owner=''`
+   - `lease_expires_at=NULL`
+   - `last_error=$5`
+   - `updated_at=now()`
+   - 条件：`status='LEASED' AND owner/token 匹配`
+7. 更新 0 行：
+   - 调用 `leaseFailure`，与 Ack 同样的分类。
+8. 更新成功：
+   - Worker `Nacks++`。
+   - 如果 `task.Attempt >= task.MaxAttempts`：
+     - `Dead++`
+     - 调用 `DeadLetterHandler`
+   - 否则任务回到 PENDING，等待下一次 Claim。
+9. 旧 `attempt` 不改；下一次 Claim 会再 `attempt++`。
+10. `last_error` 写入 Handler 错误字符串（包括 `RetryAfter` / `Permanent` 包装后的文本）。
+
+**关键细节**
+
+- 第一次失败时 `task.Attempt` 已经是 1（Claim 时递增）。
+- `MaxAttempts=1` 的任务第一次失败后 Nack 会直接 DEAD。
+- `Nack` 本身不区分“可重试/永久”；区分在 Worker 的 `finish` 里完成。
+- `Nack` 成功但达到上限时，DeadLetter 回调由 Worker 触发，不是数据库触发。
+- `Nack` 失败如果是 `ErrLeaseLost`，说明任务被取消/回收，不再调 DeadLetter。
+
+### 4.7 永久失败：`Handler` 返回 `Permanent` → `Fail`
+
+**完整步骤**
+
+1. `finish` 检查 `IsPermanent(handlerErr)`。
+2. 调用 `Store.Fail(task, lease, cause)`。
+3. `Fail` 做 task/lease 校验。
+4. SQL：
+   - `status='DEAD'`
+   - 清空 owner/expiry
+   - `last_error=cause`
+   - 条件：LEASED + owner/token 匹配
+5. 更新 0 行：
+   - `leaseFailure` 分类。
+6. 成功：
+   - `Fails++`
+   - `Dead++`
+   - 调用 DeadLetterHandler
+7. DeadLetterHandler 返回错误：
+   - 通过 OnError 上报。
+8. DeadLetterHandler 为空：
+   - 仍然进入 DEAD，只是没有回调。
+
+### 4.8 Panic 路径
+
+**入口**
+
+- 函数：`Worker.safeHandle`
+
+**完整步骤**
+
+1. 用 `defer/recover` 包住 `Handler.Handle`。
+2. 如果 Handler panic：
+   - `Panics++`。
+   - 把 panic 转成普通错误：`handler panic: <值>`。
+3. 返回给 `finish`。
+4. 因为不是 `Permanent`，走普通 `Nack` 路径。
+5. 多次 panic 最终会耗尽 attempts，进入 DEAD。
+
+**关键细节**
+
+- panic 不会杀进程。
+- panic 不会被包装成 `Permanent`，所以默认会重试。
+- 如果希望 panic 直接 DEAD，需要在 Handler 内返回 `Permanent`，而不是 panic。
+
+### 4.9 心跳与续租：`Extend`
+
+**入口**
+
+- 文件：`internal/workflow/worker.go`
+- 函数：`Worker.heartbeat` → `PostgresStore.Extend`
+
+**完整步骤**
+
+1. `ProcessOne` Claim 成功后启动 heartbeat。
+2. heartbeat 每个 `HeartbeatInterval` 触发一次。
+3. 调用 `Extend(lease, LeaseTTL)`。
+4. `Extend` 校验 task_id/owner/token。
+5. SQL：
+   - `lease_expires_at = now() + ttl`
+   - `updated_at=now()`
+   - 条件：LEASED + owner/token 匹配
+6. 成功：
+   - 返回新的 `ExpiresAt`。
+   - heartbeat 内的 lease 变量更新（但 Handler 持有的 lease 不更新；token 不变，仍可用于 Ack/Nack/Fail）。
+7. 失败：
+   - 如果是 `ErrLeaseLost`，`LeaseLost++`。
+   - 调用 `cancel()` 取消 Handler context。
+   - heartbeat 退出。
+8. Handler 收到 context 取消后，通常会返回错误。
+9. `finish` 尝试 Nack；如果 lease 已经被别人拿走，Nack 返回 `ErrLeaseLost`，Worker 忽略。
+
+**关键细节**
+
+- 心跳只延长 expiry，不改变 owner/token/status/attempt。
+- 心跳第一次触发在 interval 之后，不是 Claim 后立刻。
+- 如果 Handler 在第一次续租前就超过了 TTL，任务仍可能被 ReapExpired 回收；这是配置问题。
+- 心跳失败只取消 Handler context，不会自动把任务标记为失败。
+
+### 4.10 取消：`CancelRun` / `CancelTask`
+
+**入口**
+
+- 文件：`internal/workflow/postgres_cancel.go`
+- 调用方：Control（未来）
+- 输入：run_id、可选 task_type、reason
+- 输出：受影响行数
+
+**`CancelRun` 完整步骤**
+
+1. 检查连接池。
+2. `run_id` 为空返回 `ErrInvalidTask`。
+3. `reason` 为空用 `cancelled`。
+4. 执行 UPDATE：
+   - 条件：`run_id=$1 AND status IN ('PENDING','LEASED')`
+   - `status='CANCELLED'`
+   - `lease_owner=''`
+   - `lease_expires_at=NULL`
+   - `lease_token = CASE WHEN status='LEASED' THEN lease_token+1 ELSE lease_token END`
+   - `last_error=reason`
+   - `updated_at=now()`
+5. 返回影响行数。
+6. 没有活跃任务时返回 0，不报错。
+
+**`CancelTask` 完整步骤**
+
+- 与 `CancelRun` 相同，但多一个 `task_type=$2` 条件。
+- 先校验 task_type 合法；非法返回 `ErrInvalidTask`。
+- 只影响指定类型的任务。
+
+**取消后的竞态**
+
+| 场景 | 结果 |
+|---|---|
+| 任务 PENDING | 直接 CANCELLED；token 不变 |
+| 任务 LEASED | CANCELLED；token++；旧 worker 的 Extend/Ack/Nack/Fail 返回 `ErrLeaseLost` |
+| Ack 先成功 | 任务 DONE；后续 Cancel 影响 0 行 |
+| Cancel 先成功 | 任务 CANCELLED；Ack 返回 `ErrLeaseLost` |
+| Nack 先回到 PENDING | Cancel 随后可以把它 CANCELLED |
+| 任务已 DONE/DEAD/CANCELLED | Cancel 不影响 |
+
+**关键细节**
+
+- 取消不会删除任务行。
+- 取消不会调用 DeadLetter。
+- 取消不会改变 `attempt`。
+- 取消不会向 daemon 发送 Cancel；这是 Control/Connection 层未来要做的事。
+
+### 4.11 过期回收：`ReapExpired`
+
+**入口**
+
+- 文件：`internal/workflow/postgres_reaper.go`
+- 调用方：维护循环（目前没有自动启动）
+- 输入：`now`、`limit`
+- 输出：回收数量
+
+**完整步骤**
+
+1. 检查连接池。
+2. `now` 为零时用当前 UTC 时间。
+3. `limit <= 0` 时用 100。
+4. CTE 选出：
+   - `status='LEASED'`
+   - `lease_expires_at <= now`
+   - 按 `lease_expires_at` 排序
+   - `FOR UPDATE SKIP LOCKED`
+   - `LIMIT limit`
+5. UPDATE 选中行：
+   - `attempt >= max_attempts` → `DEAD`
+   - 否则 → `PENDING`
+   - `available_at`：DEAD 保持原值；PENDING 设为传入的 now
+   - 清空 `lease_owner` / `lease_expires_at`
+   - `lease_token++`
+   - `last_error='lease_expired'`
+   - `updated_at=now()`
+6. 返回影响行数。
+
+**关键细节**
+
+- 不增加 `attempt`；attempt 在 Claim 时已经增加。
+- 旧 worker 的 token 失效，旧写入返回 `ErrLeaseLost`。
+- 进入 DEAD 时**不会**调用 DeadLetterHandler；只有 Worker 的 Fail/Nack 会调用。
+- `limit` 控制单次批量，避免长事务。
+- `ReapExpired` 只处理 LEASED；PENDING 不处理。
+- 如果任务在 `attempt == max_attempts` 时处于 PENDING（理论上 Nack 会直接 DEAD，但异常数据可能），ReapExpired 不会碰它；它也不会被 Claim，因为 Claim 条件有 `attempt < max_attempts`。这是一个潜在悬挂状态。
+
+### 4.12 查询：`Stats` / `ListDead`
+
+**`Stats` 完整步骤**
+
+1. 初始化所有状态计数为 0：
+   - PENDING / LEASED / DONE / DEAD / CANCELLED
+2. 初始化所有类型计数为 0：
+   - RUN_DISPATCH / RUN_RETRY / RUN_TIMEOUT / RUN_RECONCILE
+3. 查询 `GROUP BY status`，累加 `Total`。
+4. 查询 `GROUP BY task_type`。
+5. 查询 `min(available_at) WHERE status='PENDING'`。
+6. 如果有最老 PENDING：
+   - 记录 `OldestPending`
+   - 用应用时钟算 `OldestPendingAge`；如果最老时间在未来，年龄保持 0
+7. 返回 `Stats`。
+
+**`ListDead` 完整步骤**
+
+1. `limit <= 0` 时用 100。
+2. 查询 `status='DEAD' ORDER BY updated_at DESC LIMIT limit`。
+3. 逐行 `scanTask`。
+4. 返回任务列表。
+
+### 4.13 优雅停机：`Stop`
+
+**入口**
+
+- 文件：`internal/workflow/worker.go`
+- 函数：`Worker.Stop`
+- 调用方：进程关闭或测试
+
+**完整步骤**
+
+1. 如果 Worker 未启动，直接返回。
+2. 用 `sync.Once` 关闭 `stopCh`。
+3. 等待 `doneCh`：
+   - 如果 Handler 很快结束，`run` 退出，Stop 返回。
+   - 如果超过 `ShutdownTimeout`：
+     - 调用 `runCancel()` 取消外层 context。
+     - 再等 `doneCh`。
+4. `run` 在下一轮检查到 stop/ctx 后退出。
+5. 当前 Handler 如果在 timeout 前完成：
+   - `finish` 使用外层 context（还活着），可以正常 Ack/Nack/Fail。
+6. 当前 Handler 如果在 timeout 后被取消：
+   - Handler context 被取消，Handler 通常返回错误。
+   - `finish` 使用已被取消的外层 context；Ack/Nack/Fail 可能失败。
+   - 任务保持 LEASED，等待 ReapExpired 回收。
+7. `Pool.Stop` 按顺序 Stop 每个 worker；在停止前一个 worker 时，后面的 worker 仍可能继续 Claim。
+
+**关键细节**
+
+- Stop 不会主动 ReapExpired。
+- Stop 不会主动取消已 Claim 的任务。
+- Worker 不可重启。
+- `ShutdownTimeout` 只控制“什么时候取消 handler context”，不保证 Handler 一定响应。
+
+### 4.14 一个完整异常链：取消打断 Handler
+
+这是最容易看错的一条链路，按实际代码顺序列出：
+
+1. Control 调用 `Enqueue`，任务为 PENDING，attempt=0，token=0。
+2. Worker `Claim`，任务变 LEASED，attempt=1，token=1，owner=`worker-1`。
+3. Handler 开始执行，heartbeat 启动。
+4. Control 调用 `CancelRun`：
+   - 任务是 LEASED。
+   - 状态变 CANCELLED。
+   - token 从 1 变 2。
+   - owner/expiry 清空。
+5. Worker 的 heartbeat 下一次 `Extend` 用旧 token=1：
+   - SQL 0 行。
+   - `leaseFailure` 看到 CANCELLED 且 token 不同，返回 `ErrLeaseLost`。
+   - heartbeat `LeaseLost++`，取消 Handler context。
+6. Handler 返回 `context canceled` 或普通错误。
+7. `finish` 走 Nack：
+   - 用旧 token=1 更新。
+   - SQL 0 行。
+   - `leaseFailure` 再次返回 `ErrLeaseLost`。
+   - Worker 视为可接受，不上报 OnError，不再调 DeadLetter。
+8. 最终任务保持 CANCELLED。
+9. DeadLetter 不会触发，因为取消不是 DEAD。
+
+这条链路说明：
+
+- 取消的终态由 Control 的 `CancelRun` 决定，不由 Handler 决定。
+- 旧 Handler 的 Nack 不会把任务改回 PENDING。
+- `LeaseLost` 在这里是正常竞态结果，不是系统故障。
+
+### 4.15 不属于 Workflow 流程的步骤
+
+下面这些步骤**不在**当前 Workflow 库里：
+
+1. 创建 `runs` 行。
+2. 选择 daemon。
+3. 组装 `TaskAssign`。
+4. 发送 gRPC 消息。
+5. 等待 `TaskAck`。
+6. 向 daemon 发 Cancel。
+7. daemon 事件落库。
+8. 启动时扫描非终态 Run 并补任务。
+9. HTTP `/metrics`。
+10. 多进程指标聚合。
+
+这些属于 Control、Connection、RunStore 或后续阶段。
 
 ---
 
