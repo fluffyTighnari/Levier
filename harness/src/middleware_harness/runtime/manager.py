@@ -38,6 +38,7 @@ class ManagerConfig:
 
     max_concurrent_runs: int = 4
     supported_strategies: Sequence[str] = ("react", "echo")
+    runtime_type: str = "normal"
     checkpoint_every_events: int = 20
     checkpoint_every_seconds: float = 60.0
 
@@ -105,6 +106,7 @@ class RunManager:
             lease_epoch=envelope.lease_epoch,
             events=events,
             resume=resume,
+            checkpoint_enabled=self.config.runtime_type == "longterm",
             checkpoint_every_events=self.config.checkpoint_every_events,
             checkpoint_every_seconds=self.config.checkpoint_every_seconds,
         )
@@ -120,6 +122,8 @@ class RunManager:
         data = assign.resume_from.state
         if not data:
             return None, ""
+        if self.config.runtime_type != "longterm":
+            return None, "resume_from requires longterm runtime"
         try:
             state = CheckpointState.decode(data)
         except CheckpointError as exc:

@@ -71,7 +71,7 @@ class CheckpointResumeTest(unittest.IsolatedAsyncioTestCase):
         sender = FakeSender()
         manager = RunManager(
             sender,
-            ManagerConfig(supported_strategies=("react",)),
+            ManagerConfig(supported_strategies=("react",), runtime_type="longterm"),
             ReactStrategy(provider),
         )
         try:
@@ -122,6 +122,56 @@ class CheckpointResumeTest(unittest.IsolatedAsyncioTestCase):
             [event.event.type for event in second_events],
         )
 
+    async def test_normal_runtime_is_stateless(self) -> None:
+        sender = FakeSender()
+        manager = RunManager(
+            sender,
+            ManagerConfig(supported_strategies=("react",)),
+            ReactStrategy(ScriptedProvider("normal")),
+        )
+        try:
+            await manager.handle(assign(attempt=1))
+            for _ in range(200):
+                if manager.running_count() == 0:
+                    break
+                await asyncio.sleep(0.005)
+        finally:
+            await manager.close()
+        self.assertFalse(any(
+            envelope.WhichOneof("payload") == "checkpoint"
+            for envelope in sender.sent
+        ))
+        self.assertFalse(any(
+            envelope.WhichOneof("payload") == "event"
+            and envelope.event.type == runtime_pb2.EventType.CHECKPOINT_SAVED
+            for envelope in sender.sent
+        ))
+
+    async def test_normal_runtime_rejects_resume_from(self) -> None:
+        checkpoint = CheckpointState(
+            session_id="session-1",
+            run_id="run-1",
+            attempt=1,
+            strategy="react",
+            step=1,
+        )
+        sender = FakeSender()
+        manager = RunManager(
+            sender,
+            ManagerConfig(supported_strategies=("react",)),
+            ReactStrategy(ScriptedProvider("never")),
+        )
+        try:
+            await manager.handle(assign(resume=checkpoint.encode(), attempt=2))
+        finally:
+            await manager.close()
+        ack = next(
+            envelope for envelope in sender.sent
+            if envelope.WhichOneof("payload") == "task_ack"
+        )
+        self.assertFalse(ack.task_ack.accepted)
+        self.assertIn("longterm", ack.task_ack.reason)
+
     async def test_echo_resume_does_not_repeat_message(self) -> None:
         def echo_envelope(resume: bytes = b"", attempt: int = 1) -> runtime_pb2.Envelope:
             task = runtime_pb2.TaskAssign(
@@ -141,7 +191,7 @@ class CheckpointResumeTest(unittest.IsolatedAsyncioTestCase):
             sender = FakeSender()
             manager = RunManager(
                 sender,
-                ManagerConfig(supported_strategies=("echo",)),
+                ManagerConfig(supported_strategies=("echo",), runtime_type="longterm"),
                 EchoStrategy(),
             )
             try:
@@ -178,7 +228,7 @@ class CheckpointResumeTest(unittest.IsolatedAsyncioTestCase):
         sender = FakeSender()
         manager = RunManager(
             sender,
-            ManagerConfig(supported_strategies=("react",)),
+            ManagerConfig(supported_strategies=("react",), runtime_type="longterm"),
             ReactStrategy(ScriptedProvider("never")),
         )
         try:
@@ -204,7 +254,7 @@ class CheckpointResumeTest(unittest.IsolatedAsyncioTestCase):
         sender = FakeSender()
         manager = RunManager(
             sender,
-            ManagerConfig(supported_strategies=("react",)),
+            ManagerConfig(supported_strategies=("react",), runtime_type="longterm"),
             ReactStrategy(ScriptedProvider("never")),
         )
         try:

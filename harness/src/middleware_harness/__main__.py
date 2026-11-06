@@ -97,6 +97,7 @@ async def _run(settings: Settings, health: HealthState) -> None:
         config=ManagerConfig(
             max_concurrent_runs=settings.daemon.max_concurrent_runs,
             supported_strategies=supported,
+            runtime_type=settings.daemon.runtime_type,
         ),
         runner=runner,
     )

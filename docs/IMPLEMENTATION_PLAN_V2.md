@@ -271,7 +271,7 @@ internal/control ──► internal/workflow (PostgreSQL run_tasks, SKIP LOCKED)
 - [x] **P3-30 Checkpoint、打包与 Gate**
   - checkpoint 编码/上报/`resume_from`、容器基础镜像、集成测试。
   - 验收：跨进程恢复无重复消息；镜像可跑 echo；G3 通过。
-  - 完成记录：`CheckpointState`、`RunContext.save_checkpoint`、React/echo 恢复、Dockerfile、G3；68 个 Harness 测试、17 个 Runtime 测试；镜像构建因本机无 Docker 未执行，安装路径已用干净 venv 验证；报告：`docs/reports/P3-30.md`、`docs/reports/G3.md`。
+  - 完成记录：`CheckpointState`、longterm-only `RunContext.save_checkpoint`、React/echo 恢复、Dockerfile、G3；normal runtime 无状态且拒绝 `resume_from`；70 个 Harness 测试、17 个 Runtime 测试；镜像构建因本机无 Docker 未执行，安装路径已用干净 venv 验证；报告：`docs/reports/P3-30.md`、`docs/reports/G3.md`。
 
 **G3 审查物：** 能力矩阵、Channel 录制、假 LLM 测试、MCP 测试、checkpoint 恢复演示。
 

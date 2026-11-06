@@ -32,6 +32,7 @@ class RunContext:
     tool_sessions: list[str] = field(default_factory=list)
     tool_routes: dict[str, str] = field(default_factory=dict)
     resume: CheckpointState | None = None
+    checkpoint_enabled: bool = False
     checkpoint_every_events: int = 20
     checkpoint_every_seconds: float = 60.0
     _last_checkpoint_events: int = 0
@@ -60,7 +61,7 @@ class RunContext:
 
     def checkpoint_due(self) -> bool:
         """Whether a longterm checkpoint should be written at this safe point."""
-        if not self.assign.session_id:
+        if not self.checkpoint_enabled or not self.assign.session_id:
             return False
         if self.events.seq - self._last_checkpoint_events >= self.checkpoint_every_events:
             return True
@@ -68,7 +69,7 @@ class RunContext:
 
     async def save_checkpoint(self, state: CheckpointState) -> None:
         """Send a checkpoint and record its watermark."""
-        if not self.assign.session_id:
+        if not self.checkpoint_enabled or not self.assign.session_id:
             return
         async with self._checkpoint_lock:
             state.last_event_attempt = self.attempt

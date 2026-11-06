@@ -95,6 +95,7 @@ class RunContextCheckpointTest(unittest.IsolatedAsyncioTestCase):
             attempt=2,
             lease_epoch=5,
             events=EventWriter(sender, "run-1", 2, 5),
+            checkpoint_enabled=True,
             checkpoint_every_events=every_events,
             checkpoint_every_seconds=every_seconds,
         )
