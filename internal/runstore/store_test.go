@@ -232,6 +232,50 @@ func TestAppendEventIsIdempotentAndAdvancesProjection(t *testing.T) {
 	}
 }
 
+func TestAssignRunAndUpdateStatus(t *testing.T) {
+	store := New(testPool(t))
+	ctx := context.Background()
+	app := createApp(t, store)
+	run, err := store.CreateRun(ctx, Run{
+		RunID: "run-" + id.New(),
+		AppID: app.AppID,
+		Input: json.RawMessage(`[{"role":"user","content":"hello"}]`),
+	})
+	if err != nil {
+		t.Fatalf("CreateRun() error = %v", err)
+	}
+	if string(run.Input) != `[{"role": "user", "content": "hello"}]` &&
+		string(run.Input) != `[{"role":"user","content":"hello"}]` {
+		t.Fatalf("input = %s", run.Input)
+	}
+
+	assigned, err := store.AssignRun(ctx, run.RunID, 1, 1, "daemon-1")
+	if err != nil {
+		t.Fatalf("AssignRun() error = %v", err)
+	}
+	if assigned.Status != "assigned" || assigned.Attempt != 1 || assigned.LeaseEpoch != 1 {
+		t.Fatalf("assigned = %+v", assigned)
+	}
+	if assigned.AssignedDaemonID != "daemon-1" || assigned.AssignedAt == nil {
+		t.Fatalf("assigned daemon/time = %+v", assigned)
+	}
+
+	if err := store.UpdateRunStatus(ctx, run.RunID, "running", 1, 1); err != nil {
+		t.Fatalf("UpdateRunStatus(running) error = %v", err)
+	}
+	if err := store.UpdateRunStatus(ctx, run.RunID, "completed", 1, 1); err != nil {
+		t.Fatalf("UpdateRunStatus(completed) error = %v", err)
+	}
+	current, _ := store.GetRun(ctx, run.RunID)
+	if current.Status != "completed" {
+		t.Fatalf("status = %q", current.Status)
+	}
+
+	if err := store.UpdateRunStatus(ctx, run.RunID, "failed", 2, 2); !errors.Is(err, ErrRunNotAssignable) {
+		t.Fatalf("stale UpdateRunStatus() error = %v, want ErrRunNotAssignable", err)
+	}
+}
+
 func TestRunPersistsAcrossStoreInstances(t *testing.T) {
 	pool := testPool(t)
 	store := New(pool)

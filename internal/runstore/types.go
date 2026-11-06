@@ -30,11 +30,13 @@ type Run struct {
 	Runtime          string          `json:"runtime"`
 	Strategy         string          `json:"strategy"`
 	Params           json.RawMessage `json:"params"`
+	Input            json.RawMessage `json:"input"`
 	Status           string          `json:"status"`
 	Attempt          int             `json:"attempt"`
 	SessionID        string          `json:"session_id,omitempty"`
 	Model            json.RawMessage `json:"model"`
 	RunTimeoutMS     int             `json:"run_timeout_ms"`
+	ToolTimeoutMS    int             `json:"tool_timeout_ms"`
 	TraceID          string          `json:"trace_id"`
 	AssignedDaemonID string          `json:"assigned_daemon_id,omitempty"`
 	LeaseEpoch       int64           `json:"lease_epoch"`

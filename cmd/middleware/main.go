@@ -23,8 +23,11 @@ import (
 
 	"github.com/fluffyTighnari/middleware/internal/config"
 	"github.com/fluffyTighnari/middleware/internal/connection"
+	"github.com/fluffyTighnari/middleware/internal/control"
 	"github.com/fluffyTighnari/middleware/internal/db"
 	"github.com/fluffyTighnari/middleware/internal/observe"
+	"github.com/fluffyTighnari/middleware/internal/runstore"
+	"github.com/fluffyTighnari/middleware/internal/workflow"
 )
 
 func main() {
@@ -72,6 +75,21 @@ func main() {
 	})
 	defer hub.Close()
 
+	runs := runstore.New(pool)
+	controller := control.New(runs, hub, control.Config{Logger: logger})
+	hub.SetOnEnvelope(controller.HandleEnvelope)
+	controller.Start(ctx)
+	defer controller.Close()
+
+	queue := workflow.NewPostgres(pool)
+	workers := workflow.NewPool(queue, controller, cfg.Workflow.Workers, workflow.WorkerConfig{
+		Owner:        "control",
+		LeaseTTL:     cfg.Workflow.LeaseTTL.Std(),
+		PollInterval: cfg.Workflow.PollInterval.Std(),
+	})
+	workers.Start()
+	defer workers.Stop()
+
 	listener, err := net.Listen("tcp", cfg.GRPC.Addr)
 	if err != nil {
 		logger.Error("listen grpc failed", "addr", cfg.GRPC.Addr, "err", err)
@@ -95,6 +113,8 @@ func main() {
 	)
 	<-ctx.Done()
 
+	workers.Stop()
+	controller.Close()
 	hub.Close()
 	stopped := make(chan struct{})
 	go func() {

@@ -16,6 +16,8 @@ var (
 	ErrIdempotencyConflict = errors.New("idempotency key reused with a different request")
 	// ErrInvalidRun reports invalid run input.
 	ErrInvalidRun = errors.New("invalid run")
+	// ErrRunNotAssignable reports a run in a non-dispatchable state.
+	ErrRunNotAssignable = errors.New("run is not assignable")
 	// ErrInvalidEvent reports invalid event input.
 	ErrInvalidEvent = errors.New("invalid event")
 )

@@ -287,9 +287,10 @@ internal/control ──► internal/workflow (PostgreSQL run_tasks, SKIP LOCKED)
   - 验收：未 Hello 3s 断开；重复 daemon_id 策略明确。
   - 完成记录：`internal/connection.DaemonHub`、grpc `daemon_tokens`、出站缓冲/心跳/清理、`PickHealthy`；`cmd/middleware` 已启动 gRPC；6 个连接测试通过；报告：`docs/reports/P4-32.md`。
 
-- [ ] **P4-33 最小 Control**
+- [x] **P4-33 最小 Control**
   - 领取 `RUN_DISPATCH`、按 runtime 选 daemon、TaskAssign、5s TaskAck、状态迁移。
   - 验收：单 daemon 单 run 可进入 assigned/running。
+  - 完成记录：`internal/control.Control`、TaskAssign 组装、TaskAck pending、事件落库与状态迁移；RunStore `AssignRun`/`UpdateRunStatus`；单 daemon echo 端到端通过；报告：`docs/reports/P4-33.md`。
 
 - [ ] **P4-34 最小 HTTP API**
   - `POST /runs`、`GET /runs/{id}`、`GET events`、测试用 Bearer。

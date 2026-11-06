@@ -76,9 +76,10 @@ type Hub struct {
 
 	cfg Config
 
-	mu      sync.RWMutex
-	daemons map[string]*daemonConn
-	closed  bool
+	mu         sync.RWMutex
+	daemons    map[string]*daemonConn
+	onEnvelope func(daemonID string, env *runtimev1.Envelope)
+	closed     bool
 }
 
 type daemonConn struct {
@@ -103,7 +104,14 @@ func New(cfg Config) *Hub {
 	if cfg.Now == nil {
 		cfg.Now = func() time.Time { return time.Now().UTC() }
 	}
-	return &Hub{cfg: cfg, daemons: make(map[string]*daemonConn)}
+	return &Hub{cfg: cfg, daemons: make(map[string]*daemonConn), onEnvelope: cfg.OnEnvelope}
+}
+
+// SetOnEnvelope replaces the inbound envelope callback.
+func (h *Hub) SetOnEnvelope(handler func(daemonID string, env *runtimev1.Envelope)) {
+	h.mu.Lock()
+	h.onEnvelope = handler
+	h.mu.Unlock()
 }
 
 // Register registers the hub as the RuntimeService implementation.
@@ -353,8 +361,11 @@ func (h *Hub) readLoop(conn *daemonConn) error {
 		case *runtimev1.Envelope_Heartbeat:
 			h.updateHeartbeat(conn, payload.Heartbeat.GetRunningCount())
 		default:
-			if h.cfg.OnEnvelope != nil {
-				h.cfg.OnEnvelope(conn.info.DaemonID, env)
+			h.mu.RLock()
+			handler := h.onEnvelope
+			h.mu.RUnlock()
+			if handler != nil {
+				handler(conn.info.DaemonID, env)
 			}
 		}
 	}

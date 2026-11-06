@@ -22,21 +22,21 @@ const appColumns = `
 
 const runColumns = `
 	run_id, app_id, idempotency_key, request_hash, runtime, strategy,
-	params_json, status, attempt, session_id, model_json, run_timeout_ms,
-	trace_id, assigned_daemon_id, lease_epoch, assigned_at,
+	params_json, input_json, status, attempt, session_id, model_json, run_timeout_ms,
+	tool_timeout_ms, trace_id, assigned_daemon_id, lease_epoch, assigned_at,
 	last_event_attempt, last_event_seq, created_at, updated_at`
 
 const insertRunSQL = `
 	INSERT INTO runs (
 		run_id, app_id, idempotency_key, request_hash, runtime, strategy,
-		params_json, status, attempt, session_id, model_json, run_timeout_ms,
-		trace_id, assigned_daemon_id, lease_epoch, assigned_at,
+		params_json, input_json, status, attempt, session_id, model_json, run_timeout_ms,
+		tool_timeout_ms, trace_id, assigned_daemon_id, lease_epoch, assigned_at,
 		last_event_attempt, last_event_seq, created_at, updated_at
 	) VALUES (
 		$1, $2, $3, $4, $5, $6,
-		$7, $8, $9, NULLIF($10, ''), $11, $12,
-		$13, NULLIF($14, ''), $15, $16,
-		$17, $18, $19, $20
+		$7, $8, $9, $10, NULLIF($11, ''), $12, $13,
+		$14, $15, NULLIF($16, ''), $17, $18, $19,
+		$20, $21, $22
 	)
 	ON CONFLICT (app_id, idempotency_key)
 		WHERE idempotency_key <> ''
@@ -122,11 +122,13 @@ func (s *Store) CreateRun(ctx context.Context, run Run) (Run, error) {
 			normalized.Runtime,
 			normalized.Strategy,
 			normalized.Params,
+			normalized.Input,
 			normalized.Status,
 			normalized.Attempt,
 			normalized.SessionID,
 			normalized.Model,
 			normalized.RunTimeoutMS,
+			normalized.ToolTimeoutMS,
 			normalized.TraceID,
 			normalized.AssignedDaemonID,
 			normalized.LeaseEpoch,
@@ -177,6 +179,80 @@ func (s *Store) GetRun(ctx context.Context, runID string) (Run, error) {
 		return Run{}, fmt.Errorf("get run: %w", err)
 	}
 	return run, nil
+}
+
+// AssignRun moves a run to assigned and records the daemon/attempt fencing.
+func (s *Store) AssignRun(
+	ctx context.Context,
+	runID string,
+	attempt int,
+	leaseEpoch int64,
+	daemonID string,
+) (Run, error) {
+	if s == nil || s.pool == nil {
+		return Run{}, fmt.Errorf("runstore: postgres pool is nil")
+	}
+	if runID == "" || daemonID == "" || attempt < 1 || leaseEpoch < 1 {
+		return Run{}, fmt.Errorf("%w: invalid assignment", ErrInvalidRun)
+	}
+	run, err := scanRun(s.pool.QueryRow(ctx, `
+		UPDATE runs
+		SET status = 'assigned',
+		    attempt = $2,
+		    lease_epoch = $3,
+		    assigned_daemon_id = $4,
+		    assigned_at = now(),
+		    updated_at = now()
+		WHERE run_id = $1
+		  AND status IN ('queued', 'assigned')
+		RETURNING `+runColumns,
+		runID, attempt, leaseEpoch, daemonID,
+	))
+	if errors.Is(err, pgx.ErrNoRows) {
+		if _, getErr := s.GetRun(ctx, runID); errors.Is(getErr, ErrRunNotFound) {
+			return Run{}, ErrRunNotFound
+		}
+		return Run{}, ErrRunNotAssignable
+	}
+	if err != nil {
+		return Run{}, fmt.Errorf("assign run: %w", err)
+	}
+	return run, nil
+}
+
+// UpdateRunStatus applies a status transition fenced by attempt and lease_epoch.
+func (s *Store) UpdateRunStatus(
+	ctx context.Context,
+	runID string,
+	status string,
+	attempt int,
+	leaseEpoch int64,
+) error {
+	if s == nil || s.pool == nil {
+		return fmt.Errorf("runstore: postgres pool is nil")
+	}
+	if runID == "" || status == "" || attempt < 1 || leaseEpoch < 1 {
+		return fmt.Errorf("%w: invalid status update", ErrInvalidRun)
+	}
+	tag, err := s.pool.Exec(ctx, `
+		UPDATE runs
+		SET status = $2,
+		    updated_at = now()
+		WHERE run_id = $1
+		  AND attempt = $3
+		  AND lease_epoch = $4
+		  AND status NOT IN ('completed', 'failed', 'cancelled', 'timeout')
+	`, runID, status, attempt, leaseEpoch)
+	if err != nil {
+		return fmt.Errorf("update run status: %w", err)
+	}
+	if tag.RowsAffected() == 0 {
+		if _, getErr := s.GetRun(ctx, runID); errors.Is(getErr, ErrRunNotFound) {
+			return ErrRunNotFound
+		}
+		return ErrRunNotAssignable
+	}
+	return nil
 }
 
 // AppendEvent inserts one event idempotently and advances the run projection.
@@ -260,6 +336,9 @@ func normalizeRun(run Run) (Run, error) {
 	if run.RunTimeoutMS <= 0 {
 		run.RunTimeoutMS = 1_800_000
 	}
+	if run.ToolTimeoutMS <= 0 {
+		run.ToolTimeoutMS = 60_000
+	}
 	if run.TraceID == "" {
 		run.TraceID = run.RunID
 	}
@@ -274,6 +353,12 @@ func normalizeRun(run Run) (Run, error) {
 	run.Model, err = normalizeJSON(run.Model)
 	if err != nil {
 		return Run{}, fmt.Errorf("%w: model: %v", ErrInvalidRun, err)
+	}
+	if len(run.Input) == 0 {
+		run.Input = json.RawMessage(`[]`)
+	}
+	if !json.Valid(run.Input) {
+		return Run{}, fmt.Errorf("%w: input is invalid JSON", ErrInvalidRun)
 	}
 	now := time.Now().UTC()
 	run.CreatedAt = now
@@ -347,11 +432,13 @@ func scanRun(row pgx.Row) (Run, error) {
 		&run.Runtime,
 		&run.Strategy,
 		&params,
+		&run.Input,
 		&run.Status,
 		&run.Attempt,
 		&sessionID,
 		&model,
 		&run.RunTimeoutMS,
+		&run.ToolTimeoutMS,
 		&run.TraceID,
 		&assignedDaemon,
 		&run.LeaseEpoch,
