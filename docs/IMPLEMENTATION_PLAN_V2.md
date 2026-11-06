@@ -4,7 +4,7 @@
 |---|---|
 | 计划版本 | V2.0 |
 | 日期 | 2026-11-03 |
-| 状态 | P0–P2 完成；G2 功能通过、1k/s 待 server-local 复测；取代 `IMPLEMENTATION_PLAN.md` v0.3 |
+| 状态 | P0–P2 完成；G2 通过（本机 Enqueue 约 9.1k/s、ClaimAck 约 1.82k/s）；取代 `IMPLEMENTATION_PLAN.md` v0.3 |
 | 依据 | `docs/DESIGN.md` v0.1、`docs/WORKFLOW_ENGINE_AUDIT.md` |
 | 总步骤 | 72 个审查单元 |
 | 用法 | 一次只做一个 `Px-yy`；产出、验收、diff 都确认后再进入下一步 |
@@ -226,7 +226,7 @@ internal/control ──► internal/workflow (PostgreSQL run_tasks, SKIP LOCKED)
 - [x] **P2-22 指标、基准与 Gate**
   - 队列深度、最老任务年龄、Claim 延迟、Ack/Nack/Dead、租约丢失；1k 任务/秒基准。
   - 验收：基准报告；P4 可直接接入；G2 通过。
-  - 完成记录：`Metrics`/`Pool.Stats`、Worker/Pool 指标、Enqueue/ClaimAck benchmark；G2 功能通过，1k/s 待 server-local 复测；报告：`docs/reports/P2-22.md`。
+  - 完成记录：`Metrics`/`Pool.Stats`、Worker/Pool 指标、Enqueue/ClaimAck benchmark；本机 PostgreSQL 验证 Enqueue 约 9.1k/s、ClaimAck 约 1.82k/s，G2 通过；报告：`docs/reports/P2-22.md`。
 
 **G2 审查物：** Task API、schema、并发/重启/DLQ 报告、基准数据。
 
