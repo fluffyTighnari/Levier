@@ -201,6 +201,11 @@ func TestAppendEventIsIdempotentAndAdvancesProjection(t *testing.T) {
 		t.Fatalf("event count = %d, want 1", count)
 	}
 
+	events, err := store.ListEvents(ctx, run.RunID, 0, 0, 10)
+	if err != nil || len(events) != 1 || events[0].Type != "RUN_STATUS" {
+		t.Fatalf("ListEvents() = %+v, %v", events, err)
+	}
+
 	got, err := store.GetRun(ctx, run.RunID)
 	if err != nil {
 		t.Fatalf("GetRun() error = %v", err)

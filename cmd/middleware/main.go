@@ -14,6 +14,7 @@ import (
 	"flag"
 	"log/slog"
 	"net"
+	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
@@ -25,6 +26,7 @@ import (
 	"github.com/fluffyTighnari/middleware/internal/connection"
 	"github.com/fluffyTighnari/middleware/internal/control"
 	"github.com/fluffyTighnari/middleware/internal/db"
+	"github.com/fluffyTighnari/middleware/internal/httpapi"
 	"github.com/fluffyTighnari/middleware/internal/observe"
 	"github.com/fluffyTighnari/middleware/internal/runstore"
 	"github.com/fluffyTighnari/middleware/internal/workflow"
@@ -106,16 +108,42 @@ func main() {
 		}
 	}()
 
+	api := httpapi.NewServer(runs, queue, httpapi.Config{
+		BearerToken:          cfg.HTTP.BearerToken,
+		DefaultRunTimeoutMS:  1_800_000,
+		DefaultToolTimeoutMS: 60_000,
+	})
+	httpListener, err := net.Listen("tcp", cfg.HTTP.Addr)
+	if err != nil {
+		logger.Error("listen http failed", "addr", cfg.HTTP.Addr, "err", err)
+		os.Exit(1)
+	}
+	httpServer := &http.Server{
+		Handler:      api.Handler(),
+		ReadTimeout:  cfg.HTTP.ReadTimeout.Std(),
+		WriteTimeout: cfg.HTTP.WriteTimeout.Std(),
+	}
+	go func() {
+		if err := httpServer.Serve(httpListener); err != nil && err != http.ErrServerClosed {
+			logger.Error("http server stopped", "err", err)
+		}
+	}()
+
 	logger.Info("middleware starting",
 		"config", *configPath,
 		"database", "connected",
 		"grpc_addr", cfg.GRPC.Addr,
+		"http_addr", cfg.HTTP.Addr,
 	)
 	<-ctx.Done()
 
 	workers.Stop()
 	controller.Close()
 	hub.Close()
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), cfg.HTTP.ShutdownTimeout.Std())
+	_ = httpServer.Shutdown(shutdownCtx)
+	cancel()
+	_ = httpListener.Close()
 	stopped := make(chan struct{})
 	go func() {
 		grpcServer.GracefulStop()

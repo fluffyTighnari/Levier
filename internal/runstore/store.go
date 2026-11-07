@@ -303,6 +303,63 @@ func (s *Store) AppendEvent(ctx context.Context, event Event) (bool, error) {
 	return inserted, nil
 }
 
+// ListEvents returns persisted events after (afterAttempt, afterSeq).
+func (s *Store) ListEvents(
+	ctx context.Context,
+	runID string,
+	afterAttempt int32,
+	afterSeq int64,
+	limit int,
+) ([]Event, error) {
+	if s == nil || s.pool == nil {
+		return nil, fmt.Errorf("runstore: postgres pool is nil")
+	}
+	if runID == "" {
+		return nil, fmt.Errorf("%w: run_id is required", ErrInvalidEvent)
+	}
+	if afterAttempt < 0 || afterSeq < 0 {
+		return nil, fmt.Errorf("%w: after values must be non-negative", ErrInvalidEvent)
+	}
+	if limit <= 0 {
+		limit = 100
+	}
+	if limit > 1000 {
+		limit = 1000
+	}
+	rows, err := s.pool.Query(ctx, `
+		SELECT run_id, attempt, seq, source, type, payload, ts_ms
+		FROM run_events
+		WHERE run_id = $1
+		  AND (attempt > $2 OR (attempt = $2 AND seq > $3))
+		ORDER BY attempt, seq
+		LIMIT $4
+	`, runID, afterAttempt, afterSeq, limit)
+	if err != nil {
+		return nil, fmt.Errorf("list events: %w", err)
+	}
+	defer rows.Close()
+	events := make([]Event, 0, limit)
+	for rows.Next() {
+		var event Event
+		if err := rows.Scan(
+			&event.RunID,
+			&event.Attempt,
+			&event.Seq,
+			&event.Source,
+			&event.Type,
+			&event.Payload,
+			&event.TSMs,
+		); err != nil {
+			return nil, fmt.Errorf("list events: scan: %w", err)
+		}
+		events = append(events, event)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("list events: %w", err)
+	}
+	return events, nil
+}
+
 func (s *Store) getRunByIdempotency(ctx context.Context, appID, key string) (Run, error) {
 	run, err := scanRun(s.pool.QueryRow(ctx,
 		"SELECT "+runColumns+" FROM runs WHERE app_id = $1 AND idempotency_key = $2",

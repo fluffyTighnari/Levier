@@ -292,9 +292,10 @@ internal/control ──► internal/workflow (PostgreSQL run_tasks, SKIP LOCKED)
   - 验收：单 daemon 单 run 可进入 assigned/running。
   - 完成记录：`internal/control.Control`、TaskAssign 组装、TaskAck pending、事件落库与状态迁移；RunStore `AssignRun`/`UpdateRunStatus`；单 daemon echo 端到端通过；报告：`docs/reports/P4-33.md`。
 
-- [ ] **P4-34 最小 HTTP API**
+- [x] **P4-34 最小 HTTP API**
   - `POST /runs`、`GET /runs/{id}`、`GET events`、测试用 Bearer。
   - 验收：curl 可创建并查到完整事件。
+  - 完成记录：HTTP 路由、Bearer、幂等创建、`RUN_DISPATCH` 入队、事件回放、`main` 接线；手工 curl 通过；报告：`docs/reports/P4-34.md`。
 
 - [ ] **P4-35 Harness echo 集成**
   - Harness 接收 TaskAssign → Ack → RUN_STATUS/MESSAGE_COMPLETED → 终态。
