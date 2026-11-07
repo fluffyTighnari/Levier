@@ -12,6 +12,7 @@ import (
 	"os"
 	"reflect"
 	"strings"
+	"sync"
 	"testing"
 
 	"github.com/jackc/pgx/v5"
@@ -254,7 +255,15 @@ func TestAssignRunAndUpdateStatus(t *testing.T) {
 		t.Fatalf("input = %s", run.Input)
 	}
 
-	assigned, err := store.AssignRun(ctx, run.RunID, 1, 1, "daemon-1")
+	assigned, err := store.AssignRun(ctx, Assignment{
+		RunID:              run.RunID,
+		ExpectedStatus:     StatusQueued,
+		ExpectedAttempt:    0,
+		ExpectedLeaseEpoch: 0,
+		Attempt:            1,
+		LeaseEpoch:         1,
+		DaemonID:           "daemon-1",
+	})
 	if err != nil {
 		t.Fatalf("AssignRun() error = %v", err)
 	}
@@ -265,19 +274,140 @@ func TestAssignRunAndUpdateStatus(t *testing.T) {
 		t.Fatalf("assigned daemon/time = %+v", assigned)
 	}
 
-	if err := store.UpdateRunStatus(ctx, run.RunID, "running", 1, 1); err != nil {
-		t.Fatalf("UpdateRunStatus(running) error = %v", err)
+	if _, err := store.Transition(ctx, Transition{
+		RunID:              run.RunID,
+		ExpectedStatus:     StatusAssigned,
+		ToStatus:           StatusRunning,
+		ExpectedAttempt:    1,
+		ExpectedLeaseEpoch: 1,
+	}); err != nil {
+		t.Fatalf("Transition(running) error = %v", err)
 	}
-	if err := store.UpdateRunStatus(ctx, run.RunID, "completed", 1, 1); err != nil {
-		t.Fatalf("UpdateRunStatus(completed) error = %v", err)
+	if _, err := store.Transition(ctx, Transition{
+		RunID:              run.RunID,
+		ExpectedStatus:     StatusRunning,
+		ToStatus:           StatusCompleted,
+		ExpectedAttempt:    1,
+		ExpectedLeaseEpoch: 1,
+	}); err != nil {
+		t.Fatalf("Transition(completed) error = %v", err)
 	}
 	current, _ := store.GetRun(ctx, run.RunID)
 	if current.Status != "completed" {
 		t.Fatalf("status = %q", current.Status)
 	}
 
-	if err := store.UpdateRunStatus(ctx, run.RunID, "failed", 2, 2); !errors.Is(err, ErrRunNotAssignable) {
-		t.Fatalf("stale UpdateRunStatus() error = %v, want ErrRunNotAssignable", err)
+	if _, err := store.Transition(ctx, Transition{
+		RunID:              run.RunID,
+		ExpectedStatus:     StatusRunning,
+		ToStatus:           StatusFailed,
+		ExpectedAttempt:    2,
+		ExpectedLeaseEpoch: 2,
+	}); !errors.Is(err, ErrRunNotAssignable) {
+		t.Fatalf("stale Transition() error = %v, want ErrRunNotAssignable", err)
+	}
+}
+
+func TestConcurrentTransitionOnlyOneSucceeds(t *testing.T) {
+	store := New(testPool(t))
+	ctx := context.Background()
+	app := createApp(t, store)
+	run, _ := store.CreateRun(ctx, Run{RunID: "run-" + id.New(), AppID: app.AppID})
+	if _, err := store.AssignRun(ctx, Assignment{
+		RunID: run.RunID, ExpectedStatus: StatusQueued,
+		ExpectedAttempt: 0, ExpectedLeaseEpoch: 0,
+		Attempt: 1, LeaseEpoch: 1, DaemonID: "daemon-1",
+	}); err != nil {
+		t.Fatalf("AssignRun() error = %v", err)
+	}
+
+	var wg sync.WaitGroup
+	results := make(chan error, 2)
+	for i := 0; i < 2; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			_, err := store.Transition(ctx, Transition{
+				RunID: run.RunID, ExpectedStatus: StatusAssigned,
+				ToStatus: StatusRunning, ExpectedAttempt: 1, ExpectedLeaseEpoch: 1,
+			})
+			results <- err
+		}()
+	}
+	wg.Wait()
+	close(results)
+
+	successes := 0
+	failures := 0
+	for err := range results {
+		if err == nil {
+			successes++
+		} else if errors.Is(err, ErrRunNotAssignable) {
+			failures++
+		} else {
+			t.Fatalf("Transition() error = %v", err)
+		}
+	}
+	if successes != 1 || failures != 1 {
+		t.Fatalf("successes=%d failures=%d", successes, failures)
+	}
+}
+
+func TestIllegalTransitionAndTerminalGuard(t *testing.T) {
+	store := New(testPool(t))
+	ctx := context.Background()
+	app := createApp(t, store)
+	run, _ := store.CreateRun(ctx, Run{RunID: "run-" + id.New(), AppID: app.AppID})
+
+	if _, err := store.Transition(ctx, Transition{
+		RunID: run.RunID, ExpectedStatus: StatusQueued,
+		ToStatus: StatusRunning, ExpectedAttempt: 0, ExpectedLeaseEpoch: 0,
+	}); !errors.Is(err, ErrRunNotAssignable) && !errors.Is(err, ErrInvalidRun) {
+		t.Fatalf("illegal queued->running error = %v", err)
+	}
+
+	if _, err := store.AssignRun(ctx, Assignment{
+		RunID: run.RunID, ExpectedStatus: StatusQueued,
+		ExpectedAttempt: 0, ExpectedLeaseEpoch: 0,
+		Attempt: 1, LeaseEpoch: 1, DaemonID: "daemon-1",
+	}); err != nil {
+		t.Fatalf("AssignRun() error = %v", err)
+	}
+	if _, err := store.Transition(ctx, Transition{
+		RunID: run.RunID, ExpectedStatus: StatusAssigned,
+		ToStatus: StatusRunning, ExpectedAttempt: 1, ExpectedLeaseEpoch: 1,
+	}); err != nil {
+		t.Fatalf("assigned->running error = %v", err)
+	}
+	if _, err := store.Transition(ctx, Transition{
+		RunID: run.RunID, ExpectedStatus: StatusRunning,
+		ToStatus: StatusCompleted, ExpectedAttempt: 1, ExpectedLeaseEpoch: 1,
+	}); err != nil {
+		t.Fatalf("running->completed error = %v", err)
+	}
+	if _, err := store.Transition(ctx, Transition{
+		RunID: run.RunID, ExpectedStatus: StatusCompleted,
+		ToStatus: StatusRunning, ExpectedAttempt: 1, ExpectedLeaseEpoch: 1,
+	}); !errors.Is(err, ErrRunNotAssignable) {
+		t.Fatalf("terminal transition error = %v", err)
+	}
+}
+
+func TestEventDoesNotChangeRunStatus(t *testing.T) {
+	store := New(testPool(t))
+	ctx := context.Background()
+	app := createApp(t, store)
+	run, _ := store.CreateRun(ctx, Run{RunID: "run-" + id.New(), AppID: app.AppID})
+
+	if _, err := store.AppendEvent(ctx, Event{
+		RunID: run.RunID, Attempt: 1, Seq: 1, Source: "daemon",
+		Type: "RUN_STATUS", Payload: json.RawMessage(`{"status":"running"}`),
+	}); err != nil {
+		t.Fatalf("AppendEvent() error = %v", err)
+	}
+	current, _ := store.GetRun(ctx, run.RunID)
+	if current.Status != StatusQueued {
+		t.Fatalf("status = %q, want queued; events must not write status", current.Status)
 	}
 }
 

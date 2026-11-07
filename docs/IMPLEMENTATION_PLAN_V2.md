@@ -4,7 +4,7 @@
 |---|---|
 | 计划版本 | V2.0 |
 | 日期 | 2026-11-03 |
-| 状态 | P0–P4 完成；P5-37 完成；G2 通过；G3 功能通过；M1/G4 功能通过；镜像待 Docker 复核；取代 `IMPLEMENTATION_PLAN.md` v0.3 |
+| 状态 | P0–P4 完成；P5-37–P5-38 完成；G2 通过；G3 功能通过；M1/G4 功能通过；镜像待 Docker 复核；取代 `IMPLEMENTATION_PLAN.md` v0.3 |
 | 依据 | `docs/DESIGN.md` v0.1、`docs/WORKFLOW_ENGINE_AUDIT.md` |
 | 总步骤 | 72 个审查单元 |
 | 用法 | 一次只做一个 `Px-yy`；产出、验收、diff 都确认后再进入下一步 |
@@ -316,9 +316,10 @@ internal/control ──► internal/workflow (PostgreSQL run_tasks, SKIP LOCKED)
   - 验收：迁移评审；`EXPLAIN (ANALYZE, BUFFERS)` 走索引；并发事务可用。
   - 完成记录：迁移 0005、tool_defs/mcp_server_defs/sessions/tool_invocations、约束与索引；EXPLAIN 命中 `idx_runs_status` 与 `run_events_pkey`；报告：`docs/reports/P5-37.md`。
 
-- [ ] **P5-38 状态机与 CAS**
+- [x] **P5-38 状态机与 CAS**
   - `Transition(expected_status, attempt_delta, lease)`、终态守卫、Control 单一写者。
   - 验收：并发迁移仅一个成功；非法迁移拒绝；事件不回写状态。
+  - 完成记录：`status.go` 状态白名单、`AssignRun`/`Transition` CAS、Control 单一写者；并发/非法/终态/事件不写状态测试通过；报告：`docs/reports/P5-38.md`。
 
 - [ ] **P5-39 事件写入**
   - `(run_id, attempt, seq)` 幂等、`source`、乱序窗口 16、`SEQ_GAP`、ephemeral 分流；校验 `Envelope.lease_epoch == runs.lease_epoch`；MW 生成事件使用保留 seq 区间。

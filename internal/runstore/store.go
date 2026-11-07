@@ -181,35 +181,61 @@ func (s *Store) GetRun(ctx context.Context, runID string) (Run, error) {
 	return run, nil
 }
 
+// Assignment moves a run to assigned with CAS fencing.
+type Assignment struct {
+	RunID              string
+	ExpectedStatus     string
+	ExpectedAttempt    int
+	ExpectedLeaseEpoch int64
+	Attempt            int
+	LeaseEpoch         int64
+	DaemonID           string
+}
+
+// Transition applies a CAS status transition.
+type Transition struct {
+	RunID              string
+	ExpectedStatus     string
+	ToStatus           string
+	ExpectedAttempt    int
+	ExpectedLeaseEpoch int64
+	AttemptDelta       int
+}
+
 // AssignRun moves a run to assigned and records the daemon/attempt fencing.
-func (s *Store) AssignRun(
-	ctx context.Context,
-	runID string,
-	attempt int,
-	leaseEpoch int64,
-	daemonID string,
-) (Run, error) {
+func (s *Store) AssignRun(ctx context.Context, assignment Assignment) (Run, error) {
 	if s == nil || s.pool == nil {
 		return Run{}, fmt.Errorf("runstore: postgres pool is nil")
 	}
-	if runID == "" || daemonID == "" || attempt < 1 || leaseEpoch < 1 {
+	if assignment.RunID == "" || assignment.DaemonID == "" ||
+		assignment.ExpectedStatus == "" || assignment.ExpectedAttempt < 0 ||
+		assignment.ExpectedLeaseEpoch < 0 || assignment.Attempt < 1 ||
+		assignment.LeaseEpoch < 1 {
 		return Run{}, fmt.Errorf("%w: invalid assignment", ErrInvalidRun)
+	}
+	if assignment.ExpectedStatus != StatusQueued && assignment.ExpectedStatus != StatusAssigned {
+		return Run{}, fmt.Errorf("%w: cannot assign from %s", ErrRunNotAssignable, assignment.ExpectedStatus)
 	}
 	run, err := scanRun(s.pool.QueryRow(ctx, `
 		UPDATE runs
 		SET status = 'assigned',
-		    attempt = $2,
-		    lease_epoch = $3,
-		    assigned_daemon_id = $4,
+		    attempt = $5,
+		    lease_epoch = $6,
+		    assigned_daemon_id = $7,
 		    assigned_at = now(),
 		    updated_at = now()
 		WHERE run_id = $1
+		  AND status = $2
+		  AND attempt = $3
+		  AND lease_epoch = $4
 		  AND status IN ('queued', 'assigned')
 		RETURNING `+runColumns,
-		runID, attempt, leaseEpoch, daemonID,
+		assignment.RunID, assignment.ExpectedStatus, assignment.ExpectedAttempt,
+		assignment.ExpectedLeaseEpoch, assignment.Attempt, assignment.LeaseEpoch,
+		assignment.DaemonID,
 	))
 	if errors.Is(err, pgx.ErrNoRows) {
-		if _, getErr := s.GetRun(ctx, runID); errors.Is(getErr, ErrRunNotFound) {
+		if _, getErr := s.GetRun(ctx, assignment.RunID); errors.Is(getErr, ErrRunNotFound) {
 			return Run{}, ErrRunNotFound
 		}
 		return Run{}, ErrRunNotAssignable
@@ -220,39 +246,51 @@ func (s *Store) AssignRun(
 	return run, nil
 }
 
-// UpdateRunStatus applies a status transition fenced by attempt and lease_epoch.
-func (s *Store) UpdateRunStatus(
-	ctx context.Context,
-	runID string,
-	status string,
-	attempt int,
-	leaseEpoch int64,
-) error {
+// Transition applies a CAS status transition. Terminal runs never transition.
+func (s *Store) Transition(ctx context.Context, transition Transition) (Run, error) {
 	if s == nil || s.pool == nil {
-		return fmt.Errorf("runstore: postgres pool is nil")
+		return Run{}, fmt.Errorf("runstore: postgres pool is nil")
 	}
-	if runID == "" || status == "" || attempt < 1 || leaseEpoch < 1 {
-		return fmt.Errorf("%w: invalid status update", ErrInvalidRun)
+	if transition.RunID == "" || transition.ExpectedStatus == "" || transition.ToStatus == "" ||
+		transition.ExpectedAttempt < 0 || transition.ExpectedLeaseEpoch < 0 ||
+		transition.AttemptDelta < 0 {
+		return Run{}, fmt.Errorf("%w: invalid transition", ErrInvalidRun)
 	}
-	tag, err := s.pool.Exec(ctx, `
+	if TerminalStatus(transition.ExpectedStatus) {
+		return Run{}, fmt.Errorf("%w: current status is terminal", ErrRunNotAssignable)
+	}
+	if !canTransition(transition.ExpectedStatus, transition.ToStatus) {
+		return Run{}, fmt.Errorf(
+			"%w: %s -> %s",
+			ErrRunNotAssignable,
+			transition.ExpectedStatus,
+			transition.ToStatus,
+		)
+	}
+	run, err := scanRun(s.pool.QueryRow(ctx, `
 		UPDATE runs
-		SET status = $2,
+		SET status = $5,
+		    attempt = attempt + $6,
 		    updated_at = now()
 		WHERE run_id = $1
+		  AND status = $2
 		  AND attempt = $3
 		  AND lease_epoch = $4
 		  AND status NOT IN ('completed', 'failed', 'cancelled', 'timeout')
-	`, runID, status, attempt, leaseEpoch)
-	if err != nil {
-		return fmt.Errorf("update run status: %w", err)
-	}
-	if tag.RowsAffected() == 0 {
-		if _, getErr := s.GetRun(ctx, runID); errors.Is(getErr, ErrRunNotFound) {
-			return ErrRunNotFound
+		RETURNING `+runColumns,
+		transition.RunID, transition.ExpectedStatus, transition.ExpectedAttempt,
+		transition.ExpectedLeaseEpoch, transition.ToStatus, transition.AttemptDelta,
+	))
+	if errors.Is(err, pgx.ErrNoRows) {
+		if _, getErr := s.GetRun(ctx, transition.RunID); errors.Is(getErr, ErrRunNotFound) {
+			return Run{}, ErrRunNotFound
 		}
-		return ErrRunNotAssignable
+		return Run{}, ErrRunNotAssignable
 	}
-	return nil
+	if err != nil {
+		return Run{}, fmt.Errorf("transition run: %w", err)
+	}
+	return run, nil
 }
 
 // AppendEvent inserts one event idempotently and advances the run projection.

@@ -38,24 +38,29 @@ func (f *fakeRuns) GetRun(context.Context, string) (runstore.Run, error) {
 	return f.run, nil
 }
 
-func (f *fakeRuns) AssignRun(_ context.Context, _ string, attempt int, epoch int64, daemonID string) (runstore.Run, error) {
+func (f *fakeRuns) AssignRun(_ context.Context, assignment runstore.Assignment) (runstore.Run, error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	f.assignCalls++
-	f.assignedTo = daemonID
+	f.assignedTo = assignment.DaemonID
 	f.run.Status = "assigned"
-	f.run.Attempt = attempt
-	f.run.LeaseEpoch = epoch
-	f.run.AssignedDaemonID = daemonID
+	f.run.Attempt = assignment.Attempt
+	f.run.LeaseEpoch = assignment.LeaseEpoch
+	f.run.AssignedDaemonID = assignment.DaemonID
 	return f.run, nil
 }
 
-func (f *fakeRuns) UpdateRunStatus(_ context.Context, _ string, status string, _ int, _ int64) error {
+func (f *fakeRuns) Transition(_ context.Context, transition runstore.Transition) (runstore.Run, error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
-	f.statuses = append(f.statuses, status)
-	f.run.Status = status
-	return nil
+	if transition.ExpectedStatus != f.run.Status ||
+		transition.ExpectedAttempt != f.run.Attempt ||
+		transition.ExpectedLeaseEpoch != f.run.LeaseEpoch {
+		return runstore.Run{}, runstore.ErrRunNotAssignable
+	}
+	f.statuses = append(f.statuses, transition.ToStatus)
+	f.run.Status = transition.ToStatus
+	return f.run, nil
 }
 
 func (f *fakeRuns) AppendEvent(_ context.Context, event runstore.Event) (bool, error) {

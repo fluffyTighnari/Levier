@@ -39,8 +39,8 @@ type Config struct {
 // RunStore is the persistence subset used by Control.
 type RunStore interface {
 	GetRun(ctx context.Context, runID string) (runstore.Run, error)
-	AssignRun(ctx context.Context, runID string, attempt int, leaseEpoch int64, daemonID string) (runstore.Run, error)
-	UpdateRunStatus(ctx context.Context, runID, status string, attempt int, leaseEpoch int64) error
+	AssignRun(ctx context.Context, assignment runstore.Assignment) (runstore.Run, error)
+	Transition(ctx context.Context, transition runstore.Transition) (runstore.Run, error)
 	AppendEvent(ctx context.Context, event runstore.Event) (bool, error)
 }
 
@@ -167,7 +167,15 @@ func (c *Control) Handle(ctx context.Context, task workflow.Task, _ workflow.Lea
 		return workflow.Permanent(fmt.Errorf("build task assign: %w", err))
 	}
 
-	if _, err := c.runs.AssignRun(ctx, run.RunID, attempt, leaseEpoch, daemonID); err != nil {
+	if _, err := c.runs.AssignRun(ctx, runstore.Assignment{
+		RunID:              run.RunID,
+		ExpectedStatus:     run.Status,
+		ExpectedAttempt:    run.Attempt,
+		ExpectedLeaseEpoch: run.LeaseEpoch,
+		Attempt:            attempt,
+		LeaseEpoch:         leaseEpoch,
+		DaemonID:           daemonID,
+	}); err != nil {
 		if errors.Is(err, runstore.ErrRunNotAssignable) {
 			return nil
 		}
@@ -273,14 +281,17 @@ func (c *Control) handleEvent(env *runtimev1.Envelope) {
 	default:
 		return
 	}
-	if err := c.runs.UpdateRunStatus(
-		ctx,
-		env.GetRunId(),
-		status,
-		int(env.GetAttempt()),
-		env.GetLeaseEpoch(),
-	); err != nil && !errors.Is(err, runstore.ErrRunNotAssignable) {
-		c.log.Warn("control update run status failed",
+	if status == run.Status {
+		return
+	}
+	if _, err := c.runs.Transition(ctx, runstore.Transition{
+		RunID:              env.GetRunId(),
+		ExpectedStatus:     run.Status,
+		ToStatus:           status,
+		ExpectedAttempt:    int(env.GetAttempt()),
+		ExpectedLeaseEpoch: env.GetLeaseEpoch(),
+	}); err != nil && !errors.Is(err, runstore.ErrRunNotAssignable) {
+		c.log.Warn("control transition run failed",
 			"run_id", env.GetRunId(),
 			"status", status,
 			"err", err,
