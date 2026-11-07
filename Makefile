@@ -14,7 +14,7 @@ export
 BIN_DIR := bin
 GO_FILES := $(shell find . -name '*.go' -not -path './workflow_engine/*' -not -path './vendor/*')
 
-.PHONY: all build test lint fmt fmt-check vet run clean dev-up dev-down migrate proto proto-check proto-lint contract-check harness-test mcp-runtime-test image-harness image-mcp-runtime
+.PHONY: all build test lint fmt fmt-check vet run clean dev-up dev-down migrate proto proto-check proto-lint contract-check harness-test mcp-runtime-test image-harness image-mcp-runtime e2e-echo
 
 all: build
 
@@ -81,3 +81,6 @@ image-harness:
 
 image-mcp-runtime:
 	docker build -f deploy/mcp-runtime.Dockerfile -t middleware-mcp-runtime:dev .
+
+e2e-echo: build
+	./scripts/e2e_echo.sh

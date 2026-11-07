@@ -297,9 +297,10 @@ internal/control ──► internal/workflow (PostgreSQL run_tasks, SKIP LOCKED)
   - 验收：curl 可创建并查到完整事件。
   - 完成记录：HTTP 路由、Bearer、幂等创建、`RUN_DISPATCH` 入队、事件回放、`main` 接线；手工 curl 通过；报告：`docs/reports/P4-34.md`。
 
-- [ ] **P4-35 Harness echo 集成**
+- [x] **P4-35 Harness echo 集成**
   - Harness 接收 TaskAssign → Ack → RUN_STATUS/MESSAGE_COMPLETED → 终态。
   - 验收：seq 连续；终态正确；事件可回放。
+  - 完成记录：`scripts/e2e_echo.sh`、`make e2e-echo`；真实 Middleware + Harness echo 完成，事件 seq 1/2/3，HTTP 回放通过；报告：`docs/reports/P4-35.md`。
 
 - [ ] **P4-36 M1 E2E 与 Gate**
   - 脚本：App→MW→Workflow→Harness→固定回复→PostgreSQL→查询。
