@@ -31,11 +31,11 @@ func TestMigrateIsIdempotent(t *testing.T) {
 	if err := pool.QueryRow(ctx, "SELECT count(*) FROM schema_migrations").Scan(&applied); err != nil {
 		t.Fatalf("count schema_migrations: %v", err)
 	}
-	if applied != 4 {
-		t.Fatalf("applied migrations = %d, want 4", applied)
+	if applied != 5 {
+		t.Fatalf("applied migrations = %d, want 5", applied)
 	}
 
-	for _, table := range []string{"apps", "daemons", "runs", "run_events", "run_tasks"} {
+	for _, table := range []string{"apps", "tool_defs", "mcp_server_defs", "daemons", "runs", "run_events", "run_tasks", "sessions", "tool_invocations"} {
 		var exists bool
 		if err := pool.QueryRow(ctx, "SELECT to_regclass($1) IS NOT NULL", table).Scan(&exists); err != nil {
 			t.Fatalf("check table %s: %v", table, err)

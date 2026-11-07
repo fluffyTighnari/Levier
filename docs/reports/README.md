@@ -43,6 +43,7 @@
 | P4-34 | `docs/reports/P4-34.md` | 已提交 |
 | P4-35 | `docs/reports/P4-35.md` | 已提交 |
 | P4-36 | `docs/reports/P4-36.md` | 已提交 |
+| P5-37 | `docs/reports/P5-37.md` | 已提交 |
 | G4 | `docs/reports/G4.md` | 已提交 |
 
 模板：`docs/reports/TEMPLATE.md`。
