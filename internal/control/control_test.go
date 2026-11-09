@@ -114,6 +114,17 @@ func (fakeMaterials) AssembleTaskMaterials(context.Context, string) (register.Ta
 	}, nil
 }
 
+type fakeScheduler struct {
+	request PlacementRequest
+	id      string
+	ok      bool
+}
+
+func (f *fakeScheduler) Pick(request PlacementRequest) (string, bool) {
+	f.request = request
+	return f.id, f.ok
+}
+
 func newRun() runstore.Run {
 	return runstore.Run{
 		RunID:         "run-1",
@@ -193,6 +204,32 @@ func TestHandleIncludesAssembledMaterials(t *testing.T) {
 	}
 	if len(assign.GetMcpBindings()) != 1 || assign.GetMcpBindings()[0].GetNamespace() != "mcp__github__" {
 		t.Fatalf("mcp bindings = %+v", assign.GetMcpBindings())
+	}
+}
+
+func TestHandleUsesLongtermStickyScheduler(t *testing.T) {
+	runs := &fakeRuns{run: newRun()}
+	runs.run.Runtime = "longterm"
+	runs.run.AssignedDaemonID = "daemon-old"
+	hub := &fakeHub{daemonID: "daemon-old"}
+	scheduler := &fakeScheduler{id: "daemon-old", ok: true}
+	ctrl := New(runs, hub, Config{AckTimeout: time.Second, Scheduler: scheduler})
+	hub.onSend = func(env *runtimev1.Envelope) {
+		go ctrl.HandleEnvelope("daemon-old", &runtimev1.Envelope{
+			CorrelationId: env.GetMsgId(),
+			Payload: &runtimev1.Envelope_TaskAck{
+				TaskAck: &runtimev1.TaskAck{Accepted: true},
+			},
+		})
+	}
+	if err := ctrl.Handle(context.Background(), testTask(), workflow.Lease{}); err != nil {
+		t.Fatalf("Handle() error = %v", err)
+	}
+	if scheduler.request.StickyDaemonID != "daemon-old" {
+		t.Fatalf("sticky daemon = %q", scheduler.request.StickyDaemonID)
+	}
+	if scheduler.request.Runtime != runtimev1.RuntimeType_LONGTERM {
+		t.Fatalf("runtime = %v", scheduler.request.Runtime)
 	}
 }
 

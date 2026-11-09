@@ -85,6 +85,7 @@ func main() {
 	controller := control.New(runs, hub, control.Config{
 		Logger:    logger,
 		Publisher: appHub,
+		Scheduler: control.NewHubScheduler(hub),
 	}, registry)
 	hub.SetOnEnvelope(controller.HandleEnvelope)
 	controller.Start(ctx)

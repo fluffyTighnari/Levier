@@ -4,7 +4,7 @@
 |---|---|
 | 计划版本 | V2.0 |
 | 日期 | 2026-11-03 |
-| 状态 | P0–P5 完成；P6-43–P6-47 完成；G2/G3/G4/G5 功能通过；M1 垂直切片完成；镜像待 Docker 复核；取代 `IMPLEMENTATION_PLAN.md` v0.3 |
+| 状态 | P0–P5 完成；P6-43–P6-48 完成；G2/G3/G4/G5 功能通过；M1 垂直切片完成；镜像待 Docker 复核；取代 `IMPLEMENTATION_PLAN.md` v0.3 |
 | 依据 | `docs/DESIGN.md` v0.1、`docs/WORKFLOW_ENGINE_AUDIT.md` |
 | 总步骤 | 72 个审查单元 |
 | 用法 | 一次只做一个 `Px-yy`；产出、验收、diff 都确认后再进入下一步 |
@@ -370,9 +370,10 @@ internal/control ──► internal/workflow (PostgreSQL run_tasks, SKIP LOCKED)
   - 验收：重复结果幂等；断线立即 `APP_UNREACHABLE`。
   - 完成记录：`AppHub` pending map、`CallLocalTool`/`ResolveLocalTool`、WS local_tool_result 路由、超时/取消/断线失败；重复结果幂等；报告：`docs/reports/P6-47.md`。
 
-- [ ] **P6-48 调度器**
+- [x] **P6-48 调度器**
   - runtime/容量/labels/strategy 过滤、least-loaded、longterm 粘滞。
   - 验收：表驱动选主；满载不分配；粘滞失败回退。
+  - 完成记录：`Select`/`HubScheduler`、过滤/least-loaded/sticky/fallback；表驱动与 longterm sticky 测试通过；报告：`docs/reports/P6-48.md`。
 
 - [ ] **P6-49 TaskAssign/Ack/重投**
   - TaskAssign 组装/发送（携带 lease_epoch）、5s Ack、拒绝换候选、容量预留/释放、2s→5min 退避。

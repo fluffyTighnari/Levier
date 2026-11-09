@@ -77,6 +77,7 @@ type DaemonInfo struct {
 	Labels              map[string]string
 	RunningRuns         []RunRef
 	RunningCount        int32
+	Healthy             bool
 	ConnectedAt         time.Time
 	LastHeartbeat       time.Time
 }
@@ -331,16 +332,21 @@ func (h *Hub) Get(daemonID string) (DaemonInfo, bool) {
 	if conn == nil {
 		return DaemonInfo{}, false
 	}
-	return cloneInfo(conn.info), true
+	info := cloneInfo(conn.info)
+	info.Healthy = h.healthy(conn.info, h.cfg.Now())
+	return info, true
 }
 
 // List returns registrations sorted by daemon_id.
 func (h *Hub) List() []DaemonInfo {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
+	now := h.cfg.Now()
 	result := make([]DaemonInfo, 0, len(h.daemons))
 	for _, conn := range h.daemons {
-		result = append(result, cloneInfo(conn.info))
+		info := cloneInfo(conn.info)
+		info.Healthy = h.healthy(conn.info, now)
+		result = append(result, info)
 	}
 	sort.Slice(result, func(i, j int) bool {
 		return result[i].DaemonID < result[j].DaemonID

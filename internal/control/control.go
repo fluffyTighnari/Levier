@@ -41,6 +41,7 @@ type Config struct {
 	RetryDelay  time.Duration
 	EventBuffer int
 	Publisher   EventPublisher
+	Scheduler   Scheduler
 	Logger      *slog.Logger
 }
 
@@ -175,7 +176,20 @@ func (c *Control) Handle(ctx context.Context, task workflow.Task, _ workflow.Lea
 
 	attempt := run.Attempt + 1
 	leaseEpoch := run.LeaseEpoch + 1
-	daemonID, ok := c.hub.PickHealthy(runtimeType(run.Runtime), run.Strategy, nil)
+	placement := PlacementRequest{
+		Runtime:  runtimeType(run.Runtime),
+		Strategy: run.Strategy,
+	}
+	if run.Runtime == "longterm" {
+		placement.StickyDaemonID = run.AssignedDaemonID
+	}
+	var daemonID string
+	var ok bool
+	if c.cfg.Scheduler != nil {
+		daemonID, ok = c.cfg.Scheduler.Pick(placement)
+	} else {
+		daemonID, ok = c.hub.PickHealthy(placement.Runtime, placement.Strategy, placement.Labels)
+	}
 	if !ok {
 		return workflow.RetryAfter(errNoDaemon, c.cfg.RetryDelay)
 	}
