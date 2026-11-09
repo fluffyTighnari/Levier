@@ -89,7 +89,19 @@ func (s *Server) handleWS(conn *websocket.Conn) {
 				Attempt: attempt, Seq: seq,
 			})
 		case *LocalToolResultMessage:
-			// Local tool results are wired in P7.
+			result := connection.LocalToolResult{
+				InvocationID: typed.InvocationID,
+				OK:           typed.OK,
+				ResultJSON:   typed.ResultJSON,
+			}
+			if typed.Error != nil {
+				result.Error = &connection.LocalToolError{
+					Code:      typed.Error.Code,
+					Message:   typed.Error.Message,
+					Retryable: typed.Error.Retryable,
+				}
+			}
+			s.appHub.ResolveLocalTool(appID, result)
 		}
 	}
 }

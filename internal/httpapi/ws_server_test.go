@@ -6,6 +6,7 @@
 package httpapi
 
 import (
+	"context"
 	"encoding/json"
 	"net/http/httptest"
 	"strings"
@@ -60,6 +61,65 @@ func TestWebSocketSubscribeAndPublish(t *testing.T) {
 	}
 	if !strings.Contains(raw, `"type":"event"`) {
 		t.Fatalf("event = %s", raw)
+	}
+}
+
+func TestWebSocketRoutesLocalToolResult(t *testing.T) {
+	store := newFakeStore()
+	appHub := connection.NewAppHub()
+	server := NewServer(store, &fakeQueue{}, Config{
+		BearerToken: "legacy-token",
+		AppHub:      appHub,
+	})
+	httpServer := httptest.NewServer(server.Handler())
+	defer httpServer.Close()
+
+	token := server.wsTokens.Issue("app-1")
+	wsURL := "ws" + strings.TrimPrefix(httpServer.URL, "http") +
+		"/api/v1/ws?app_id=app-1&token=" + token
+	conn, err := websocket.Dial(wsURL, "", httpServer.URL)
+	if err != nil {
+		t.Fatalf("Dial() error = %v", err)
+	}
+	defer conn.Close()
+	deadline := time.Now().Add(time.Second)
+	for appHub.Count("app-1") == 0 && time.Now().Before(deadline) {
+		time.Sleep(5 * time.Millisecond)
+	}
+
+	resultCh := make(chan connection.LocalToolResult, 1)
+	errCh := make(chan error, 1)
+	go func() {
+		result, err := appHub.CallLocalTool(context.Background(), "app-1", connection.LocalToolRequest{
+			InvocationID: "inv-1", ToolName: "search", ArgumentsJSON: `{"q":"x"}`, TimeoutMS: 1000,
+		})
+		resultCh <- result
+		errCh <- err
+	}()
+
+	var raw string
+	if err := websocket.Message.Receive(conn, &raw); err != nil {
+		t.Fatalf("Receive(local_tool_call) error = %v", err)
+	}
+	var call LocalToolCallMessage
+	if err := json.Unmarshal([]byte(raw), &call); err != nil || call.Type != WSMessageLocalToolCall {
+		t.Fatalf("local tool call = %s, %v", raw, err)
+	}
+	result, _ := json.Marshal(LocalToolResultMessage{
+		Type:          WSMessageLocalToolResult,
+		CorrelationID: "corr-1",
+		InvocationID:  "inv-1",
+		OK:            true,
+		ResultJSON:    "3",
+	})
+	if err := websocket.Message.Send(conn, string(result)); err != nil {
+		t.Fatalf("Send(local_tool_result) error = %v", err)
+	}
+	if err := <-errCh; err != nil {
+		t.Fatalf("CallLocalTool() error = %v", err)
+	}
+	if got := <-resultCh; !got.OK || got.ResultJSON != "3" {
+		t.Fatalf("result = %+v", got)
 	}
 }
 

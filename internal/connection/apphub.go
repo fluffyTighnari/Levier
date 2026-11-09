@@ -6,13 +6,55 @@
 package connection
 
 import (
+	"context"
+	"encoding/json"
+	"errors"
+	"fmt"
 	"sync"
+	"time"
+
+	"github.com/fluffyTighnari/middleware/internal/id"
 )
 
 // EventSink is the transport-neutral App connection writer.
 type EventSink interface {
 	Send(payload []byte) error
 	Close() error
+}
+
+var (
+	// ErrAppUnreachable reports that no App WebSocket connection is available.
+	ErrAppUnreachable = errors.New("app is unreachable")
+	// ErrLocalToolTimeout reports a local tool call deadline.
+	ErrLocalToolTimeout = errors.New("local tool call timed out")
+)
+
+// LocalToolRequest is one App-executed tool invocation.
+type LocalToolRequest struct {
+	InvocationID  string
+	ToolName      string
+	ArgumentsJSON string
+	TimeoutMS     int64
+}
+
+// LocalToolError is a structured App tool error.
+type LocalToolError struct {
+	Code      string `json:"code"`
+	Message   string `json:"message"`
+	Retryable bool   `json:"retryable,omitempty"`
+}
+
+// LocalToolResult is the App's response to a local tool call.
+type LocalToolResult struct {
+	InvocationID string
+	OK           bool
+	ResultJSON   string
+	Error        *LocalToolError
+}
+
+type pendingLocalCall struct {
+	appID  string
+	result chan LocalToolResult
 }
 
 // AppConn is one registered App WebSocket connection.
@@ -27,16 +69,18 @@ type AppConn struct {
 
 // AppHub tracks App connections and run subscriptions.
 type AppHub struct {
-	mu    sync.RWMutex
-	apps  map[string]map[*AppConn]struct{}
-	conns map[*AppConn]struct{}
+	mu      sync.RWMutex
+	apps    map[string]map[*AppConn]struct{}
+	conns   map[*AppConn]struct{}
+	pending map[string]*pendingLocalCall
 }
 
 // NewAppHub returns an empty AppHub.
 func NewAppHub() *AppHub {
 	return &AppHub{
-		apps:  make(map[string]map[*AppConn]struct{}),
-		conns: make(map[*AppConn]struct{}),
+		apps:    make(map[string]map[*AppConn]struct{}),
+		conns:   make(map[*AppConn]struct{}),
+		pending: make(map[string]*pendingLocalCall),
 	}
 }
 
@@ -94,8 +138,12 @@ func (h *AppHub) CloseConn(conn *AppConn) {
 		}
 	}
 	delete(h.conns, conn)
+	remaining := len(h.apps[conn.appID])
 	h.mu.Unlock()
 	conn.close()
+	if remaining == 0 {
+		h.failPending(conn.appID, "APP_UNREACHABLE", "app connection closed")
+	}
 }
 
 // Publish sends a JSON payload to App connections subscribed to runID.
@@ -118,6 +166,130 @@ func (h *AppHub) Publish(appID, runID string, payload []byte) {
 	}
 }
 
+// Broadcast sends a payload to every connection of one App.
+func (h *AppHub) Broadcast(appID string, payload []byte) bool {
+	h.mu.RLock()
+	conns := make([]*AppConn, 0, len(h.apps[appID]))
+	for conn := range h.apps[appID] {
+		conns = append(conns, conn)
+	}
+	h.mu.RUnlock()
+	delivered := false
+	for _, conn := range conns {
+		if err := conn.sink.Send(payload); err != nil {
+			h.CloseConn(conn)
+			continue
+		}
+		delivered = true
+	}
+	return delivered
+}
+
+// CallLocalTool sends a local tool call and waits for the App result.
+func (h *AppHub) CallLocalTool(ctx context.Context, appID string, request LocalToolRequest) (LocalToolResult, error) {
+	if request.InvocationID == "" || request.ToolName == "" {
+		return LocalToolResult{}, fmt.Errorf("invocation_id and tool_name are required")
+	}
+	pending := &pendingLocalCall{appID: appID, result: make(chan LocalToolResult, 1)}
+	h.mu.Lock()
+	if _, exists := h.pending[request.InvocationID]; exists {
+		h.mu.Unlock()
+		return LocalToolResult{}, fmt.Errorf("local tool call %q is already pending", request.InvocationID)
+	}
+	h.pending[request.InvocationID] = pending
+	h.mu.Unlock()
+	defer func() {
+		h.mu.Lock()
+		delete(h.pending, request.InvocationID)
+		h.mu.Unlock()
+	}()
+
+	payload, err := json.Marshal(map[string]any{
+		"type":           "local_tool_call",
+		"msg_id":         id.New(),
+		"invocation_id":  request.InvocationID,
+		"tool_name":      request.ToolName,
+		"arguments_json": request.ArgumentsJSON,
+		"timeout_ms":     request.TimeoutMS,
+	})
+	if err != nil {
+		return LocalToolResult{}, fmt.Errorf("encode local tool call: %w", err)
+	}
+	if !h.Broadcast(appID, payload) {
+		return LocalToolResult{}, ErrAppUnreachable
+	}
+
+	timeout := time.Duration(request.TimeoutMS) * time.Millisecond
+	if timeout <= 0 {
+		timeout = 60 * time.Second
+	}
+	timer := time.NewTimer(timeout)
+	defer timer.Stop()
+	select {
+	case result := <-pending.result:
+		if result.Error != nil && result.Error.Code == "APP_UNREACHABLE" {
+			return result, ErrAppUnreachable
+		}
+		return result, nil
+	case <-ctx.Done():
+		return LocalToolResult{}, ctx.Err()
+	case <-timer.C:
+		return LocalToolResult{}, ErrLocalToolTimeout
+	}
+}
+
+// ResolveLocalTool delivers one App result to its waiting call.
+// Duplicate results after the first are ignored.
+func (h *AppHub) ResolveLocalTool(appID string, result LocalToolResult) bool {
+	h.mu.Lock()
+	pending := h.pending[result.InvocationID]
+	if pending == nil || pending.appID != appID {
+		h.mu.Unlock()
+		return false
+	}
+	delete(h.pending, result.InvocationID)
+	h.mu.Unlock()
+	select {
+	case pending.result <- result:
+	default:
+	}
+	return true
+}
+
+// PendingLocalTools returns the number of pending local tool calls for an App.
+func (h *AppHub) PendingLocalTools(appID string) int {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
+	count := 0
+	for _, pending := range h.pending {
+		if pending.appID == appID {
+			count++
+		}
+	}
+	return count
+}
+
+func (h *AppHub) failPending(appID, code, message string) {
+	h.mu.Lock()
+	pending := make([]*pendingLocalCall, 0)
+	for invocationID, call := range h.pending {
+		if call.appID == appID {
+			delete(h.pending, invocationID)
+			pending = append(pending, call)
+		}
+	}
+	h.mu.Unlock()
+	for _, call := range pending {
+		select {
+		case call.result <- LocalToolResult{
+			OK:    false,
+			Error: &LocalToolError{Code: code, Message: message},
+		}:
+		default:
+		}
+	}
+}
+
 // Close closes every App connection.
 func (h *AppHub) Close() {
 	h.mu.Lock()
@@ -127,9 +299,16 @@ func (h *AppHub) Close() {
 	}
 	h.apps = make(map[string]map[*AppConn]struct{})
 	h.conns = make(map[*AppConn]struct{})
+	pendingApps := make(map[string]struct{})
+	for _, call := range h.pending {
+		pendingApps[call.appID] = struct{}{}
+	}
 	h.mu.Unlock()
 	for _, conn := range conns {
 		conn.close()
+	}
+	for appID := range pendingApps {
+		h.failPending(appID, "APP_UNREACHABLE", "app hub closed")
 	}
 }
 

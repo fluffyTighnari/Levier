@@ -54,6 +54,7 @@
 | P6-44 | `docs/reports/P6-44.md` | 已提交 |
 | P6-45 | `docs/reports/P6-45.md` | 已提交 |
 | P6-46 | `docs/reports/P6-46.md` | 已提交 |
+| P6-47 | `docs/reports/P6-47.md` | 已提交 |
 | G4 | `docs/reports/G4.md` | 已提交 |
 
 模板：`docs/reports/TEMPLATE.md`。
