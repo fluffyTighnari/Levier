@@ -34,6 +34,7 @@ type HTTPConfig struct {
 	WriteTimeout    Duration `yaml:"write_timeout"`
 	ShutdownTimeout Duration `yaml:"shutdown_timeout"`
 	BearerToken     string   `yaml:"bearer_token"`
+	AdminToken      string   `yaml:"admin_token"`
 }
 
 // GRPCConfig configures the daemon-facing gRPC server.
@@ -138,6 +139,7 @@ func ApplyEnv(cfg *Config, lookup func(string) (string, bool)) error {
 
 	stringOverride(lookup, "MIDDLEWARE_HTTP_ADDR", &cfg.HTTP.Addr)
 	stringOverride(lookup, "MIDDLEWARE_HTTP_BEARER_TOKEN", &cfg.HTTP.BearerToken)
+	stringOverride(lookup, "MIDDLEWARE_HTTP_ADMIN_TOKEN", &cfg.HTTP.AdminToken)
 	stringOverride(lookup, "MIDDLEWARE_GRPC_ADDR", &cfg.GRPC.Addr)
 	stringOverride(lookup, "MIDDLEWARE_DATABASE_URL", &cfg.Database.URL)
 	stringOverride(lookup, "MIDDLEWARE_LOG_LEVEL", &cfg.Log.Level)

@@ -27,6 +27,8 @@ func TestSchemaTablesIndexesAndConstraints(t *testing.T) {
 		"idx_tool_invocations_status",
 		"idx_runs_app_status",
 		"idx_run_events_type",
+		"uq_apps_api_key_hash",
+		"idx_apps_status",
 	} {
 		var exists bool
 		if err := pool.QueryRow(ctx,

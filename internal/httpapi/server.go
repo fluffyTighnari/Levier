@@ -33,6 +33,15 @@ type RunStore interface {
 	ListEvents(ctx context.Context, runID string, afterAttempt int32, afterSeq int64, limit int) ([]runstore.Event, error)
 }
 
+// AppRegistry is the App registration subset used by the HTTP API.
+type AppRegistry interface {
+	RegisterApp(ctx context.Context, name string, multiagent bool) (runstore.App, string, bool, error)
+	GetApp(ctx context.Context, appID string) (runstore.App, error)
+	AuthenticateAPIKey(ctx context.Context, key string) (runstore.App, error)
+	UpdateApp(ctx context.Context, appID, name string, multiagent bool) (runstore.App, error)
+	RotateAPIKey(ctx context.Context, appID string) (string, error)
+}
+
 // TaskQueue is the dispatch queue subset used by the HTTP API.
 type TaskQueue interface {
 	Enqueue(ctx context.Context, task workflow.Task) (workflow.Task, error)
@@ -41,6 +50,7 @@ type TaskQueue interface {
 // Config controls the minimal HTTP API.
 type Config struct {
 	BearerToken          string
+	AdminToken           string
 	DefaultRunTimeoutMS  int
 	DefaultToolTimeoutMS int
 	MaxBodyBytes         int64
@@ -50,12 +60,13 @@ type Config struct {
 type Server struct {
 	runs  RunStore
 	queue TaskQueue
+	apps  AppRegistry
 	cfg   Config
 	mux   *http.ServeMux
 }
 
 // NewServer builds the HTTP handler.
-func NewServer(runs RunStore, queue TaskQueue, cfg Config) *Server {
+func NewServer(runs RunStore, queue TaskQueue, cfg Config, registries ...AppRegistry) *Server {
 	if cfg.DefaultRunTimeoutMS <= 0 {
 		cfg.DefaultRunTimeoutMS = 1_800_000
 	}
@@ -66,6 +77,9 @@ func NewServer(runs RunStore, queue TaskQueue, cfg Config) *Server {
 		cfg.MaxBodyBytes = defaultMaxBodyBytes
 	}
 	server := &Server{runs: runs, queue: queue, cfg: cfg, mux: http.NewServeMux()}
+	if len(registries) > 0 {
+		server.apps = registries[0]
+	}
 	server.routes()
 	return server
 }
@@ -77,9 +91,100 @@ func (s *Server) Handler() http.Handler {
 
 func (s *Server) routes() {
 	s.mux.HandleFunc("GET /healthz", s.handleHealth)
-	s.mux.HandleFunc("POST "+APIPrefix+"/runs", s.auth(s.handleCreateRun))
-	s.mux.HandleFunc("GET "+APIPrefix+"/runs/{run_id}", s.auth(s.handleGetRun))
-	s.mux.HandleFunc("GET "+APIPrefix+"/runs/{run_id}/events", s.auth(s.handleListEvents))
+	s.mux.HandleFunc("POST "+APIPrefix+"/runs", s.handleCreateRun)
+	s.mux.HandleFunc("GET "+APIPrefix+"/runs/{run_id}", s.handleGetRun)
+	s.mux.HandleFunc("GET "+APIPrefix+"/runs/{run_id}/events", s.handleListEvents)
+	s.mux.HandleFunc("POST /admin/apps", s.handleAdminCreateApp)
+	s.mux.HandleFunc("POST /admin/apps/{app_id}/rotate-key", s.handleAdminRotateKey)
+	s.mux.HandleFunc("POST "+APIPrefix+"/apps", s.handleUpdateApp)
+	s.mux.HandleFunc("GET "+APIPrefix+"/apps/{app_id}", s.handleGetApp)
+}
+
+func (s *Server) authDisabled() bool {
+	return s.cfg.BearerToken == "" && s.cfg.AdminToken == "" && s.apps == nil
+}
+
+func bearerToken(r *http.Request) string {
+	value := r.Header.Get("Authorization")
+	if strings.HasPrefix(value, "Bearer ") {
+		return strings.TrimSpace(strings.TrimPrefix(value, "Bearer "))
+	}
+	return ""
+}
+
+func matchesToken(provided, expected string) bool {
+	if expected == "" || provided == "" {
+		return false
+	}
+	return subtle.ConstantTimeCompare([]byte(provided), []byte(expected)) == 1
+}
+
+func (s *Server) isAdmin(r *http.Request) bool {
+	expected := s.cfg.AdminToken
+	if expected == "" {
+		expected = s.cfg.BearerToken
+	}
+	return matchesToken(bearerToken(r), expected)
+}
+
+func (s *Server) legacyAllowed(r *http.Request) bool {
+	return matchesToken(bearerToken(r), s.cfg.BearerToken)
+}
+
+func (s *Server) appFromRequest(r *http.Request) (runstore.App, bool) {
+	if s.apps == nil {
+		return runstore.App{}, false
+	}
+	token := bearerToken(r)
+	if token == "" {
+		return runstore.App{}, false
+	}
+	app, err := s.apps.AuthenticateAPIKey(r.Context(), token)
+	if err != nil {
+		return runstore.App{}, false
+	}
+	return app, true
+}
+
+func (s *Server) resolveRequestApp(w http.ResponseWriter, r *http.Request, appID string) (string, bool) {
+	if s.authDisabled() {
+		if appID == "" {
+			writeError(w, http.StatusBadRequest, "BAD_REQUEST", "app_id is required", false)
+			return "", false
+		}
+		return appID, true
+	}
+	if s.isAdmin(r) {
+		if appID == "" {
+			writeError(w, http.StatusBadRequest, "BAD_REQUEST", "app_id is required", false)
+			return "", false
+		}
+		return appID, true
+	}
+	if app, ok := s.appFromRequest(r); ok {
+		if appID != "" && appID != app.AppID {
+			writeError(w, http.StatusForbidden, "FORBIDDEN", "app_id does not match the authenticated app", false)
+			return "", false
+		}
+		return app.AppID, true
+	}
+	if s.legacyAllowed(r) {
+		if appID == "" {
+			writeError(w, http.StatusBadRequest, "BAD_REQUEST", "app_id is required", false)
+			return "", false
+		}
+		return appID, true
+	}
+	writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "missing or invalid bearer token", false)
+	return "", false
+}
+
+func (s *Server) canAccessRun(r *http.Request, appID string) bool {
+	if s.authDisabled() || s.isAdmin(r) || s.legacyAllowed(r) {
+		return true
+	}
+	app, ok := s.appFromRequest(r)
+	return ok && app.AppID == appID
 }
 
 func (s *Server) handleHealth(w http.ResponseWriter, _ *http.Request) {
@@ -97,8 +202,8 @@ func (s *Server) handleCreateRun(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "BAD_REQUEST", "invalid JSON body", false)
 		return
 	}
-	if request.AppID == "" {
-		writeError(w, http.StatusBadRequest, "BAD_REQUEST", "app_id is required", false)
+	appID, ok := s.resolveRequestApp(w, r, request.AppID)
+	if !ok {
 		return
 	}
 	if err := request.Validate(); err != nil {
@@ -133,7 +238,7 @@ func (s *Server) handleCreateRun(w http.ResponseWriter, r *http.Request) {
 	runID := id.New()
 	run, err := s.runs.CreateRun(r.Context(), runstore.Run{
 		RunID:          runID,
-		AppID:          request.AppID,
+		AppID:          appID,
 		IdempotencyKey: strings.TrimSpace(r.Header.Get("Idempotency-Key")),
 		RequestHash:    requestHash(body),
 		Runtime:        string(request.Runtime),
@@ -188,6 +293,10 @@ func (s *Server) handleGetRun(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, "INTERNAL", "get run failed", true)
 		return
 	}
+	if !s.canAccessRun(r, run.AppID) {
+		writeError(w, http.StatusNotFound, "RUN_NOT_FOUND", "run not found", false)
+		return
+	}
 	strategyParams := map[string]any{}
 	if len(run.Params) > 0 {
 		_ = json.Unmarshal(run.Params, &strategyParams)
@@ -223,11 +332,16 @@ func (s *Server) handleListEvents(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "BAD_REQUEST", "limit must be between 1 and 1000", false)
 		return
 	}
-	if _, err := s.runs.GetRun(r.Context(), runID); errors.Is(err, runstore.ErrRunNotFound) {
+	run, err := s.runs.GetRun(r.Context(), runID)
+	if errors.Is(err, runstore.ErrRunNotFound) {
 		writeError(w, http.StatusNotFound, "RUN_NOT_FOUND", "run not found", false)
 		return
 	} else if err != nil {
 		writeError(w, http.StatusInternalServerError, "INTERNAL", "get run failed", true)
+		return
+	}
+	if !s.canAccessRun(r, run.AppID) {
+		writeError(w, http.StatusNotFound, "RUN_NOT_FOUND", "run not found", false)
 		return
 	}
 	events, err := s.runs.ListEvents(r.Context(), runID, afterAttempt, afterSeq, limit)
@@ -259,18 +373,121 @@ func (s *Server) handleListEvents(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, response)
 }
 
-func (s *Server) auth(next http.HandlerFunc) http.HandlerFunc {
-	if s.cfg.BearerToken == "" {
-		return next
+func (s *Server) handleAdminCreateApp(w http.ResponseWriter, r *http.Request) {
+	if !s.isAdmin(r) {
+		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "admin token is required", false)
+		return
 	}
-	expected := "Bearer " + s.cfg.BearerToken
-	return func(w http.ResponseWriter, r *http.Request) {
-		provided := r.Header.Get("Authorization")
-		if subtle.ConstantTimeCompare([]byte(provided), []byte(expected)) != 1 {
-			writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "missing or invalid bearer token", false)
+	if s.apps == nil {
+		writeError(w, http.StatusNotImplemented, "NOT_IMPLEMENTED", "app registry is not configured", false)
+		return
+	}
+	var request AppUpsertRequest
+	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, s.cfg.MaxBodyBytes)).Decode(&request); err != nil {
+		writeError(w, http.StatusBadRequest, "BAD_REQUEST", "invalid JSON body", false)
+		return
+	}
+	if err := request.Validate(); err != nil {
+		writeError(w, http.StatusBadRequest, "BAD_REQUEST", err.Error(), false)
+		return
+	}
+	app, key, created, err := s.apps.RegisterApp(r.Context(), request.Name, request.Multiagent)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "INTERNAL", "create app failed", true)
+		return
+	}
+	status := http.StatusOK
+	if created {
+		status = http.StatusCreated
+	}
+	writeJSON(w, status, CreateAppResponse{App: appView(app), APIKey: key})
+}
+
+func (s *Server) handleUpdateApp(w http.ResponseWriter, r *http.Request) {
+	app, ok := s.appFromRequest(r)
+	if !ok {
+		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "app API key is required", false)
+		return
+	}
+	var request AppUpsertRequest
+	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, s.cfg.MaxBodyBytes)).Decode(&request); err != nil {
+		writeError(w, http.StatusBadRequest, "BAD_REQUEST", "invalid JSON body", false)
+		return
+	}
+	if err := request.Validate(); err != nil {
+		writeError(w, http.StatusBadRequest, "BAD_REQUEST", err.Error(), false)
+		return
+	}
+	updated, err := s.apps.UpdateApp(r.Context(), app.AppID, request.Name, request.Multiagent)
+	if errors.Is(err, runstore.ErrAppNotFound) {
+		writeError(w, http.StatusNotFound, "APP_NOT_FOUND", "app not found", false)
+		return
+	}
+	if err != nil {
+		writeError(w, http.StatusConflict, "APP_NAME_CONFLICT", "app name is already in use", false)
+		return
+	}
+	writeJSON(w, http.StatusOK, appView(updated))
+}
+
+func (s *Server) handleGetApp(w http.ResponseWriter, r *http.Request) {
+	appID := r.PathValue("app_id")
+	if !s.isAdmin(r) {
+		app, ok := s.appFromRequest(r)
+		if !ok {
+			writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "app API key is required", false)
 			return
 		}
-		next(w, r)
+		if app.AppID != appID {
+			writeError(w, http.StatusNotFound, "APP_NOT_FOUND", "app not found", false)
+			return
+		}
+	}
+	if s.apps == nil {
+		writeError(w, http.StatusNotImplemented, "NOT_IMPLEMENTED", "app registry is not configured", false)
+		return
+	}
+	app, err := s.apps.GetApp(r.Context(), appID)
+	if errors.Is(err, runstore.ErrAppNotFound) {
+		writeError(w, http.StatusNotFound, "APP_NOT_FOUND", "app not found", false)
+		return
+	}
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "INTERNAL", "get app failed", true)
+		return
+	}
+	writeJSON(w, http.StatusOK, appView(app))
+}
+
+func (s *Server) handleAdminRotateKey(w http.ResponseWriter, r *http.Request) {
+	if !s.isAdmin(r) {
+		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "admin token is required", false)
+		return
+	}
+	if s.apps == nil {
+		writeError(w, http.StatusNotImplemented, "NOT_IMPLEMENTED", "app registry is not configured", false)
+		return
+	}
+	key, err := s.apps.RotateAPIKey(r.Context(), r.PathValue("app_id"))
+	if errors.Is(err, runstore.ErrAppNotFound) {
+		writeError(w, http.StatusNotFound, "APP_NOT_FOUND", "app not found", false)
+		return
+	}
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "INTERNAL", "rotate app key failed", true)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]string{"api_key": key})
+}
+
+func appView(app runstore.App) AppView {
+	return AppView{
+		AppID:      app.AppID,
+		Name:       app.Name,
+		Multiagent: app.Multiagent,
+		Status:     app.Status,
+		CreatedAt:  app.CreatedAt,
+		UpdatedAt:  app.UpdatedAt,
 	}
 }
 

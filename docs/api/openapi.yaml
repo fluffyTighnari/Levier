@@ -35,6 +35,26 @@ paths:
                 $ref: '#/components/schemas/CreateAppResponse'
         default:
           $ref: '#/components/responses/Error'
+  /admin/apps/{app_id}/rotate-key:
+    post:
+      summary: Rotate an App API key
+      operationId: rotateAppKey
+      security:
+        - adminToken: []
+      parameters:
+        - $ref: '#/components/parameters/AppID'
+      responses:
+        "200":
+          description: New API key returned once
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  api_key:
+                    type: string
+        default:
+          $ref: '#/components/responses/Error'
   /apps:
     post:
       summary: Update the authenticated App

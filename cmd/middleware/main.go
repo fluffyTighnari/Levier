@@ -28,6 +28,7 @@ import (
 	"github.com/fluffyTighnari/middleware/internal/db"
 	"github.com/fluffyTighnari/middleware/internal/httpapi"
 	"github.com/fluffyTighnari/middleware/internal/observe"
+	"github.com/fluffyTighnari/middleware/internal/register"
 	"github.com/fluffyTighnari/middleware/internal/runstore"
 	"github.com/fluffyTighnari/middleware/internal/workflow"
 )
@@ -78,6 +79,7 @@ func main() {
 	defer hub.Close()
 
 	runs := runstore.New(pool)
+	registry := register.New(pool)
 	controller := control.New(runs, hub, control.Config{Logger: logger})
 	hub.SetOnEnvelope(controller.HandleEnvelope)
 	controller.Start(ctx)
@@ -110,9 +112,10 @@ func main() {
 
 	api := httpapi.NewServer(runs, queue, httpapi.Config{
 		BearerToken:          cfg.HTTP.BearerToken,
+		AdminToken:           cfg.HTTP.AdminToken,
 		DefaultRunTimeoutMS:  1_800_000,
 		DefaultToolTimeoutMS: 60_000,
-	})
+	}, registry)
 	httpListener, err := net.Listen("tcp", cfg.HTTP.Addr)
 	if err != nil {
 		logger.Error("listen http failed", "addr", cfg.HTTP.Addr, "err", err)
