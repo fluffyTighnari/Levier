@@ -6,6 +6,7 @@
 package httpapi
 
 import (
+	"bytes"
 	"context"
 	"crypto/sha256"
 	"crypto/subtle"
@@ -33,6 +34,12 @@ type RunStore interface {
 	CreateRun(ctx context.Context, run runstore.Run) (runstore.Run, error)
 	GetRun(ctx context.Context, runID string) (runstore.Run, error)
 	ListEvents(ctx context.Context, runID string, afterAttempt int32, afterSeq int64, limit int) ([]runstore.Event, error)
+}
+
+// SessionStore is the optional longterm session subset used by the HTTP API.
+type SessionStore interface {
+	GetSession(ctx context.Context, sessionID string) (runstore.Session, error)
+	ListSessionEvents(ctx context.Context, sessionID string, afterAttempt int32, afterSeq int64, limit int) ([]runstore.Event, error)
 }
 
 // AppRegistry is the App registration subset used by the HTTP API.
@@ -77,6 +84,7 @@ type Server struct {
 	runs      RunStore
 	queue     TaskQueue
 	apps      AppRegistry
+	sessions  SessionStore
 	appHub    *connection.AppHub
 	wsTokens  *WSTokenStore
 	canceller Canceller
@@ -111,13 +119,16 @@ func NewServer(runs RunStore, queue TaskQueue, cfg Config, registries ...AppRegi
 	if len(registries) > 0 {
 		server.apps = registries[0]
 	}
+	if sessions, ok := runs.(SessionStore); ok {
+		server.sessions = sessions
+	}
 	server.routes()
 	return server
 }
 
 // Handler returns the HTTP handler.
 func (s *Server) Handler() http.Handler {
-	return s.mux
+	return requestIDMiddleware(s.mux)
 }
 
 func (s *Server) routes() {
@@ -126,6 +137,8 @@ func (s *Server) routes() {
 	s.mux.HandleFunc("GET "+APIPrefix+"/runs/{run_id}", s.handleGetRun)
 	s.mux.HandleFunc("GET "+APIPrefix+"/runs/{run_id}/events", s.handleListEvents)
 	s.mux.HandleFunc("POST "+APIPrefix+"/runs/{run_id}/cancel", s.handleCancelRun)
+	s.mux.HandleFunc("GET "+APIPrefix+"/sessions/{session_id}", s.handleGetSession)
+	s.mux.HandleFunc("GET "+APIPrefix+"/sessions/{session_id}/events", s.handleListSessionEvents)
 	s.mux.HandleFunc("POST /admin/apps", s.handleAdminCreateApp)
 	s.mux.HandleFunc("POST /admin/apps/{app_id}/rotate-key", s.handleAdminRotateKey)
 	s.mux.HandleFunc("POST "+APIPrefix+"/apps", s.handleUpdateApp)
@@ -212,7 +225,7 @@ func (s *Server) resolveRequestApp(w http.ResponseWriter, r *http.Request, appID
 	return "", false
 }
 
-func (s *Server) canAccessRun(r *http.Request, appID string) bool {
+func (s *Server) canAccessApp(r *http.Request, appID string) bool {
 	if s.authDisabled() || s.isAdmin(r) || s.legacyAllowed(r) {
 		return true
 	}
@@ -225,14 +238,9 @@ func (s *Server) handleHealth(w http.ResponseWriter, _ *http.Request) {
 }
 
 func (s *Server) handleCreateRun(w http.ResponseWriter, r *http.Request) {
-	body, err := io.ReadAll(http.MaxBytesReader(w, r.Body, s.cfg.MaxBodyBytes))
-	if err != nil {
-		writeError(w, http.StatusRequestEntityTooLarge, "BAD_REQUEST", "request body is too large", false)
-		return
-	}
 	var request CreateRunRequest
-	if err := json.Unmarshal(body, &request); err != nil {
-		writeError(w, http.StatusBadRequest, "BAD_REQUEST", "invalid JSON body", false)
+	body, ok := s.readJSONBody(w, r, &request, true)
+	if !ok {
 		return
 	}
 	appID, ok := s.resolveRequestApp(w, r, request.AppID)
@@ -332,7 +340,7 @@ func (s *Server) handleGetRun(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, "INTERNAL", "get run failed", true)
 		return
 	}
-	if !s.canAccessRun(r, run.AppID) {
+	if !s.canAccessApp(r, run.AppID) {
 		writeError(w, http.StatusNotFound, "RUN_NOT_FOUND", "run not found", false)
 		return
 	}
@@ -379,7 +387,7 @@ func (s *Server) handleListEvents(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, "INTERNAL", "get run failed", true)
 		return
 	}
-	if !s.canAccessRun(r, run.AppID) {
+	if !s.canAccessApp(r, run.AppID) {
 		writeError(w, http.StatusNotFound, "RUN_NOT_FOUND", "run not found", false)
 		return
 	}
@@ -388,6 +396,73 @@ func (s *Server) handleListEvents(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, "INTERNAL", "list events failed", true)
 		return
 	}
+	writeJSON(w, http.StatusOK, eventListResponse(events, limit))
+}
+
+func (s *Server) handleGetSession(w http.ResponseWriter, r *http.Request) {
+	if s.sessions == nil {
+		writeError(w, http.StatusNotImplemented, "NOT_IMPLEMENTED", "session store is not configured", false)
+		return
+	}
+	session, err := s.sessions.GetSession(r.Context(), r.PathValue("session_id"))
+	if errors.Is(err, runstore.ErrSessionNotFound) {
+		writeError(w, http.StatusNotFound, "SESSION_NOT_FOUND", "session not found", false)
+		return
+	}
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "INTERNAL", "get session failed", true)
+		return
+	}
+	if !s.canAccessApp(r, session.AppID) {
+		writeError(w, http.StatusNotFound, "SESSION_NOT_FOUND", "session not found", false)
+		return
+	}
+	writeJSON(w, http.StatusOK, sessionView(session))
+}
+
+func (s *Server) handleListSessionEvents(w http.ResponseWriter, r *http.Request) {
+	if s.sessions == nil {
+		writeError(w, http.StatusNotImplemented, "NOT_IMPLEMENTED", "session store is not configured", false)
+		return
+	}
+	afterAttempt, err := queryInt32(r.URL.Query().Get("after_attempt"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "BAD_REQUEST", "after_attempt must be a non-negative integer", false)
+		return
+	}
+	afterSeq, err := queryInt64(r.URL.Query().Get("after_seq"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "BAD_REQUEST", "after_seq must be a non-negative integer", false)
+		return
+	}
+	limit, err := queryLimit(r.URL.Query().Get("limit"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "BAD_REQUEST", "limit must be between 1 and 1000", false)
+		return
+	}
+	sessionID := r.PathValue("session_id")
+	session, err := s.sessions.GetSession(r.Context(), sessionID)
+	if errors.Is(err, runstore.ErrSessionNotFound) {
+		writeError(w, http.StatusNotFound, "SESSION_NOT_FOUND", "session not found", false)
+		return
+	}
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "INTERNAL", "get session failed", true)
+		return
+	}
+	if !s.canAccessApp(r, session.AppID) {
+		writeError(w, http.StatusNotFound, "SESSION_NOT_FOUND", "session not found", false)
+		return
+	}
+	events, err := s.sessions.ListSessionEvents(r.Context(), sessionID, afterAttempt, afterSeq, limit)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "INTERNAL", "list session events failed", true)
+		return
+	}
+	writeJSON(w, http.StatusOK, eventListResponse(events, limit))
+}
+
+func eventListResponse(events []runstore.Event, limit int) EventListResponse {
 	views := make([]RunEventView, 0, len(events))
 	for _, event := range events {
 		views = append(views, RunEventView{
@@ -409,7 +484,21 @@ func (s *Server) handleListEvents(w http.ResponseWriter, r *http.Request) {
 		response.NextAttempt = int32(last.Attempt)
 		response.NextSeq = last.Seq
 	}
-	writeJSON(w, http.StatusOK, response)
+	return response
+}
+
+func sessionView(session runstore.Session) SessionView {
+	return SessionView{
+		SessionID:      session.SessionID,
+		AppID:          session.AppID,
+		Status:         session.Status,
+		CurrentRunID:   session.CurrentRunID,
+		EventAttempt:   int32(session.EventAttempt),
+		EventWatermark: session.EventWatermark,
+		CreatedAt:      session.CreatedAt,
+		UpdatedAt:      session.UpdatedAt,
+		ExpiresAt:      session.ExpiresAt,
+	}
 }
 
 func (s *Server) handleCancelRun(w http.ResponseWriter, r *http.Request) {
@@ -422,7 +511,7 @@ func (s *Server) handleCancelRun(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, "INTERNAL", "get run failed", true)
 		return
 	}
-	if !s.canAccessRun(r, run.AppID) {
+	if !s.canAccessApp(r, run.AppID) {
 		writeError(w, http.StatusNotFound, "RUN_NOT_FOUND", "run not found", false)
 		return
 	}
@@ -432,10 +521,11 @@ func (s *Server) handleCancelRun(w http.ResponseWriter, r *http.Request) {
 	}
 	reason := "user"
 	var request CancelRunRequest
-	if r.Body != nil {
-		if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, s.cfg.MaxBodyBytes)).Decode(&request); err == nil && request.Reason != "" {
-			reason = request.Reason
-		}
+	if _, ok := s.readJSONBody(w, r, &request, false); !ok {
+		return
+	}
+	if request.Reason != "" {
+		reason = request.Reason
 	}
 	cancelled, err := s.canceller.CancelRun(r.Context(), run.RunID, reason)
 	if errors.Is(err, runstore.ErrRunNotFound) {
@@ -462,8 +552,7 @@ func (s *Server) handleAdminCreateApp(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var request AppUpsertRequest
-	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, s.cfg.MaxBodyBytes)).Decode(&request); err != nil {
-		writeError(w, http.StatusBadRequest, "BAD_REQUEST", "invalid JSON body", false)
+	if _, ok := s.readJSONBody(w, r, &request, true); !ok {
 		return
 	}
 	if err := request.Validate(); err != nil {
@@ -525,8 +614,7 @@ func (s *Server) handleUpdateApp(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var request AppUpsertRequest
-	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, s.cfg.MaxBodyBytes)).Decode(&request); err != nil {
-		writeError(w, http.StatusBadRequest, "BAD_REQUEST", "invalid JSON body", false)
+	if _, ok := s.readJSONBody(w, r, &request, true); !ok {
 		return
 	}
 	if err := request.Validate(); err != nil {
@@ -609,6 +697,38 @@ func appView(app runstore.App) AppView {
 	}
 }
 
+func (s *Server) readJSONBody(w http.ResponseWriter, r *http.Request, target any, required bool) ([]byte, bool) {
+	if r.Body == nil {
+		if required {
+			writeError(w, http.StatusBadRequest, "BAD_REQUEST", "request body is required", false)
+			return nil, false
+		}
+		return nil, true
+	}
+	body, err := io.ReadAll(http.MaxBytesReader(w, r.Body, s.cfg.MaxBodyBytes))
+	if err != nil {
+		writeError(w, http.StatusRequestEntityTooLarge, "BAD_REQUEST", "request body is too large", false)
+		return nil, false
+	}
+	if len(bytes.TrimSpace(body)) == 0 {
+		if required {
+			writeError(w, http.StatusBadRequest, "BAD_REQUEST", "request body is required", false)
+			return nil, false
+		}
+		return body, true
+	}
+	decoder := json.NewDecoder(bytes.NewReader(body))
+	if err := decoder.Decode(target); err != nil {
+		writeError(w, http.StatusBadRequest, "BAD_REQUEST", "invalid JSON body", false)
+		return nil, false
+	}
+	if err := decoder.Decode(&struct{}{}); !errors.Is(err, io.EOF) {
+		writeError(w, http.StatusBadRequest, "BAD_REQUEST", "invalid JSON body", false)
+		return nil, false
+	}
+	return body, true
+}
+
 func writeJSON(w http.ResponseWriter, statusCode int, payload any) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(statusCode)
@@ -620,6 +740,7 @@ func writeError(w http.ResponseWriter, statusCode int, code, message string, ret
 		Code:      code,
 		Message:   message,
 		Retryable: retryable,
+		RequestID: w.Header().Get(RequestIDHeader),
 	}})
 }
 

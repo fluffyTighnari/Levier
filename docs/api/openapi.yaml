@@ -7,13 +7,26 @@ info:
   version: "1.0.0"
   description: |
     App-facing HTTP API for run submission, event replay, cancellation,
-    sessions, and App/Tool/MCP registration. The WebSocket contract is
-    documented separately at `/api/v1/ws`.
+    sessions, and App/Tool/MCP registration. Every response carries an
+    `X-Request-ID` header; error envelopes repeat it as `error.request_id`.
+    The WebSocket contract is documented separately at `/api/v1/ws`.
 servers:
   - url: /api/v1
 security:
   - bearerAuth: []
 paths:
+  /healthz:
+    get:
+      summary: Liveness check
+      operationId: health
+      security: []
+      responses:
+        "200":
+          description: Middleware is running
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
   /admin/apps:
     post:
       summary: Create an App and return its API key once
@@ -266,11 +279,24 @@ components:
   responses:
     Error:
       description: Structured middleware error
+      headers:
+        X-Request-ID:
+          description: Per-request correlation ID
+          schema:
+            type: string
       content:
         application/json:
           schema:
             $ref: '#/components/schemas/ErrorResponse'
   schemas:
+    HealthResponse:
+      type: object
+      required: [status]
+      properties:
+        status:
+          type: string
+        database:
+          type: string
     ErrorResponse:
       type: object
       required: [error]

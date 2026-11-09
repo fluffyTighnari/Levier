@@ -686,3 +686,32 @@ func TestInvalidEventRejected(t *testing.T) {
 		}
 	}
 }
+
+func TestGetSession(t *testing.T) {
+	store := New(testPool(t))
+	ctx := context.Background()
+	app := createApp(t, store)
+
+	if _, err := store.pool.Exec(ctx, `
+		INSERT INTO sessions (
+			session_id, app_id, status, current_run_id, event_attempt,
+			event_watermark, expires_at
+		) VALUES ('session-1', $1, 'active', 'run-9', 2, 11, now() + interval '1 hour')
+	`, app.AppID); err != nil {
+		t.Fatalf("insert session: %v", err)
+	}
+
+	session, err := store.GetSession(ctx, "session-1")
+	if err != nil {
+		t.Fatalf("GetSession() error = %v", err)
+	}
+	if session.SessionID != "session-1" || session.AppID != app.AppID ||
+		session.Status != "active" || session.CurrentRunID != "run-9" ||
+		session.EventAttempt != 2 || session.EventWatermark != 11 || session.ExpiresAt == nil {
+		t.Fatalf("session = %+v", session)
+	}
+
+	if _, err := store.GetSession(ctx, "missing"); !errors.Is(err, ErrSessionNotFound) {
+		t.Fatalf("missing session error = %v", err)
+	}
+}

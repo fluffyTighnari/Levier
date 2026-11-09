@@ -1,6 +1,6 @@
 // Middleware — internal/httpapi
 //
-// OpenAPI skeleton syntax test.
+// OpenAPI syntax and HTTP route consistency test.
 //
 // Copyright 2026 The Middleware Authors.
 package httpapi
@@ -8,12 +8,13 @@ package httpapi
 import (
 	"os"
 	"path/filepath"
+	"sort"
 	"testing"
 
 	"gopkg.in/yaml.v3"
 )
 
-func TestOpenAPIYAML(t *testing.T) {
+func TestOpenAPIMatchesHTTPRoutes(t *testing.T) {
 	path := filepath.Join("..", "..", "docs", "api", "openapi.yaml")
 	data, err := os.ReadFile(path)
 	if err != nil {
@@ -21,8 +22,8 @@ func TestOpenAPIYAML(t *testing.T) {
 	}
 
 	var doc struct {
-		OpenAPI string         `yaml:"openapi"`
-		Paths   map[string]any `yaml:"paths"`
+		OpenAPI string                    `yaml:"openapi"`
+		Paths   map[string]map[string]any `yaml:"paths"`
 	}
 	if err := yaml.Unmarshal(data, &doc); err != nil {
 		t.Fatalf("parse OpenAPI: %v", err)
@@ -30,9 +31,65 @@ func TestOpenAPIYAML(t *testing.T) {
 	if doc.OpenAPI != "3.1.0" {
 		t.Fatalf("openapi = %q, want 3.1.0", doc.OpenAPI)
 	}
-	for _, path := range []string{"/runs", "/runs/{run_id}", "/runs/{run_id}/events", "/admin/apps", "/ws"} {
-		if _, ok := doc.Paths[path]; !ok {
+
+	expected := map[string][]string{
+		"/healthz":                        {"get"},
+		"/admin/apps":                     {"post"},
+		"/admin/apps/{app_id}/rotate-key": {"post"},
+		"/apps":                           {"post"},
+		"/apps/{app_id}":                  {"get"},
+		"/runs":                           {"post"},
+		"/runs/{run_id}":                  {"get"},
+		"/runs/{run_id}/events":           {"get"},
+		"/runs/{run_id}/cancel":           {"post"},
+		"/sessions/{session_id}":          {"get"},
+		"/sessions/{session_id}/events":   {"get"},
+		"/ws":                             {"get"},
+	}
+	if len(doc.Paths) != len(expected) {
+		t.Fatalf("OpenAPI paths = %v, want %d paths", pathKeys(doc.Paths), len(expected))
+	}
+	for path, methods := range expected {
+		documented, ok := doc.Paths[path]
+		if !ok {
 			t.Fatalf("OpenAPI missing path %q", path)
 		}
+		actual := operationKeys(documented)
+		if !equalStrings(actual, methods) {
+			t.Fatalf("OpenAPI %s methods = %v, want %v", path, actual, methods)
+		}
 	}
+}
+
+func pathKeys(paths map[string]map[string]any) []string {
+	keys := make([]string, 0, len(paths))
+	for key := range paths {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+	return keys
+}
+
+func operationKeys(path map[string]any) []string {
+	keys := make([]string, 0, len(path))
+	for key := range path {
+		switch key {
+		case "get", "post", "put", "patch", "delete", "head", "options":
+			keys = append(keys, key)
+		}
+	}
+	sort.Strings(keys)
+	return keys
+}
+
+func equalStrings(a, b []string) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for i := range a {
+		if a[i] != b[i] {
+			return false
+		}
+	}
+	return true
 }

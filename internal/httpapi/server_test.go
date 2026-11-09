@@ -20,19 +20,22 @@ import (
 )
 
 type fakeStore struct {
-	run         runstore.Run
-	runs        map[string]runstore.Run
-	idempotency map[string]runstore.Run
-	events      []runstore.Event
-	lastAfterA  int32
-	lastAfterS  int64
-	lastLimit   int
+	run           runstore.Run
+	runs          map[string]runstore.Run
+	idempotency   map[string]runstore.Run
+	events        []runstore.Event
+	sessions      map[string]runstore.Session
+	sessionEvents []runstore.Event
+	lastAfterA    int32
+	lastAfterS    int64
+	lastLimit     int
 }
 
 func newFakeStore() *fakeStore {
 	return &fakeStore{
 		runs:        make(map[string]runstore.Run),
 		idempotency: make(map[string]runstore.Run),
+		sessions:    make(map[string]runstore.Session),
 	}
 }
 
@@ -67,6 +70,21 @@ func (f *fakeStore) ListEvents(_ context.Context, _ string, afterAttempt int32, 
 	f.lastAfterS = afterSeq
 	f.lastLimit = limit
 	return f.events, nil
+}
+
+func (f *fakeStore) GetSession(_ context.Context, sessionID string) (runstore.Session, error) {
+	session, ok := f.sessions[sessionID]
+	if !ok {
+		return runstore.Session{}, runstore.ErrSessionNotFound
+	}
+	return session, nil
+}
+
+func (f *fakeStore) ListSessionEvents(_ context.Context, _ string, afterAttempt int32, afterSeq int64, limit int) ([]runstore.Event, error) {
+	f.lastAfterA = afterAttempt
+	f.lastAfterS = afterSeq
+	f.lastLimit = limit
+	return f.sessionEvents, nil
 }
 
 type fakeCanceller struct {

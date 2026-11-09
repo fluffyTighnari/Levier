@@ -47,6 +47,19 @@ type Run struct {
 	UpdatedAt        time.Time       `json:"updated_at"`
 }
 
+// Session is the App-visible longterm session state.
+type Session struct {
+	SessionID      string     `json:"session_id"`
+	AppID          string     `json:"app_id"`
+	Status         string     `json:"status"`
+	CurrentRunID   string     `json:"current_run_id,omitempty"`
+	EventAttempt   int        `json:"event_attempt"`
+	EventWatermark int64      `json:"event_watermark"`
+	CreatedAt      time.Time  `json:"created_at"`
+	UpdatedAt      time.Time  `json:"updated_at"`
+	ExpiresAt      *time.Time `json:"expires_at,omitempty"`
+}
+
 // Event is one run event submitted to the store.
 type Event struct {
 	RunID      string          `json:"run_id"`

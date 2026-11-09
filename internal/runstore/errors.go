@@ -12,6 +12,8 @@ var (
 	ErrRunNotFound = errors.New("run not found")
 	// ErrAppNotFound reports a missing app.
 	ErrAppNotFound = errors.New("app not found")
+	// ErrSessionNotFound reports a missing session.
+	ErrSessionNotFound = errors.New("session not found")
 	// ErrIdempotencyConflict reports the same key with a different request.
 	ErrIdempotencyConflict = errors.New("idempotency key reused with a different request")
 	// ErrInvalidRun reports invalid run input.

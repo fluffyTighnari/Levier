@@ -4,7 +4,7 @@
 |---|---|
 | 计划版本 | V2.0 |
 | 日期 | 2026-11-03 |
-| 状态 | P0–P6 完成；P7-52–P7-55 完成；G2–G6 功能通过；M1 垂直切片完成；镜像待 Docker 复核；取代 `IMPLEMENTATION_PLAN.md` v0.3 |
+| 状态 | P0–P6 完成；P7-52–P7-56 完成；G2–G6 功能通过；M1 垂直切片完成；镜像待 Docker 复核；取代 `IMPLEMENTATION_PLAN.md` v0.3 |
 | 依据 | `docs/DESIGN.md` v0.1、`docs/WORKFLOW_ENGINE_AUDIT.md` |
 | 总步骤 | 72 个审查单元 |
 | 用法 | 一次只做一个 `Px-yy`；产出、验收、diff 都确认后再进入下一步 |
@@ -414,9 +414,10 @@ internal/control ──► internal/workflow (PostgreSQL run_tasks, SKIP LOCKED)
   - 验收：与 HTTP 共用执行器；配置校验。
   - 完成记录：共享 `requestSpec`/`executeRequest`、静态 URL、payload 模板、`response_map` 点路径、配置校验、重试/大小限制、Invoker 贯通；报告：`docs/reports/P7-55.md`。
 
-- [ ] **P7-56 HTTP 中间件与 REST**
+- [x] **P7-56 HTTP 中间件与 REST**
   - Bearer、App 作用域、错误信封、请求 ID、body 限制；apps/runs/events/cancel/sessions。
   - 验收：OpenAPI 与实现一致；越权/非法 JSON 统一错误。
+  - 完成记录：`X-Request-ID` 中间件、统一 JSON body 错误、session REST/`GetSession`、OpenAPI 路径与方法精确测试、App 作用域测试；报告：`docs/reports/P7-56.md`。
 
 - [ ] **P7-57 ws_token 与 WS**
   - 签发/校验 TTL 10min、连接、subscribe、补拉、`caught_up`、ping/pong。

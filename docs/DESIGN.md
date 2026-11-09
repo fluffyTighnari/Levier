@@ -517,7 +517,7 @@ message ErrorReport {
 响应：`{ "run_id": "...", "status": "queued", "ws_url": "/api/v1/ws", "ws_token": "..." }`
 
 - `ws_token`：短期令牌（TTL 10min，绑定 app_id），用于 WS 鉴权；过期可凭 api_key 重新获取。
-- 错误响应统一：`{ "error": { "code": "...", "message": "..." } }`。
+- 响应头带 `X-Request-ID`；错误响应统一为 `{ "error": { "code": "...", "message": "...", "request_id": "..." } }`。请求可自带合法 `X-Request-ID`，否则由 MW 生成。
 
 ### 4.3 App ↔ Middleware：WebSocket 协议
 
