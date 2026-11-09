@@ -28,6 +28,7 @@ import (
 	"github.com/fluffyTighnari/middleware/internal/control"
 	"github.com/fluffyTighnari/middleware/internal/db"
 	"github.com/fluffyTighnari/middleware/internal/gateway"
+	"github.com/fluffyTighnari/middleware/internal/gateway/executor"
 	"github.com/fluffyTighnari/middleware/internal/httpapi"
 	"github.com/fluffyTighnari/middleware/internal/observe"
 	"github.com/fluffyTighnari/middleware/internal/register"
@@ -88,7 +89,9 @@ func main() {
 	toolInvoker := gateway.NewInvoker(
 		registry,
 		appHub,
-		gateway.NewExecutorRegistry(nil),
+		gateway.NewExecutorRegistry(map[string]gateway.GlobalExecutor{
+			"builtin:http": executor.NewHTTP(),
+		}),
 		gateway.WithInvocationStore(gateway.NewPostgresInvocationStore(pool)),
 	)
 	controller := control.New(runs, hub, control.Config{

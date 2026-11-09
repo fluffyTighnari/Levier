@@ -8,6 +8,7 @@ package register
 import (
 	"context"
 	"os"
+	"strings"
 	"testing"
 )
 
@@ -185,5 +186,37 @@ func TestFileSecretResolver(t *testing.T) {
 	value, err := resolver.Resolve(context.Background(), "token")
 	if err != nil || value != "file-secret" {
 		t.Fatalf("Resolve() = %q, %v", value, err)
+	}
+}
+
+func TestGlobalToolConfigPersistsAndResolvesSecrets(t *testing.T) {
+	pool := testPool(t)
+	registry := NewWithSecrets(pool, FileSecretResolver{Values: map[string]string{"token": "abc123"}})
+	ctx := context.Background()
+
+	config := `{"url":"https://example.com","headers":{"Authorization":"Bearer ${secret:token}"}}`
+	if _, err := registry.UpsertGlobalTool(ctx, GlobalToolInput{
+		Name:        "fetch",
+		SchemaJSON:  `{"type":"object"}`,
+		ExecutorRef: "builtin:http",
+		ConfigJSON:  config,
+	}); err != nil {
+		t.Fatalf("UpsertGlobalTool() error = %v", err)
+	}
+
+	tool, resolution, err := registry.ResolveToolDecision(ctx, "app-x", "fetch")
+	if err != nil || resolution != ResolutionFound {
+		t.Fatalf("ResolveToolDecision() = %+v, %q, %v", tool, resolution, err)
+	}
+	if !strings.Contains(tool.ConfigJSON, "Bearer abc123") {
+		t.Fatalf("config was not resolved: %q", tool.ConfigJSON)
+	}
+
+	var stored string
+	if err := pool.QueryRow(ctx, "SELECT config_json FROM tool_defs WHERE name = 'fetch'").Scan(&stored); err != nil {
+		t.Fatalf("read stored config: %v", err)
+	}
+	if stored != config {
+		t.Fatalf("stored config = %q, want placeholder form", stored)
 	}
 }

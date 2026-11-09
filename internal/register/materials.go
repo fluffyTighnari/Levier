@@ -36,6 +36,7 @@ type GlobalToolInput struct {
 	Description string   `json:"description"`
 	SchemaJSON  string   `json:"schema_json"`
 	ExecutorRef string   `json:"executor_ref"`
+	ConfigJSON  string   `json:"config_json"`
 	TimeoutMS   int      `json:"timeout_ms"`
 	ACL         []string `json:"acl,omitempty"`
 }
@@ -57,6 +58,7 @@ type ToolMaterial struct {
 	Description string
 	SchemaJSON  string
 	ExecutorRef string
+	ConfigJSON  string
 	TimeoutMS   int
 	ACL         []string
 }
@@ -181,7 +183,7 @@ func (r *Registry) ReplaceLocalTools(ctx context.Context, appID string, tools []
 				version = tool_defs.version + 1,
 				updated_at = now()
 			RETURNING tool_id, scope, app_id, name, description, schema_json,
-			          executor_ref, timeout_ms, acl_json
+			          executor_ref, COALESCE(config_json, ''), timeout_ms, acl_json
 		`, "tool_"+id.New(), appID, input.Name, input.Description,
 			input.SchemaJSON, defaultTimeout(input.TimeoutMS)))
 		if err != nil {
@@ -207,6 +209,9 @@ func (r *Registry) UpsertGlobalTool(ctx context.Context, input GlobalToolInput) 
 	if input.ExecutorRef == "" {
 		return ToolMaterial{}, fmt.Errorf("register: executor_ref is required for global tools")
 	}
+	if input.ConfigJSON != "" && !json.Valid([]byte(input.ConfigJSON)) {
+		return ToolMaterial{}, fmt.Errorf("register: tool %q config_json is invalid", input.Name)
+	}
 	var aclJSON any
 	if input.ACL != nil {
 		encoded, err := json.Marshal(input.ACL)
@@ -218,21 +223,22 @@ func (r *Registry) UpsertGlobalTool(ctx context.Context, input GlobalToolInput) 
 	tool, err := scanToolMaterial(r.pool.QueryRow(ctx, `
 		INSERT INTO tool_defs (
 			tool_id, scope, app_id, name, description, schema_json,
-			executor_ref, timeout_ms, acl_json, version, created_at, updated_at
-		) VALUES ($1, 'global', NULL, $2, $3, $4, $5, $6, $7, 1, now(), now())
+			executor_ref, config_json, timeout_ms, acl_json, version, created_at, updated_at
+		) VALUES ($1, 'global', NULL, $2, $3, $4, $5, $6, $7, $8, 1, now(), now())
 		ON CONFLICT (name) WHERE scope = 'global'
 		DO UPDATE SET
 			description = EXCLUDED.description,
 			schema_json = EXCLUDED.schema_json,
 			executor_ref = EXCLUDED.executor_ref,
+			config_json = EXCLUDED.config_json,
 			timeout_ms = EXCLUDED.timeout_ms,
 			acl_json = EXCLUDED.acl_json,
 			version = tool_defs.version + 1,
 			updated_at = now()
 		RETURNING tool_id, scope, app_id, name, description, schema_json,
-		          executor_ref, timeout_ms, acl_json
+		          executor_ref, COALESCE(config_json, ''), timeout_ms, acl_json
 	`, "tool_"+id.New(), input.Name, input.Description, input.SchemaJSON,
-		input.ExecutorRef, defaultTimeout(input.TimeoutMS), aclJSON))
+		input.ExecutorRef, nullString(input.ConfigJSON), defaultTimeout(input.TimeoutMS), aclJSON))
 	if err != nil {
 		return ToolMaterial{}, fmt.Errorf("register: upsert global tool: %w", err)
 	}
@@ -341,7 +347,7 @@ func (r *Registry) ResolveToolDecision(ctx context.Context, appID, name string) 
 	}
 	local, err := scanToolMaterial(r.pool.QueryRow(ctx, `
 		SELECT tool_id, scope, app_id, name, description, schema_json,
-		       executor_ref, timeout_ms, acl_json
+		       executor_ref, COALESCE(config_json, ''), timeout_ms, acl_json
 		FROM tool_defs
 		WHERE scope = 'local' AND app_id = $1 AND name = $2
 	`, appID, name))
@@ -353,7 +359,7 @@ func (r *Registry) ResolveToolDecision(ctx context.Context, appID, name string) 
 	}
 	global, err := scanToolMaterial(r.pool.QueryRow(ctx, `
 		SELECT tool_id, scope, app_id, name, description, schema_json,
-		       executor_ref, timeout_ms, acl_json
+		       executor_ref, COALESCE(config_json, ''), timeout_ms, acl_json
 		FROM tool_defs
 		WHERE scope = 'global' AND name = $1
 	`, name))
@@ -366,6 +372,13 @@ func (r *Registry) ResolveToolDecision(ctx context.Context, appID, name string) 
 	if !aclAllows(global.ACL, appID) {
 		return ToolMaterial{}, ResolutionDenied, nil
 	}
+	if global.ConfigJSON != "" {
+		resolved, err := r.resolveString(ctx, global.ConfigJSON)
+		if err != nil {
+			return ToolMaterial{}, ResolutionNotFound, fmt.Errorf("register: resolve tool config: %w", err)
+		}
+		global.ConfigJSON = resolved
+	}
 	return global, ResolutionFound, nil
 }
 
@@ -376,7 +389,7 @@ func (r *Registry) AssembleTaskMaterials(ctx context.Context, appID string) (Tas
 	}
 	localRows, err := r.pool.Query(ctx, `
 		SELECT tool_id, scope, app_id, name, description, schema_json,
-		       executor_ref, timeout_ms, acl_json
+		       executor_ref, COALESCE(config_json, ''), timeout_ms, acl_json
 		FROM tool_defs
 		WHERE scope = 'local' AND app_id = $1
 		ORDER BY name
@@ -390,7 +403,7 @@ func (r *Registry) AssembleTaskMaterials(ctx context.Context, appID string) (Tas
 	}
 	globalRows, err := r.pool.Query(ctx, `
 		SELECT tool_id, scope, app_id, name, description, schema_json,
-		       executor_ref, timeout_ms, acl_json
+		       executor_ref, COALESCE(config_json, ''), timeout_ms, acl_json
 		FROM tool_defs
 		WHERE scope = 'global'
 		ORDER BY name
@@ -562,7 +575,7 @@ func scanToolMaterial(row pgx.Row) (ToolMaterial, error) {
 	var appID, executorRef pgtype.Text
 	if err := row.Scan(
 		&tool.ToolID, &tool.Scope, &appID, &tool.Name, &tool.Description,
-		&tool.SchemaJSON, &executorRef, &tool.TimeoutMS, &acl,
+		&tool.SchemaJSON, &executorRef, &tool.ConfigJSON, &tool.TimeoutMS, &acl,
 	); err != nil {
 		return ToolMaterial{}, err
 	}

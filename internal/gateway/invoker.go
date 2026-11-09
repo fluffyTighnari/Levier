@@ -33,13 +33,14 @@ type LocalToolCaller interface {
 
 // GlobalCall is one global tool invocation.
 type GlobalCall struct {
-	RunID         string
-	AppID         string
-	InvocationID  string
-	ToolName      string
-	ArgumentsJSON string
-	ExecutorRef   string
-	Timeout       time.Duration
+	RunID          string
+	AppID          string
+	InvocationID   string
+	ToolName       string
+	ArgumentsJSON  string
+	ExecutorRef    string
+	ToolConfigJSON string
+	Timeout        time.Duration
 }
 
 // GlobalResult is a global executor result.
@@ -292,13 +293,14 @@ func (i *Invoker) invokeGlobal(
 	callCtx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 	result, err := executor.Execute(callCtx, GlobalCall{
-		RunID:         runID,
-		AppID:         appID,
-		InvocationID:  request.GetInvocationId(),
-		ToolName:      request.GetToolName(),
-		ArgumentsJSON: request.GetArgumentsJson(),
-		ExecutorRef:   tool.ExecutorRef,
-		Timeout:       timeout,
+		RunID:          runID,
+		AppID:          appID,
+		InvocationID:   request.GetInvocationId(),
+		ToolName:       request.GetToolName(),
+		ArgumentsJSON:  request.GetArgumentsJson(),
+		ExecutorRef:    tool.ExecutorRef,
+		ToolConfigJSON: tool.ConfigJSON,
+		Timeout:        timeout,
 	})
 	if err != nil {
 		if errors.Is(err, context.DeadlineExceeded) || errors.Is(callCtx.Err(), context.DeadlineExceeded) {

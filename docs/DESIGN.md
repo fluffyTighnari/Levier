@@ -114,7 +114,7 @@
 | 实体 | 关键字段 | 说明 |
 |---|---|---|
 | **App** | app_id, name(唯一), api_key_hash, multiagent, status | 业务 Agent 服务 |
-| **ToolDef** | tool_id, scope(local/global), app_id(local 时非空), name, description, schema_json, executor_ref(global), timeout_ms, acl | 工具定义；local 归 App 执行，global 归 Gateway 执行 |
+| **ToolDef** | tool_id, scope(local/global), app_id(local 时非空), name, description, schema_json, executor_ref(global), config_json(global), timeout_ms, acl | 工具定义；local 归 App 执行，global 归 Gateway 执行 |
 | **McpServerDef** | mcp_id, name(唯一), transport(stdio/sse/streamable_http), config_json, auth_ref, allowed_tools_json | 仅存目录；连接由独立 `mcp_runtime` 建立 |
 | **Daemon** | daemon_id, runtime_type, max_concurrency, labels, status, last_heartbeat_at | 注册中心视图；运行中实例 |
 | **Run** | run_id, app_id, idempotency_key((app_id,key) 唯一), runtime, strategy, params, status, attempt, session_id?, timeouts, trace_id, assigned_daemon_id, lease_epoch, assigned_at | 一次执行的权威记录 |
@@ -144,6 +144,7 @@ CREATE TABLE tool_defs (
   description  TEXT NOT NULL DEFAULT '',
   schema_json  TEXT NOT NULL,                  -- JSON Schema
   executor_ref TEXT,                           -- scope=global 时必填，如 "builtin:http"
+  config_json  TEXT,                           -- global executor 配置，允许 ${secret:name}
   timeout_ms   INTEGER NOT NULL DEFAULT 60000,
   acl_json     TEXT,                           -- global 工具的 app 白名单，NULL=全部
   version      INTEGER NOT NULL DEFAULT 1,
@@ -688,10 +689,25 @@ ToolCallRequest(invocation_id, tool_name)
 
 ### 7.3 Global Executor v1 清单
 
-| executor_ref | 能力 | 配置（schema_json 约束参数） |
+| executor_ref | 能力 | 配置（ToolDef.config_json） |
 |---|---|---|
-| `builtin:http` | 发起 HTTP 请求（method/url/headers/body 模板，超时/重试） | ToolDef.schema_json 定义模板参数 |
+| `builtin:http` | 发起 HTTP 请求（method/url/headers/body 模板，超时/重试） | `method`、`url`、`headers`、`body`、`max_response_bytes`、`retries`、`retry_backoff_ms` |
 | `builtin:webhook` | 向预注册 URL POST 并等待响应 | URL 在 ToolDef 配置，App 只传 payload |
+
+`config_json` 在工具解析时解析 `${secret:name}`，明文不落库。`builtin:http` 的 `url`、`headers`、`body` 使用 Go `text/template`，数据为：
+
+```json
+{
+  "args": {"q": "..."},
+  "args_json": "{\"q\":\"...\"}",
+  "run_id": "...",
+  "app_id": "...",
+  "invocation_id": "...",
+  "tool_name": "..."
+}
+```
+
+可用函数：`json`（序列化）、`urlquery`（URL 转义）。模板缺失键直接报错，不渲染空值。
 
 v2 候选：`builtin:expression`（表达式求值）、沙箱化脚本执行（复用 sandbox runtime 思路）。
 
