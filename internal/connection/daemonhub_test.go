@@ -267,6 +267,70 @@ func TestSendAndOffline(t *testing.T) {
 	}
 }
 
+func TestClassifyAndEphemeralDrop(t *testing.T) {
+	hub := New(Config{})
+	conn := &daemonConn{
+		sendCh: make(chan *runtimev1.Envelope, 1),
+		done:   make(chan struct{}),
+	}
+	hub.daemons["daemon-drop"] = conn
+
+	ephemeral, err := protocol.NewRun("run-1", 1, 1, &runtimev1.Event{
+		Seq:       0,
+		Type:      runtimev1.EventType_MESSAGE_DELTA,
+		Ephemeral: true,
+		Source:    protocol.EventSourceDaemon,
+	})
+	if err != nil {
+		t.Fatalf("NewRun(ephemeral) error = %v", err)
+	}
+	if ClassifyEnvelope(ephemeral) != SendEphemeral {
+		t.Fatal("ephemeral envelope classified incorrectly")
+	}
+	if err := hub.Send("daemon-drop", ephemeral); err != nil {
+		t.Fatalf("first ephemeral Send() error = %v", err)
+	}
+	if err := hub.Send("daemon-drop", ephemeral); err != nil {
+		t.Fatalf("dropped ephemeral Send() error = %v", err)
+	}
+	if dropped := hub.DroppedEphemeral("daemon-drop"); dropped != 1 {
+		t.Fatalf("dropped = %d, want 1", dropped)
+	}
+
+	control, err := protocol.NewRun("run-1", 1, 1, &runtimev1.Cancel{Reason: "test"})
+	if err != nil {
+		t.Fatalf("NewRun(control) error = %v", err)
+	}
+	if ClassifyEnvelope(control) != SendControl {
+		t.Fatal("control envelope classified incorrectly")
+	}
+}
+
+func TestControlBackpressureMarksSlowAndCloses(t *testing.T) {
+	hub := New(Config{
+		SendTimeout:         10 * time.Millisecond,
+		SlowConsumerTimeout: 30 * time.Millisecond,
+	})
+	conn := &daemonConn{
+		sendCh: make(chan *runtimev1.Envelope, 1),
+		done:   make(chan struct{}),
+	}
+	hub.daemons["daemon-slow"] = conn
+	control, err := protocol.NewRun("run-1", 1, 1, &runtimev1.Cancel{Reason: "test"})
+	if err != nil {
+		t.Fatalf("NewRun() error = %v", err)
+	}
+	conn.sendCh <- control
+	if err := hub.Send("daemon-slow", control); err != ErrBackpressure {
+		t.Fatalf("Send() error = %v, want ErrBackpressure", err)
+	}
+	select {
+	case <-conn.done:
+	case <-time.After(time.Second):
+		t.Fatal("slow consumer connection was not closed")
+	}
+}
+
 func TestHubCloseStopsConnections(t *testing.T) {
 	hub, addr := startHub(t, Config{
 		HelloTimeout: time.Second,

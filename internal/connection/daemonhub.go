@@ -12,6 +12,7 @@ import (
 	"io"
 	"sort"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"google.golang.org/grpc"
@@ -27,6 +28,8 @@ const (
 	defaultHeartbeatTimeout = 30 * time.Second
 	defaultOutboundBuffer   = 256
 	defaultCloseTimeout     = 5 * time.Second
+	defaultSendTimeout      = 100 * time.Millisecond
+	defaultSlowConsumerTime = 5 * time.Second
 )
 
 var (
@@ -34,12 +37,26 @@ var (
 	ErrDaemonOffline = errors.New("daemon is offline")
 	// ErrBackpressure reports a full outbound buffer.
 	ErrBackpressure = errors.New("daemon outbound buffer is full")
+	// ErrSlowConsumer reports a daemon that cannot drain control traffic.
+	ErrSlowConsumer = errors.New("daemon is a slow consumer")
 	// ErrHubClosed reports sends to a closed hub.
 	ErrHubClosed = errors.New("daemon hub is closed")
 )
 
 // Authenticator validates a Hello daemon_id/auth_token pair.
 type Authenticator func(daemonID, token string) bool
+
+// SendKind classifies outbound traffic for backpressure handling.
+type SendKind int
+
+const (
+	// SendControl covers control messages that must not be dropped.
+	SendControl SendKind = iota
+	// SendPersistent covers non-ephemeral events.
+	SendPersistent
+	// SendEphemeral covers ephemeral events that may be dropped.
+	SendEphemeral
+)
 
 // RunRef identifies one run still executing on a daemon.
 type RunRef struct {
@@ -63,13 +80,15 @@ type DaemonInfo struct {
 
 // Config controls DaemonHub behavior.
 type Config struct {
-	HelloTimeout     time.Duration
-	HeartbeatTimeout time.Duration
-	CloseTimeout     time.Duration
-	OutboundBuffer   int
-	Authenticate     Authenticator
-	OnEnvelope       func(daemonID string, env *runtimev1.Envelope)
-	Now              func() time.Time
+	HelloTimeout        time.Duration
+	HeartbeatTimeout    time.Duration
+	CloseTimeout        time.Duration
+	SendTimeout         time.Duration
+	SlowConsumerTimeout time.Duration
+	OutboundBuffer      int
+	Authenticate        Authenticator
+	OnEnvelope          func(daemonID string, env *runtimev1.Envelope)
+	Now                 func() time.Time
 }
 
 // Hub implements the RuntimeService daemon side of the connection plane.
@@ -91,6 +110,11 @@ type daemonConn struct {
 	sendCh chan *runtimev1.Envelope
 	done   chan struct{}
 	once   sync.Once
+
+	slowMu           sync.Mutex
+	slow             bool
+	slowTimer        *time.Timer
+	droppedEphemeral atomic.Int64
 }
 
 // New returns a DaemonHub with defaults applied.
@@ -103,6 +127,12 @@ func New(cfg Config) *Hub {
 	}
 	if cfg.CloseTimeout <= 0 {
 		cfg.CloseTimeout = defaultCloseTimeout
+	}
+	if cfg.SendTimeout <= 0 {
+		cfg.SendTimeout = defaultSendTimeout
+	}
+	if cfg.SlowConsumerTimeout <= 0 {
+		cfg.SlowConsumerTimeout = defaultSlowConsumerTime
 	}
 	if cfg.OutboundBuffer <= 0 {
 		cfg.OutboundBuffer = defaultOutboundBuffer
@@ -217,14 +247,56 @@ func (h *Hub) Send(daemonID string, env *runtimev1.Envelope) error {
 		return ErrDaemonOffline
 	default:
 	}
+
+	if ClassifyEnvelope(env) == SendEphemeral {
+		select {
+		case conn.sendCh <- env:
+			return nil
+		case <-conn.done:
+			return ErrDaemonOffline
+		default:
+			conn.droppedEphemeral.Add(1)
+			return nil
+		}
+	}
+
+	timer := time.NewTimer(h.cfg.SendTimeout)
+	defer timer.Stop()
 	select {
 	case conn.sendCh <- env:
+		conn.clearSlow()
 		return nil
 	case <-conn.done:
 		return ErrDaemonOffline
-	default:
+	case <-timer.C:
+		conn.markSlow(h.cfg.SlowConsumerTimeout)
 		return ErrBackpressure
 	}
+}
+
+// ClassifyEnvelope classifies an outbound envelope for backpressure.
+func ClassifyEnvelope(env *runtimev1.Envelope) SendKind {
+	if env == nil {
+		return SendControl
+	}
+	if event := env.GetEvent(); event != nil {
+		if event.GetEphemeral() {
+			return SendEphemeral
+		}
+		return SendPersistent
+	}
+	return SendControl
+}
+
+// DroppedEphemeral returns the number of dropped ephemeral events for a daemon.
+func (h *Hub) DroppedEphemeral(daemonID string) int64 {
+	h.mu.RLock()
+	conn := h.daemons[daemonID]
+	h.mu.RUnlock()
+	if conn == nil {
+		return 0
+	}
+	return conn.droppedEphemeral.Load()
 }
 
 // Get returns a daemon registration snapshot.
@@ -451,9 +523,42 @@ func (c *daemonConn) writeLoop() {
 	}
 }
 
+func (c *daemonConn) markSlow(timeout time.Duration) {
+	c.slowMu.Lock()
+	c.slow = true
+	if c.slowTimer == nil {
+		c.slowTimer = time.AfterFunc(timeout, func() {
+			c.slowMu.Lock()
+			slow := c.slow
+			c.slowMu.Unlock()
+			if slow {
+				c.close()
+			}
+		})
+	}
+	c.slowMu.Unlock()
+}
+
+func (c *daemonConn) clearSlow() {
+	c.slowMu.Lock()
+	c.slow = false
+	if c.slowTimer != nil {
+		c.slowTimer.Stop()
+		c.slowTimer = nil
+	}
+	c.slowMu.Unlock()
+}
+
 func (c *daemonConn) close() {
 	c.once.Do(func() {
 		close(c.done)
+		c.slowMu.Lock()
+		c.slow = false
+		if c.slowTimer != nil {
+			c.slowTimer.Stop()
+			c.slowTimer = nil
+		}
+		c.slowMu.Unlock()
 	})
 }
 
