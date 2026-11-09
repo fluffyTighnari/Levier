@@ -90,7 +90,8 @@ func main() {
 		registry,
 		appHub,
 		gateway.NewExecutorRegistry(map[string]gateway.GlobalExecutor{
-			"builtin:http": executor.NewHTTP(),
+			"builtin:http":    executor.NewHTTP(),
+			"builtin:webhook": executor.NewWebhook(),
 		}),
 		gateway.WithInvocationStore(gateway.NewPostgresInvocationStore(pool)),
 	)

@@ -4,7 +4,7 @@
 |---|---|
 | 计划版本 | V2.0 |
 | 日期 | 2026-11-03 |
-| 状态 | P0–P6 完成；P7-52–P7-54 完成；G2–G6 功能通过；M1 垂直切片完成；镜像待 Docker 复核；取代 `IMPLEMENTATION_PLAN.md` v0.3 |
+| 状态 | P0–P6 完成；P7-52–P7-55 完成；G2–G6 功能通过；M1 垂直切片完成；镜像待 Docker 复核；取代 `IMPLEMENTATION_PLAN.md` v0.3 |
 | 依据 | `docs/DESIGN.md` v0.1、`docs/WORKFLOW_ENGINE_AUDIT.md` |
 | 总步骤 | 72 个审查单元 |
 | 用法 | 一次只做一个 `Px-yy`；产出、验收、diff 都确认后再进入下一步 |
@@ -409,9 +409,10 @@ internal/control ──► internal/workflow (PostgreSQL run_tasks, SKIP LOCKED)
   - 验收：httptest 覆盖成功/4xx/5xx/超时/大响应。
   - 完成记录：`ToolDef.config_json`、`executor.HTTP`、模板数据/函数、受限重试、响应信封与大小限制、Invoker 贯通、DB/密钥测试；报告：`docs/reports/P7-54.md`。
 
-- [ ] **P7-55 `builtin:webhook`**
+- [x] **P7-55 `builtin:webhook`**
   - 预注册 URL、payload、响应映射、重试边界。
   - 验收：与 HTTP 共用执行器；配置校验。
+  - 完成记录：共享 `requestSpec`/`executeRequest`、静态 URL、payload 模板、`response_map` 点路径、配置校验、重试/大小限制、Invoker 贯通；报告：`docs/reports/P7-55.md`。
 
 - [ ] **P7-56 HTTP 中间件与 REST**
   - Bearer、App 作用域、错误信封、请求 ID、body 限制；apps/runs/events/cancel/sessions。

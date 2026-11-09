@@ -692,7 +692,7 @@ ToolCallRequest(invocation_id, tool_name)
 | executor_ref | 能力 | 配置（ToolDef.config_json） |
 |---|---|---|
 | `builtin:http` | 发起 HTTP 请求（method/url/headers/body 模板，超时/重试） | `method`、`url`、`headers`、`body`、`max_response_bytes`、`retries`、`retry_backoff_ms` |
-| `builtin:webhook` | 向预注册 URL POST 并等待响应 | URL 在 ToolDef 配置，App 只传 payload |
+| `builtin:webhook` | 向预注册 URL POST 并等待响应 | `url`（静态）、`headers`、`payload`、`response_map`、`max_response_bytes`、`retries`、`retry_backoff_ms` |
 
 `config_json` 在工具解析时解析 `${secret:name}`，明文不落库。`builtin:http` 的 `url`、`headers`、`body` 使用 Go `text/template`，数据为：
 
@@ -708,6 +708,20 @@ ToolCallRequest(invocation_id, tool_name)
 ```
 
 可用函数：`json`（序列化）、`urlquery`（URL 转义）。模板缺失键直接报错，不渲染空值。
+
+`builtin:webhook` 的 `url` 必须静态；`payload` 省略时直接使用 `arguments_json`。`response_map` 把响应字段映射为结果键：
+
+```json
+{
+  "response_map": {
+    "event_id": "body.id",
+    "status": "status",
+    "first_item": "body.items.0.name"
+  }
+}
+```
+
+路径根只能是 `status` 或 `body`；缺失路径返回不可重试的 `TOOL_EXEC_ERROR`。未配置 `response_map` 时返回与 `builtin:http` 相同的响应信封。
 
 v2 候选：`builtin:expression`（表达式求值）、沙箱化脚本执行（复用 sandbox runtime 思路）。
 

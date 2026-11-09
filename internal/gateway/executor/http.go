@@ -1,7 +1,6 @@
 // Middleware — internal/gateway/executor
 //
-// builtin:http global tool executor: request templating, bounded retries,
-// and response size limits.
+// Shared HTTP request execution plus the builtin:http executor.
 //
 // Copyright 2026 The Middleware Authors.
 package executor
@@ -14,11 +13,12 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"net/textproto"
 	"net/url"
 	"strings"
 	"text/template"
 	"time"
+
+	"golang.org/x/net/http/httpguts"
 
 	"github.com/fluffyTighnari/middleware/internal/gateway"
 )
@@ -32,6 +32,20 @@ const (
 )
 
 var errResponseTooLarge = errors.New("response exceeds configured limit")
+
+// requestSpec is the shared request shape used by HTTP and webhook executors.
+type requestSpec struct {
+	Method           string
+	URL              string
+	Headers          map[string]string
+	Body             string
+	MaxResponseBytes int64
+	Retries          int
+	RetryBackoffMS   int
+}
+
+// responseEncoder converts a successful HTTP response into ToolCallResult JSON.
+type responseEncoder func(status int, payload []byte) (string, error)
 
 // HTTPConfig is the tool-specific configuration for builtin:http.
 type HTTPConfig struct {
@@ -84,31 +98,17 @@ func ParseHTTPConfig(raw string) (HTTPConfig, error) {
 	default:
 		return HTTPConfig{}, fmt.Errorf("builtin:http: unsupported method %q", cfg.Method)
 	}
-	if strings.TrimSpace(cfg.URL) == "" {
-		return HTTPConfig{}, fmt.Errorf("builtin:http: url is required")
+	if err := validateTemplatedURL(cfg.URL, "builtin:http"); err != nil {
+		return HTTPConfig{}, err
 	}
-	if !strings.Contains(cfg.URL, "{{") {
-		if err := validateHTTPURL(cfg.URL); err != nil {
-			return HTTPConfig{}, fmt.Errorf("builtin:http: %w", err)
-		}
+	if err := validateHeaders(cfg.Headers, "builtin:http"); err != nil {
+		return HTTPConfig{}, err
 	}
-	for name, value := range cfg.Headers {
-		if textproto.CanonicalMIMEHeaderKey(name) == "" {
-			return HTTPConfig{}, fmt.Errorf("builtin:http: invalid header name %q", name)
-		}
-		cfg.Headers[name] = value
+	if err := validateLimits(cfg.MaxResponseBytes, cfg.Retries, cfg.RetryBackoffMS, "builtin:http"); err != nil {
+		return HTTPConfig{}, err
 	}
 	if cfg.MaxResponseBytes == 0 {
 		cfg.MaxResponseBytes = defaultMaxResponseBytes
-	}
-	if cfg.MaxResponseBytes < 1 || cfg.MaxResponseBytes > maxResponseBytesLimit {
-		return HTTPConfig{}, fmt.Errorf("builtin:http: max_response_bytes must be between 1 and %d", maxResponseBytesLimit)
-	}
-	if cfg.Retries < 0 || cfg.Retries > maxRetries {
-		return HTTPConfig{}, fmt.Errorf("builtin:http: retries must be between 0 and %d", maxRetries)
-	}
-	if cfg.RetryBackoffMS < 0 || cfg.RetryBackoffMS > 5000 {
-		return HTTPConfig{}, fmt.Errorf("builtin:http: retry_backoff_ms must be between 0 and 5000")
 	}
 	return cfg, nil
 }
@@ -123,17 +123,34 @@ func (h *HTTP) Execute(ctx context.Context, call gateway.GlobalCall) (gateway.Gl
 	if err != nil {
 		return failure("TOOL_EXEC_ERROR", err.Error(), false), nil
 	}
-	data := invocationData(call, args)
+	spec := requestSpec{
+		Method:           cfg.Method,
+		URL:              cfg.URL,
+		Headers:          cfg.Headers,
+		Body:             cfg.Body,
+		MaxResponseBytes: cfg.MaxResponseBytes,
+		Retries:          cfg.Retries,
+		RetryBackoffMS:   cfg.RetryBackoffMS,
+	}
+	return executeRequest(ctx, h.Client, spec, invocationData(call, args), encodeBody)
+}
 
-	attempts := cfg.Retries + 1
+func executeRequest(
+	ctx context.Context,
+	client *http.Client,
+	spec requestSpec,
+	data map[string]any,
+	encode responseEncoder,
+) (gateway.GlobalResult, error) {
+	attempts := spec.Retries + 1
 	var last gateway.GlobalResult
 	for attempt := 0; attempt < attempts; attempt++ {
 		if attempt > 0 {
-			if err := sleepContext(ctx, retryDelay(cfg, attempt)); err != nil {
+			if err := sleepContext(ctx, retryDelay(spec, attempt)); err != nil {
 				return gateway.GlobalResult{}, err
 			}
 		}
-		result, retry, err := h.do(ctx, cfg, data)
+		result, retry, err := doRequest(ctx, client, spec, data, encode)
 		if err != nil {
 			if ctx.Err() != nil {
 				return gateway.GlobalResult{}, ctx.Err()
@@ -152,15 +169,21 @@ func (h *HTTP) Execute(ctx context.Context, call gateway.GlobalCall) (gateway.Gl
 	return last, nil
 }
 
-func (h *HTTP) do(ctx context.Context, cfg HTTPConfig, data map[string]any) (gateway.GlobalResult, bool, error) {
-	renderedURL, err := renderTemplate("url", cfg.URL, data)
+func doRequest(
+	ctx context.Context,
+	client *http.Client,
+	spec requestSpec,
+	data map[string]any,
+	encode responseEncoder,
+) (gateway.GlobalResult, bool, error) {
+	renderedURL, err := renderTemplate("url", spec.URL, data)
 	if err != nil {
 		return failure("TOOL_EXEC_ERROR", err.Error(), false), false, nil
 	}
 	if err := validateHTTPURL(renderedURL); err != nil {
 		return failure("TOOL_EXEC_ERROR", err.Error(), false), false, nil
 	}
-	body, err := renderTemplate("body", cfg.Body, data)
+	body, err := renderTemplate("body", spec.Body, data)
 	if err != nil {
 		return failure("TOOL_EXEC_ERROR", err.Error(), false), false, nil
 	}
@@ -168,11 +191,11 @@ func (h *HTTP) do(ctx context.Context, cfg HTTPConfig, data map[string]any) (gat
 	if body != "" {
 		reader = strings.NewReader(body)
 	}
-	request, err := http.NewRequestWithContext(ctx, cfg.Method, renderedURL, reader)
+	request, err := http.NewRequestWithContext(ctx, spec.Method, renderedURL, reader)
 	if err != nil {
 		return failure("TOOL_EXEC_ERROR", "build request: "+err.Error(), false), false, nil
 	}
-	for name, value := range cfg.Headers {
+	for name, value := range spec.Headers {
 		rendered, err := renderTemplate("header "+name, value, data)
 		if err != nil {
 			return failure("TOOL_EXEC_ERROR", err.Error(), false), false, nil
@@ -186,7 +209,6 @@ func (h *HTTP) do(ctx context.Context, cfg HTTPConfig, data map[string]any) (gat
 		request.Header.Set("Content-Type", "application/json")
 	}
 
-	client := h.Client
 	if client == nil {
 		client = http.DefaultClient
 	}
@@ -197,17 +219,17 @@ func (h *HTTP) do(ctx context.Context, cfg HTTPConfig, data map[string]any) (gat
 	defer response.Body.Close()
 
 	if response.StatusCode >= 200 && response.StatusCode < 300 {
-		payload, err := readLimited(response.Body, cfg.MaxResponseBytes)
+		payload, err := readLimited(response.Body, spec.MaxResponseBytes)
 		if errors.Is(err, errResponseTooLarge) {
 			return failure("RESPONSE_TOO_LARGE",
-				fmt.Sprintf("response exceeds %d bytes", cfg.MaxResponseBytes), false), false, nil
+				fmt.Sprintf("response exceeds %d bytes", spec.MaxResponseBytes), false), false, nil
 		}
 		if err != nil {
 			return gateway.GlobalResult{}, false, err
 		}
-		encoded, err := encodeBody(response.StatusCode, payload)
+		encoded, err := encode(response.StatusCode, payload)
 		if err != nil {
-			return failure("TOOL_EXEC_ERROR", "encode response: "+err.Error(), false), false, nil
+			return failure("TOOL_EXEC_ERROR", err.Error(), false), false, nil
 		}
 		return gateway.GlobalResult{OK: true, ResultJSON: encoded}, false, nil
 	}
@@ -223,6 +245,54 @@ func (h *HTTP) do(ctx context.Context, cfg HTTPConfig, data map[string]any) (gat
 	}
 	retry := response.StatusCode >= 500 || response.StatusCode == http.StatusTooManyRequests
 	return failure(code, message, retry), retry, nil
+}
+
+func validateTemplatedURL(raw, executor string) error {
+	if strings.TrimSpace(raw) == "" {
+		return fmt.Errorf("%s: url is required", executor)
+	}
+	if strings.Contains(raw, "{{") {
+		return nil
+	}
+	if err := validateHTTPURL(raw); err != nil {
+		return fmt.Errorf("%s: %w", executor, err)
+	}
+	return nil
+}
+
+func validateStaticURL(raw, executor string) error {
+	if strings.TrimSpace(raw) == "" {
+		return fmt.Errorf("%s: url is required", executor)
+	}
+	if strings.Contains(raw, "{{") {
+		return fmt.Errorf("%s: url must be static", executor)
+	}
+	if err := validateHTTPURL(raw); err != nil {
+		return fmt.Errorf("%s: %w", executor, err)
+	}
+	return nil
+}
+
+func validateHeaders(headers map[string]string, executor string) error {
+	for name := range headers {
+		if !httpguts.ValidHeaderFieldName(name) {
+			return fmt.Errorf("%s: invalid header name %q", executor, name)
+		}
+	}
+	return nil
+}
+
+func validateLimits(maxResponseBytes int64, retries, retryBackoffMS int, executor string) error {
+	if maxResponseBytes < 0 || maxResponseBytes > maxResponseBytesLimit {
+		return fmt.Errorf("%s: max_response_bytes must be between 0 and %d", executor, maxResponseBytesLimit)
+	}
+	if retries < 0 || retries > maxRetries {
+		return fmt.Errorf("%s: retries must be between 0 and %d", executor, maxRetries)
+	}
+	if retryBackoffMS < 0 || retryBackoffMS > 5000 {
+		return fmt.Errorf("%s: retry_backoff_ms must be between 0 and 5000", executor)
+	}
+	return nil
 }
 
 func parseArguments(raw string) (map[string]any, error) {
@@ -314,8 +384,8 @@ func encodeBody(status int, payload []byte) (string, error) {
 	return string(encoded), nil
 }
 
-func retryDelay(cfg HTTPConfig, attempt int) time.Duration {
-	base := time.Duration(cfg.RetryBackoffMS) * time.Millisecond
+func retryDelay(spec requestSpec, attempt int) time.Duration {
+	base := time.Duration(spec.RetryBackoffMS) * time.Millisecond
 	if base <= 0 {
 		base = defaultRetryBackoffMS * time.Millisecond
 	}
