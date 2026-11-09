@@ -78,6 +78,12 @@ Middleware 的正式模型是：
 
 这样可以比较改造前后的行为差异，而不是只验证“新写了一个 demo”。
 
+## 改造计划
+
+逐边调试步骤见：
+
+- `docs/APP_RETROFIT_PLAN.md`
+
 ## 设计约束
 
 - 不读取或打印 API key。

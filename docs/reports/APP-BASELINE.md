@@ -147,6 +147,8 @@ WS 是下一项需要单独证明的协议边界：
 
 ## 7. 下一步
 
+详细逐边计划见 `docs/APP_RETROFIT_PLAN.md`。
+
 1. 改造 counter_agent：拆出 App WS 工具宿主。
 2. Harness 增加 DeepSeek provider 配置，跑同一提示词。
 3. 用 `examples/http_client` 提交 Run，并对比基线。

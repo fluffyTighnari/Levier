@@ -461,6 +461,8 @@ internal/control ──► internal/workflow (PostgreSQL run_tasks, SKIP LOCKED)
 
 **G8 审查物：** 故障矩阵报告、压测报告、安全清单、M2/M3 验收记录。
 
+> APP 改造的逐边调试计划见 `docs/APP_RETROFIT_PLAN.md`；它先于 P8-59/60 执行。
+
 ### P9 longterm（P9-65–P9-68）
 
 - [ ] **P9-65 Session 与 Checkpoint**
