@@ -204,6 +204,7 @@ func (c *Control) Handle(ctx context.Context, task workflow.Task, _ workflow.Lea
 	status := run.Status
 	currentAttempt := run.Attempt
 	currentEpoch := run.LeaseEpoch
+	lastErr := fmt.Errorf("%w: no eligible daemon", errNoDaemon)
 
 	for attemptIndex := 0; attemptIndex < c.cfg.MaxPlacementAttempts; attemptIndex++ {
 		placement.ExcludeDaemonIDs = excluded
@@ -262,7 +263,14 @@ func (c *Control) Handle(ctx context.Context, task workflow.Task, _ workflow.Lea
 		case <-timer.C:
 			c.removePending(envelope.GetMsgId())
 			c.hub.Release(daemonID)
-			return errAckTimeout
+			lastErr = errAckTimeout
+			if c.cfg.Scheduler == nil {
+				return errAckTimeout
+			}
+			excluded[daemonID] = struct{}{}
+			attempt++
+			leaseEpoch++
+			continue
 		case ack := <-ackCh:
 			timer.Stop()
 			c.removePending(envelope.GetMsgId())
@@ -271,12 +279,15 @@ func (c *Control) Handle(ctx context.Context, task workflow.Task, _ workflow.Lea
 			}
 			c.hub.Release(daemonID)
 			excluded[daemonID] = struct{}{}
+			lastErr = fmt.Errorf("daemon %q rejected task: %s", daemonID, ack.GetReason())
 			if c.cfg.Scheduler == nil {
-				return fmt.Errorf("daemon %q rejected task: %s", daemonID, ack.GetReason())
+				return lastErr
 			}
+			attempt++
+			leaseEpoch++
 		}
 	}
-	return fmt.Errorf("%w: no eligible daemon", errNoDaemon)
+	return lastErr
 }
 
 func (c *Control) pick(placement PlacementRequest) (string, bool) {

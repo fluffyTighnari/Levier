@@ -308,6 +308,45 @@ func TestHandleRetriesNextCandidateOnRejection(t *testing.T) {
 	}
 }
 
+func TestHandleRetriesNextCandidateOnAckTimeout(t *testing.T) {
+	runs := &fakeRuns{run: newRun()}
+	hub := &fakeHub{daemonID: "d1"}
+	scheduler := &sequenceScheduler{ids: []string{"d1", "d2"}}
+	ctrl := New(runs, hub, Config{
+		AckTimeout:           10 * time.Millisecond,
+		MaxPlacementAttempts: 3,
+		Scheduler:            scheduler,
+	})
+	var calls int
+	hub.onSend = func(env *runtimev1.Envelope) {
+		calls++
+		if calls == 1 {
+			return
+		}
+		go ctrl.HandleEnvelope("", &runtimev1.Envelope{
+			CorrelationId: env.GetMsgId(),
+			Payload: &runtimev1.Envelope_TaskAck{
+				TaskAck: &runtimev1.TaskAck{Accepted: true},
+			},
+		})
+	}
+	if err := ctrl.Handle(context.Background(), testTask(), workflow.Lease{}); err != nil {
+		t.Fatalf("Handle() error = %v", err)
+	}
+	if runs.assignedTo != "d2" || runs.run.Attempt != 2 || runs.run.LeaseEpoch != 2 {
+		t.Fatalf("assignment = %+v", runs.run)
+	}
+	if hub.releaseCalls != 1 {
+		t.Fatalf("releases = %d, want 1", hub.releaseCalls)
+	}
+	if len(scheduler.requests) != 2 {
+		t.Fatalf("scheduler requests = %d", len(scheduler.requests))
+	}
+	if _, excluded := scheduler.requests[1].ExcludeDaemonIDs["d1"]; !excluded {
+		t.Fatal("timed-out daemon was not excluded")
+	}
+}
+
 func TestTerminalEventReleasesCapacity(t *testing.T) {
 	runs := &fakeRuns{
 		run:          newRun(),
