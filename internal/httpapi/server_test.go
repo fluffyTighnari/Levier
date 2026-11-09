@@ -69,7 +69,17 @@ func (f *fakeStore) ListEvents(_ context.Context, _ string, afterAttempt int32, 
 	f.lastAfterA = afterAttempt
 	f.lastAfterS = afterSeq
 	f.lastLimit = limit
-	return f.events, nil
+	result := make([]runstore.Event, 0, len(f.events))
+	for _, event := range f.events {
+		if int32(event.Attempt) > afterAttempt ||
+			(int32(event.Attempt) == afterAttempt && event.Seq > afterSeq) {
+			result = append(result, event)
+		}
+	}
+	if limit > 0 && len(result) > limit {
+		result = result[:limit]
+	}
+	return result, nil
 }
 
 func (f *fakeStore) GetSession(_ context.Context, sessionID string) (runstore.Session, error) {
@@ -186,7 +196,7 @@ func TestCreateRunGetRunAndEvents(t *testing.T) {
 	}
 
 	store.events = []runstore.Event{{
-		RunID: created.RunID, Attempt: 1, Seq: 1, Source: "daemon",
+		RunID: created.RunID, Attempt: 2, Seq: 3, Source: "daemon",
 		Type: "RUN_STATUS", Payload: json.RawMessage(`{"status":"running"}`), TSMs: 10,
 	}}
 	resp = request(t, http.MethodGet, server.URL+"/api/v1/runs/"+created.RunID+"/events?after_attempt=1&after_seq=2&limit=10", "token-1", nil)

@@ -139,6 +139,7 @@ func (s *Server) routes() {
 	s.mux.HandleFunc("POST "+APIPrefix+"/runs/{run_id}/cancel", s.handleCancelRun)
 	s.mux.HandleFunc("GET "+APIPrefix+"/sessions/{session_id}", s.handleGetSession)
 	s.mux.HandleFunc("GET "+APIPrefix+"/sessions/{session_id}/events", s.handleListSessionEvents)
+	s.mux.HandleFunc("POST "+APIPrefix+"/ws-token", s.handleIssueWSToken)
 	s.mux.HandleFunc("POST /admin/apps", s.handleAdminCreateApp)
 	s.mux.HandleFunc("POST /admin/apps/{app_id}/rotate-key", s.handleAdminRotateKey)
 	s.mux.HandleFunc("POST "+APIPrefix+"/apps", s.handleUpdateApp)
@@ -231,6 +232,23 @@ func (s *Server) canAccessApp(r *http.Request, appID string) bool {
 	}
 	app, ok := s.appFromRequest(r)
 	return ok && app.AppID == appID
+}
+
+func (s *Server) handleIssueWSToken(w http.ResponseWriter, r *http.Request) {
+	appID, ok := s.resolveRequestApp(w, r, r.URL.Query().Get("app_id"))
+	if !ok {
+		return
+	}
+	token := s.wsTokens.Issue(appID)
+	if token == "" {
+		writeError(w, http.StatusInternalServerError, "INTERNAL", "issue ws token failed", true)
+		return
+	}
+	writeJSON(w, http.StatusOK, WSTokenResponse{
+		WSURL:     WSURL,
+		WSToken:   token,
+		ExpiresIn: int64(s.wsTokens.TTL().Seconds()),
+	})
 }
 
 func (s *Server) handleHealth(w http.ResponseWriter, _ *http.Request) {

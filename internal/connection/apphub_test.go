@@ -8,6 +8,8 @@ package connection
 import (
 	"context"
 	"errors"
+	"fmt"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -182,4 +184,49 @@ func TestAppHubSubscriptionFanout(t *testing.T) {
 	}
 	hub.CloseConn(second)
 	hub.Close()
+}
+
+func TestAppConnReplayBuffersAndDeduplicates(t *testing.T) {
+	hub := NewAppHub()
+	sink := &recordingSink{}
+	conn := hub.Register("app-1", sink)
+	defer hub.CloseConn(conn)
+	conn.BeginReplay("run-1", 0, 0)
+	conn.Subscribe("run-1")
+
+	hub.Publish("app-1", "run-1", eventPayload(1, 1))
+	hub.Publish("app-1", "run-1", eventPayload(1, 2))
+	hub.Publish("app-1", "run-1", eventPayload(1, 2))
+	if sink.count() != 0 {
+		t.Fatalf("live events escaped the replay buffer: %d", sink.count())
+	}
+
+	if err := conn.SendReplay("run-1", 1, 1, eventPayload(1, 1)); err != nil {
+		t.Fatalf("SendReplay(1) error = %v", err)
+	}
+	if err := conn.SendReplay("run-1", 1, 2, eventPayload(1, 2)); err != nil {
+		t.Fatalf("SendReplay(2) error = %v", err)
+	}
+	if err := conn.EndReplay("run-1", 1, 2); err != nil {
+		t.Fatalf("EndReplay() error = %v", err)
+	}
+
+	hub.Publish("app-1", "run-1", eventPayload(1, 2))
+	hub.Publish("app-1", "run-1", eventPayload(1, 3))
+
+	want := []string{`"seq":1`, `"seq":2`, `"seq":3`}
+	sink.mu.Lock()
+	defer sink.mu.Unlock()
+	if len(sink.payloads) != len(want) {
+		t.Fatalf("payloads = %d, want %d", len(sink.payloads), len(want))
+	}
+	for i, fragment := range want {
+		if !strings.Contains(string(sink.payloads[i]), fragment) {
+			t.Fatalf("payload[%d] = %s", i, sink.payloads[i])
+		}
+	}
+}
+
+func eventPayload(attempt int32, seq int64) []byte {
+	return []byte(fmt.Sprintf(`{"type":"event","attempt":%d,"seq":%d}`, attempt, seq))
 }

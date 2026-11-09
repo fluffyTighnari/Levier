@@ -46,10 +46,24 @@ func (s *WSTokenStore) Issue(appID string) string {
 		return ""
 	}
 	token := base64.RawURLEncoding.EncodeToString(buf)
+	now := s.now()
 	s.mu.Lock()
-	s.tokens[token] = wsToken{appID: appID, expires: s.now().Add(s.ttl)}
+	for existing, value := range s.tokens {
+		if now.After(value.expires) {
+			delete(s.tokens, existing)
+		}
+	}
+	s.tokens[token] = wsToken{appID: appID, expires: now.Add(s.ttl)}
 	s.mu.Unlock()
 	return token
+}
+
+// TTL returns the configured token lifetime.
+func (s *WSTokenStore) TTL() time.Duration {
+	if s == nil {
+		return defaultWSTokenTTL
+	}
+	return s.ttl
 }
 
 // Validate returns the App bound to a token.

@@ -516,7 +516,7 @@ message ErrorReport {
 
 响应：`{ "run_id": "...", "status": "queued", "ws_url": "/api/v1/ws", "ws_token": "..." }`
 
-- `ws_token`：短期令牌（TTL 10min，绑定 app_id），用于 WS 鉴权；过期可凭 api_key 重新获取。
+- `ws_token`：短期令牌（TTL 10min，绑定 app_id），用于 WS 鉴权；过期可凭 api_key 调 `POST /ws-token` 重新获取。
 - 响应头带 `X-Request-ID`；错误响应统一为 `{ "error": { "code": "...", "message": "...", "request_id": "..." } }`。请求可自带合法 `X-Request-ID`，否则由 MW 生成。
 
 ### 4.3 App ↔ Middleware：WebSocket 协议
@@ -544,7 +544,7 @@ message ErrorReport {
 
 纪律：
 
-1. `subscribe` 带 `last_attempt/last_seq` 时，MW 从 `run_events` 补推 `(last_attempt,last_seq)` 之后的持久化事件；ephemeral 事件不补（断线期间 token 流丢失由最终 `MESSAGE_COMPLETED` 兜底）。
+1. `subscribe` 带 `last_attempt/last_seq` 时，MW 从 `run_events` 分页补推 `(last_attempt,last_seq)` 之后的持久化事件；ephemeral 事件不补（断线期间 token 流丢失由最终 `MESSAGE_COMPLETED` 兜底）。补推期间到达的实时事件先缓冲，补推结束后按 `(attempt,seq)` 去重并顺序发送，避免重连重复/乱序。
 2. App 侧 `local_tool_result` 必须按 `invocation_id` 幂等：同一调用重复投递（重连重发）时返回缓存结果而非重复执行。
 3. App 断开不影响 Run 运行（ADR-6）；其挂起的 local tool 调用立即失败 `APP_UNREACHABLE`（retryable），由 Harness 策略层决定重试或降级。
 

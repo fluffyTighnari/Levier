@@ -127,6 +127,13 @@ type EventListResponse struct {
 	NextSeq     int64          `json:"next_seq,omitempty"`
 }
 
+// WSTokenResponse is returned when an App requests a fresh WebSocket token.
+type WSTokenResponse struct {
+	WSURL     string `json:"ws_url"`
+	WSToken   string `json:"ws_token"`
+	ExpiresIn int64  `json:"expires_in"`
+}
+
 // CancelRunRequest is the optional POST /runs/{run_id}/cancel body.
 type CancelRunRequest struct {
 	Reason string `json:"reason,omitempty"`

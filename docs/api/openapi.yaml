@@ -214,6 +214,26 @@ paths:
                 $ref: '#/components/schemas/EventListResponse'
         default:
           $ref: '#/components/responses/Error'
+  /ws-token:
+    post:
+      summary: Issue a fresh short-lived WebSocket token
+      operationId: issueWSToken
+      parameters:
+        - name: app_id
+          in: query
+          required: false
+          description: Required for admin/legacy bearer credentials.
+          schema:
+            type: string
+      responses:
+        "200":
+          description: WebSocket token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WSTokenResponse'
+        default:
+          $ref: '#/components/responses/Error'
   /ws:
     get:
       summary: App WebSocket (protocol v1)
@@ -459,6 +479,17 @@ components:
       properties:
         reason:
           type: string
+    WSTokenResponse:
+      type: object
+      required: [ws_url, ws_token, expires_in]
+      properties:
+        ws_url:
+          type: string
+        ws_token:
+          type: string
+        expires_in:
+          type: integer
+          format: int64
     CancelRunResponse:
       type: object
       required: [run_id, status]

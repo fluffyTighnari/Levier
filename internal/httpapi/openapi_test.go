@@ -44,6 +44,7 @@ func TestOpenAPIMatchesHTTPRoutes(t *testing.T) {
 		"/runs/{run_id}/cancel":           {"post"},
 		"/sessions/{session_id}":          {"get"},
 		"/sessions/{session_id}/events":   {"get"},
+		"/ws-token":                       {"post"},
 		"/ws":                             {"get"},
 	}
 	if len(doc.Paths) != len(expected) {

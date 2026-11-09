@@ -75,8 +75,10 @@ func (s *Server) handleWS(conn *websocket.Conn) {
 				})
 				continue
 			}
+			appConn.BeginReplay(typed.RunID, typed.LastAttempt, typed.LastSeq)
 			appConn.Subscribe(typed.RunID)
 			attempt, seq, err := s.replayWS(appConn, typed)
+			_ = appConn.EndReplay(typed.RunID, attempt, seq)
 			if err != nil {
 				_ = s.sendWS(appConn, ErrorMessage{
 					Type:  WSMessageError,
@@ -106,29 +108,39 @@ func (s *Server) handleWS(conn *websocket.Conn) {
 	}
 }
 
+const wsReplayPageSize = 1000
+
 func (s *Server) replayWS(appConn *connection.AppConn, msg *SubscribeMessage) (int32, int64, error) {
-	events, err := s.runs.ListEvents(context.Background(), msg.RunID, msg.LastAttempt, msg.LastSeq, 1000)
-	if err != nil {
-		return 0, 0, err
-	}
 	attempt, seq := msg.LastAttempt, msg.LastSeq
-	for _, event := range events {
-		view := EventMessage{
-			Type:      WSMessageEvent,
-			RunID:     event.RunID,
-			Attempt:   int32(event.Attempt),
-			Seq:       event.Seq,
-			Source:    event.Source,
-			EventType: event.Type,
-			Data:      event.Payload,
-			TSMillis:  event.TSMs,
-		}
-		if err := s.sendWS(appConn, view); err != nil {
+	for {
+		events, err := s.runs.ListEvents(context.Background(), msg.RunID, attempt, seq, wsReplayPageSize)
+		if err != nil {
 			return attempt, seq, err
 		}
-		attempt, seq = int32(event.Attempt), event.Seq
+		for _, event := range events {
+			view := EventMessage{
+				Type:      WSMessageEvent,
+				RunID:     event.RunID,
+				Attempt:   int32(event.Attempt),
+				Seq:       event.Seq,
+				Source:    event.Source,
+				EventType: event.Type,
+				Data:      event.Payload,
+				TSMillis:  event.TSMs,
+			}
+			payload, err := json.Marshal(view)
+			if err != nil {
+				return attempt, seq, err
+			}
+			if err := appConn.SendReplay(msg.RunID, int32(event.Attempt), event.Seq, payload); err != nil {
+				return attempt, seq, err
+			}
+			attempt, seq = int32(event.Attempt), event.Seq
+		}
+		if len(events) < wsReplayPageSize {
+			return attempt, seq, nil
+		}
 	}
-	return attempt, seq, nil
 }
 
 func (s *Server) sendWS(appConn *connection.AppConn, message any) error {

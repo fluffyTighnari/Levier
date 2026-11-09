@@ -65,6 +65,7 @@
 | P7-54 | `docs/reports/P7-54.md` | 已提交 |
 | P7-55 | `docs/reports/P7-55.md` | 已提交 |
 | P7-56 | `docs/reports/P7-56.md` | 已提交 |
+| P7-57 | `docs/reports/P7-57.md` | 已提交 |
 | G4 | `docs/reports/G4.md` | 已提交 |
 
 模板：`docs/reports/TEMPLATE.md`。
