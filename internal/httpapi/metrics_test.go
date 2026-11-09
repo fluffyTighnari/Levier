@@ -22,8 +22,9 @@ func TestMetricsEndpointExposesHTTPMetrics(t *testing.T) {
 	registry := observe.NewRegistry()
 	collected := false
 	server := NewServer(store, &fakeQueue{}, Config{
-		BearerToken: "token-1",
-		Metrics:     registry,
+		BearerToken:       "token-1",
+		AllowLegacyBearer: true,
+		Metrics:           registry,
 		MetricsCollector: func(context.Context) {
 			collected = true
 			registry.Set(observe.MetricWorkflowTasks, "Tasks.", map[string]string{
@@ -69,7 +70,7 @@ func TestMetricsEndpointExposesHTTPMetrics(t *testing.T) {
 
 func TestTraceIDUsesRequestID(t *testing.T) {
 	store := newFakeStore()
-	server := NewServer(store, &fakeQueue{}, Config{BearerToken: "token-1"})
+	server := NewServer(store, &fakeQueue{}, Config{BearerToken: "token-1", AllowLegacyBearer: true})
 	httpServer := httptest.NewServer(server.Handler())
 	defer httpServer.Close()
 

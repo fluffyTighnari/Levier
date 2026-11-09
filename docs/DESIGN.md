@@ -869,7 +869,8 @@ Daemon 重连 `Hello.running_runs`（`run_id + lease_epoch`）≠ MW 视角时�
 
 | 主体 | 机制 |
 |---|---|
-| App → MW | API key（Bearer，库存 SHA-256 hash）；WS 用短期 ws_token |
+| App → MW | API key（Bearer，库存 SHA-256 hash）；WS 用短期 ws_token。管理接口只用 `admin_token`，不回落 legacy bearer |
+| Admin → MW | `admin_token`；legacy bearer 由 `http.allow_legacy_bearer` 控制，默认关闭 |
 | Daemon → MW | 预分配 daemon_id + auth_token（Hello 校验） |
 | 工具 ACL | local：仅属主 App；global：ToolDef.acl_json 白名单（NULL=全量） |
 | MCP | App 注册时按 name 引用；未引用不下发 `mcp_bindings`；`allowed_tools` 二次过滤 |

@@ -4,7 +4,7 @@
 |---|---|
 | 计划版本 | V2.0 |
 | 日期 | 2026-11-03 |
-| 状态 | P0–P7 完成；P8-62 观测基线完成；P8-59/60 暂缓；G2–G7 功能通过；M1 垂直切片完成；镜像待 Docker 复核；取代 `IMPLEMENTATION_PLAN.md` v0.3 |
+| 状态 | P0–P7 完成；P8-62 观测基线、P8-63 安全基线完成；P8-59/60 暂缓；G2–G7 功能通过；M1 垂直切片完成；镜像待 Docker 复核；取代 `IMPLEMENTATION_PLAN.md` v0.3 |
 | 依据 | `docs/DESIGN.md` v0.1、`docs/WORKFLOW_ENGINE_AUDIT.md` |
 | 总步骤 | 72 个审查单元 |
 | 用法 | 一次只做一个 `Px-yy`；产出、验收、diff 都确认后再进入下一步 |
@@ -453,6 +453,7 @@ internal/control ──► internal/workflow (PostgreSQL run_tasks, SKIP LOCKED)
 - [ ] **P8-63 压力与安全**
   - N run 并发、慢消费者、队列上限；认证/ACL/ws_token/跨 App/密钥。
   - 验收：压测报告含拐点；安全清单通过。
+  - 进度：安全基线完成——legacy bearer 默认关闭、Admin 不回落、App 作用域跨 App 拒绝、ws_token/local_tool_result 边界、密钥/脱敏清单、M1 改用 App key；压测待补；报告：`docs/reports/P8-63.md`。
 
 - [ ] **P8-64 M2/M3 Gate**
   - 汇总 E2E、故障、指标、压测、安全。

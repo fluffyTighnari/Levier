@@ -100,8 +100,9 @@ func newAppTestServer(t *testing.T) (*fakeStore, *fakeQueue, *fakeApps, *httptes
 	queue := &fakeQueue{}
 	apps := newFakeApps()
 	server := NewServer(store, queue, Config{
-		BearerToken: "legacy-token",
-		AdminToken:  "admin-token",
+		BearerToken:       "legacy-token",
+		AllowLegacyBearer: true,
+		AdminToken:        "admin-token",
 	}, apps)
 	httpServer := httptest.NewServer(server.Handler())
 	t.Cleanup(httpServer.Close)
@@ -230,6 +231,91 @@ func TestUpdateAndRotateAppHTTP(t *testing.T) {
 	resp = request(t, http.MethodGet, server.URL+"/api/v1/apps/"+app.AppID, rotated["api_key"], nil)
 	if resp.StatusCode != http.StatusOK {
 		t.Fatalf("new key status = %d", resp.StatusCode)
+	}
+	resp.Body.Close()
+}
+
+func TestLegacyBearerDisabledByDefault(t *testing.T) {
+	store := newFakeStore()
+	apps := newFakeApps()
+	app, key, _, _ := apps.RegisterApp(context.Background(), "app-secure", false)
+	server := NewServer(store, &fakeQueue{}, Config{
+		BearerToken:       "legacy-token",
+		AdminToken:        "admin-token",
+		AllowLegacyBearer: false,
+	}, apps)
+	httpServer := httptest.NewServer(server.Handler())
+	defer httpServer.Close()
+
+	body := []byte(`{
+		"app_id":"` + app.AppID + `",
+		"runtime":"normal",
+		"strategy":{"name":"echo"},
+		"input":[{"role":"user","content":"hello"}],
+		"model":{"provider":"anthropic","model":"claude-test"}
+	}`)
+	resp := request(t, http.MethodPost, httpServer.URL+"/api/v1/runs", "legacy-token", body)
+	if resp.StatusCode != http.StatusUnauthorized {
+		t.Fatalf("legacy bearer status = %d, want 401", resp.StatusCode)
+	}
+	resp.Body.Close()
+
+	body = []byte(`{
+		"runtime":"normal",
+		"strategy":{"name":"echo"},
+		"input":[{"role":"user","content":"hello"}],
+		"model":{"provider":"anthropic","model":"claude-test"}
+	}`)
+	resp = request(t, http.MethodPost, httpServer.URL+"/api/v1/runs", key, body)
+	if resp.StatusCode != http.StatusAccepted {
+		t.Fatalf("app key status = %d, want 202", resp.StatusCode)
+	}
+	resp.Body.Close()
+}
+
+func TestAdminTokenHasNoBearerFallback(t *testing.T) {
+	store := newFakeStore()
+	server := NewServer(store, &fakeQueue{}, Config{
+		BearerToken: "legacy-token",
+		AdminToken:  "",
+	})
+	httpServer := httptest.NewServer(server.Handler())
+	defer httpServer.Close()
+
+	resp := request(t, http.MethodPost, httpServer.URL+"/admin/apps", "legacy-token", []byte(`{"name":"app-x"}`))
+	if resp.StatusCode != http.StatusUnauthorized {
+		t.Fatalf("legacy admin status = %d, want 401", resp.StatusCode)
+	}
+	resp.Body.Close()
+}
+
+func TestCrossAppRunEventAndCancelDenied(t *testing.T) {
+	store, _, apps, server := newAppTestServer(t)
+	owner, ownerKey, _, _ := apps.RegisterApp(context.Background(), "app-owner", false)
+	_, otherKey, _, _ := apps.RegisterApp(context.Background(), "app-other", false)
+	store.runs["run-1"] = runstore.Run{RunID: "run-1", AppID: owner.AppID, Status: "running"}
+
+	resp := request(t, http.MethodGet, server.URL+"/api/v1/runs/run-1/events", otherKey, nil)
+	if resp.StatusCode != http.StatusNotFound {
+		t.Fatalf("foreign events status = %d, want 404", resp.StatusCode)
+	}
+	resp.Body.Close()
+
+	resp = request(t, http.MethodPost, server.URL+"/api/v1/runs/run-1/cancel", otherKey, nil)
+	if resp.StatusCode != http.StatusNotFound {
+		t.Fatalf("foreign cancel status = %d, want 404", resp.StatusCode)
+	}
+	resp.Body.Close()
+
+	resp = request(t, http.MethodGet, server.URL+"/api/v1/runs/run-1/events", ownerKey, nil)
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("owner events status = %d", resp.StatusCode)
+	}
+	resp.Body.Close()
+
+	resp = request(t, http.MethodGet, server.URL+"/api/v1/runs/run-1", "admin-token", nil)
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("admin run status = %d", resp.StatusCode)
 	}
 	resp.Body.Close()
 }

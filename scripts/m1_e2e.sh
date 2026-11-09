@@ -20,8 +20,8 @@ MIDDLEWARE_CONFIG="${MIDDLEWARE_CONFIG:-config.example.yaml}"
 HARNESS_CONFIG="${HARNESS_CONFIG:-harness/config.example.yaml}"
 HARNESS_PYTHON="${HARNESS_PYTHON:-harness/.venv/bin/python}"
 MW_URL="${MW_URL:-http://127.0.0.1:8080}"
-BEARER_TOKEN="${BEARER_TOKEN:-change-me}"
-APP_ID="${APP_ID:-app-m1-e2e}"
+ADMIN_TOKEN="${ADMIN_TOKEN:-admin-change-me}"
+APP_NAME="${APP_NAME:-m1-e2e}"
 ARTIFACT_DIR="${ARTIFACT_DIR:-docs/reports/artifacts/P4-36}"
 PSQL="${PSQL:-psql}"
 
@@ -73,6 +73,35 @@ if [ -z "$ready" ]; then
   exit 1
 fi
 
+app_create="$(curl -fsS -X POST "$MW_URL/admin/apps" \
+  -H "Authorization: Bearer $ADMIN_TOKEN" \
+  -H 'Content-Type: application/json' \
+  -d "{\"name\":\"$APP_NAME\"}")"
+printf '%s' "$app_create" | python3 -c '
+import json, sys
+payload = json.load(sys.stdin)
+payload["api_key"] = "[REDACTED]"
+print(json.dumps(payload))
+' >"$ARTIFACT_DIR/app.json"
+APP_ID="$(printf '%s' "$app_create" | python3 -c 'import json,sys; print(json.load(sys.stdin)["app"]["app_id"])')"
+APP_KEY="$(printf '%s' "$app_create" | python3 -c 'import json,sys; print(json.load(sys.stdin).get("api_key",""))')"
+if [ -z "$APP_KEY" ]; then
+  rotate="$(curl -fsS -X POST "$MW_URL/admin/apps/$APP_ID/rotate-key" \
+    -H "Authorization: Bearer $ADMIN_TOKEN")"
+  printf '%s' "$rotate" | python3 -c '
+import json, sys
+payload = json.load(sys.stdin)
+payload["api_key"] = "[REDACTED]"
+print(json.dumps(payload))
+' >"$ARTIFACT_DIR/app_rotate.json"
+  APP_KEY="$(printf '%s' "$rotate" | python3 -c 'import json,sys; print(json.load(sys.stdin)["api_key"])')"
+fi
+if [ -z "$APP_ID" ] || [ -z "$APP_KEY" ]; then
+  echo "app bootstrap failed" >&2
+  exit 1
+fi
+echo "app: $APP_ID" | tee -a "$ARTIFACT_DIR/summary.txt"
+
 curl -fsS "$MW_URL/metrics" >"$ARTIFACT_DIR/metrics.txt"
 if ! grep -q 'mw_http_requests_total' "$ARTIFACT_DIR/metrics.txt"; then
   echo "metrics endpoint did not expose mw_http_requests_total" >&2
@@ -86,17 +115,22 @@ HARNESS_PID=$!
 sleep 1.5
 
 create="$(curl -fsS -X POST "$MW_URL/api/v1/runs" \
-  -H "Authorization: Bearer $BEARER_TOKEN" \
+  -H "Authorization: Bearer $APP_KEY" \
   -H 'Content-Type: application/json' \
   -d "{\"app_id\":\"$APP_ID\",\"runtime\":\"normal\",\"strategy\":{\"name\":\"echo\"},\"input\":[{\"role\":\"user\",\"content\":\"hello m1 e2e\"}],\"model\":{\"provider\":\"anthropic\",\"model\":\"claude-test\"},\"timeouts\":{\"run_ms\":10000,\"tool_ms\":5000}}")"
-printf '%s\n' "$create" >"$ARTIFACT_DIR/create.json"
-echo "create: $create"
+printf '%s' "$create" | python3 -c '
+import json, sys
+payload = json.load(sys.stdin)
+payload["ws_token"] = "[REDACTED]"
+print(json.dumps(payload))
+' >"$ARTIFACT_DIR/create.json"
+echo "create: $(cat "$ARTIFACT_DIR/create.json")"
 RUN_ID="$(printf '%s' "$create" | python3 -c 'import json,sys; print(json.load(sys.stdin)["run_id"])')"
 echo "run_id: $RUN_ID" | tee -a "$ARTIFACT_DIR/summary.txt"
 
 state=""
 for _ in $(seq 1 50); do
-  run="$(curl -fsS "$MW_URL/api/v1/runs/$RUN_ID" -H "Authorization: Bearer $BEARER_TOKEN")"
+  run="$(curl -fsS "$MW_URL/api/v1/runs/$RUN_ID" -H "Authorization: Bearer $APP_KEY")"
   state="$(printf '%s' "$run" | python3 -c 'import json,sys; print(json.load(sys.stdin)["status"])')"
   if [ "$state" = "completed" ] || [ "$state" = "failed" ] || [ "$state" = "cancelled" ] || [ "$state" = "timeout" ]; then
     break
@@ -107,7 +141,7 @@ printf '%s\n' "$run" >"$ARTIFACT_DIR/run.json"
 printf '%s\n' "$state" >"$ARTIFACT_DIR/status.txt"
 echo "run status: $state" | tee -a "$ARTIFACT_DIR/summary.txt"
 
-events="$(curl -fsS "$MW_URL/api/v1/runs/$RUN_ID/events" -H "Authorization: Bearer $BEARER_TOKEN")"
+events="$(curl -fsS "$MW_URL/api/v1/runs/$RUN_ID/events" -H "Authorization: Bearer $APP_KEY")"
 printf '%s\n' "$events" >"$ARTIFACT_DIR/events.json"
 printf '%s' "$events" | python3 -c '
 import json, sys
@@ -122,6 +156,7 @@ assert events[2]["data"]["status"] == "completed", events[2]
 assert payload["next_attempt"] == 1 and payload["next_seq"] == 3, payload
 '
 echo "events: seq 1/2/3 valid" | tee -a "$ARTIFACT_DIR/summary.txt"
+
 
 curl -fsS "$MW_URL/metrics" >"$ARTIFACT_DIR/metrics.txt"
 if ! grep -Eq 'mw_runs_total\{runtime="normal",status="completed"\} 1' "$ARTIFACT_DIR/metrics.txt"; then

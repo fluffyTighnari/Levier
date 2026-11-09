@@ -39,6 +39,9 @@ func TestParseDefaultsAndOverrides(t *testing.T) {
 	if cfg.HTTP.WriteTimeout.Std() != 30*time.Second {
 		t.Fatalf("HTTP.WriteTimeout default = %v", cfg.HTTP.WriteTimeout.Std())
 	}
+	if cfg.HTTP.AllowLegacyBearer {
+		t.Fatal("AllowLegacyBearer default = true, want false")
+	}
 	if cfg.Workflow.Workers != 4 {
 		t.Fatalf("Workflow.Workers default = %d", cfg.Workflow.Workers)
 	}
@@ -72,11 +75,12 @@ func TestApplyEnv(t *testing.T) {
 	cfg := Default()
 	cfg.Database.URL = "postgres://localhost/middleware"
 	env := map[string]string{
-		"MIDDLEWARE_HTTP_ADDR":             ":28080",
-		"MIDDLEWARE_WORKFLOW_WORKERS":      "9",
-		"MIDDLEWARE_WORKFLOW_LEASE_TTL":    "45s",
-		"MIDDLEWARE_WORKFLOW_MAX_ATTEMPTS": "7",
-		"MIDDLEWARE_LOG_LEVEL":             "warn",
+		"MIDDLEWARE_HTTP_ADDR":                ":28080",
+		"MIDDLEWARE_WORKFLOW_WORKERS":         "9",
+		"MIDDLEWARE_WORKFLOW_LEASE_TTL":       "45s",
+		"MIDDLEWARE_WORKFLOW_MAX_ATTEMPTS":    "7",
+		"MIDDLEWARE_LOG_LEVEL":                "warn",
+		"MIDDLEWARE_HTTP_ALLOW_LEGACY_BEARER": "true",
 	}
 
 	if err := ApplyEnv(&cfg, func(key string) (string, bool) {
@@ -97,6 +101,9 @@ func TestApplyEnv(t *testing.T) {
 	}
 	if cfg.Log.Level != "warn" {
 		t.Fatalf("Log.Level = %q", cfg.Log.Level)
+	}
+	if !cfg.HTTP.AllowLegacyBearer {
+		t.Fatal("AllowLegacyBearer was not applied")
 	}
 }
 

@@ -134,7 +134,7 @@ func newTestServer(t *testing.T) (*fakeStore, *fakeQueue, *httptest.Server) {
 	t.Helper()
 	store := newFakeStore()
 	queue := &fakeQueue{}
-	server := NewServer(store, queue, Config{BearerToken: "token-1"})
+	server := NewServer(store, queue, Config{BearerToken: "token-1", AllowLegacyBearer: true})
 	httpServer := httptest.NewServer(server.Handler())
 	t.Cleanup(httpServer.Close)
 	return store, queue, httpServer
@@ -304,8 +304,9 @@ func TestCancelRun(t *testing.T) {
 	store.runs["run-1"] = runstore.Run{RunID: "run-1", AppID: "app-1", Status: "running"}
 	canceller := &fakeCanceller{run: store.runs["run-1"]}
 	server := NewServer(store, &fakeQueue{}, Config{
-		BearerToken: "token-1",
-		Canceller:   canceller,
+		BearerToken:       "token-1",
+		AllowLegacyBearer: true,
+		Canceller:         canceller,
 	})
 	httpServer := httptest.NewServer(server.Handler())
 	defer httpServer.Close()
@@ -327,7 +328,7 @@ func TestCancelRun(t *testing.T) {
 func TestQueueFailureReturns500(t *testing.T) {
 	store := newFakeStore()
 	queue := &fakeQueue{err: errors.New("queue down")}
-	server := NewServer(store, queue, Config{BearerToken: "token-1"})
+	server := NewServer(store, queue, Config{BearerToken: "token-1", AllowLegacyBearer: true})
 	httpServer := httptest.NewServer(server.Handler())
 	defer httpServer.Close()
 

@@ -69,6 +69,7 @@
 | P7-58 | `docs/reports/P7-58.md` | 已提交 |
 | G7 | `docs/reports/G7.md` | 已提交 |
 | P8-62 | `docs/reports/P8-62.md` | 观测基线完成 |
+| P8-63 | `docs/reports/P8-63.md` | 安全基线完成 |
 | G4 | `docs/reports/G4.md` | 已提交 |
 
 模板：`docs/reports/TEMPLATE.md`。

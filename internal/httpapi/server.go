@@ -73,6 +73,7 @@ type TaskQueue interface {
 type Config struct {
 	BearerToken          string
 	AdminToken           string
+	AllowLegacyBearer    bool
 	DefaultRunTimeoutMS  int
 	DefaultToolTimeoutMS int
 	MaxBodyBytes         int64
@@ -180,15 +181,11 @@ func matchesToken(provided, expected string) bool {
 }
 
 func (s *Server) isAdmin(r *http.Request) bool {
-	expected := s.cfg.AdminToken
-	if expected == "" {
-		expected = s.cfg.BearerToken
-	}
-	return matchesToken(bearerToken(r), expected)
+	return matchesToken(bearerToken(r), s.cfg.AdminToken)
 }
 
 func (s *Server) legacyAllowed(r *http.Request) bool {
-	return matchesToken(bearerToken(r), s.cfg.BearerToken)
+	return s.cfg.AllowLegacyBearer && matchesToken(bearerToken(r), s.cfg.BearerToken)
 }
 
 func (s *Server) appFromRequest(r *http.Request) (runstore.App, bool) {

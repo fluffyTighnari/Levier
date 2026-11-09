@@ -24,9 +24,10 @@ func TestWSTokenExpiryAndReissue(t *testing.T) {
 	store := newFakeStore()
 	appHub := connection.NewAppHub()
 	server := NewServer(store, &fakeQueue{}, Config{
-		BearerToken: "legacy-token",
-		WSTokenTTL:  time.Minute,
-		AppHub:      appHub,
+		BearerToken:       "legacy-token",
+		AllowLegacyBearer: true,
+		WSTokenTTL:        time.Minute,
+		AppHub:            appHub,
 	})
 	now := time.Now()
 	server.wsTokens.now = func() time.Time { return now }
@@ -142,8 +143,9 @@ func TestWebSocketReplayPaginatesAndResumes(t *testing.T) {
 	}
 	appHub := connection.NewAppHub()
 	server := NewServer(store, &fakeQueue{}, Config{
-		BearerToken: "legacy-token",
-		AppHub:      appHub,
+		BearerToken:       "legacy-token",
+		AllowLegacyBearer: true,
+		AppHub:            appHub,
 	})
 	httpServer := httptest.NewServer(server.Handler())
 	defer httpServer.Close()
@@ -210,7 +212,7 @@ func TestWebSocketReplayPaginatesAndResumes(t *testing.T) {
 
 func TestWebSocketTokenRejectsMismatchedApp(t *testing.T) {
 	store := newFakeStore()
-	server := NewServer(store, &fakeQueue{}, Config{BearerToken: "legacy-token"})
+	server := NewServer(store, &fakeQueue{}, Config{BearerToken: "legacy-token", AllowLegacyBearer: true})
 	httpServer := httptest.NewServer(server.Handler())
 	defer httpServer.Close()
 
@@ -239,7 +241,7 @@ func TestWebSocketReplayLimitAndCursor(t *testing.T) {
 			Type: "MESSAGE_DELTA", Payload: json.RawMessage(`{}`), TSMs: int64(i),
 		})
 	}
-	server := NewServer(store, &fakeQueue{}, Config{BearerToken: "legacy-token"})
+	server := NewServer(store, &fakeQueue{}, Config{BearerToken: "legacy-token", AllowLegacyBearer: true})
 	httpServer := httptest.NewServer(server.Handler())
 	defer httpServer.Close()
 

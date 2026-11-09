@@ -61,7 +61,7 @@ func TestRequestIDEchoAndGenerate(t *testing.T) {
 func TestBodyLimitAndUniformJSONErrors(t *testing.T) {
 	store := newFakeStore()
 	queue := &fakeQueue{}
-	server := NewServer(store, queue, Config{BearerToken: "token-1", MaxBodyBytes: 32})
+	server := NewServer(store, queue, Config{BearerToken: "token-1", AllowLegacyBearer: true, MaxBodyBytes: 32})
 	httpServer := httptest.NewServer(server.Handler())
 	defer httpServer.Close()
 
@@ -88,8 +88,9 @@ func TestCancelInvalidJSONReturnsBadRequest(t *testing.T) {
 	store := newFakeStore()
 	store.runs["run-1"] = runstore.Run{RunID: "run-1", AppID: "app-1", Status: "running"}
 	server := NewServer(store, &fakeQueue{}, Config{
-		BearerToken: "token-1",
-		Canceller:   &fakeCanceller{run: store.runs["run-1"]},
+		BearerToken:       "token-1",
+		AllowLegacyBearer: true,
+		Canceller:         &fakeCanceller{run: store.runs["run-1"]},
 	})
 	httpServer := httptest.NewServer(server.Handler())
 	defer httpServer.Close()

@@ -29,12 +29,13 @@ type Config struct {
 
 // HTTPConfig configures the App-facing HTTP server.
 type HTTPConfig struct {
-	Addr            string   `yaml:"addr"`
-	ReadTimeout     Duration `yaml:"read_timeout"`
-	WriteTimeout    Duration `yaml:"write_timeout"`
-	ShutdownTimeout Duration `yaml:"shutdown_timeout"`
-	BearerToken     string   `yaml:"bearer_token"`
-	AdminToken      string   `yaml:"admin_token"`
+	Addr              string   `yaml:"addr"`
+	ReadTimeout       Duration `yaml:"read_timeout"`
+	WriteTimeout      Duration `yaml:"write_timeout"`
+	ShutdownTimeout   Duration `yaml:"shutdown_timeout"`
+	BearerToken       string   `yaml:"bearer_token"`
+	AdminToken        string   `yaml:"admin_token"`
+	AllowLegacyBearer bool     `yaml:"allow_legacy_bearer"`
 }
 
 // GRPCConfig configures the daemon-facing gRPC server.
@@ -140,6 +141,9 @@ func ApplyEnv(cfg *Config, lookup func(string) (string, bool)) error {
 	stringOverride(lookup, "MIDDLEWARE_HTTP_ADDR", &cfg.HTTP.Addr)
 	stringOverride(lookup, "MIDDLEWARE_HTTP_BEARER_TOKEN", &cfg.HTTP.BearerToken)
 	stringOverride(lookup, "MIDDLEWARE_HTTP_ADMIN_TOKEN", &cfg.HTTP.AdminToken)
+	if err := boolOverride(lookup, "MIDDLEWARE_HTTP_ALLOW_LEGACY_BEARER", &cfg.HTTP.AllowLegacyBearer); err != nil {
+		return err
+	}
 	stringOverride(lookup, "MIDDLEWARE_GRPC_ADDR", &cfg.GRPC.Addr)
 	stringOverride(lookup, "MIDDLEWARE_DATABASE_URL", &cfg.Database.URL)
 	stringOverride(lookup, "MIDDLEWARE_LOG_LEVEL", &cfg.Log.Level)
@@ -250,6 +254,19 @@ func validateAddr(name, addr string) error {
 	if err != nil || n < 1 || n > 65535 {
 		return fmt.Errorf("%s has invalid port %q", name, port)
 	}
+	return nil
+}
+
+func boolOverride(lookup func(string) (string, bool), key string, dst *bool) error {
+	value, ok := lookup(key)
+	if !ok || value == "" {
+		return nil
+	}
+	parsed, err := strconv.ParseBool(value)
+	if err != nil {
+		return fmt.Errorf("%s must be true or false", key)
+	}
+	*dst = parsed
 	return nil
 }
 

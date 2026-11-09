@@ -201,6 +201,7 @@ func main() {
 	api := httpapi.NewServer(runs, queue, httpapi.Config{
 		BearerToken:          cfg.HTTP.BearerToken,
 		AdminToken:           cfg.HTTP.AdminToken,
+		AllowLegacyBearer:    cfg.HTTP.AllowLegacyBearer,
 		DefaultRunTimeoutMS:  1_800_000,
 		DefaultToolTimeoutMS: 60_000,
 		AppHub:               appHub,

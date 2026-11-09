@@ -102,7 +102,7 @@ func TestSessionEventsREST(t *testing.T) {
 
 func TestSessionStoreNotConfigured(t *testing.T) {
 	store := newFakeStore()
-	server := NewServer(runOnlyStore{store: store}, &fakeQueue{}, Config{BearerToken: "token-1"})
+	server := NewServer(runOnlyStore{store: store}, &fakeQueue{}, Config{BearerToken: "token-1", AllowLegacyBearer: true})
 	httpServer := httptest.NewServer(server.Handler())
 	defer httpServer.Close()
 

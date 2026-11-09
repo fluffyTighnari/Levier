@@ -26,9 +26,10 @@ func TestWebSocketSubscribeAndPublish(t *testing.T) {
 	}
 	appHub := connection.NewAppHub()
 	server := NewServer(store, &fakeQueue{}, Config{
-		BearerToken: "legacy-token",
-		WSTokenTTL:  time.Minute,
-		AppHub:      appHub,
+		BearerToken:       "legacy-token",
+		AllowLegacyBearer: true,
+		WSTokenTTL:        time.Minute,
+		AppHub:            appHub,
 	})
 	httpServer := httptest.NewServer(server.Handler())
 	defer httpServer.Close()
@@ -68,8 +69,9 @@ func TestWebSocketRoutesLocalToolResult(t *testing.T) {
 	store := newFakeStore()
 	appHub := connection.NewAppHub()
 	server := NewServer(store, &fakeQueue{}, Config{
-		BearerToken: "legacy-token",
-		AppHub:      appHub,
+		BearerToken:       "legacy-token",
+		AllowLegacyBearer: true,
+		AppHub:            appHub,
 	})
 	httpServer := httptest.NewServer(server.Handler())
 	defer httpServer.Close()
@@ -127,8 +129,9 @@ func TestWebSocketRejectsWrongToken(t *testing.T) {
 	store := newFakeStore()
 	appHub := connection.NewAppHub()
 	server := NewServer(store, &fakeQueue{}, Config{
-		BearerToken: "legacy-token",
-		AppHub:      appHub,
+		BearerToken:       "legacy-token",
+		AllowLegacyBearer: true,
+		AppHub:            appHub,
 	})
 	httpServer := httptest.NewServer(server.Handler())
 	defer httpServer.Close()
@@ -152,8 +155,9 @@ func TestWebSocketRejectsForeignRunSubscription(t *testing.T) {
 	store.runs["run-1"] = runstore.Run{RunID: "run-1", AppID: "app-2"}
 	appHub := connection.NewAppHub()
 	server := NewServer(store, &fakeQueue{}, Config{
-		BearerToken: "legacy-token",
-		AppHub:      appHub,
+		BearerToken:       "legacy-token",
+		AllowLegacyBearer: true,
+		AppHub:            appHub,
 	})
 	server.wsTokens.now = func() time.Time { return time.Now() }
 	httpServer := httptest.NewServer(server.Handler())
@@ -180,8 +184,9 @@ func TestWebSocketLocalToolValidationAndIdempotency(t *testing.T) {
 	store := newFakeStore()
 	appHub := connection.NewAppHub()
 	server := NewServer(store, &fakeQueue{}, Config{
-		BearerToken: "legacy-token",
-		AppHub:      appHub,
+		BearerToken:       "legacy-token",
+		AllowLegacyBearer: true,
+		AppHub:            appHub,
 	})
 	httpServer := httptest.NewServer(server.Handler())
 	defer httpServer.Close()
@@ -290,8 +295,9 @@ func TestWebSocketRunCompleted(t *testing.T) {
 	store.runs["run-1"] = runstore.Run{RunID: "run-1", AppID: "app-1", Status: "running"}
 	appHub := connection.NewAppHub()
 	server := NewServer(store, &fakeQueue{}, Config{
-		BearerToken: "legacy-token",
-		AppHub:      appHub,
+		BearerToken:       "legacy-token",
+		AllowLegacyBearer: true,
+		AppHub:            appHub,
 	})
 	httpServer := httptest.NewServer(server.Handler())
 	defer httpServer.Close()

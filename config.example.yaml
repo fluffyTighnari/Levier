@@ -6,8 +6,9 @@ http:
   read_timeout: "15s"
   write_timeout: "30s"
   shutdown_timeout: "10s"
-  bearer_token: "change-me"
   admin_token: "admin-change-me"
+  # Compatibility switch; keep false in production.
+  allow_legacy_bearer: false
 
 grpc:
   addr: ":9090"
