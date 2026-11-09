@@ -1,0 +1,245 @@
+// Middleware — internal/gateway
+//
+// ToolInvoker resolves ToolDefs and routes local/global calls.
+//
+// Copyright 2026 The Middleware Authors.
+package gateway
+
+import (
+	"context"
+	"errors"
+	"fmt"
+	"strings"
+	"time"
+
+	runtimev1 "github.com/fluffyTighnari/middleware/gen/middleware/runtime/v1"
+	"github.com/fluffyTighnari/middleware/internal/connection"
+	"github.com/fluffyTighnari/middleware/internal/register"
+)
+
+const defaultToolTimeout = 60 * time.Second
+
+// ToolResolver is the Registry subset used for routing.
+type ToolResolver interface {
+	ResolveToolDecision(ctx context.Context, appID, name string) (register.ToolMaterial, register.Resolution, error)
+}
+
+// LocalToolCaller executes local tools through AppHub.
+type LocalToolCaller interface {
+	CallLocalTool(ctx context.Context, appID string, request connection.LocalToolRequest) (connection.LocalToolResult, error)
+}
+
+// GlobalCall is one global tool invocation.
+type GlobalCall struct {
+	RunID         string
+	AppID         string
+	InvocationID  string
+	ToolName      string
+	ArgumentsJSON string
+	ExecutorRef   string
+	Timeout       time.Duration
+}
+
+// GlobalResult is a global executor result.
+type GlobalResult struct {
+	OK         bool
+	ResultJSON string
+	Code       string
+	Message    string
+	Retryable  bool
+}
+
+// GlobalExecutor executes one registered global tool.
+type GlobalExecutor interface {
+	Execute(ctx context.Context, call GlobalCall) (GlobalResult, error)
+}
+
+// ExecutorRegistry maps executor_ref to a global executor.
+type ExecutorRegistry struct {
+	executors map[string]GlobalExecutor
+}
+
+// NewExecutorRegistry returns a global executor registry.
+func NewExecutorRegistry(executors map[string]GlobalExecutor) *ExecutorRegistry {
+	copied := make(map[string]GlobalExecutor, len(executors))
+	for key, value := range executors {
+		copied[key] = value
+	}
+	return &ExecutorRegistry{executors: copied}
+}
+
+// Resolve returns the executor for executor_ref.
+func (r *ExecutorRegistry) Resolve(executorRef string) (GlobalExecutor, bool) {
+	if r == nil {
+		return nil, false
+	}
+	executor, ok := r.executors[executorRef]
+	return executor, ok
+}
+
+// Invoker routes one ToolCallRequest to a local or global executor.
+type Invoker struct {
+	resolver ToolResolver
+	local    LocalToolCaller
+	globals  *ExecutorRegistry
+}
+
+// NewInvoker returns a tool invoker.
+func NewInvoker(resolver ToolResolver, local LocalToolCaller, globals *ExecutorRegistry) *Invoker {
+	return &Invoker{resolver: resolver, local: local, globals: globals}
+}
+
+// Invoke resolves and executes one tool request.
+func (i *Invoker) Invoke(
+	ctx context.Context,
+	runID string,
+	appID string,
+	request *runtimev1.ToolCallRequest,
+) *runtimev1.ToolCallResult {
+	if request == nil || request.GetInvocationId() == "" || request.GetToolName() == "" {
+		return toolError("", "BAD_REQUEST", "invocation_id and tool_name are required", false)
+	}
+	if i == nil || i.resolver == nil {
+		return toolError(request.GetInvocationId(), "TOOL_NOT_FOUND", "tool registry is not configured", false)
+	}
+	tool, resolution, err := i.resolver.ResolveToolDecision(ctx, appID, request.GetToolName())
+	if err != nil {
+		return toolError(request.GetInvocationId(), "TOOL_EXEC_ERROR", err.Error(), false)
+	}
+	switch resolution {
+	case register.ResolutionDenied:
+		return toolError(request.GetInvocationId(), "TOOL_DENIED", "tool is not allowed for this app", false)
+	case register.ResolutionNotFound:
+		return toolError(request.GetInvocationId(), "TOOL_NOT_FOUND", "tool not found", false)
+	case register.ResolutionFound:
+	default:
+		return toolError(request.GetInvocationId(), "TOOL_NOT_FOUND", "tool not found", false)
+	}
+	if strings.HasPrefix(tool.Name, "mcp__") {
+		return toolError(request.GetInvocationId(), "TOOL_NOT_FOUND", "MCP tools are routed by the MCP runtime", false)
+	}
+
+	timeout := time.Duration(request.GetTimeoutMs()) * time.Millisecond
+	if timeout <= 0 {
+		timeout = time.Duration(tool.TimeoutMS) * time.Millisecond
+	}
+	if timeout <= 0 {
+		timeout = defaultToolTimeout
+	}
+
+	switch tool.Scope {
+	case "local":
+		return i.invokeLocal(ctx, runID, appID, request, timeout)
+	case "global":
+		return i.invokeGlobal(ctx, runID, appID, request, tool, timeout)
+	default:
+		return toolError(request.GetInvocationId(), "TOOL_EXEC_ERROR", fmt.Sprintf("unsupported tool scope %q", tool.Scope), false)
+	}
+}
+
+func (i *Invoker) invokeLocal(
+	ctx context.Context,
+	runID, appID string,
+	request *runtimev1.ToolCallRequest,
+	timeout time.Duration,
+) *runtimev1.ToolCallResult {
+	if i.local == nil {
+		return toolError(request.GetInvocationId(), "TOOL_NOT_AVAILABLE", "AppHub is not configured", false)
+	}
+	result, err := i.local.CallLocalTool(ctx, appID, connection.LocalToolRequest{
+		InvocationID:  request.GetInvocationId(),
+		RunID:         runID,
+		ToolName:      request.GetToolName(),
+		ArgumentsJSON: request.GetArgumentsJson(),
+		TimeoutMS:     timeout.Milliseconds(),
+	})
+	if err != nil {
+		switch {
+		case errors.Is(err, connection.ErrAppUnreachable):
+			return toolError(request.GetInvocationId(), "APP_UNREACHABLE", err.Error(), true)
+		case errors.Is(err, connection.ErrLocalToolTimeout), errors.Is(err, context.DeadlineExceeded):
+			return toolError(request.GetInvocationId(), "TOOL_TIMEOUT", "local tool timed out", true)
+		default:
+			return toolError(request.GetInvocationId(), "TOOL_EXEC_ERROR", err.Error(), false)
+		}
+	}
+	if result.OK {
+		return &runtimev1.ToolCallResult{
+			InvocationId: request.GetInvocationId(),
+			Ok:           true,
+			ResultJson:   result.ResultJSON,
+		}
+	}
+	code := "TOOL_EXEC_ERROR"
+	message := "local tool failed"
+	retryable := false
+	if result.Error != nil {
+		if result.Error.Code != "" {
+			code = result.Error.Code
+		}
+		message = result.Error.Message
+		retryable = result.Error.Retryable
+	}
+	return toolError(request.GetInvocationId(), code, message, retryable)
+}
+
+func (i *Invoker) invokeGlobal(
+	ctx context.Context,
+	runID, appID string,
+	request *runtimev1.ToolCallRequest,
+	tool register.ToolMaterial,
+	timeout time.Duration,
+) *runtimev1.ToolCallResult {
+	if i.globals == nil {
+		return toolError(request.GetInvocationId(), "TOOL_NOT_FOUND", "global executor registry is not configured", false)
+	}
+	executor, ok := i.globals.Resolve(tool.ExecutorRef)
+	if !ok {
+		return toolError(request.GetInvocationId(), "TOOL_NOT_FOUND", fmt.Sprintf("executor %q is not registered", tool.ExecutorRef), false)
+	}
+	callCtx, cancel := context.WithTimeout(ctx, timeout)
+	defer cancel()
+	result, err := executor.Execute(callCtx, GlobalCall{
+		RunID:         runID,
+		AppID:         appID,
+		InvocationID:  request.GetInvocationId(),
+		ToolName:      request.GetToolName(),
+		ArgumentsJSON: request.GetArgumentsJson(),
+		ExecutorRef:   tool.ExecutorRef,
+		Timeout:       timeout,
+	})
+	if err != nil {
+		if errors.Is(err, context.DeadlineExceeded) || errors.Is(callCtx.Err(), context.DeadlineExceeded) {
+			return toolError(request.GetInvocationId(), "TOOL_TIMEOUT", "global tool timed out", true)
+		}
+		return toolError(request.GetInvocationId(), "TOOL_EXEC_ERROR", err.Error(), false)
+	}
+	if result.OK {
+		return &runtimev1.ToolCallResult{
+			InvocationId: request.GetInvocationId(),
+			Ok:           true,
+			ResultJson:   result.ResultJSON,
+		}
+	}
+	code := result.Code
+	if code == "" {
+		code = "TOOL_EXEC_ERROR"
+	}
+	message := result.Message
+	if message == "" {
+		message = "global tool failed"
+	}
+	return toolError(request.GetInvocationId(), code, message, result.Retryable)
+}
+
+func toolError(invocationID, code, message string, retryable bool) *runtimev1.ToolCallResult {
+	return &runtimev1.ToolCallResult{
+		InvocationId: invocationID,
+		Ok:           false,
+		Error: &runtimev1.ErrorInfo{
+			Code:      code,
+			Message:   message,
+			Retryable: retryable,
+		},
+	}
+}

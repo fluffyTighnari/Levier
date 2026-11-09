@@ -44,9 +44,15 @@ type Config struct {
 	EventBuffer          int
 	Publisher            EventPublisher
 	Scheduler            Scheduler
+	Tools                ToolInvoker
 	Tasks                TaskStore
 	LocalTools           LocalToolCanceller
 	Logger               *slog.Logger
+}
+
+// ToolInvoker routes one ToolCallRequest.
+type ToolInvoker interface {
+	Invoke(ctx context.Context, runID, appID string, request *runtimev1.ToolCallRequest) *runtimev1.ToolCallResult
 }
 
 // TaskStore cancels and enqueues durable RunTasks.
@@ -148,6 +154,27 @@ func (c *Control) Close() {
 		c.cancel()
 	}
 	c.wg.Wait()
+}
+
+// HandleToolCall executes one daemon ToolCallRequest through the gateway.
+func (c *Control) HandleToolCall(daemonID string, env *runtimev1.Envelope) error {
+	if c.cfg.Tools == nil || env == nil || env.GetToolCallRequest() == nil {
+		return nil
+	}
+	ctx := context.Background()
+	run, err := c.runs.GetRun(ctx, env.GetRunId())
+	if err != nil {
+		return fmt.Errorf("get run for tool call: %w", err)
+	}
+	result := c.cfg.Tools.Invoke(ctx, env.GetRunId(), run.AppID, env.GetToolCallRequest())
+	response, err := protocol.NewResponse(env, result)
+	if err != nil {
+		return fmt.Errorf("build tool call result: %w", err)
+	}
+	if err := c.hub.Send(daemonID, response); err != nil {
+		return fmt.Errorf("send tool call result: %w", err)
+	}
+	return nil
 }
 
 // HandleEnvelope routes TaskAck and Event messages from DaemonHub.

@@ -19,6 +19,7 @@ import (
 
 	runtimev1 "github.com/fluffyTighnari/middleware/gen/middleware/runtime/v1"
 	"github.com/fluffyTighnari/middleware/internal/connection"
+	"github.com/fluffyTighnari/middleware/internal/id"
 	"github.com/fluffyTighnari/middleware/internal/protocol"
 	"github.com/fluffyTighnari/middleware/internal/register"
 	"github.com/fluffyTighnari/middleware/internal/runstore"
@@ -161,6 +162,16 @@ type fakeScheduler struct {
 func (f *fakeScheduler) Pick(request PlacementRequest) (string, bool) {
 	f.request = request
 	return f.id, f.ok
+}
+
+type fakeInvoker struct {
+	called bool
+	result *runtimev1.ToolCallResult
+}
+
+func (f *fakeInvoker) Invoke(_ context.Context, runID, appID string, request *runtimev1.ToolCallRequest) *runtimev1.ToolCallResult {
+	f.called = true
+	return f.result
 }
 
 type fakeTaskCanceller struct {
@@ -393,6 +404,32 @@ func TestHandleRetriesNextCandidateOnAckTimeout(t *testing.T) {
 	}
 	if _, excluded := scheduler.requests[1].ExcludeDaemonIDs["d1"]; !excluded {
 		t.Fatal("timed-out daemon was not excluded")
+	}
+}
+
+func TestHandleToolCallRoutesAndResponds(t *testing.T) {
+	runs := &fakeRuns{run: newRun()}
+	hub := &fakeHub{}
+	invocationID := id.New()
+	invoker := &fakeInvoker{result: &runtimev1.ToolCallResult{
+		InvocationId: invocationID, Ok: true, ResultJson: "3",
+	}}
+	ctrl := New(runs, hub, Config{Tools: invoker})
+	request := &runtimev1.ToolCallRequest{
+		InvocationId: invocationID, ToolName: "search", ArgumentsJson: "{}", TimeoutMs: 1000,
+	}
+	env, err := protocol.NewRun("run-1", 1, 1, request)
+	if err != nil {
+		t.Fatalf("NewRun() error = %v", err)
+	}
+	if err := ctrl.HandleToolCall("d1", env); err != nil {
+		t.Fatalf("HandleToolCall() error = %v", err)
+	}
+	if !invoker.called || len(hub.sent) != 1 {
+		t.Fatalf("called=%v sent=%d", invoker.called, len(hub.sent))
+	}
+	if hub.sent[0].GetToolCallResult().GetResultJson() != "3" || hub.sent[0].GetCorrelationId() != env.GetMsgId() {
+		t.Fatalf("response = %+v", hub.sent[0])
 	}
 }
 

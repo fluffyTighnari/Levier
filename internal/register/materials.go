@@ -316,10 +316,28 @@ func (r *Registry) SetAppMCPRefs(ctx context.Context, appID string, names []stri
 	return nil
 }
 
+// Resolution describes the result of tool resolution.
+type Resolution string
+
+const (
+	// ResolutionNotFound means no visible tool matched.
+	ResolutionNotFound Resolution = "not_found"
+	// ResolutionFound means a visible tool matched.
+	ResolutionFound Resolution = "found"
+	// ResolutionDenied means a global tool exists but ACL excludes the App.
+	ResolutionDenied Resolution = "denied"
+)
+
 // ResolveTool resolves a local tool first, then a global tool with ACL.
 func (r *Registry) ResolveTool(ctx context.Context, appID, name string) (ToolMaterial, bool, error) {
+	tool, resolution, err := r.ResolveToolDecision(ctx, appID, name)
+	return tool, resolution == ResolutionFound, err
+}
+
+// ResolveToolDecision resolves a tool and distinguishes missing from denied.
+func (r *Registry) ResolveToolDecision(ctx context.Context, appID, name string) (ToolMaterial, Resolution, error) {
 	if r == nil || r.pool == nil {
-		return ToolMaterial{}, false, fmt.Errorf("register: postgres pool is nil")
+		return ToolMaterial{}, ResolutionNotFound, fmt.Errorf("register: postgres pool is nil")
 	}
 	local, err := scanToolMaterial(r.pool.QueryRow(ctx, `
 		SELECT tool_id, scope, app_id, name, description, schema_json,
@@ -328,10 +346,10 @@ func (r *Registry) ResolveTool(ctx context.Context, appID, name string) (ToolMat
 		WHERE scope = 'local' AND app_id = $1 AND name = $2
 	`, appID, name))
 	if err == nil {
-		return local, true, nil
+		return local, ResolutionFound, nil
 	}
 	if !errors.Is(err, pgx.ErrNoRows) {
-		return ToolMaterial{}, false, fmt.Errorf("register: resolve local tool: %w", err)
+		return ToolMaterial{}, ResolutionNotFound, fmt.Errorf("register: resolve local tool: %w", err)
 	}
 	global, err := scanToolMaterial(r.pool.QueryRow(ctx, `
 		SELECT tool_id, scope, app_id, name, description, schema_json,
@@ -340,15 +358,15 @@ func (r *Registry) ResolveTool(ctx context.Context, appID, name string) (ToolMat
 		WHERE scope = 'global' AND name = $1
 	`, name))
 	if errors.Is(err, pgx.ErrNoRows) {
-		return ToolMaterial{}, false, nil
+		return ToolMaterial{}, ResolutionNotFound, nil
 	}
 	if err != nil {
-		return ToolMaterial{}, false, fmt.Errorf("register: resolve global tool: %w", err)
+		return ToolMaterial{}, ResolutionNotFound, fmt.Errorf("register: resolve global tool: %w", err)
 	}
 	if !aclAllows(global.ACL, appID) {
-		return ToolMaterial{}, false, nil
+		return ToolMaterial{}, ResolutionDenied, nil
 	}
-	return global, true, nil
+	return global, ResolutionFound, nil
 }
 
 // AssembleTaskMaterials returns local/global tools and MCP bindings for an App.

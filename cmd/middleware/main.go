@@ -22,10 +22,12 @@ import (
 
 	"google.golang.org/grpc"
 
+	runtimev1 "github.com/fluffyTighnari/middleware/gen/middleware/runtime/v1"
 	"github.com/fluffyTighnari/middleware/internal/config"
 	"github.com/fluffyTighnari/middleware/internal/connection"
 	"github.com/fluffyTighnari/middleware/internal/control"
 	"github.com/fluffyTighnari/middleware/internal/db"
+	"github.com/fluffyTighnari/middleware/internal/gateway"
 	"github.com/fluffyTighnari/middleware/internal/httpapi"
 	"github.com/fluffyTighnari/middleware/internal/observe"
 	"github.com/fluffyTighnari/middleware/internal/register"
@@ -83,14 +85,22 @@ func main() {
 	queue := workflow.NewPostgres(pool)
 	appHub := connection.NewAppHub()
 	defer appHub.Close()
+	toolInvoker := gateway.NewInvoker(registry, appHub, gateway.NewExecutorRegistry(nil))
 	controller := control.New(runs, hub, control.Config{
 		Logger:     logger,
 		Publisher:  appHub,
 		Scheduler:  control.NewHubScheduler(hub),
+		Tools:      toolInvoker,
 		Tasks:      queue,
 		LocalTools: appHub,
 	}, registry)
-	hub.SetOnEnvelope(controller.HandleEnvelope)
+	hub.SetOnEnvelope(func(daemonID string, env *runtimev1.Envelope) {
+		if env.GetToolCallRequest() != nil {
+			_ = controller.HandleToolCall(daemonID, env)
+			return
+		}
+		controller.HandleEnvelope(daemonID, env)
+	})
 	hub.SetOnHello(controller.ReconcileDaemon)
 	hub.SetOnOffline(controller.HandleDaemonOffline)
 	controller.Start(ctx)
