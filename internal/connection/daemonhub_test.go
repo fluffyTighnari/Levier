@@ -331,6 +331,120 @@ func TestControlBackpressureMarksSlowAndCloses(t *testing.T) {
 	}
 }
 
+func TestHeartbeatCapacityCalibrationAndOfflineSweep(t *testing.T) {
+	base := time.Now().UTC()
+	now := base
+	offline := make(chan string, 1)
+	heartbeat := make(chan int32, 1)
+	hub, addr := startHub(t, Config{
+		HelloTimeout:         time.Second,
+		HeartbeatTimeout:     30 * time.Second,
+		HeartbeatCheckPeriod: time.Hour,
+		Now:                  func() time.Time { return now },
+		Authenticate:         func(daemonID, token string) bool { return true },
+		OnHeartbeat: func(_ string, count int32) {
+			select {
+			case heartbeat <- count:
+			default:
+			}
+		},
+		OnOffline: func(id string) {
+			select {
+			case offline <- id:
+			default:
+			}
+		},
+	})
+	cfg := fakedaemon.DefaultConfig()
+	cfg.DaemonID = "daemon-heartbeat"
+	daemon, err := fakedaemon.Dial(context.Background(), addr, cfg)
+	if err != nil {
+		t.Fatalf("Dial() error = %v", err)
+	}
+	defer daemon.Close()
+	if !waitFor(t, time.Second, func() bool { return hub.Count() == 1 }) {
+		t.Fatal("daemon was not registered")
+	}
+
+	hb, err := protocol.New(&runtimev1.Heartbeat{RunningCount: 3})
+	if err != nil {
+		t.Fatalf("New(heartbeat) error = %v", err)
+	}
+	if err := daemon.Send(hb); err != nil {
+		t.Fatalf("Send(heartbeat) error = %v", err)
+	}
+	if !waitFor(t, time.Second, func() bool {
+		info, ok := hub.Get("daemon-heartbeat")
+		return ok && info.RunningCount == 3
+	}) {
+		t.Fatal("running count was not calibrated")
+	}
+	select {
+	case count := <-heartbeat:
+		if count != 3 {
+			t.Fatalf("OnHeartbeat count = %d", count)
+		}
+	case <-time.After(time.Second):
+		t.Fatal("OnHeartbeat was not called")
+	}
+
+	now = base.Add(31 * time.Second)
+	hub.Sweep(now)
+	if hub.Count() != 0 {
+		t.Fatalf("hub count after sweep = %d", hub.Count())
+	}
+	select {
+	case id := <-offline:
+		if id != "daemon-heartbeat" {
+			t.Fatalf("offline id = %q", id)
+		}
+	case <-time.After(time.Second):
+		t.Fatal("OnOffline was not called")
+	}
+}
+
+func TestInboundPanicIsIsolated(t *testing.T) {
+	errCh := make(chan error, 1)
+	hub, addr := startHub(t, Config{
+		HelloTimeout:         time.Second,
+		HeartbeatCheckPeriod: time.Hour,
+		Authenticate:         func(daemonID, token string) bool { return true },
+		OnEnvelope: func(string, *runtimev1.Envelope) {
+			panic("handler boom")
+		},
+		OnError: func(err error) {
+			select {
+			case errCh <- err:
+			default:
+			}
+		},
+	})
+	cfg := fakedaemon.DefaultConfig()
+	cfg.DaemonID = "daemon-panic"
+	daemon, err := fakedaemon.Dial(context.Background(), addr, cfg)
+	if err != nil {
+		t.Fatalf("Dial() error = %v", err)
+	}
+	defer daemon.Close()
+	if !waitFor(t, time.Second, func() bool { return hub.Count() == 1 }) {
+		t.Fatal("daemon was not registered")
+	}
+	if err := daemon.SendEvent("run-1", 1, 1, runtimev1.EventType_RUN_STATUS, map[string]any{"status": "running"}); err != nil {
+		t.Fatalf("SendEvent() error = %v", err)
+	}
+	select {
+	case err := <-errCh:
+		if err == nil {
+			t.Fatal("panic error is nil")
+		}
+	case <-time.After(time.Second):
+		t.Fatal("panic was not isolated")
+	}
+	if hub.Count() != 1 {
+		t.Fatalf("connection was closed after callback panic: count=%d", hub.Count())
+	}
+}
+
 func TestHubCloseStopsConnections(t *testing.T) {
 	hub, addr := startHub(t, Config{
 		HelloTimeout: time.Second,

@@ -10,6 +10,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log/slog"
 	"sort"
 	"sync"
 	"sync/atomic"
@@ -24,12 +25,13 @@ import (
 )
 
 const (
-	defaultHelloTimeout     = 3 * time.Second
-	defaultHeartbeatTimeout = 30 * time.Second
-	defaultOutboundBuffer   = 256
-	defaultCloseTimeout     = 5 * time.Second
-	defaultSendTimeout      = 100 * time.Millisecond
-	defaultSlowConsumerTime = 5 * time.Second
+	defaultHelloTimeout         = 3 * time.Second
+	defaultHeartbeatTimeout     = 30 * time.Second
+	defaultOutboundBuffer       = 256
+	defaultCloseTimeout         = 5 * time.Second
+	defaultSendTimeout          = 100 * time.Millisecond
+	defaultSlowConsumerTime     = 5 * time.Second
+	defaultHeartbeatCheckPeriod = 5 * time.Second
 )
 
 var (
@@ -67,6 +69,7 @@ type RunRef struct {
 // DaemonInfo is the in-memory registration snapshot for one daemon.
 type DaemonInfo struct {
 	DaemonID            string
+	Status              string
 	RuntimeType         runtimev1.RuntimeType
 	MaxConcurrentRuns   int32
 	SupportedStrategies []string
@@ -80,15 +83,19 @@ type DaemonInfo struct {
 
 // Config controls DaemonHub behavior.
 type Config struct {
-	HelloTimeout        time.Duration
-	HeartbeatTimeout    time.Duration
-	CloseTimeout        time.Duration
-	SendTimeout         time.Duration
-	SlowConsumerTimeout time.Duration
-	OutboundBuffer      int
-	Authenticate        Authenticator
-	OnEnvelope          func(daemonID string, env *runtimev1.Envelope)
-	Now                 func() time.Time
+	HelloTimeout         time.Duration
+	HeartbeatTimeout     time.Duration
+	CloseTimeout         time.Duration
+	SendTimeout          time.Duration
+	SlowConsumerTimeout  time.Duration
+	HeartbeatCheckPeriod time.Duration
+	OutboundBuffer       int
+	Authenticate         Authenticator
+	OnEnvelope           func(daemonID string, env *runtimev1.Envelope)
+	OnHeartbeat          func(daemonID string, runningCount int32)
+	OnOffline            func(daemonID string)
+	OnError              func(error)
+	Now                  func() time.Time
 }
 
 // Hub implements the RuntimeService daemon side of the connection plane.
@@ -102,6 +109,8 @@ type Hub struct {
 	onEnvelope func(daemonID string, env *runtimev1.Envelope)
 	closed     bool
 	wg         sync.WaitGroup
+	stopCh     chan struct{}
+	stopOnce   sync.Once
 }
 
 type daemonConn struct {
@@ -134,13 +143,23 @@ func New(cfg Config) *Hub {
 	if cfg.SlowConsumerTimeout <= 0 {
 		cfg.SlowConsumerTimeout = defaultSlowConsumerTime
 	}
+	if cfg.HeartbeatCheckPeriod <= 0 {
+		cfg.HeartbeatCheckPeriod = defaultHeartbeatCheckPeriod
+	}
 	if cfg.OutboundBuffer <= 0 {
 		cfg.OutboundBuffer = defaultOutboundBuffer
 	}
 	if cfg.Now == nil {
 		cfg.Now = func() time.Time { return time.Now().UTC() }
 	}
-	return &Hub{cfg: cfg, daemons: make(map[string]*daemonConn), onEnvelope: cfg.OnEnvelope}
+	hub := &Hub{
+		cfg:        cfg,
+		daemons:    make(map[string]*daemonConn),
+		onEnvelope: cfg.OnEnvelope,
+		stopCh:     make(chan struct{}),
+	}
+	go hub.reaper()
+	return hub
 }
 
 // SetOnEnvelope replaces the inbound envelope callback.
@@ -175,6 +194,7 @@ func (h *Hub) Channel(stream runtimev1.RuntimeService_ChannelServer) error {
 	now := h.cfg.Now()
 	info := DaemonInfo{
 		DaemonID:            hello.GetDaemonId(),
+		Status:              "online",
 		RuntimeType:         hello.GetRuntimeType(),
 		MaxConcurrentRuns:   hello.GetMaxConcurrentRuns(),
 		SupportedStrategies: append([]string(nil), hello.GetSupportedStrategies()...),
@@ -216,7 +236,11 @@ func (h *Hub) Channel(stream runtimev1.RuntimeService_ChannelServer) error {
 	h.mu.Unlock()
 
 	defer h.wg.Done()
-	defer h.remove(conn)
+	defer func() {
+		if h.remove(conn) {
+			h.notifyOffline(conn.info.DaemonID)
+		}
+	}()
 	go conn.writeLoop()
 
 	return h.readLoop(conn)
@@ -376,6 +400,7 @@ func (h *Hub) PickHealthy(
 
 // Close stops accepting new streams and marks existing connections offline.
 func (h *Hub) Close() {
+	h.stopOnce.Do(func() { close(h.stopCh) })
 	h.mu.Lock()
 	if h.closed {
 		h.mu.Unlock()
@@ -467,14 +492,22 @@ func (h *Hub) readLoop(conn *daemonConn) error {
 		case *runtimev1.Envelope_Hello:
 			return status.Error(codes.InvalidArgument, "duplicate hello")
 		case *runtimev1.Envelope_Heartbeat:
-			h.updateHeartbeat(conn, payload.Heartbeat.GetRunningCount())
+			count := payload.Heartbeat.GetRunningCount()
+			h.updateHeartbeat(conn, count)
+			h.safeCall(func() {
+				if h.cfg.OnHeartbeat != nil {
+					h.cfg.OnHeartbeat(conn.info.DaemonID, count)
+				}
+			})
 		default:
 			h.mu.RLock()
 			handler := h.onEnvelope
 			h.mu.RUnlock()
-			if handler != nil {
-				handler(conn.info.DaemonID, env)
-			}
+			h.safeCall(func() {
+				if handler != nil {
+					handler(conn.info.DaemonID, env)
+				}
+			})
 		}
 	}
 }
@@ -492,13 +525,70 @@ func (h *Hub) updateHeartbeat(conn *daemonConn, runningCount int32) {
 	}
 }
 
-func (h *Hub) remove(conn *daemonConn) {
+func (h *Hub) remove(conn *daemonConn) bool {
 	h.mu.Lock()
-	if current := h.daemons[conn.info.DaemonID]; current == conn {
+	current := h.daemons[conn.info.DaemonID]
+	if current == conn {
 		delete(h.daemons, conn.info.DaemonID)
 	}
 	h.mu.Unlock()
 	conn.close()
+	return current == conn
+}
+
+// Sweep removes daemons whose last heartbeat exceeds HeartbeatTimeout.
+func (h *Hub) Sweep(now time.Time) {
+	h.mu.Lock()
+	stale := make([]*daemonConn, 0)
+	for daemonID, conn := range h.daemons {
+		last := conn.info.LastHeartbeat
+		if last.IsZero() {
+			last = conn.info.ConnectedAt
+		}
+		if now.Sub(last) > h.cfg.HeartbeatTimeout {
+			delete(h.daemons, daemonID)
+			stale = append(stale, conn)
+		}
+	}
+	h.mu.Unlock()
+	for _, conn := range stale {
+		conn.close()
+		h.notifyOffline(conn.info.DaemonID)
+	}
+}
+
+func (h *Hub) reaper() {
+	ticker := time.NewTicker(h.cfg.HeartbeatCheckPeriod)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-h.stopCh:
+			return
+		case <-ticker.C:
+			h.Sweep(h.cfg.Now())
+		}
+	}
+}
+
+func (h *Hub) notifyOffline(daemonID string) {
+	h.safeCall(func() {
+		if h.cfg.OnOffline != nil {
+			h.cfg.OnOffline(daemonID)
+		}
+	})
+}
+
+func (h *Hub) safeCall(fn func()) {
+	defer func() {
+		if recovered := recover(); recovered != nil {
+			err := fmt.Errorf("daemon hub callback panic: %v", recovered)
+			slog.Error("daemon hub callback panic", "err", err)
+			if h.cfg.OnError != nil {
+				h.cfg.OnError(err)
+			}
+		}
+	}()
+	fn()
 }
 
 func (h *Hub) healthy(info DaemonInfo, now time.Time) bool {
