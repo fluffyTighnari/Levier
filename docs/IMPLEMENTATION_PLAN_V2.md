@@ -4,7 +4,7 @@
 |---|---|
 | 计划版本 | V2.0 |
 | 日期 | 2026-11-03 |
-| 状态 | P0–P6 完成；P7-52 完成；G2–G6 功能通过；M1 垂直切片完成；镜像待 Docker 复核；取代 `IMPLEMENTATION_PLAN.md` v0.3 |
+| 状态 | P0–P6 完成；P7-52–P7-53 完成；G2–G6 功能通过；M1 垂直切片完成；镜像待 Docker 复核；取代 `IMPLEMENTATION_PLAN.md` v0.3 |
 | 依据 | `docs/DESIGN.md` v0.1、`docs/WORKFLOW_ENGINE_AUDIT.md` |
 | 总步骤 | 72 个审查单元 |
 | 用法 | 一次只做一个 `Px-yy`；产出、验收、diff 都确认后再进入下一步 |
@@ -399,9 +399,10 @@ internal/control ──► internal/workflow (PostgreSQL run_tasks, SKIP LOCKED)
   - 验收：三分支路由测试；超时码正确。
   - 完成记录：`gateway.Invoker`、`ResolveToolDecision`、Control `HandleToolCall`、local/global/denied/unknown/timeout 测试；报告：`docs/reports/P7-52.md`。
 
-- [ ] **P7-53 幂等与 single-flight**
+- [x] **P7-53 幂等与 single-flight**
   - 缓存→PostgreSQL、in-flight future、结果落库、TTL。
   - 验收：并发同 invocation 只执行一次；完成后命中。
+  - 完成记录：`invocationState` single-flight/缓存、`PostgresInvocationStore` 认领与过期接管、`Invoker` 幂等编排、并发/失败/跨实例/DB 测试；报告：`docs/reports/P7-53.md`。
 
 - [ ] **P7-54 `builtin:http`**
   - 模板渲染、method/url/headers/body、超时/重试、响应大小限制。

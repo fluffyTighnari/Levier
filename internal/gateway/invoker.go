@@ -1,6 +1,7 @@
 // Middleware — internal/gateway
 //
-// ToolInvoker resolves ToolDefs and routes local/global calls.
+// ToolInvoker resolves ToolDefs, deduplicates invocations, and routes
+// local/global calls.
 //
 // Copyright 2026 The Middleware Authors.
 package gateway
@@ -9,6 +10,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"strings"
 	"time"
 
@@ -77,19 +79,47 @@ func (r *ExecutorRegistry) Resolve(executorRef string) (GlobalExecutor, bool) {
 	return executor, ok
 }
 
+// InvokerOption customizes an Invoker.
+type InvokerOption func(*Invoker)
+
+// WithInvocationStore enables PostgreSQL-backed idempotency.
+func WithInvocationStore(store InvocationStore) InvokerOption {
+	return func(invoker *Invoker) {
+		invoker.store = store
+	}
+}
+
+// WithResultCache overrides the in-process cache TTL and capacity.
+func WithResultCache(ttl time.Duration, maxEntries int) InvokerOption {
+	return func(invoker *Invoker) {
+		invoker.state = newInvocationState(ttl, maxEntries)
+	}
+}
+
 // Invoker routes one ToolCallRequest to a local or global executor.
 type Invoker struct {
 	resolver ToolResolver
 	local    LocalToolCaller
 	globals  *ExecutorRegistry
+	store    InvocationStore
+	state    *invocationState
 }
 
 // NewInvoker returns a tool invoker.
-func NewInvoker(resolver ToolResolver, local LocalToolCaller, globals *ExecutorRegistry) *Invoker {
-	return &Invoker{resolver: resolver, local: local, globals: globals}
+func NewInvoker(resolver ToolResolver, local LocalToolCaller, globals *ExecutorRegistry, opts ...InvokerOption) *Invoker {
+	invoker := &Invoker{
+		resolver: resolver,
+		local:    local,
+		globals:  globals,
+		state:    newInvocationState(defaultResultCacheTTL, defaultResultCacheMax),
+	}
+	for _, opt := range opts {
+		opt(invoker)
+	}
+	return invoker
 }
 
-// Invoke resolves and executes one tool request.
+// Invoke resolves and executes one tool request exactly once per invocation_id.
 func (i *Invoker) Invoke(
 	ctx context.Context,
 	runID string,
@@ -102,6 +132,68 @@ func (i *Invoker) Invoke(
 	if i == nil || i.resolver == nil {
 		return toolError(request.GetInvocationId(), "TOOL_NOT_FOUND", "tool registry is not configured", false)
 	}
+	invocationID := request.GetInvocationId()
+
+	if cached, ok := i.state.get(invocationID); ok {
+		return cached
+	}
+	pending, owner := i.state.acquire(invocationID)
+	if !owner {
+		result, err := i.state.wait(ctx, pending)
+		if err != nil {
+			return toolError(invocationID, "TOOL_TIMEOUT", "cancelled while waiting for invocation", true)
+		}
+		return result
+	}
+	result := i.execute(ctx, runID, appID, request)
+	i.state.finish(invocationID, pending, result)
+	return cloneResult(result)
+}
+
+// execute claims the invocation in the durable store, then runs it.
+func (i *Invoker) execute(
+	ctx context.Context,
+	runID, appID string,
+	request *runtimev1.ToolCallRequest,
+) *runtimev1.ToolCallResult {
+	invocationID := request.GetInvocationId()
+	if i.store != nil {
+		owner, stored, err := i.store.Begin(ctx, invocationID, runID, request.GetToolName())
+		if err != nil {
+			return toolError(invocationID, "TOOL_EXEC_ERROR", err.Error(), false)
+		}
+		if !owner {
+			if stored != nil && stored.Result != nil {
+				i.state.put(invocationID, stored.Result)
+				return stored.Result
+			}
+			return toolError(invocationID, "TOOL_EXEC_ERROR", "invocation is already in flight", true)
+		}
+	}
+
+	result := i.invokeOnce(ctx, runID, appID, request)
+	if i.store != nil {
+		var err error
+		if result.GetOk() {
+			err = i.store.Complete(ctx, invocationID, result)
+		} else {
+			err = i.store.Fail(ctx, invocationID, result)
+		}
+		if err != nil {
+			slog.Warn("gateway persist invocation failed", "invocation_id", invocationID, "err", err)
+		}
+	}
+	i.state.put(invocationID, result)
+	return result
+}
+
+// invokeOnce performs routing and execution without idempotency.
+func (i *Invoker) invokeOnce(
+	ctx context.Context,
+	runID string,
+	appID string,
+	request *runtimev1.ToolCallRequest,
+) *runtimev1.ToolCallResult {
 	tool, resolution, err := i.resolver.ResolveToolDecision(ctx, appID, request.GetToolName())
 	if err != nil {
 		return toolError(request.GetInvocationId(), "TOOL_EXEC_ERROR", err.Error(), false)

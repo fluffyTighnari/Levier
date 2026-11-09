@@ -60,8 +60,12 @@ func (f *fakeGlobal) Execute(_ context.Context, call GlobalCall) (GlobalResult, 
 }
 
 func request(name string) *runtimev1.ToolCallRequest {
+	return requestWithID("inv-1", name)
+}
+
+func requestWithID(invocationID, name string) *runtimev1.ToolCallRequest {
 	return &runtimev1.ToolCallRequest{
-		InvocationId: "inv-1", ToolName: name, ArgumentsJson: `{"q":"x"}`,
+		InvocationId: invocationID, ToolName: name, ArgumentsJson: `{"q":"x"}`,
 	}
 }
 
@@ -72,11 +76,12 @@ func TestInvokeLocalSuccess(t *testing.T) {
 	local := &fakeLocal{result: connection.LocalToolResult{OK: true, ResultJSON: "3"}}
 	invoker := NewInvoker(resolver, local, nil)
 
-	result := invoker.Invoke(context.Background(), "run-1", "app-1", request("search"))
+	req := requestWithID("inv-local", "search")
+	result := invoker.Invoke(context.Background(), "run-1", "app-1", req)
 	if !result.GetOk() || result.GetResultJson() != "3" {
 		t.Fatalf("result = %+v", result)
 	}
-	if local.request.InvocationID != "inv-1" || local.request.TimeoutMS != 1234 {
+	if local.request.InvocationID != req.GetInvocationId() || local.request.TimeoutMS != 1234 {
 		t.Fatalf("request = %+v", local.request)
 	}
 }
@@ -115,13 +120,13 @@ func TestInvokeGlobalSuccessAndTimeout(t *testing.T) {
 	invoker := NewInvoker(resolver, nil, NewExecutorRegistry(map[string]GlobalExecutor{
 		"builtin:http": global,
 	}))
-	result := invoker.Invoke(context.Background(), "run-1", "app-1", request("fetch"))
+	result := invoker.Invoke(context.Background(), "run-1", "app-1", requestWithID("inv-global-1", "fetch"))
 	if !result.GetOk() || global.call.ExecutorRef != "builtin:http" {
 		t.Fatalf("result = %+v call=%+v", result, global.call)
 	}
 
 	global.err = context.DeadlineExceeded
-	result = invoker.Invoke(context.Background(), "run-1", "app-1", request("fetch"))
+	result = invoker.Invoke(context.Background(), "run-1", "app-1", requestWithID("inv-global-2", "fetch"))
 	if result.GetError().GetCode() != "TOOL_TIMEOUT" || !result.GetError().GetRetryable() {
 		t.Fatalf("timeout result = %+v", result)
 	}
@@ -139,13 +144,13 @@ func TestInvokeUnknownDeniedAndMCP(t *testing.T) {
 	}
 	invoker := NewInvoker(resolver, &fakeLocal{}, nil)
 
-	if result := invoker.Invoke(context.Background(), "run-1", "app-1", request("missing")); result.GetError().GetCode() != "TOOL_NOT_FOUND" {
+	if result := invoker.Invoke(context.Background(), "run-1", "app-1", requestWithID("inv-missing", "missing")); result.GetError().GetCode() != "TOOL_NOT_FOUND" {
 		t.Fatalf("missing = %+v", result)
 	}
-	if result := invoker.Invoke(context.Background(), "run-1", "app-1", request("private")); result.GetError().GetCode() != "TOOL_DENIED" {
+	if result := invoker.Invoke(context.Background(), "run-1", "app-1", requestWithID("inv-private", "private")); result.GetError().GetCode() != "TOOL_DENIED" {
 		t.Fatalf("denied = %+v", result)
 	}
-	if result := invoker.Invoke(context.Background(), "run-1", "app-1", request("mcp__x__y")); result.GetError().GetCode() != "TOOL_NOT_FOUND" {
+	if result := invoker.Invoke(context.Background(), "run-1", "app-1", requestWithID("inv-mcp", "mcp__x__y")); result.GetError().GetCode() != "TOOL_NOT_FOUND" {
 		t.Fatalf("mcp = %+v", result)
 	}
 }

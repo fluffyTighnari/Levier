@@ -85,7 +85,12 @@ func main() {
 	queue := workflow.NewPostgres(pool)
 	appHub := connection.NewAppHub()
 	defer appHub.Close()
-	toolInvoker := gateway.NewInvoker(registry, appHub, gateway.NewExecutorRegistry(nil))
+	toolInvoker := gateway.NewInvoker(
+		registry,
+		appHub,
+		gateway.NewExecutorRegistry(nil),
+		gateway.WithInvocationStore(gateway.NewPostgresInvocationStore(pool)),
+	)
 	controller := control.New(runs, hub, control.Config{
 		Logger:     logger,
 		Publisher:  appHub,
