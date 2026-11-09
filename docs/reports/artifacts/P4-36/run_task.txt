@@ -1,5 +1,5 @@
           task_id           |           run_id           |  task_type   | status | attempt | max_attempts | lease_owner | lease_token | lease_expires_at |          updated_at           
 ----------------------------+----------------------------+--------------+--------+---------+--------------+-------------+-------------+------------------+-------------------------------
- 01M6ZDSNEF9NA3MYV9DERM2KPP | 01M6ZDSNEBF37N5QVHZ9159X5J | RUN_DISPATCH | DONE   |       1 |            5 |             |           1 |                  | 2026-11-09 13:51:46.219955+08
+ 01M6ZE96W8YX9KVFQS9KA4NCMT | 01M6ZE96W5GA6PYMY5SG83EKGH | RUN_DISPATCH | DONE   |       1 |            5 |             |           1 |                  | 2026-11-09 14:00:15.572989+08
 (1 row)
 

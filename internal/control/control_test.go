@@ -10,6 +10,7 @@ import (
 	"encoding/json"
 	"errors"
 	"log/slog"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -72,11 +73,14 @@ func (f *fakeRuns) AppendEvent(_ context.Context, event runstore.Event) (runstor
 }
 
 type fakeHub struct {
-	mu        sync.Mutex
-	daemonID  string
-	sent      []*runtimev1.Envelope
-	onSend    func(*runtimev1.Envelope)
-	pickCalls int
+	mu           sync.Mutex
+	daemonID     string
+	sent         []*runtimev1.Envelope
+	onSend       func(*runtimev1.Envelope)
+	pickCalls    int
+	reserveCalls int
+	releaseCalls int
+	released     []string
 }
 
 func (f *fakeHub) PickHealthy(runtimev1.RuntimeType, string, map[string]string) (string, bool) {
@@ -87,6 +91,20 @@ func (f *fakeHub) PickHealthy(runtimev1.RuntimeType, string, map[string]string) 
 		return "", false
 	}
 	return f.daemonID, true
+}
+
+func (f *fakeHub) Reserve(string) bool {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.reserveCalls++
+	return true
+}
+
+func (f *fakeHub) Release(daemonID string) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.releaseCalls++
+	f.released = append(f.released, daemonID)
 }
 
 func (f *fakeHub) Send(daemonID string, env *runtimev1.Envelope) error {
@@ -123,6 +141,22 @@ type fakeScheduler struct {
 func (f *fakeScheduler) Pick(request PlacementRequest) (string, bool) {
 	f.request = request
 	return f.id, f.ok
+}
+
+type sequenceScheduler struct {
+	ids      []string
+	requests []PlacementRequest
+}
+
+func (s *sequenceScheduler) Pick(request PlacementRequest) (string, bool) {
+	s.requests = append(s.requests, request)
+	for _, id := range s.ids {
+		if _, excluded := request.ExcludeDaemonIDs[id]; excluded {
+			continue
+		}
+		return id, true
+	}
+	return "", false
 }
 
 func newRun() runstore.Run {
@@ -233,6 +267,80 @@ func TestHandleUsesLongtermStickyScheduler(t *testing.T) {
 	}
 }
 
+func TestHandleRetriesNextCandidateOnRejection(t *testing.T) {
+	runs := &fakeRuns{run: newRun()}
+	hub := &fakeHub{daemonID: "d1"}
+	scheduler := &sequenceScheduler{ids: []string{"d1", "d2"}}
+	ctrl := New(runs, hub, Config{
+		AckTimeout:           time.Second,
+		MaxPlacementAttempts: 3,
+		Scheduler:            scheduler,
+	})
+	var calls int
+	hub.onSend = func(env *runtimev1.Envelope) {
+		calls++
+		accepted := calls > 1
+		reason := "busy"
+		if accepted {
+			reason = ""
+		}
+		go ctrl.HandleEnvelope("", &runtimev1.Envelope{
+			CorrelationId: env.GetMsgId(),
+			Payload: &runtimev1.Envelope_TaskAck{
+				TaskAck: &runtimev1.TaskAck{Accepted: accepted, Reason: reason},
+			},
+		})
+	}
+	if err := ctrl.Handle(context.Background(), testTask(), workflow.Lease{}); err != nil {
+		t.Fatalf("Handle() error = %v", err)
+	}
+	if runs.assignedTo != "d2" {
+		t.Fatalf("assigned to = %q, want d2", runs.assignedTo)
+	}
+	if hub.releaseCalls != 1 {
+		t.Fatalf("releases = %d, want 1", hub.releaseCalls)
+	}
+	if len(scheduler.requests) != 2 {
+		t.Fatalf("scheduler requests = %d", len(scheduler.requests))
+	}
+	if _, excluded := scheduler.requests[1].ExcludeDaemonIDs["d1"]; !excluded {
+		t.Fatal("rejected daemon was not excluded")
+	}
+}
+
+func TestTerminalEventReleasesCapacity(t *testing.T) {
+	runs := &fakeRuns{
+		run:          newRun(),
+		appendResult: runstore.AppendResult{Inserted: true},
+	}
+	runs.run.Status = "running"
+	runs.run.Attempt = 1
+	runs.run.LeaseEpoch = 1
+	runs.run.AssignedDaemonID = "d1"
+	hub := &fakeHub{}
+	ctrl := New(runs, hub, Config{})
+	ctrl.Start(context.Background())
+	defer ctrl.Close()
+
+	data, _ := structpb.NewStruct(map[string]any{"status": "completed"})
+	event := &runtimev1.Event{
+		Seq: 1, Type: runtimev1.EventType_RUN_STATUS, Source: protocol.EventSourceDaemon, Data: data,
+	}
+	env, _ := protocol.NewRun("run-1", 1, 1, event)
+	ctrl.HandleEnvelope("d1", env)
+	deadline := time.Now().Add(time.Second)
+	for time.Now().Before(deadline) {
+		hub.mu.Lock()
+		released := len(hub.released)
+		hub.mu.Unlock()
+		if released == 1 {
+			return
+		}
+		time.Sleep(5 * time.Millisecond)
+	}
+	t.Fatal("capacity was not released on terminal event")
+}
+
 func TestHandleNoDaemonRetries(t *testing.T) {
 	runs := &fakeRuns{run: newRun()}
 	ctrl := New(runs, &fakeHub{}, Config{RetryDelay: 3 * time.Second})
@@ -240,9 +348,11 @@ func TestHandleNoDaemonRetries(t *testing.T) {
 	if err == nil {
 		t.Fatal("Handle() error = nil")
 	}
-	delay, ok := workflow.RetryAfterDuration(err)
-	if !ok || delay != 3*time.Second {
-		t.Fatalf("retry = %v, %v; err=%v", delay, ok, err)
+	if _, ok := workflow.RetryAfterDuration(err); ok {
+		t.Fatalf("unexpected explicit retry delay: %v", err)
+	}
+	if !strings.Contains(err.Error(), "no eligible daemon") {
+		t.Fatalf("error = %v", err)
 	}
 	if runs.assignCalls != 0 {
 		t.Fatalf("assign calls = %d", runs.assignCalls)
@@ -262,10 +372,11 @@ func TestHandleRejectedAckRetries(t *testing.T) {
 		})
 	}
 	err := ctrl.Handle(context.Background(), testTask(), workflow.Lease{})
-	if err == nil || !errors.Is(err, errNoDaemon) && err.Error() != "busy" {
-		if _, ok := workflow.RetryAfterDuration(err); !ok {
-			t.Fatalf("Handle() error = %v", err)
-		}
+	if err == nil || !strings.Contains(err.Error(), "busy") {
+		t.Fatalf("Handle() error = %v", err)
+	}
+	if _, ok := workflow.RetryAfterDuration(err); ok {
+		t.Fatalf("unexpected explicit retry delay: %v", err)
 	}
 }
 
@@ -277,9 +388,11 @@ func TestHandleAckTimeoutRetries(t *testing.T) {
 	if err == nil {
 		t.Fatal("Handle() error = nil")
 	}
-	delay, ok := workflow.RetryAfterDuration(err)
-	if !ok || delay != time.Second {
-		t.Fatalf("retry = %v, %v; err=%v", delay, ok, err)
+	if !errors.Is(err, errAckTimeout) {
+		t.Fatalf("Handle() error = %v, want errAckTimeout", err)
+	}
+	if _, ok := workflow.RetryAfterDuration(err); ok {
+		t.Fatalf("unexpected explicit retry delay: %v", err)
 	}
 }
 

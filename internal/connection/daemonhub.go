@@ -77,6 +77,7 @@ type DaemonInfo struct {
 	Labels              map[string]string
 	RunningRuns         []RunRef
 	RunningCount        int32
+	Reserved            int32
 	Healthy             bool
 	ConnectedAt         time.Time
 	LastHeartbeat       time.Time
@@ -324,6 +325,35 @@ func (h *Hub) DroppedEphemeral(daemonID string) int64 {
 	return conn.droppedEphemeral.Load()
 }
 
+// Reserve reserves one run slot on a daemon.
+func (h *Hub) Reserve(daemonID string) bool {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	conn := h.daemons[daemonID]
+	if conn == nil {
+		return false
+	}
+	maxRuns := conn.info.MaxConcurrentRuns
+	if maxRuns <= 0 {
+		maxRuns = 1
+	}
+	if effectiveRunning(conn.info) >= maxRuns {
+		return false
+	}
+	conn.info.Reserved++
+	return true
+}
+
+// Release releases one reserved run slot.
+func (h *Hub) Release(daemonID string) {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	conn := h.daemons[daemonID]
+	if conn != nil && conn.info.Reserved > 0 {
+		conn.info.Reserved--
+	}
+}
+
 // Get returns a daemon registration snapshot.
 func (h *Hub) Get(daemonID string) (DaemonInfo, bool) {
 	h.mu.RLock()
@@ -392,10 +422,10 @@ func (h *Hub) PickHealthy(
 		if maxRuns <= 0 {
 			maxRuns = 1
 		}
-		if info.RunningCount >= maxRuns {
+		if effectiveRunning(info) >= maxRuns {
 			continue
 		}
-		score := float64(info.RunningCount) / float64(maxRuns)
+		score := float64(effectiveRunning(info)) / float64(maxRuns)
 		if bestID == "" || score < bestScore {
 			bestID = info.DaemonID
 			bestScore = score
@@ -656,6 +686,13 @@ func (c *daemonConn) close() {
 		}
 		c.slowMu.Unlock()
 	})
+}
+
+func effectiveRunning(info DaemonInfo) int32 {
+	if info.RunningCount > info.Reserved {
+		return info.RunningCount
+	}
+	return info.Reserved
 }
 
 func cloneInfo(info DaemonInfo) DaemonInfo {

@@ -6,6 +6,7 @@
 package control
 
 import (
+	"slices"
 	"sort"
 
 	runtimev1 "github.com/fluffyTighnari/middleware/gen/middleware/runtime/v1"
@@ -14,10 +15,11 @@ import (
 
 // PlacementRequest describes one scheduling decision.
 type PlacementRequest struct {
-	Runtime        runtimev1.RuntimeType
-	Strategy       string
-	Labels         map[string]string
-	StickyDaemonID string
+	Runtime          runtimev1.RuntimeType
+	Strategy         string
+	Labels           map[string]string
+	StickyDaemonID   string
+	ExcludeDaemonIDs map[string]struct{}
 }
 
 // Candidate is one schedulable daemon snapshot.
@@ -88,7 +90,7 @@ func (s *HubScheduler) Pick(request PlacementRequest) (string, bool) {
 			SupportedStrategies: info.SupportedStrategies,
 			Labels:              info.Labels,
 			MaxConcurrentRuns:   info.MaxConcurrentRuns,
-			RunningCount:        info.RunningCount,
+			RunningCount:        maxInt32(info.RunningCount, info.Reserved),
 			Healthy:             info.Healthy,
 		})
 	}
@@ -97,6 +99,9 @@ func (s *HubScheduler) Pick(request PlacementRequest) (string, bool) {
 
 func candidateEligible(candidate Candidate, request PlacementRequest) bool {
 	if !candidate.Healthy {
+		return false
+	}
+	if _, excluded := request.ExcludeDaemonIDs[candidate.DaemonID]; excluded {
 		return false
 	}
 	if request.Runtime != runtimev1.RuntimeType_RUNTIME_TYPE_UNSPECIFIED &&
@@ -118,6 +123,13 @@ func candidateEligible(candidate Candidate, request PlacementRequest) bool {
 	return candidate.RunningCount < maxRuns
 }
 
+func maxInt32(left, right int32) int32 {
+	if left > right {
+		return left
+	}
+	return right
+}
+
 func loadRatio(candidate Candidate) float64 {
 	maxRuns := candidate.MaxConcurrentRuns
 	if maxRuns <= 0 {
@@ -127,10 +139,5 @@ func loadRatio(candidate Candidate) float64 {
 }
 
 func contains(values []string, target string) bool {
-	for _, value := range values {
-		if value == target {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(values, target)
 }

@@ -37,12 +37,13 @@ type EventPublisher interface {
 
 // Config controls the minimal Control loop.
 type Config struct {
-	AckTimeout  time.Duration
-	RetryDelay  time.Duration
-	EventBuffer int
-	Publisher   EventPublisher
-	Scheduler   Scheduler
-	Logger      *slog.Logger
+	AckTimeout           time.Duration
+	RetryDelay           time.Duration
+	MaxPlacementAttempts int
+	EventBuffer          int
+	Publisher            EventPublisher
+	Scheduler            Scheduler
+	Logger               *slog.Logger
 }
 
 // RunStore is the persistence subset used by Control.
@@ -61,6 +62,8 @@ type MaterialAssembler interface {
 // DaemonHub is the connection subset used by Control.
 type DaemonHub interface {
 	PickHealthy(runtimeType runtimev1.RuntimeType, strategy string, labels map[string]string) (string, bool)
+	Reserve(daemonID string) bool
+	Release(daemonID string)
 	Send(daemonID string, env *runtimev1.Envelope) error
 }
 
@@ -92,6 +95,9 @@ func New(runs RunStore, hub DaemonHub, cfg Config, assemblers ...MaterialAssembl
 	}
 	if cfg.RetryDelay <= 0 {
 		cfg.RetryDelay = 2 * time.Second
+	}
+	if cfg.MaxPlacementAttempts <= 0 {
+		cfg.MaxPlacementAttempts = 3
 	}
 	if cfg.EventBuffer <= 0 {
 		cfg.EventBuffer = 256
@@ -168,32 +174,12 @@ func (c *Control) Handle(ctx context.Context, task workflow.Task, _ workflow.Lea
 		return fmt.Errorf("get run: %w", err)
 	}
 	switch run.Status {
-	case "completed", "failed", "cancelled", "timeout":
-		return nil
-	case "running":
+	case "completed", "failed", "cancelled", "timeout", "running":
 		return nil
 	}
 
 	attempt := run.Attempt + 1
 	leaseEpoch := run.LeaseEpoch + 1
-	placement := PlacementRequest{
-		Runtime:  runtimeType(run.Runtime),
-		Strategy: run.Strategy,
-	}
-	if run.Runtime == "longterm" {
-		placement.StickyDaemonID = run.AssignedDaemonID
-	}
-	var daemonID string
-	var ok bool
-	if c.cfg.Scheduler != nil {
-		daemonID, ok = c.cfg.Scheduler.Pick(placement)
-	} else {
-		daemonID, ok = c.hub.PickHealthy(placement.Runtime, placement.Strategy, placement.Labels)
-	}
-	if !ok {
-		return workflow.RetryAfter(errNoDaemon, c.cfg.RetryDelay)
-	}
-
 	assign, err := buildTaskAssign(run, attempt)
 	if err != nil {
 		return workflow.Permanent(err)
@@ -206,57 +192,104 @@ func (c *Control) Handle(ctx context.Context, task workflow.Task, _ workflow.Lea
 		assign.Tools = toolManifests(materials.Tools)
 		assign.McpBindings = mcpBindings(materials.MCPBindings)
 	}
-	envelope, err := protocol.NewRun(run.RunID, int32(attempt), leaseEpoch, assign)
-	if err != nil {
-		return workflow.Permanent(fmt.Errorf("build task assign: %w", err))
-	}
 
-	if _, err := c.runs.AssignRun(ctx, runstore.Assignment{
-		RunID:              run.RunID,
-		ExpectedStatus:     run.Status,
-		ExpectedAttempt:    run.Attempt,
-		ExpectedLeaseEpoch: run.LeaseEpoch,
-		Attempt:            attempt,
-		LeaseEpoch:         leaseEpoch,
-		DaemonID:           daemonID,
-	}); err != nil {
-		if errors.Is(err, runstore.ErrRunNotAssignable) {
-			return nil
+	placement := PlacementRequest{
+		Runtime:  runtimeType(run.Runtime),
+		Strategy: run.Strategy,
+	}
+	if run.Runtime == "longterm" {
+		placement.StickyDaemonID = run.AssignedDaemonID
+	}
+	excluded := make(map[string]struct{})
+	status := run.Status
+	currentAttempt := run.Attempt
+	currentEpoch := run.LeaseEpoch
+
+	for attemptIndex := 0; attemptIndex < c.cfg.MaxPlacementAttempts; attemptIndex++ {
+		placement.ExcludeDaemonIDs = excluded
+		daemonID, ok := c.pick(placement)
+		if !ok {
+			break
 		}
-		return fmt.Errorf("assign run: %w", err)
-	}
+		if !c.hub.Reserve(daemonID) {
+			excluded[daemonID] = struct{}{}
+			continue
+		}
 
-	ackCh := make(chan *runtimev1.TaskAck, 1)
-	c.pendingMu.Lock()
-	c.pending[envelope.GetMsgId()] = ackCh
-	c.pendingMu.Unlock()
-	defer func() {
-		c.pendingMu.Lock()
-		delete(c.pending, envelope.GetMsgId())
-		c.pendingMu.Unlock()
-	}()
-
-	if err := c.hub.Send(daemonID, envelope); err != nil {
-		return workflow.RetryAfter(fmt.Errorf("send task assign: %w", err), c.cfg.RetryDelay)
-	}
-
-	timer := time.NewTimer(c.cfg.AckTimeout)
-	defer timer.Stop()
-	select {
-	case <-ctx.Done():
-		return ctx.Err()
-	case <-timer.C:
-		return workflow.RetryAfter(errAckTimeout, c.cfg.RetryDelay)
-	case ack := <-ackCh:
-		if !ack.GetAccepted() {
-			reason := ack.GetReason()
-			if reason == "" {
-				reason = "daemon rejected task"
+		assigned, err := c.runs.AssignRun(ctx, runstore.Assignment{
+			RunID:              run.RunID,
+			ExpectedStatus:     status,
+			ExpectedAttempt:    currentAttempt,
+			ExpectedLeaseEpoch: currentEpoch,
+			Attempt:            attempt,
+			LeaseEpoch:         leaseEpoch,
+			DaemonID:           daemonID,
+		})
+		if err != nil {
+			c.hub.Release(daemonID)
+			if errors.Is(err, runstore.ErrRunNotAssignable) {
+				return nil
 			}
-			return workflow.RetryAfter(errors.New(reason), c.cfg.RetryDelay)
+			return fmt.Errorf("assign run: %w", err)
 		}
-		return nil
+		status = assigned.Status
+		currentAttempt = assigned.Attempt
+		currentEpoch = assigned.LeaseEpoch
+
+		envelope, err := protocol.NewRun(run.RunID, int32(attempt), leaseEpoch, assign)
+		if err != nil {
+			c.hub.Release(daemonID)
+			return workflow.Permanent(fmt.Errorf("build task assign: %w", err))
+		}
+		ackCh := make(chan *runtimev1.TaskAck, 1)
+		c.pendingMu.Lock()
+		c.pending[envelope.GetMsgId()] = ackCh
+		c.pendingMu.Unlock()
+
+		if err := c.hub.Send(daemonID, envelope); err != nil {
+			c.removePending(envelope.GetMsgId())
+			c.hub.Release(daemonID)
+			return fmt.Errorf("send task assign: %w", err)
+		}
+
+		timer := time.NewTimer(c.cfg.AckTimeout)
+		select {
+		case <-ctx.Done():
+			timer.Stop()
+			c.removePending(envelope.GetMsgId())
+			c.hub.Release(daemonID)
+			return ctx.Err()
+		case <-timer.C:
+			c.removePending(envelope.GetMsgId())
+			c.hub.Release(daemonID)
+			return errAckTimeout
+		case ack := <-ackCh:
+			timer.Stop()
+			c.removePending(envelope.GetMsgId())
+			if ack.GetAccepted() {
+				return nil
+			}
+			c.hub.Release(daemonID)
+			excluded[daemonID] = struct{}{}
+			if c.cfg.Scheduler == nil {
+				return fmt.Errorf("daemon %q rejected task: %s", daemonID, ack.GetReason())
+			}
+		}
 	}
+	return fmt.Errorf("%w: no eligible daemon", errNoDaemon)
+}
+
+func (c *Control) pick(placement PlacementRequest) (string, bool) {
+	if c.cfg.Scheduler != nil {
+		return c.cfg.Scheduler.Pick(placement)
+	}
+	return c.hub.PickHealthy(placement.Runtime, placement.Strategy, placement.Labels)
+}
+
+func (c *Control) removePending(msgID string) {
+	c.pendingMu.Lock()
+	delete(c.pending, msgID)
+	c.pendingMu.Unlock()
 }
 
 func (c *Control) eventLoop() {
@@ -377,6 +410,9 @@ func (c *Control) handleEvent(env *runtimev1.Envelope) {
 			"err", err,
 		)
 		return
+	}
+	if runstore.TerminalStatus(status) {
+		c.hub.Release(run.AssignedDaemonID)
 	}
 	if c.cfg.Publisher != nil && runstore.TerminalStatus(status) {
 		payload, _ := json.Marshal(map[string]any{

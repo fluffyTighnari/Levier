@@ -445,6 +445,37 @@ func TestInboundPanicIsIsolated(t *testing.T) {
 	}
 }
 
+func TestReserveAndReleaseCapacity(t *testing.T) {
+	hub := New(Config{})
+	conn := &daemonConn{
+		info:   DaemonInfo{DaemonID: "d1", MaxConcurrentRuns: 2},
+		sendCh: make(chan *runtimev1.Envelope, 1),
+		done:   make(chan struct{}),
+	}
+	hub.daemons["d1"] = conn
+
+	if !hub.Reserve("d1") || !hub.Reserve("d1") {
+		t.Fatal("first two reservations failed")
+	}
+	if hub.Reserve("d1") {
+		t.Fatal("third reservation succeeded past capacity")
+	}
+	info, _ := hub.Get("d1")
+	if info.Reserved != 2 {
+		t.Fatalf("reserved = %d, want 2", info.Reserved)
+	}
+	hub.Release("d1")
+	if !hub.Reserve("d1") {
+		t.Fatal("reservation after release failed")
+	}
+	hub.Release("d1")
+	hub.Release("d1")
+	info, _ = hub.Get("d1")
+	if info.Reserved != 0 {
+		t.Fatalf("reserved after release = %d, want 0", info.Reserved)
+	}
+}
+
 func TestHubCloseStopsConnections(t *testing.T) {
 	hub, addr := startHub(t, Config{
 		HelloTimeout: time.Second,
