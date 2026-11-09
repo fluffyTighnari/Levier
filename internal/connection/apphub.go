@@ -47,16 +47,40 @@ type LocalToolError struct {
 
 // LocalToolResult is the App's response to a local tool call.
 type LocalToolResult struct {
-	InvocationID string
-	OK           bool
-	ResultJSON   string
-	Error        *LocalToolError
+	CorrelationID string
+	InvocationID  string
+	OK            bool
+	ResultJSON    string
+	Error         *LocalToolError
 }
 
 type pendingLocalCall struct {
-	appID  string
-	runID  string
-	result chan LocalToolResult
+	appID         string
+	runID         string
+	correlationID string
+	result        chan LocalToolResult
+}
+
+// LocalToolResolution describes the outcome of one local tool result.
+type LocalToolResolution int
+
+const (
+	// LocalToolResolved means the pending call received the result.
+	LocalToolResolved LocalToolResolution = iota
+	// LocalToolDuplicate means the invocation already completed.
+	LocalToolDuplicate
+	// LocalToolUnknown means no pending or completed invocation matched.
+	LocalToolUnknown
+	// LocalToolForbidden means the result came from another App.
+	LocalToolForbidden
+	// LocalToolCorrelationMismatch means correlation_id does not match.
+	LocalToolCorrelationMismatch
+)
+
+type completedLocalCall struct {
+	appID   string
+	result  LocalToolResult
+	expires time.Time
 }
 
 // runCursor is the last (attempt, seq) delivered to one run stream.
@@ -86,18 +110,20 @@ type AppConn struct {
 
 // AppHub tracks App connections and run subscriptions.
 type AppHub struct {
-	mu      sync.RWMutex
-	apps    map[string]map[*AppConn]struct{}
-	conns   map[*AppConn]struct{}
-	pending map[string]*pendingLocalCall
+	mu        sync.RWMutex
+	apps      map[string]map[*AppConn]struct{}
+	conns     map[*AppConn]struct{}
+	pending   map[string]*pendingLocalCall
+	completed map[string]completedLocalCall
 }
 
 // NewAppHub returns an empty AppHub.
 func NewAppHub() *AppHub {
 	return &AppHub{
-		apps:    make(map[string]map[*AppConn]struct{}),
-		conns:   make(map[*AppConn]struct{}),
-		pending: make(map[string]*pendingLocalCall),
+		apps:      make(map[string]map[*AppConn]struct{}),
+		conns:     make(map[*AppConn]struct{}),
+		pending:   make(map[string]*pendingLocalCall),
+		completed: make(map[string]completedLocalCall),
 	}
 }
 
@@ -327,7 +353,13 @@ func (h *AppHub) CallLocalTool(ctx context.Context, appID string, request LocalT
 	if request.InvocationID == "" || request.ToolName == "" {
 		return LocalToolResult{}, fmt.Errorf("invocation_id and tool_name are required")
 	}
-	pending := &pendingLocalCall{appID: appID, runID: request.RunID, result: make(chan LocalToolResult, 1)}
+	msgID := id.New()
+	pending := &pendingLocalCall{
+		appID:         appID,
+		runID:         request.RunID,
+		correlationID: msgID,
+		result:        make(chan LocalToolResult, 1),
+	}
 	h.mu.Lock()
 	if _, exists := h.pending[request.InvocationID]; exists {
 		h.mu.Unlock()
@@ -343,7 +375,7 @@ func (h *AppHub) CallLocalTool(ctx context.Context, appID string, request LocalT
 
 	payload, err := json.Marshal(map[string]any{
 		"type":           "local_tool_call",
-		"msg_id":         id.New(),
+		"msg_id":         msgID,
 		"invocation_id":  request.InvocationID,
 		"tool_name":      request.ToolName,
 		"arguments_json": request.ArgumentsJSON,
@@ -378,19 +410,71 @@ func (h *AppHub) CallLocalTool(ctx context.Context, appID string, request LocalT
 // ResolveLocalTool delivers one App result to its waiting call.
 // Duplicate results after the first are ignored.
 func (h *AppHub) ResolveLocalTool(appID string, result LocalToolResult) bool {
+	return h.ResolveLocalToolChecked(appID, result) == LocalToolResolved
+}
+
+// ResolveLocalToolChecked validates and delivers one local tool result.
+func (h *AppHub) ResolveLocalToolChecked(appID string, result LocalToolResult) LocalToolResolution {
+	if result.InvocationID == "" {
+		return LocalToolUnknown
+	}
 	h.mu.Lock()
 	pending := h.pending[result.InvocationID]
-	if pending == nil || pending.appID != appID {
+	if pending == nil {
+		completed, ok := h.completed[result.InvocationID]
 		h.mu.Unlock()
-		return false
+		if ok && completed.appID == appID {
+			return LocalToolDuplicate
+		}
+		return LocalToolUnknown
+	}
+	if pending.appID != appID {
+		h.mu.Unlock()
+		return LocalToolForbidden
+	}
+	if result.CorrelationID == "" || result.CorrelationID != pending.correlationID {
+		h.mu.Unlock()
+		return LocalToolCorrelationMismatch
 	}
 	delete(h.pending, result.InvocationID)
+	h.rememberCompletedLocked(result.InvocationID, appID, result)
 	h.mu.Unlock()
 	select {
 	case pending.result <- result:
 	default:
 	}
-	return true
+	return LocalToolResolved
+}
+
+// CachedLocalToolResult returns a recently completed invocation result.
+func (h *AppHub) CachedLocalToolResult(appID, invocationID string) (LocalToolResult, bool) {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
+	completed, ok := h.completed[invocationID]
+	if !ok || completed.appID != appID || time.Now().After(completed.expires) {
+		return LocalToolResult{}, false
+	}
+	return completed.result, true
+}
+
+func (h *AppHub) rememberCompletedLocked(invocationID, appID string, result LocalToolResult) {
+	now := time.Now()
+	for key, completed := range h.completed {
+		if now.After(completed.expires) {
+			delete(h.completed, key)
+		}
+	}
+	if len(h.completed) >= 1024 {
+		for key := range h.completed {
+			delete(h.completed, key)
+			break
+		}
+	}
+	h.completed[invocationID] = completedLocalCall{
+		appID:   appID,
+		result:  result,
+		expires: now.Add(10 * time.Minute),
+	}
 }
 
 // CancelLocalTools fails pending local tool calls for one App/run.

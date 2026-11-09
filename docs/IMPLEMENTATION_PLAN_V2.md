@@ -4,7 +4,7 @@
 |---|---|
 | 计划版本 | V2.0 |
 | 日期 | 2026-11-03 |
-| 状态 | P0–P6 完成；P7-52–P7-57 完成；G2–G6 功能通过；M1 垂直切片完成；镜像待 Docker 复核；取代 `IMPLEMENTATION_PLAN.md` v0.3 |
+| 状态 | P0–P7 完成；G2–G7 功能通过；M1 垂直切片完成；镜像待 Docker 复核；取代 `IMPLEMENTATION_PLAN.md` v0.3 |
 | 依据 | `docs/DESIGN.md` v0.1、`docs/WORKFLOW_ENGINE_AUDIT.md` |
 | 总步骤 | 72 个审查单元 |
 | 用法 | 一次只做一个 `Px-yy`；产出、验收、diff 都确认后再进入下一步 |
@@ -424,9 +424,10 @@ internal/control ──► internal/workflow (PostgreSQL run_tasks, SKIP LOCKED)
   - 验收：过期拒绝；断线重连无重无漏。
   - 完成记录：`POST /ws-token`、token 过期清理、分页补推、连接级 `(attempt,seq)` 游标与 replay 缓冲去重、ping/pong、重连续传测试；报告：`docs/reports/P7-57.md`。
 
-- [ ] **P7-58 local_tool_result 与 Gate**
+- [x] **P7-58 local_tool_result 与 Gate**
   - correlation/invocation 校验、幂等结果、未知调用、`run_completed`、OpenAPI 完整。
   - 验收：重发返回缓存；伪造 App 拒绝；G7 通过。
+  - 完成记录：`ResolveLocalToolChecked`、correlation 校验、completed 缓存、`LOCAL_TOOL_*` 错误、`run_completed` 测试、G7 审查；报告：`docs/reports/P7-58.md`、`docs/reports/G7.md`。
 
 **G7 审查物：** 路由矩阵、并发去重、HTTP executor、OpenAPI、curl 全流程。
 

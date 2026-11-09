@@ -1,7 +1,7 @@
  attempt | seq | source |       type        |                                           payload                                            |     ts_ms     
 ---------+-----+--------+-------------------+----------------------------------------------------------------------------------------------+---------------
-       1 |   1 | daemon | RUN_STATUS        | {"status": "running"}                                                                        | 1794213963201
-       1 |   2 | daemon | MESSAGE_COMPLETED | {"role": "assistant", "content": "hello m1 e2e", "message_id": "01M6ZQRSE1Z10BV1JTG0ZZD20D"} | 1794213963201
-       1 |   3 | daemon | RUN_STATUS        | {"status": "completed"}                                                                      | 1794213963201
+       1 |   1 | daemon | RUN_STATUS        | {"status": "running"}                                                                        | 1794214353577
+       1 |   2 | daemon | MESSAGE_COMPLETED | {"role": "assistant", "content": "hello m1 e2e", "message_id": "01M6ZR4PN9BH11HM42WDFCE93H"} | 1794214353577
+       1 |   3 | daemon | RUN_STATUS        | {"status": "completed"}                                                                      | 1794214353577
 (3 rows)
 

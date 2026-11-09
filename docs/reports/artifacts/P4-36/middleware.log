@@ -1,2 +1,2 @@
-{"time":"2026-11-09T16:46:01.372483+08:00","level":"INFO","msg":"middleware starting","config":"config.example.yaml","database":"connected","grpc_addr":":9090","http_addr":":8080"}
-{"time":"2026-11-09T16:46:03.691314+08:00","level":"INFO","msg":"middleware stopped"}
+{"time":"2026-11-09T16:52:31.74618+08:00","level":"INFO","msg":"middleware starting","config":"config.example.yaml","database":"connected","grpc_addr":":9090","http_addr":":8080"}
+{"time":"2026-11-09T16:52:34.048069+08:00","level":"INFO","msg":"middleware stopped"}

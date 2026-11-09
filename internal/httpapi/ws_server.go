@@ -92,9 +92,10 @@ func (s *Server) handleWS(conn *websocket.Conn) {
 			})
 		case *LocalToolResultMessage:
 			result := connection.LocalToolResult{
-				InvocationID: typed.InvocationID,
-				OK:           typed.OK,
-				ResultJSON:   typed.ResultJSON,
+				CorrelationID: typed.CorrelationID,
+				InvocationID:  typed.InvocationID,
+				OK:            typed.OK,
+				ResultJSON:    typed.ResultJSON,
 			}
 			if typed.Error != nil {
 				result.Error = &connection.LocalToolError{
@@ -103,7 +104,23 @@ func (s *Server) handleWS(conn *websocket.Conn) {
 					Retryable: typed.Error.Retryable,
 				}
 			}
-			s.appHub.ResolveLocalTool(appID, result)
+			switch s.appHub.ResolveLocalToolChecked(appID, result) {
+			case connection.LocalToolUnknown:
+				_ = s.sendWS(appConn, ErrorMessage{
+					Type:  WSMessageError,
+					Error: ErrorBody{Code: "LOCAL_TOOL_UNKNOWN", Message: "local tool invocation is not pending"},
+				})
+			case connection.LocalToolForbidden:
+				_ = s.sendWS(appConn, ErrorMessage{
+					Type:  WSMessageError,
+					Error: ErrorBody{Code: "LOCAL_TOOL_FORBIDDEN", Message: "local tool invocation belongs to another app"},
+				})
+			case connection.LocalToolCorrelationMismatch:
+				_ = s.sendWS(appConn, ErrorMessage{
+					Type:  WSMessageError,
+					Error: ErrorBody{Code: "LOCAL_TOOL_CORRELATION_MISMATCH", Message: "correlation_id does not match the local tool call"},
+				})
+			}
 		}
 	}
 }

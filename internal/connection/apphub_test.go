@@ -7,6 +7,7 @@ package connection
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
@@ -61,7 +62,8 @@ func TestCallLocalToolAndResolve(t *testing.T) {
 		t.Fatal("local tool call was not sent")
 	}
 	if !hub.ResolveLocalTool("app-1", LocalToolResult{
-		InvocationID: "inv-1", OK: true, ResultJSON: `{"ok":true}`,
+		CorrelationID: lastCorrelationID(t, sink),
+		InvocationID:  "inv-1", OK: true, ResultJSON: `{"ok":true}`,
 	}) {
 		t.Fatal("ResolveLocalTool() = false")
 	}
@@ -74,6 +76,9 @@ func TestCallLocalToolAndResolve(t *testing.T) {
 	}
 	if hub.ResolveLocalTool("app-1", LocalToolResult{InvocationID: "inv-1", OK: true}) {
 		t.Fatal("duplicate result was accepted")
+	}
+	if got := hub.ResolveLocalToolChecked("app-1", LocalToolResult{InvocationID: "inv-1"}); got != LocalToolDuplicate {
+		t.Fatalf("duplicate resolution = %v", got)
 	}
 	if hub.PendingLocalTools("app-1") != 0 {
 		t.Fatal("pending local tool was not removed")
@@ -229,4 +234,70 @@ func TestAppConnReplayBuffersAndDeduplicates(t *testing.T) {
 
 func eventPayload(attempt int32, seq int64) []byte {
 	return []byte(fmt.Sprintf(`{"type":"event","attempt":%d,"seq":%d}`, attempt, seq))
+}
+
+func lastCorrelationID(t *testing.T, sink *recordingSink) string {
+	t.Helper()
+	sink.mu.Lock()
+	defer sink.mu.Unlock()
+	if len(sink.payloads) == 0 {
+		t.Fatal("no payload recorded")
+	}
+	var message struct {
+		MsgID string `json:"msg_id"`
+	}
+	if err := json.Unmarshal(sink.payloads[len(sink.payloads)-1], &message); err != nil {
+		t.Fatalf("decode local tool call: %v", err)
+	}
+	return message.MsgID
+}
+
+func TestResolveLocalToolValidation(t *testing.T) {
+	hub := NewAppHub()
+	sink := &recordingSink{}
+	conn := hub.Register("app-1", sink)
+	defer hub.CloseConn(conn)
+
+	resultCh := make(chan error, 1)
+	go func() {
+		_, err := hub.CallLocalTool(context.Background(), "app-1", LocalToolRequest{
+			InvocationID: "inv-1", ToolName: "search", ArgumentsJSON: `{}`, TimeoutMS: 1000,
+		})
+		resultCh <- err
+	}()
+	if !waitSinkCount(t, sink, 1) {
+		t.Fatal("local tool call was not sent")
+	}
+	correlation := lastCorrelationID(t, sink)
+
+	if got := hub.ResolveLocalToolChecked("app-1", LocalToolResult{
+		CorrelationID: "wrong", InvocationID: "inv-1", OK: true,
+	}); got != LocalToolCorrelationMismatch {
+		t.Fatalf("mismatch resolution = %v", got)
+	}
+	if got := hub.ResolveLocalToolChecked("app-2", LocalToolResult{
+		CorrelationID: correlation, InvocationID: "inv-1", OK: true,
+	}); got != LocalToolForbidden {
+		t.Fatalf("forbidden resolution = %v", got)
+	}
+	if got := hub.ResolveLocalToolChecked("app-1", LocalToolResult{
+		CorrelationID: correlation, InvocationID: "missing", OK: true,
+	}); got != LocalToolUnknown {
+		t.Fatalf("unknown resolution = %v", got)
+	}
+	if got := hub.ResolveLocalToolChecked("app-1", LocalToolResult{
+		CorrelationID: correlation, InvocationID: "inv-1", OK: true, ResultJSON: "3",
+	}); got != LocalToolResolved {
+		t.Fatalf("resolved resolution = %v", got)
+	}
+	if err := <-resultCh; err != nil {
+		t.Fatalf("CallLocalTool() error = %v", err)
+	}
+	cached, ok := hub.CachedLocalToolResult("app-1", "inv-1")
+	if !ok || cached.ResultJSON != "3" || cached.CorrelationID != correlation {
+		t.Fatalf("cached result = %+v, ok=%v", cached, ok)
+	}
+	if _, ok := hub.CachedLocalToolResult("app-2", "inv-1"); ok {
+		t.Fatal("cached result leaked to another app")
+	}
 }

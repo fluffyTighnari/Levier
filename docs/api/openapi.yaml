@@ -241,6 +241,12 @@ paths:
         Upgrade to the App WebSocket. Client sends hello/subscribe/
         local_tool_result/ping; server sends event/local_tool_call/
         run_completed/caught_up/pong/error.
+
+        `local_tool_result.correlation_id` must equal the `msg_id` of the
+        corresponding `local_tool_call`. Unknown invocations return
+        `LOCAL_TOOL_UNKNOWN`, foreign invocations return
+        `LOCAL_TOOL_FORBIDDEN`, and mismatched correlation returns
+        `LOCAL_TOOL_CORRELATION_MISMATCH`. Duplicate results are idempotent.
       operationId: appWebSocket
       responses:
         "101":
