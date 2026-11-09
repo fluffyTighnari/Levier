@@ -29,7 +29,7 @@ type fakeRuns struct {
 	assignedTo   string
 	statuses     []string
 	events       []runstore.Event
-	appendResult bool
+	appendResult runstore.AppendResult
 }
 
 func (f *fakeRuns) GetRun(context.Context, string) (runstore.Run, error) {
@@ -63,7 +63,7 @@ func (f *fakeRuns) Transition(_ context.Context, transition runstore.Transition)
 	return f.run, nil
 }
 
-func (f *fakeRuns) AppendEvent(_ context.Context, event runstore.Event) (bool, error) {
+func (f *fakeRuns) AppendEvent(_ context.Context, event runstore.Event) (runstore.AppendResult, error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	f.events = append(f.events, event)
@@ -210,7 +210,7 @@ func TestHandleAckTimeoutRetries(t *testing.T) {
 func TestEventUpdatesRunStatus(t *testing.T) {
 	runs := &fakeRuns{
 		run:          newRun(),
-		appendResult: true,
+		appendResult: runstore.AppendResult{Inserted: true},
 	}
 	runs.run.Status = "assigned"
 	runs.run.Attempt = 1
@@ -245,10 +245,56 @@ func TestEventUpdatesRunStatus(t *testing.T) {
 	t.Fatalf("statuses = %v, want running", runs.statuses)
 }
 
+func TestControlEventCounters(t *testing.T) {
+	runs := &fakeRuns{
+		run: newRun(),
+		appendResult: runstore.AppendResult{
+			Inserted: true,
+			Gap:      true,
+			GapSize:  17,
+		},
+	}
+	runs.run.Status = "assigned"
+	runs.run.Attempt = 1
+	runs.run.LeaseEpoch = 1
+	ctrl := New(runs, &fakeHub{}, Config{})
+	ctrl.Start(context.Background())
+	defer ctrl.Close()
+
+	data, _ := structpb.NewStruct(map[string]any{"status": "running"})
+	event := &runtimev1.Event{
+		Seq:    1,
+		Type:   runtimev1.EventType_RUN_STATUS,
+		Source: protocol.EventSourceDaemon,
+		Data:   data,
+	}
+	env, _ := protocol.NewRun("run-1", 1, 1, event)
+	ctrl.HandleEnvelope("daemon-1", env)
+
+	ephemeral := &runtimev1.Event{
+		Seq:       0,
+		Type:      runtimev1.EventType_MESSAGE_DELTA,
+		Ephemeral: true,
+		Source:    protocol.EventSourceDaemon,
+		Data:      data,
+	}
+	ephemeralEnv, _ := protocol.NewRun("run-1", 1, 1, ephemeral)
+	ctrl.HandleEnvelope("daemon-1", ephemeralEnv)
+
+	deadline := time.Now().Add(time.Second)
+	for time.Now().Before(deadline) {
+		if ctrl.GapEvents() == 1 && ctrl.EphemeralEvents() == 1 {
+			return
+		}
+		time.Sleep(5 * time.Millisecond)
+	}
+	t.Fatalf("gap=%d ephemeral=%d", ctrl.GapEvents(), ctrl.EphemeralEvents())
+}
+
 func TestStaleEpochEventIgnored(t *testing.T) {
 	runs := &fakeRuns{
 		run:          newRun(),
-		appendResult: true,
+		appendResult: runstore.AppendResult{Inserted: true},
 	}
 	runs.run.Status = "running"
 	runs.run.Attempt = 2

@@ -20,4 +20,6 @@ var (
 	ErrRunNotAssignable = errors.New("run is not assignable")
 	// ErrInvalidEvent reports invalid event input.
 	ErrInvalidEvent = errors.New("invalid event")
+	// ErrEphemeralEvent reports an attempt to persist an ephemeral event.
+	ErrEphemeralEvent = errors.New("ephemeral events are not persisted")
 )

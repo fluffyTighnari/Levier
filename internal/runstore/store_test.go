@@ -180,15 +180,15 @@ func TestAppendEventIsIdempotentAndAdvancesProjection(t *testing.T) {
 		Type:    "RUN_STATUS",
 		Payload: json.RawMessage(`{"status":"running"}`),
 	}
-	inserted, err := store.AppendEvent(ctx, event)
-	if err != nil || !inserted {
-		t.Fatalf("first AppendEvent() inserted=%v error=%v", inserted, err)
+	result, err := store.AppendEvent(ctx, event)
+	if err != nil || !result.Inserted {
+		t.Fatalf("first AppendEvent() result=%+v error=%v", result, err)
 	}
-	inserted, err = store.AppendEvent(ctx, event)
+	result, err = store.AppendEvent(ctx, event)
 	if err != nil {
 		t.Fatalf("duplicate AppendEvent() error = %v", err)
 	}
-	if inserted {
+	if result.Inserted {
 		t.Fatal("duplicate AppendEvent() inserted = true, want false")
 	}
 
@@ -305,6 +305,99 @@ func TestAssignRunAndUpdateStatus(t *testing.T) {
 		ExpectedLeaseEpoch: 2,
 	}); !errors.Is(err, ErrRunNotAssignable) {
 		t.Fatalf("stale Transition() error = %v, want ErrRunNotAssignable", err)
+	}
+}
+
+func TestAppendEventOutOfOrderAndGap(t *testing.T) {
+	store := New(testPool(t))
+	ctx := context.Background()
+	app := createApp(t, store)
+	run, _ := store.CreateRun(ctx, Run{RunID: "run-" + id.New(), AppID: app.AppID})
+	if _, err := store.AssignRun(ctx, Assignment{
+		RunID: run.RunID, ExpectedStatus: StatusQueued,
+		ExpectedAttempt: 0, ExpectedLeaseEpoch: 0,
+		Attempt: 1, LeaseEpoch: 1, DaemonID: "daemon-1",
+	}); err != nil {
+		t.Fatalf("AssignRun() error = %v", err)
+	}
+
+	makeEvent := func(seq int64) Event {
+		return Event{
+			RunID: run.RunID, Attempt: 1, Seq: seq, Source: "daemon",
+			Type: "RUN_STATUS", Payload: json.RawMessage(`{"status":"running"}`),
+			LeaseEpoch: 1,
+		}
+	}
+	result, err := store.AppendEvent(ctx, makeEvent(2))
+	if err != nil || !result.Inserted || result.Gap {
+		t.Fatalf("seq2 result = %+v, %v", result, err)
+	}
+	result, err = store.AppendEvent(ctx, makeEvent(1))
+	if err != nil || !result.Inserted {
+		t.Fatalf("seq1 result = %+v, %v", result, err)
+	}
+	result, err = store.AppendEvent(ctx, makeEvent(20))
+	if err != nil || !result.Inserted || !result.Gap || result.GapSize != 17 {
+		t.Fatalf("seq20 result = %+v, %v", result, err)
+	}
+	result, err = store.AppendEvent(ctx, makeEvent(2))
+	if err != nil || result.Inserted {
+		t.Fatalf("duplicate result = %+v, %v", result, err)
+	}
+
+	current, _ := store.GetRun(ctx, run.RunID)
+	if current.LastEventAttempt != 1 || current.LastEventSeq != 20 {
+		t.Fatalf("projection = (%d,%d), want (1,20)", current.LastEventAttempt, current.LastEventSeq)
+	}
+
+	var count int
+	if err := store.pool.QueryRow(ctx,
+		"SELECT count(*) FROM run_events WHERE run_id = $1", run.RunID,
+	).Scan(&count); err != nil {
+		t.Fatalf("count events: %v", err)
+	}
+	if count != 3 {
+		t.Fatalf("event count = %d, want 3", count)
+	}
+}
+
+func TestAppendEventStaleAndEphemeral(t *testing.T) {
+	store := New(testPool(t))
+	ctx := context.Background()
+	app := createApp(t, store)
+	run, _ := store.CreateRun(ctx, Run{RunID: "run-" + id.New(), AppID: app.AppID})
+	if _, err := store.AssignRun(ctx, Assignment{
+		RunID: run.RunID, ExpectedStatus: StatusQueued,
+		ExpectedAttempt: 0, ExpectedLeaseEpoch: 0,
+		Attempt: 1, LeaseEpoch: 2, DaemonID: "daemon-1",
+	}); err != nil {
+		t.Fatalf("AssignRun() error = %v", err)
+	}
+
+	result, err := store.AppendEvent(ctx, Event{
+		RunID: run.RunID, Attempt: 1, Seq: 1, Source: "daemon",
+		Type: "RUN_STATUS", LeaseEpoch: 1,
+	})
+	if err != nil || !result.Stale || result.Inserted {
+		t.Fatalf("stale result = %+v, %v", result, err)
+	}
+	if _, err := store.AppendEvent(ctx, Event{
+		RunID: run.RunID, Attempt: 1, Seq: 1, Source: "daemon",
+		Type: "RUN_STATUS", LeaseEpoch: 2, Ephemeral: true,
+	}); !errors.Is(err, ErrEphemeralEvent) {
+		t.Fatalf("ephemeral error = %v", err)
+	}
+	if _, err := store.AppendEvent(ctx, Event{
+		RunID: run.RunID, Attempt: 1, Seq: 1, Source: "mw",
+		Type: "RUN_STATUS", LeaseEpoch: 2,
+	}); !errors.Is(err, ErrInvalidEvent) {
+		t.Fatalf("mw seq error = %v", err)
+	}
+	if _, err := store.AppendEvent(ctx, Event{
+		RunID: run.RunID, Attempt: 1, Seq: MWSeqBase, Source: "daemon",
+		Type: "RUN_STATUS", LeaseEpoch: 2,
+	}); !errors.Is(err, ErrInvalidEvent) {
+		t.Fatalf("daemon reserved seq error = %v", err)
 	}
 }
 

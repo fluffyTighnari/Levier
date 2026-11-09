@@ -17,6 +17,12 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
+// MWSeqBase is the first seq reserved for middleware-generated events.
+const MWSeqBase int64 = 1 << 62
+
+// EventGapWindow is the maximum accepted out-of-order seq gap.
+const EventGapWindow int64 = 16
+
 const appColumns = `
 	app_id, name, api_key_hash, multiagent, status, created_at, updated_at`
 
@@ -294,23 +300,48 @@ func (s *Store) Transition(ctx context.Context, transition Transition) (Run, err
 }
 
 // AppendEvent inserts one event idempotently and advances the run projection.
-// It returns false when the event already exists.
-func (s *Store) AppendEvent(ctx context.Context, event Event) (bool, error) {
+// It validates the run lease epoch and reports out-of-window sequence gaps.
+func (s *Store) AppendEvent(ctx context.Context, event Event) (AppendResult, error) {
 	if s == nil || s.pool == nil {
-		return false, fmt.Errorf("runstore: postgres pool is nil")
+		return AppendResult{}, fmt.Errorf("runstore: postgres pool is nil")
 	}
 	normalized, err := normalizeEvent(event)
 	if err != nil {
-		return false, err
+		return AppendResult{}, err
 	}
 
 	tx, err := s.pool.Begin(ctx)
 	if err != nil {
-		return false, fmt.Errorf("append event: begin: %w", err)
+		return AppendResult{}, fmt.Errorf("append event: begin: %w", err)
 	}
 	defer func() {
 		_ = tx.Rollback(context.Background())
 	}()
+
+	var leaseEpoch int64
+	var lastAttempt int
+	var lastSeq int64
+	err = tx.QueryRow(ctx, `
+		SELECT lease_epoch, last_event_attempt, last_event_seq
+		FROM runs
+		WHERE run_id = $1
+		FOR UPDATE
+	`, normalized.RunID).Scan(&leaseEpoch, &lastAttempt, &lastSeq)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return AppendResult{}, ErrRunNotFound
+	}
+	if err != nil {
+		return AppendResult{}, fmt.Errorf("append event: lock run: %w", err)
+	}
+	if normalized.LeaseEpoch != leaseEpoch {
+		return AppendResult{Stale: true}, nil
+	}
+
+	result := AppendResult{}
+	if normalized.Attempt == lastAttempt && normalized.Seq > lastSeq+1 {
+		result.GapSize = normalized.Seq - lastSeq - 1
+		result.Gap = result.GapSize > EventGapWindow
+	}
 
 	tag, err := tx.Exec(ctx, `
 		INSERT INTO run_events (run_id, attempt, seq, source, type, payload, ts_ms)
@@ -319,26 +350,26 @@ func (s *Store) AppendEvent(ctx context.Context, event Event) (bool, error) {
 	`, normalized.RunID, normalized.Attempt, normalized.Seq, normalized.Source,
 		normalized.Type, normalized.Payload, normalized.TSMs)
 	if err != nil {
-		return false, fmt.Errorf("append event: insert: %w", err)
+		return AppendResult{}, fmt.Errorf("append event: insert: %w", err)
 	}
-	inserted := tag.RowsAffected() > 0
-	if inserted {
+	result.Inserted = tag.RowsAffected() > 0
+	if result.Inserted &&
+		(normalized.Attempt > lastAttempt ||
+			(normalized.Attempt == lastAttempt && normalized.Seq > lastSeq)) {
 		if _, err := tx.Exec(ctx, `
 			UPDATE runs
 			SET last_event_attempt = $2,
 			    last_event_seq = $3,
 			    updated_at = now()
 			WHERE run_id = $1
-			  AND (last_event_attempt < $2
-			       OR (last_event_attempt = $2 AND last_event_seq < $3))
 		`, normalized.RunID, normalized.Attempt, normalized.Seq); err != nil {
-			return false, fmt.Errorf("append event: update run: %w", err)
+			return AppendResult{}, fmt.Errorf("append event: update run: %w", err)
 		}
 	}
 	if err := tx.Commit(ctx); err != nil {
-		return false, fmt.Errorf("append event: commit: %w", err)
+		return AppendResult{}, fmt.Errorf("append event: commit: %w", err)
 	}
-	return inserted, nil
+	return result, nil
 }
 
 // ListEvents returns persisted events after (afterAttempt, afterSeq).
@@ -462,6 +493,9 @@ func normalizeRun(run Run) (Run, error) {
 }
 
 func normalizeEvent(event Event) (Event, error) {
+	if event.Ephemeral {
+		return Event{}, ErrEphemeralEvent
+	}
 	if event.RunID == "" {
 		return Event{}, fmt.Errorf("%w: run_id is required", ErrInvalidEvent)
 	}
@@ -471,8 +505,17 @@ func normalizeEvent(event Event) (Event, error) {
 	if event.Seq < 1 {
 		return Event{}, fmt.Errorf("%w: seq must be >= 1", ErrInvalidEvent)
 	}
+	if event.LeaseEpoch < 0 {
+		return Event{}, fmt.Errorf("%w: lease_epoch must not be negative", ErrInvalidEvent)
+	}
 	if event.Source != "daemon" && event.Source != "mw" {
 		return Event{}, fmt.Errorf("%w: source must be daemon or mw", ErrInvalidEvent)
+	}
+	if event.Source == "daemon" && event.Seq >= MWSeqBase {
+		return Event{}, fmt.Errorf("%w: daemon seq must be below %d", ErrInvalidEvent, MWSeqBase)
+	}
+	if event.Source == "mw" && event.Seq < MWSeqBase {
+		return Event{}, fmt.Errorf("%w: mw seq must be at least %d", ErrInvalidEvent, MWSeqBase)
 	}
 	if event.Type == "" {
 		return Event{}, fmt.Errorf("%w: type is required", ErrInvalidEvent)

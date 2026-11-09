@@ -13,6 +13,7 @@ import (
 	"log/slog"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"google.golang.org/protobuf/types/known/structpb"
@@ -41,7 +42,7 @@ type RunStore interface {
 	GetRun(ctx context.Context, runID string) (runstore.Run, error)
 	AssignRun(ctx context.Context, assignment runstore.Assignment) (runstore.Run, error)
 	Transition(ctx context.Context, transition runstore.Transition) (runstore.Run, error)
-	AppendEvent(ctx context.Context, event runstore.Event) (bool, error)
+	AppendEvent(ctx context.Context, event runstore.Event) (runstore.AppendResult, error)
 }
 
 // DaemonHub is the connection subset used by Control.
@@ -64,6 +65,10 @@ type Control struct {
 	ctx    context.Context
 	cancel context.CancelFunc
 	wg     sync.WaitGroup
+
+	staleEvents     atomic.Int64
+	gapEvents       atomic.Int64
+	ephemeralEvents atomic.Int64
 }
 
 // New returns a Control instance.
@@ -232,6 +237,10 @@ func (c *Control) handleEvent(env *runtimev1.Envelope) {
 	if event == nil {
 		return
 	}
+	if event.GetEphemeral() {
+		c.ephemeralEvents.Add(1)
+		return
+	}
 	ctx := context.Background()
 	run, err := c.runs.GetRun(ctx, env.GetRunId())
 	if errors.Is(err, runstore.ErrRunNotFound) {
@@ -258,20 +267,34 @@ func (c *Control) handleEvent(env *runtimev1.Envelope) {
 	if source == "" {
 		source = protocol.EventSourceDaemon
 	}
-	inserted, err := c.runs.AppendEvent(ctx, runstore.Event{
-		RunID:   env.GetRunId(),
-		Attempt: int(env.GetAttempt()),
-		Seq:     event.GetSeq(),
-		Source:  source,
-		Type:    runtimev1.EventType_name[int32(event.GetType())],
-		Payload: payload,
-		TSMs:    env.GetTsMs(),
+	result, err := c.runs.AppendEvent(ctx, runstore.Event{
+		RunID:      env.GetRunId(),
+		Attempt:    int(env.GetAttempt()),
+		Seq:        event.GetSeq(),
+		Source:     source,
+		Type:       runtimev1.EventType_name[int32(event.GetType())],
+		Payload:    payload,
+		TSMs:       env.GetTsMs(),
+		LeaseEpoch: env.GetLeaseEpoch(),
 	})
 	if err != nil {
 		c.log.Warn("control append event failed", "run_id", env.GetRunId(), "err", err)
 		return
 	}
-	if !inserted || event.GetType() != runtimev1.EventType_RUN_STATUS {
+	if result.Stale {
+		c.staleEvents.Add(1)
+		return
+	}
+	if result.Gap {
+		c.gapEvents.Add(1)
+		c.log.Warn("control event sequence gap",
+			"run_id", env.GetRunId(),
+			"attempt", env.GetAttempt(),
+			"seq", event.GetSeq(),
+			"gap", result.GapSize,
+		)
+	}
+	if !result.Inserted || event.GetType() != runtimev1.EventType_RUN_STATUS {
 		return
 	}
 	statusValue, _ := eventData["status"].(string)
@@ -298,6 +321,15 @@ func (c *Control) handleEvent(env *runtimev1.Envelope) {
 		)
 	}
 }
+
+// StaleEvents returns the number of dropped stale-epoch events.
+func (c *Control) StaleEvents() int64 { return c.staleEvents.Load() }
+
+// GapEvents returns the number of events that exceeded the reorder window.
+func (c *Control) GapEvents() int64 { return c.gapEvents.Load() }
+
+// EphemeralEvents returns the number of skipped ephemeral events.
+func (c *Control) EphemeralEvents() int64 { return c.ephemeralEvents.Load() }
 
 func buildTaskAssign(run runstore.Run, attempt int) (*runtimev1.TaskAssign, error) {
 	params := map[string]any{}

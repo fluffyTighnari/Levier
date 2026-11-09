@@ -47,13 +47,23 @@ type Run struct {
 	UpdatedAt        time.Time       `json:"updated_at"`
 }
 
-// Event is one persisted run event.
+// Event is one run event submitted to the store.
 type Event struct {
-	RunID   string          `json:"run_id"`
-	Attempt int             `json:"attempt"`
-	Seq     int64           `json:"seq"`
-	Source  string          `json:"source"`
-	Type    string          `json:"type"`
-	Payload json.RawMessage `json:"payload"`
-	TSMs    int64           `json:"ts_ms"`
+	RunID      string          `json:"run_id"`
+	Attempt    int             `json:"attempt"`
+	Seq        int64           `json:"seq"`
+	Source     string          `json:"source"`
+	Type       string          `json:"type"`
+	Payload    json.RawMessage `json:"payload"`
+	TSMs       int64           `json:"ts_ms"`
+	LeaseEpoch int64           `json:"lease_epoch"`
+	Ephemeral  bool            `json:"ephemeral"`
+}
+
+// AppendResult describes one event insertion attempt.
+type AppendResult struct {
+	Inserted bool
+	Stale    bool
+	Gap      bool
+	GapSize  int64
 }

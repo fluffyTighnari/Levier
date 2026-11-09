@@ -1,1 +1,1 @@
-{"run_id":"01M6V218QB7RD2Y5KQT0H3DGGC","app_id":"app-m1-e2e","runtime":"normal","strategy":{"name":"echo"},"status":"completed","attempt":1,"trace_id":"01M6V218QB7RD2Y5KQT10BVQ9B","created_at":"2026-11-07T21:09:14.603042+08:00","updated_at":"2026-11-07T21:09:14.684158+08:00"}
+{"run_id":"01M6YZKDYVMY4BRGPA6N6AXWDY","app_id":"app-m1-e2e","runtime":"normal","strategy":{"name":"echo"},"status":"completed","attempt":1,"trace_id":"01M6YZKDYVMY4BRGPA6R335K1Y","created_at":"2026-11-09T09:43:41.787452+08:00","updated_at":"2026-11-09T09:43:41.970652+08:00"}

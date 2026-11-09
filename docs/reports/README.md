@@ -45,6 +45,7 @@
 | P4-36 | `docs/reports/P4-36.md` | 已提交 |
 | P5-37 | `docs/reports/P5-37.md` | 已提交 |
 | P5-38 | `docs/reports/P5-38.md` | 已提交 |
+| P5-39 | `docs/reports/P5-39.md` | 已提交 |
 | G4 | `docs/reports/G4.md` | 已提交 |
 
 模板：`docs/reports/TEMPLATE.md`。
