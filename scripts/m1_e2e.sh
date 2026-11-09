@@ -130,7 +130,7 @@ if command -v "$PSQL" >/dev/null 2>&1; then
   "$PSQL" "$MIDDLEWARE_DATABASE_URL" -v ON_ERROR_STOP=1 -P pager=off \
     -c "SELECT attempt, seq, source, type, payload, ts_ms FROM run_events WHERE run_id = '$RUN_ID' ORDER BY attempt, seq;" \
     >"$ARTIFACT_DIR/run_events.txt"
-  task_state="$("$PSQL" "$MIDDLEWARE_DATABASE_URL" -tAc "SELECT status FROM run_tasks WHERE run_id = '$RUN_ID' ORDER BY created_at DESC LIMIT 1")"
+  task_state="$("$PSQL" "$MIDDLEWARE_DATABASE_URL" -tAc "SELECT status FROM run_tasks WHERE run_id = '$RUN_ID' AND task_type = 'RUN_DISPATCH' ORDER BY created_at DESC LIMIT 1")"
   if [ "$task_state" != "DONE" ]; then
     echo "workflow task state = $task_state, want DONE" >&2
     exit 1

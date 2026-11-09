@@ -1,5 +1,6 @@
-          task_id           |           run_id           |  task_type   | status | attempt | max_attempts | lease_owner | lease_token | lease_expires_at |          updated_at           
-----------------------------+----------------------------+--------------+--------+---------+--------------+-------------+-------------+------------------+-------------------------------
- 01M6ZEC17SNZMP9RWTNAS34ZCT | 01M6ZEC17N2B8XC9BFZ41PGQ6Q | RUN_DISPATCH | DONE   |       1 |            5 |             |           1 |                  | 2026-11-09 14:01:48.108814+08
-(1 row)
+          task_id           |           run_id           |  task_type   |  status   | attempt | max_attempts | lease_owner | lease_token | lease_expires_at |          updated_at           
+----------------------------+----------------------------+--------------+-----------+---------+--------------+-------------+-------------+------------------+-------------------------------
+ 01M6ZJYVM90RYA0H6PEF1KWK62 | 01M6ZJYVM4DHNY094QQGKX4DJ9 | RUN_DISPATCH | DONE      |       1 |            5 |             |           1 |                  | 2026-11-09 15:21:59.249733+08
+ 01M6ZJYVMC6W1FPSMSCPC9QXZC | 01M6ZJYVM4DHNY094QQGKX4DJ9 | RUN_TIMEOUT  | CANCELLED |       0 |            3 |             |           0 |                  | 2026-11-09 15:21:59.254857+08
+(2 rows)
 

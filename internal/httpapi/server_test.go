@@ -69,6 +69,17 @@ func (f *fakeStore) ListEvents(_ context.Context, _ string, afterAttempt int32, 
 	return f.events, nil
 }
 
+type fakeCanceller struct {
+	run    runstore.Run
+	reason string
+}
+
+func (f *fakeCanceller) CancelRun(_ context.Context, _ string, reason string) (runstore.Run, error) {
+	f.reason = reason
+	f.run.Status = "cancelled"
+	return f.run, nil
+}
+
 type fakeQueue struct {
 	tasks []workflow.Task
 	err   error
@@ -132,8 +143,11 @@ func TestCreateRunGetRunAndEvents(t *testing.T) {
 	if created.RunID == "" || created.Status != RunStatusQueued {
 		t.Fatalf("create response = %+v", created)
 	}
-	if len(queue.tasks) != 1 || queue.tasks[0].RunID != created.RunID {
+	if len(queue.tasks) != 2 || queue.tasks[0].RunID != created.RunID {
 		t.Fatalf("tasks = %+v", queue.tasks)
+	}
+	if queue.tasks[0].Type != workflow.TaskDispatch || queue.tasks[1].Type != workflow.TaskTimeout {
+		t.Fatalf("task types = %v/%v", queue.tasks[0].Type, queue.tasks[1].Type)
 	}
 	stored := store.runs[created.RunID]
 	if stored.RunTimeoutMS != 1000 || stored.ToolTimeoutMS != 500 {
@@ -243,8 +257,8 @@ func TestIdempotentCreate(t *testing.T) {
 	if firstResponse.RunID != secondResponse.RunID {
 		t.Fatalf("run IDs differ: %s vs %s", firstResponse.RunID, secondResponse.RunID)
 	}
-	if len(queue.tasks) != 1 {
-		t.Fatalf("tasks = %d, want 1", len(queue.tasks))
+	if len(queue.tasks) != 2 {
+		t.Fatalf("tasks = %d, want 2", len(queue.tasks))
 	}
 	if len(store.runs) != 1 {
 		t.Fatalf("runs = %d, want 1", len(store.runs))
@@ -255,6 +269,31 @@ func TestIdempotentCreate(t *testing.T) {
 		t.Fatalf("conflicting status = %d", third.StatusCode)
 	}
 	third.Body.Close()
+}
+
+func TestCancelRun(t *testing.T) {
+	store := newFakeStore()
+	store.runs["run-1"] = runstore.Run{RunID: "run-1", AppID: "app-1", Status: "running"}
+	canceller := &fakeCanceller{run: store.runs["run-1"]}
+	server := NewServer(store, &fakeQueue{}, Config{
+		BearerToken: "token-1",
+		Canceller:   canceller,
+	})
+	httpServer := httptest.NewServer(server.Handler())
+	defer httpServer.Close()
+
+	resp := request(t, http.MethodPost, httpServer.URL+"/api/v1/runs/run-1/cancel", "token-1", []byte(`{"reason":"user"}`))
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("status = %d", resp.StatusCode)
+	}
+	var cancelled CancelRunResponse
+	if err := json.NewDecoder(resp.Body).Decode(&cancelled); err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+	resp.Body.Close()
+	if cancelled.Status != RunStatusCancelled || canceller.reason != "user" {
+		t.Fatalf("cancelled = %+v reason=%q", cancelled, canceller.reason)
+	}
 }
 
 func TestQueueFailureReturns500(t *testing.T) {

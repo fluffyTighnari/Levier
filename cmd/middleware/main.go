@@ -80,18 +80,20 @@ func main() {
 
 	runs := runstore.New(pool)
 	registry := register.New(pool)
+	queue := workflow.NewPostgres(pool)
 	appHub := connection.NewAppHub()
 	defer appHub.Close()
 	controller := control.New(runs, hub, control.Config{
-		Logger:    logger,
-		Publisher: appHub,
-		Scheduler: control.NewHubScheduler(hub),
+		Logger:     logger,
+		Publisher:  appHub,
+		Scheduler:  control.NewHubScheduler(hub),
+		Tasks:      queue,
+		LocalTools: appHub,
 	}, registry)
 	hub.SetOnEnvelope(controller.HandleEnvelope)
 	controller.Start(ctx)
 	defer controller.Close()
 
-	queue := workflow.NewPostgres(pool)
 	workers := workflow.NewPool(queue, controller, cfg.Workflow.Workers, workflow.WorkerConfig{
 		Owner:        "control",
 		LeaseTTL:     cfg.Workflow.LeaseTTL.Std(),
@@ -122,6 +124,7 @@ func main() {
 		DefaultRunTimeoutMS:  1_800_000,
 		DefaultToolTimeoutMS: 60_000,
 		AppHub:               appHub,
+		Canceller:            controller,
 	}, registry)
 	httpListener, err := net.Listen("tcp", cfg.HTTP.Addr)
 	if err != nil {

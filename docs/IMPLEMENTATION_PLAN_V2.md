@@ -4,7 +4,7 @@
 |---|---|
 | 计划版本 | V2.0 |
 | 日期 | 2026-11-03 |
-| 状态 | P0–P5 完成；P6-43–P6-49 完成；G2/G3/G4/G5 功能通过；M1 垂直切片完成；镜像待 Docker 复核；取代 `IMPLEMENTATION_PLAN.md` v0.3 |
+| 状态 | P0–P5 完成；P6-43–P6-50 完成；G2/G3/G4/G5 功能通过；M1 垂直切片完成；镜像待 Docker 复核；取代 `IMPLEMENTATION_PLAN.md` v0.3 |
 | 依据 | `docs/DESIGN.md` v0.1、`docs/WORKFLOW_ENGINE_AUDIT.md` |
 | 总步骤 | 72 个审查单元 |
 | 用法 | 一次只做一个 `Px-yy`；产出、验收、diff 都确认后再进入下一步 |
@@ -380,9 +380,10 @@ internal/control ──► internal/workflow (PostgreSQL run_tasks, SKIP LOCKED)
   - 验收：拒绝/超时换 daemon；成功分配时 `lease_epoch++`；容量无泄漏；退避曲线正确。
   - 完成记录：多候选 exclude、Reserve/Release、拒绝换主、普通错误触发 Worker Backoff；容量/退避测试通过；报告：`docs/reports/P6-49.md`。
 
-- [ ] **P6-50 取消与超时层级**
+- [x] **P6-50 取消与超时层级**
   - queued/assigned/running 取消、Cancel 下发、挂起工具取消、run_timeout。
   - 验收：取消/完成竞态单终态；超时必终态。
+  - 完成记录：`CancelRun`、HTTP cancel、RUN_TIMEOUT 入队/处理、Cancel 下发、local tool 取消；竞态/超时测试通过；报告：`docs/reports/P6-50.md`。
 
 - [ ] **P6-51 对账与重启恢复**
   - Hello `running_run_ids`、daemon lost 重排队、MW 重启恢复、lease 防双跑。

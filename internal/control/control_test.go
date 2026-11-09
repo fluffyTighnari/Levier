@@ -55,7 +55,7 @@ func (f *fakeRuns) AssignRun(_ context.Context, assignment runstore.Assignment) 
 func (f *fakeRuns) Transition(_ context.Context, transition runstore.Transition) (runstore.Run, error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
-	if transition.ExpectedStatus != f.run.Status ||
+	if runstore.TerminalStatus(f.run.Status) || transition.ExpectedStatus != f.run.Status ||
 		transition.ExpectedAttempt != f.run.Attempt ||
 		transition.ExpectedLeaseEpoch != f.run.LeaseEpoch {
 		return runstore.Run{}, runstore.ErrRunNotAssignable
@@ -141,6 +141,29 @@ type fakeScheduler struct {
 func (f *fakeScheduler) Pick(request PlacementRequest) (string, bool) {
 	f.request = request
 	return f.id, f.ok
+}
+
+type fakeTaskCanceller struct {
+	calls int
+	runID string
+}
+
+func (f *fakeTaskCanceller) CancelRun(_ context.Context, runID, _ string) (int, error) {
+	f.calls++
+	f.runID = runID
+	return 1, nil
+}
+
+type fakeLocalTools struct {
+	calls int
+	runID string
+	code  string
+}
+
+func (f *fakeLocalTools) CancelLocalTools(_, runID, code, _ string) {
+	f.calls++
+	f.runID = runID
+	f.code = code
 }
 
 type sequenceScheduler struct {
@@ -344,6 +367,95 @@ func TestHandleRetriesNextCandidateOnAckTimeout(t *testing.T) {
 	}
 	if _, excluded := scheduler.requests[1].ExcludeDaemonIDs["d1"]; !excluded {
 		t.Fatal("timed-out daemon was not excluded")
+	}
+}
+
+func TestCancelRunSendsCancelAndFailsTools(t *testing.T) {
+	runs := &fakeRuns{run: newRun()}
+	runs.run.Status = "running"
+	runs.run.Attempt = 1
+	runs.run.LeaseEpoch = 1
+	runs.run.AssignedDaemonID = "d1"
+	hub := &fakeHub{}
+	tasks := &fakeTaskCanceller{}
+	localTools := &fakeLocalTools{}
+	ctrl := New(runs, hub, Config{Tasks: tasks, LocalTools: localTools})
+
+	cancelled, err := ctrl.CancelRun(context.Background(), "run-1", "user")
+	if err != nil {
+		t.Fatalf("CancelRun() error = %v", err)
+	}
+	if cancelled.Status != runstore.StatusCancelled {
+		t.Fatalf("status = %q", cancelled.Status)
+	}
+	if len(hub.sent) != 1 || hub.sent[0].GetCancel() == nil {
+		t.Fatalf("cancel was not sent: %+v", hub.sent)
+	}
+	if tasks.calls != 1 || tasks.runID != "run-1" {
+		t.Fatalf("tasks = %+v", tasks)
+	}
+	if localTools.calls != 1 || localTools.code != "RUN_CANCELLED" {
+		t.Fatalf("local tools = %+v", localTools)
+	}
+	if hub.releaseCalls != 1 {
+		t.Fatalf("release calls = %d", hub.releaseCalls)
+	}
+}
+
+func TestCancelRunWinsOverLateCompletion(t *testing.T) {
+	runs := &fakeRuns{
+		run:          newRun(),
+		appendResult: runstore.AppendResult{Inserted: true},
+	}
+	runs.run.Status = "running"
+	runs.run.Attempt = 1
+	runs.run.LeaseEpoch = 1
+	runs.run.AssignedDaemonID = "d1"
+	ctrl := New(runs, &fakeHub{}, Config{})
+	ctrl.Start(context.Background())
+	defer ctrl.Close()
+
+	if _, err := ctrl.CancelRun(context.Background(), "run-1", "user"); err != nil {
+		t.Fatalf("CancelRun() error = %v", err)
+	}
+	data, _ := structpb.NewStruct(map[string]any{"status": "completed"})
+	event := &runtimev1.Event{
+		Seq: 1, Type: runtimev1.EventType_RUN_STATUS, Source: protocol.EventSourceDaemon, Data: data,
+	}
+	env, _ := protocol.NewRun("run-1", 1, 1, event)
+	ctrl.HandleEnvelope("d1", env)
+	time.Sleep(20 * time.Millisecond)
+
+	current, _ := runs.GetRun(context.Background(), "run-1")
+	if current.Status != runstore.StatusCancelled {
+		t.Fatalf("late completion changed status to %q", current.Status)
+	}
+}
+
+func TestRunTimeoutTerminal(t *testing.T) {
+	runs := &fakeRuns{run: newRun()}
+	runs.run.Status = "running"
+	runs.run.Attempt = 1
+	runs.run.LeaseEpoch = 1
+	runs.run.AssignedDaemonID = "d1"
+	hub := &fakeHub{}
+	localTools := &fakeLocalTools{}
+	ctrl := New(runs, hub, Config{LocalTools: localTools})
+	task := testTask()
+	task.Type = workflow.TaskTimeout
+
+	if err := ctrl.Handle(context.Background(), task, workflow.Lease{}); err != nil {
+		t.Fatalf("Handle(timeout) error = %v", err)
+	}
+	current, _ := runs.GetRun(context.Background(), "run-1")
+	if current.Status != runstore.StatusTimeout {
+		t.Fatalf("status = %q, want timeout", current.Status)
+	}
+	if len(hub.sent) != 1 || hub.sent[0].GetCancel() == nil {
+		t.Fatal("timeout did not send cancel")
+	}
+	if localTools.code != "RUN_TIMEOUT" {
+		t.Fatalf("local tool code = %q", localTools.code)
 	}
 }
 

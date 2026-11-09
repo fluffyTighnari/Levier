@@ -32,6 +32,7 @@ var (
 // LocalToolRequest is one App-executed tool invocation.
 type LocalToolRequest struct {
 	InvocationID  string
+	RunID         string
 	ToolName      string
 	ArgumentsJSON string
 	TimeoutMS     int64
@@ -54,6 +55,7 @@ type LocalToolResult struct {
 
 type pendingLocalCall struct {
 	appID  string
+	runID  string
 	result chan LocalToolResult
 }
 
@@ -190,7 +192,7 @@ func (h *AppHub) CallLocalTool(ctx context.Context, appID string, request LocalT
 	if request.InvocationID == "" || request.ToolName == "" {
 		return LocalToolResult{}, fmt.Errorf("invocation_id and tool_name are required")
 	}
-	pending := &pendingLocalCall{appID: appID, result: make(chan LocalToolResult, 1)}
+	pending := &pendingLocalCall{appID: appID, runID: request.RunID, result: make(chan LocalToolResult, 1)}
 	h.mu.Lock()
 	if _, exists := h.pending[request.InvocationID]; exists {
 		h.mu.Unlock()
@@ -256,7 +258,13 @@ func (h *AppHub) ResolveLocalTool(appID string, result LocalToolResult) bool {
 	return true
 }
 
-// PendingLocalTools returns the number of pending local tool calls for an App.
+// CancelLocalTools fails pending local tool calls for one App/run.
+func (h *AppHub) CancelLocalTools(appID, runID, code, message string) {
+	h.failPendingWhere(func(call *pendingLocalCall) bool {
+		return call.appID == appID && (runID == "" || call.runID == runID)
+	}, code, message)
+}
+
 func (h *AppHub) PendingLocalTools(appID string) int {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
@@ -270,20 +278,29 @@ func (h *AppHub) PendingLocalTools(appID string) int {
 }
 
 func (h *AppHub) failPending(appID, code, message string) {
+	h.failPendingWhere(func(call *pendingLocalCall) bool {
+		return call.appID == appID
+	}, code, message)
+}
+
+func (h *AppHub) failPendingWhere(match func(*pendingLocalCall) bool, code, message string) {
 	h.mu.Lock()
 	pending := make([]*pendingLocalCall, 0)
+	invocations := make([]string, 0)
 	for invocationID, call := range h.pending {
-		if call.appID == appID {
+		if match(call) {
 			delete(h.pending, invocationID)
 			pending = append(pending, call)
+			invocations = append(invocations, invocationID)
 		}
 	}
 	h.mu.Unlock()
-	for _, call := range pending {
+	for index, call := range pending {
 		select {
 		case call.result <- LocalToolResult{
-			OK:    false,
-			Error: &LocalToolError{Code: code, Message: message},
+			InvocationID: invocations[index],
+			OK:           false,
+			Error:        &LocalToolError{Code: code, Message: message},
 		}:
 		default:
 		}

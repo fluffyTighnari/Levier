@@ -45,6 +45,11 @@ type AppRegistry interface {
 }
 
 // CatalogRegistry is the optional App tool/MCP catalog subset.
+// Canceller cancels one non-terminal run.
+type Canceller interface {
+	CancelRun(ctx context.Context, runID, reason string) (runstore.Run, error)
+}
+
 type CatalogRegistry interface {
 	ReplaceLocalTools(ctx context.Context, appID string, tools []register.ToolInput) ([]register.ToolMaterial, error)
 	SetAppMCPRefs(ctx context.Context, appID string, names []string) error
@@ -64,17 +69,19 @@ type Config struct {
 	MaxBodyBytes         int64
 	WSTokenTTL           time.Duration
 	AppHub               *connection.AppHub
+	Canceller            Canceller
 }
 
 // Server implements the minimal App HTTP API.
 type Server struct {
-	runs     RunStore
-	queue    TaskQueue
-	apps     AppRegistry
-	appHub   *connection.AppHub
-	wsTokens *WSTokenStore
-	cfg      Config
-	mux      *http.ServeMux
+	runs      RunStore
+	queue     TaskQueue
+	apps      AppRegistry
+	appHub    *connection.AppHub
+	wsTokens  *WSTokenStore
+	canceller Canceller
+	cfg       Config
+	mux       *http.ServeMux
 }
 
 // NewServer builds the HTTP handler.
@@ -93,12 +100,13 @@ func NewServer(runs RunStore, queue TaskQueue, cfg Config, registries ...AppRegi
 		appHub = connection.NewAppHub()
 	}
 	server := &Server{
-		runs:     runs,
-		queue:    queue,
-		cfg:      cfg,
-		appHub:   appHub,
-		wsTokens: NewWSTokenStore(cfg.WSTokenTTL),
-		mux:      http.NewServeMux(),
+		runs:      runs,
+		queue:     queue,
+		cfg:       cfg,
+		appHub:    appHub,
+		wsTokens:  NewWSTokenStore(cfg.WSTokenTTL),
+		canceller: cfg.Canceller,
+		mux:       http.NewServeMux(),
 	}
 	if len(registries) > 0 {
 		server.apps = registries[0]
@@ -117,6 +125,7 @@ func (s *Server) routes() {
 	s.mux.HandleFunc("POST "+APIPrefix+"/runs", s.handleCreateRun)
 	s.mux.HandleFunc("GET "+APIPrefix+"/runs/{run_id}", s.handleGetRun)
 	s.mux.HandleFunc("GET "+APIPrefix+"/runs/{run_id}/events", s.handleListEvents)
+	s.mux.HandleFunc("POST "+APIPrefix+"/runs/{run_id}/cancel", s.handleCancelRun)
 	s.mux.HandleFunc("POST /admin/apps", s.handleAdminCreateApp)
 	s.mux.HandleFunc("POST /admin/apps/{app_id}/rotate-key", s.handleAdminRotateKey)
 	s.mux.HandleFunc("POST "+APIPrefix+"/apps", s.handleUpdateApp)
@@ -298,6 +307,11 @@ func (s *Server) handleCreateRun(w http.ResponseWriter, r *http.Request) {
 			writeError(w, http.StatusInternalServerError, "INTERNAL", "enqueue run task failed", true)
 			return
 		}
+		timeoutAt := time.Now().Add(time.Duration(runTimeout) * time.Millisecond)
+		if _, err := s.queue.Enqueue(r.Context(), workflow.NewTask(run.RunID, workflow.TaskTimeout, timeoutAt, 0)); err != nil {
+			writeError(w, http.StatusInternalServerError, "INTERNAL", "enqueue run timeout task failed", true)
+			return
+		}
 	}
 
 	writeJSON(w, http.StatusAccepted, CreateRunResponse{
@@ -396,6 +410,46 @@ func (s *Server) handleListEvents(w http.ResponseWriter, r *http.Request) {
 		response.NextSeq = last.Seq
 	}
 	writeJSON(w, http.StatusOK, response)
+}
+
+func (s *Server) handleCancelRun(w http.ResponseWriter, r *http.Request) {
+	run, err := s.runs.GetRun(r.Context(), r.PathValue("run_id"))
+	if errors.Is(err, runstore.ErrRunNotFound) {
+		writeError(w, http.StatusNotFound, "RUN_NOT_FOUND", "run not found", false)
+		return
+	}
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "INTERNAL", "get run failed", true)
+		return
+	}
+	if !s.canAccessRun(r, run.AppID) {
+		writeError(w, http.StatusNotFound, "RUN_NOT_FOUND", "run not found", false)
+		return
+	}
+	if s.canceller == nil {
+		writeError(w, http.StatusNotImplemented, "NOT_IMPLEMENTED", "cancellation is not configured", false)
+		return
+	}
+	reason := "user"
+	var request CancelRunRequest
+	if r.Body != nil {
+		if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, s.cfg.MaxBodyBytes)).Decode(&request); err == nil && request.Reason != "" {
+			reason = request.Reason
+		}
+	}
+	cancelled, err := s.canceller.CancelRun(r.Context(), run.RunID, reason)
+	if errors.Is(err, runstore.ErrRunNotFound) {
+		writeError(w, http.StatusNotFound, "RUN_NOT_FOUND", "run not found", false)
+		return
+	}
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "INTERNAL", "cancel run failed", true)
+		return
+	}
+	writeJSON(w, http.StatusOK, CancelRunResponse{
+		RunID:  cancelled.RunID,
+		Status: RunStatus(cancelled.Status),
+	})
 }
 
 func (s *Server) handleAdminCreateApp(w http.ResponseWriter, r *http.Request) {

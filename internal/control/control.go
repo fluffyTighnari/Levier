@@ -43,7 +43,19 @@ type Config struct {
 	EventBuffer          int
 	Publisher            EventPublisher
 	Scheduler            Scheduler
+	Tasks                TaskCanceller
+	LocalTools           LocalToolCanceller
 	Logger               *slog.Logger
+}
+
+// TaskCanceller cancels durable RunTasks.
+type TaskCanceller interface {
+	CancelRun(ctx context.Context, runID, reason string) (int, error)
+}
+
+// LocalToolCanceller fails pending App tool calls for a run.
+type LocalToolCanceller interface {
+	CancelLocalTools(appID, runID, code, message string)
 }
 
 // RunStore is the persistence subset used by Control.
@@ -162,6 +174,9 @@ func (c *Control) HandleEnvelope(_ string, env *runtimev1.Envelope) {
 
 // Handle implements workflow.Handler for one claimed task.
 func (c *Control) Handle(ctx context.Context, task workflow.Task, _ workflow.Lease) error {
+	if task.Type == workflow.TaskTimeout {
+		return c.handleTimeout(ctx, task.RunID)
+	}
 	if task.Type != workflow.TaskDispatch && task.Type != workflow.TaskRetry {
 		return nil
 	}
@@ -303,6 +318,109 @@ func (c *Control) removePending(msgID string) {
 	c.pendingMu.Unlock()
 }
 
+// CancelRun cancels one non-terminal run and notifies its daemon.
+func (c *Control) CancelRun(ctx context.Context, runID, reason string) (runstore.Run, error) {
+	run, err := c.runs.GetRun(ctx, runID)
+	if errors.Is(err, runstore.ErrRunNotFound) {
+		return runstore.Run{}, err
+	}
+	if err != nil {
+		return runstore.Run{}, fmt.Errorf("get run: %w", err)
+	}
+	if runstore.TerminalStatus(run.Status) {
+		return run, nil
+	}
+	c.sendCancel(ctx, run, reason)
+	cancelled, err := c.runs.Transition(ctx, runstore.Transition{
+		RunID:              run.RunID,
+		ExpectedStatus:     run.Status,
+		ToStatus:           runstore.StatusCancelled,
+		ExpectedAttempt:    run.Attempt,
+		ExpectedLeaseEpoch: run.LeaseEpoch,
+	})
+	if err != nil {
+		if errors.Is(err, runstore.ErrRunNotAssignable) {
+			current, _ := c.runs.GetRun(ctx, runID)
+			return current, nil
+		}
+		return runstore.Run{}, fmt.Errorf("cancel run: %w", err)
+	}
+	c.hub.Release(run.AssignedDaemonID)
+	c.cancelTasks(ctx, runID, reason)
+	c.cancelLocalTools(run.AppID, runID, "RUN_CANCELLED", reason)
+	c.publishCompleted(run.AppID, runID, runstore.StatusCancelled, run.Attempt)
+	return cancelled, nil
+}
+
+func (c *Control) handleTimeout(ctx context.Context, runID string) error {
+	run, err := c.runs.GetRun(ctx, runID)
+	if errors.Is(err, runstore.ErrRunNotFound) {
+		return nil
+	}
+	if err != nil {
+		return fmt.Errorf("get run: %w", err)
+	}
+	if runstore.TerminalStatus(run.Status) {
+		return nil
+	}
+	c.sendCancel(ctx, run, "timeout")
+	timedOut, err := c.runs.Transition(ctx, runstore.Transition{
+		RunID:              run.RunID,
+		ExpectedStatus:     run.Status,
+		ToStatus:           runstore.StatusTimeout,
+		ExpectedAttempt:    run.Attempt,
+		ExpectedLeaseEpoch: run.LeaseEpoch,
+	})
+	if err != nil {
+		if errors.Is(err, runstore.ErrRunNotAssignable) {
+			return nil
+		}
+		return fmt.Errorf("timeout run: %w", err)
+	}
+	c.hub.Release(run.AssignedDaemonID)
+	c.cancelLocalTools(run.AppID, runID, "RUN_TIMEOUT", "run timed out")
+	c.publishCompleted(run.AppID, runID, runstore.StatusTimeout, timedOut.Attempt)
+	return nil
+}
+
+func (c *Control) sendCancel(ctx context.Context, run runstore.Run, reason string) {
+	if run.AssignedDaemonID == "" || run.Attempt < 1 {
+		return
+	}
+	envelope, err := protocol.NewRun(run.RunID, int32(run.Attempt), run.LeaseEpoch, &runtimev1.Cancel{Reason: reason})
+	if err != nil {
+		c.log.Warn("control build cancel failed", "run_id", run.RunID, "err", err)
+		return
+	}
+	if err := c.hub.Send(run.AssignedDaemonID, envelope); err != nil {
+		c.log.Warn("control send cancel failed", "run_id", run.RunID, "err", err)
+	}
+}
+
+func (c *Control) cancelTasks(ctx context.Context, runID, reason string) {
+	if c.cfg.Tasks != nil {
+		if _, err := c.cfg.Tasks.CancelRun(ctx, runID, reason); err != nil {
+			c.log.Warn("control cancel tasks failed", "run_id", runID, "err", err)
+		}
+	}
+}
+
+func (c *Control) cancelLocalTools(appID, runID, code, message string) {
+	if c.cfg.LocalTools != nil && appID != "" {
+		c.cfg.LocalTools.CancelLocalTools(appID, runID, code, message)
+	}
+}
+
+func (c *Control) publishCompleted(appID, runID, status string, attempt int) {
+	if c.cfg.Publisher == nil || appID == "" {
+		return
+	}
+	payload, _ := json.Marshal(map[string]any{
+		"type": "run_completed", "run_id": runID, "status": status, "attempt": attempt,
+	})
+	c.cfg.Publisher.Publish(appID, runID, payload)
+}
+
 func (c *Control) eventLoop() {
 	defer c.wg.Done()
 	for {
@@ -424,15 +542,11 @@ func (c *Control) handleEvent(env *runtimev1.Envelope) {
 	}
 	if runstore.TerminalStatus(status) {
 		c.hub.Release(run.AssignedDaemonID)
-	}
-	if c.cfg.Publisher != nil && runstore.TerminalStatus(status) {
-		payload, _ := json.Marshal(map[string]any{
-			"type":    "run_completed",
-			"run_id":  env.GetRunId(),
-			"status":  status,
-			"attempt": env.GetAttempt(),
-		})
-		c.cfg.Publisher.Publish(run.AppID, env.GetRunId(), payload)
+		if status == runstore.StatusCancelled {
+			c.cancelLocalTools(run.AppID, env.GetRunId(), "RUN_CANCELLED", "run cancelled")
+		}
+		c.cancelTasks(ctx, env.GetRunId(), "run terminal")
+		c.publishCompleted(run.AppID, env.GetRunId(), status, int(env.GetAttempt()))
 	}
 }
 

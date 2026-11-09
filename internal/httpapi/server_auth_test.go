@@ -164,8 +164,8 @@ func TestRunUsesAuthenticatedApp(t *testing.T) {
 	if store.runs[created.RunID].AppID != app.AppID {
 		t.Fatalf("run app = %q, want %q", store.runs[created.RunID].AppID, app.AppID)
 	}
-	if len(queue.tasks) != 1 {
-		t.Fatalf("tasks = %d", len(queue.tasks))
+	if len(queue.tasks) != 2 {
+		t.Fatalf("tasks = %d, want 2", len(queue.tasks))
 	}
 
 	resp = request(t, http.MethodGet, server.URL+"/api/v1/runs/"+created.RunID, key, nil)

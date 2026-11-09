@@ -105,6 +105,34 @@ func TestLocalToolTimeoutAndDisconnect(t *testing.T) {
 	}
 }
 
+func TestCancelLocalToolsByRun(t *testing.T) {
+	hub := NewAppHub()
+	sink := &recordingSink{}
+	conn := hub.Register("app-1", sink)
+	defer hub.CloseConn(conn)
+
+	resultCh := make(chan LocalToolResult, 1)
+	errCh := make(chan error, 1)
+	go func() {
+		result, err := hub.CallLocalTool(context.Background(), "app-1", LocalToolRequest{
+			InvocationID: "inv-cancel", RunID: "run-1", ToolName: "search", TimeoutMS: 1000,
+		})
+		resultCh <- result
+		errCh <- err
+	}()
+	if !waitSinkCount(t, sink, 1) {
+		t.Fatal("local tool call was not sent")
+	}
+	hub.CancelLocalTools("app-1", "run-1", "RUN_CANCELLED", "cancelled")
+	if err := <-errCh; err != nil {
+		t.Fatalf("CallLocalTool() error = %v", err)
+	}
+	result := <-resultCh
+	if result.Error == nil || result.Error.Code != "RUN_CANCELLED" {
+		t.Fatalf("result = %+v", result)
+	}
+}
+
 func TestLocalToolNoAppConnection(t *testing.T) {
 	hub := NewAppHub()
 	if _, err := hub.CallLocalTool(context.Background(), "missing", LocalToolRequest{
