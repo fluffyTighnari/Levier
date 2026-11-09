@@ -9,11 +9,13 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"os"
 	"reflect"
 	"strings"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -398,6 +400,113 @@ func TestAppendEventStaleAndEphemeral(t *testing.T) {
 		Type: "RUN_STATUS", LeaseEpoch: 2,
 	}); !errors.Is(err, ErrInvalidEvent) {
 		t.Fatalf("daemon reserved seq error = %v", err)
+	}
+}
+
+func TestListEventsPaginationNoDuplicatesOrMisses(t *testing.T) {
+	store := New(testPool(t))
+	ctx := context.Background()
+	app := createApp(t, store)
+	run, _ := store.CreateRun(ctx, Run{RunID: "run-" + id.New(), AppID: app.AppID})
+	for attempt := 1; attempt <= 2; attempt++ {
+		maxSeq := 5
+		if attempt == 2 {
+			maxSeq = 3
+		}
+		for seq := 1; seq <= maxSeq; seq++ {
+			if _, err := store.AppendEvent(ctx, Event{
+				RunID: run.RunID, Attempt: attempt, Seq: int64(seq), Source: "daemon",
+				Type: "MESSAGE_COMPLETED", Payload: json.RawMessage(`{"ok":true}`),
+			}); err != nil {
+				t.Fatalf("append (%d,%d): %v", attempt, seq, err)
+			}
+		}
+	}
+
+	var afterAttempt int32
+	var afterSeq int64
+	var collected []Event
+	for {
+		page, err := store.ListEvents(ctx, run.RunID, afterAttempt, afterSeq, 2)
+		if err != nil {
+			t.Fatalf("ListEvents() error = %v", err)
+		}
+		if len(page) == 0 {
+			break
+		}
+		collected = append(collected, page...)
+		last := page[len(page)-1]
+		afterAttempt = int32(last.Attempt)
+		afterSeq = last.Seq
+	}
+	if len(collected) != 8 {
+		t.Fatalf("collected %d events, want 8", len(collected))
+	}
+	seen := make(map[string]bool)
+	wantAttempt, wantSeq := 1, int64(1)
+	for _, event := range collected {
+		key := fmt.Sprintf("%d/%d", event.Attempt, event.Seq)
+		if seen[key] {
+			t.Fatalf("duplicate event %s", key)
+		}
+		seen[key] = true
+		if event.Attempt != wantAttempt || event.Seq != wantSeq {
+			t.Fatalf("event = (%d,%d), want (%d,%d)", event.Attempt, event.Seq, wantAttempt, wantSeq)
+		}
+		wantSeq++
+		if wantSeq > 5 && wantAttempt == 1 {
+			wantAttempt = 2
+			wantSeq = 1
+		}
+	}
+
+	capped, err := store.ListEvents(ctx, run.RunID, 0, 0, 5000)
+	if err != nil || len(capped) != 8 {
+		t.Fatalf("capped ListEvents() = %d, %v; want 8", len(capped), err)
+	}
+}
+
+func TestListSessionEventsAcrossRuns(t *testing.T) {
+	store := New(testPool(t))
+	ctx := context.Background()
+	app := createApp(t, store)
+	first, _ := store.CreateRun(ctx, Run{
+		RunID: "run-" + id.New(), AppID: app.AppID,
+		Runtime: "longterm", SessionID: "session-1",
+	})
+	time.Sleep(2 * time.Millisecond)
+	second, _ := store.CreateRun(ctx, Run{
+		RunID: "run-" + id.New(), AppID: app.AppID,
+		Runtime: "longterm", SessionID: "session-1",
+	})
+	for _, run := range []Run{first, second} {
+		for seq := int64(1); seq <= 2; seq++ {
+			if _, err := store.AppendEvent(ctx, Event{
+				RunID: run.RunID, Attempt: 1, Seq: seq, Source: "daemon",
+				Type: "MESSAGE_COMPLETED", Payload: json.RawMessage(`{"ok":true}`),
+			}); err != nil {
+				t.Fatalf("append session event: %v", err)
+			}
+		}
+	}
+
+	events, err := store.ListSessionEvents(ctx, "session-1", 0, 0, 10)
+	if err != nil {
+		t.Fatalf("ListSessionEvents() error = %v", err)
+	}
+	if len(events) != 4 {
+		t.Fatalf("session events = %d, want 4", len(events))
+	}
+	if events[0].RunID != first.RunID || events[2].RunID != second.RunID {
+		t.Fatalf("session order = %+v", events)
+	}
+	if events[0].Seq != 1 || events[1].Seq != 2 || events[2].Seq != 1 || events[3].Seq != 2 {
+		t.Fatalf("session seq order = %+v", events)
+	}
+
+	page, err := store.ListSessionEvents(ctx, "session-1", 1, 1, 10)
+	if err != nil || len(page) != 2 {
+		t.Fatalf("session page = %+v, %v; want 2", page, err)
 	}
 }
 

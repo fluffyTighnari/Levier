@@ -4,7 +4,7 @@
 |---|---|
 | 计划版本 | V2.0 |
 | 日期 | 2026-11-03 |
-| 状态 | P0–P4 完成；P5-37–P5-39 完成；G2 通过；G3 功能通过；M1/G4 功能通过；镜像待 Docker 复核；取代 `IMPLEMENTATION_PLAN.md` v0.3 |
+| 状态 | P0–P4 完成；P5-37–P5-40 完成；G2 通过；G3 功能通过；M1/G4 功能通过；镜像待 Docker 复核；取代 `IMPLEMENTATION_PLAN.md` v0.3 |
 | 依据 | `docs/DESIGN.md` v0.1、`docs/WORKFLOW_ENGINE_AUDIT.md` |
 | 总步骤 | 72 个审查单元 |
 | 用法 | 一次只做一个 `Px-yy`；产出、验收、diff 都确认后再进入下一步 |
@@ -326,9 +326,10 @@ internal/control ──► internal/workflow (PostgreSQL run_tasks, SKIP LOCKED)
   - 验收：乱序/重复/缺口测试；旧 epoch 事件被丢弃并计数；崩溃后投影一致。
   - 完成记录：`AppendResult`、lease 原子校验、gap 16、ephemeral 分流、MW seq 区间、Control 计数；乱序/缺口/stale/ephemeral 测试通过；报告：`docs/reports/P5-39.md`。
 
-- [ ] **P5-40 事件查询与会话聚合**
+- [x] **P5-40 事件查询与会话聚合**
   - `ListEvents` 分页 ≤1000、session 跨 run 聚合、稳定顺序。
   - 验收：分页无重无漏；跨 run 顺序稳定。
+  - 完成记录：`ListEvents` 分页上限/游标、`ListSessionEvents` 跨 run 聚合、稳定排序；分页无重无漏与 session 顺序测试通过；报告：`docs/reports/P5-40.md`。
 
 - [ ] **P5-41 App 注册与鉴权**
   - `/admin/apps` bootstrap、api_key 生成/hash/rotate、upsert by name、状态。

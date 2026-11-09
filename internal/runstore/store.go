@@ -372,6 +372,69 @@ func (s *Store) AppendEvent(ctx context.Context, event Event) (AppendResult, err
 	return result, nil
 }
 
+// ListSessionEvents returns session events across runs in stable order.
+func (s *Store) ListSessionEvents(
+	ctx context.Context,
+	sessionID string,
+	afterAttempt int32,
+	afterSeq int64,
+	limit int,
+) ([]Event, error) {
+	if s == nil || s.pool == nil {
+		return nil, fmt.Errorf("runstore: postgres pool is nil")
+	}
+	if sessionID == "" {
+		return nil, fmt.Errorf("%w: session_id is required", ErrInvalidEvent)
+	}
+	if afterAttempt < 0 || afterSeq < 0 {
+		return nil, fmt.Errorf("%w: after values must be non-negative", ErrInvalidEvent)
+	}
+	limit = eventLimit(limit)
+	rows, err := s.pool.Query(ctx, `
+		SELECT e.run_id, e.attempt, e.seq, e.source, e.type, e.payload, e.ts_ms
+		FROM run_events e
+		JOIN runs r ON r.run_id = e.run_id
+		WHERE r.session_id = $1
+		  AND (e.attempt > $2 OR (e.attempt = $2 AND e.seq > $3))
+		ORDER BY r.created_at, r.run_id, e.attempt, e.seq
+		LIMIT $4
+	`, sessionID, afterAttempt, afterSeq, limit)
+	if err != nil {
+		return nil, fmt.Errorf("list session events: %w", err)
+	}
+	defer rows.Close()
+	events := make([]Event, 0, limit)
+	for rows.Next() {
+		var event Event
+		if err := rows.Scan(
+			&event.RunID,
+			&event.Attempt,
+			&event.Seq,
+			&event.Source,
+			&event.Type,
+			&event.Payload,
+			&event.TSMs,
+		); err != nil {
+			return nil, fmt.Errorf("list session events: scan: %w", err)
+		}
+		events = append(events, event)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("list session events: %w", err)
+	}
+	return events, nil
+}
+
+func eventLimit(limit int) int {
+	if limit <= 0 {
+		return 100
+	}
+	if limit > 1000 {
+		return 1000
+	}
+	return limit
+}
+
 // ListEvents returns persisted events after (afterAttempt, afterSeq).
 func (s *Store) ListEvents(
 	ctx context.Context,
@@ -389,12 +452,7 @@ func (s *Store) ListEvents(
 	if afterAttempt < 0 || afterSeq < 0 {
 		return nil, fmt.Errorf("%w: after values must be non-negative", ErrInvalidEvent)
 	}
-	if limit <= 0 {
-		limit = 100
-	}
-	if limit > 1000 {
-		limit = 1000
-	}
+	limit = eventLimit(limit)
 	rows, err := s.pool.Query(ctx, `
 		SELECT run_id, attempt, seq, source, type, payload, ts_ms
 		FROM run_events
