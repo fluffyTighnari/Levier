@@ -14,7 +14,7 @@ export
 BIN_DIR := bin
 GO_FILES := $(shell find . -name '*.go' -not -path './workflow_engine/*' -not -path './vendor/*')
 
-.PHONY: all build test lint fmt fmt-check vet run clean dev-up dev-down migrate proto proto-check proto-lint contract-check harness-test mcp-runtime-test image-harness image-mcp-runtime e2e-echo m1-e2e
+.PHONY: all build test lint fmt fmt-check vet run clean dev-up dev-down migrate proto proto-check proto-lint contract-check harness-test mcp-runtime-test image-harness image-mcp-runtime e2e-echo m1-e2e counter-agent http-smoke
 
 all: build
 
@@ -87,3 +87,9 @@ e2e-echo: build
 
 m1-e2e: build
 	./scripts/m1_e2e.sh
+
+counter-agent:
+	$(PYTHON) examples/counter_agent/main.py
+
+http-smoke:
+	$(PYTHON) examples/http_client/client.py

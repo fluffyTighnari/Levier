@@ -80,6 +80,7 @@
 |---|---|
 | `docs/reports/WORKFLOW_TRACE.md` | Workflow 层全量逐函数追踪、输入输出、竞态与测试说明 |
 | `docs/reports/BOUNDARY_DATA_FLOW.md` | Middleware/Daemon 数据结构与边界流：Envelope、Task、事件、工具、重连 |
+| `docs/reports/APP-BASELINE.md` | 0 依赖 Counter Agent 基线与语言无关 HTTP 验证 |
 
 **规则：**
 
