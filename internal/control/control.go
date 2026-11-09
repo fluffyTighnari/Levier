@@ -20,6 +20,7 @@ import (
 
 	runtimev1 "github.com/fluffyTighnari/middleware/gen/middleware/runtime/v1"
 	"github.com/fluffyTighnari/middleware/internal/connection"
+	"github.com/fluffyTighnari/middleware/internal/observe"
 	"github.com/fluffyTighnari/middleware/internal/protocol"
 	"github.com/fluffyTighnari/middleware/internal/register"
 	"github.com/fluffyTighnari/middleware/internal/runstore"
@@ -48,6 +49,7 @@ type Config struct {
 	Tasks                TaskStore
 	LocalTools           LocalToolCanceller
 	Logger               *slog.Logger
+	Metrics              *observe.Registry
 }
 
 // ToolInvoker routes one ToolCallRequest.
@@ -96,6 +98,7 @@ type Control struct {
 	materials MaterialAssembler
 	cfg       Config
 	log       *slog.Logger
+	metrics   *observe.Registry
 
 	pendingMu sync.Mutex
 	pending   map[string]chan *runtimev1.TaskAck
@@ -132,6 +135,7 @@ func New(runs RunStore, hub DaemonHub, cfg Config, assemblers ...MaterialAssembl
 		hub:     hub,
 		cfg:     cfg,
 		log:     cfg.Logger,
+		metrics: cfg.Metrics,
 		pending: make(map[string]chan *runtimev1.TaskAck),
 		events:  make(chan *runtimev1.Envelope, cfg.EventBuffer),
 	}
@@ -198,6 +202,11 @@ func (c *Control) HandleEnvelope(_ string, env *runtimev1.Envelope) {
 		select {
 		case c.events <- env:
 		default:
+			if c.metrics != nil {
+				c.metrics.Inc(observe.MetricEventsDroppedTotal, "Dropped or skipped events by reason.", map[string]string{
+					"reason": "control_buffer_full",
+				})
+			}
 			c.log.Warn("control event buffer full", "run_id", env.GetRunId())
 		}
 	}
@@ -282,6 +291,21 @@ func (c *Control) Handle(ctx context.Context, task workflow.Task, _ workflow.Lea
 		status = assigned.Status
 		currentAttempt = assigned.Attempt
 		currentEpoch = assigned.LeaseEpoch
+		if c.metrics != nil && assigned.AssignedAt != nil && !assigned.CreatedAt.IsZero() {
+			c.metrics.Observe(observe.MetricRunQueueDuration, "Run queue duration in seconds.", map[string]string{
+				"runtime": run.Runtime,
+			}, assigned.AssignedAt.Sub(assigned.CreatedAt).Seconds())
+		}
+		c.log.Info("control assigned run",
+			observe.FieldRunID, run.RunID,
+			observe.FieldTraceID, run.TraceID,
+			observe.FieldAppID, run.AppID,
+			observe.FieldAttempt, attempt,
+			observe.FieldLeaseEpoch, leaseEpoch,
+			observe.FieldDaemonID, daemonID,
+			"runtime", run.Runtime,
+			"strategy", run.Strategy,
+		)
 
 		envelope, err := protocol.NewRun(run.RunID, int32(attempt), leaseEpoch, assign)
 		if err != nil {
@@ -551,6 +575,11 @@ func (c *Control) handleEvent(env *runtimev1.Envelope) {
 	}
 	if event.GetEphemeral() {
 		c.ephemeralEvents.Add(1)
+		if c.metrics != nil {
+			c.metrics.Inc(observe.MetricEventsDroppedTotal, "Dropped or skipped events by reason.", map[string]string{
+				"reason": "ephemeral",
+			})
+		}
 		return
 	}
 	ctx := context.Background()
@@ -559,7 +588,11 @@ func (c *Control) handleEvent(env *runtimev1.Envelope) {
 		return
 	}
 	if err != nil {
-		c.log.Warn("control get run failed", "run_id", env.GetRunId(), "err", err)
+		c.log.Warn("control get run failed",
+			observe.FieldRunID, env.GetRunId(),
+			observe.FieldAttempt, env.GetAttempt(),
+			"err", err,
+		)
 		return
 	}
 	if int(env.GetAttempt()) != run.Attempt || env.GetLeaseEpoch() != run.LeaseEpoch {
@@ -595,19 +628,36 @@ func (c *Control) handleEvent(env *runtimev1.Envelope) {
 	}
 	if result.Stale {
 		c.staleEvents.Add(1)
+		if c.metrics != nil {
+			c.metrics.Inc(observe.MetricEventsDroppedTotal, "Dropped or skipped events by reason.", map[string]string{
+				"reason": "stale_epoch",
+			})
+		}
 		return
 	}
 	if result.Gap {
 		c.gapEvents.Add(1)
+		if c.metrics != nil {
+			c.metrics.Inc(observe.MetricEventsDroppedTotal, "Dropped or skipped events by reason.", map[string]string{
+				"reason": "seq_gap",
+			})
+		}
 		c.log.Warn("control event sequence gap",
-			"run_id", env.GetRunId(),
-			"attempt", env.GetAttempt(),
+			observe.FieldRunID, env.GetRunId(),
+			observe.FieldTraceID, run.TraceID,
+			observe.FieldAttempt, env.GetAttempt(),
 			"seq", event.GetSeq(),
 			"gap", result.GapSize,
 		)
 	}
 	if !result.Inserted {
 		return
+	}
+	if c.metrics != nil {
+		c.metrics.Inc(observe.MetricEventsTotal, "Persisted events by type.", map[string]string{
+			"type": runtimev1.EventType_name[int32(event.GetType())],
+		})
+		c.observeUsage(run, event, eventData)
 	}
 	if c.cfg.Publisher != nil {
 		wsPayload, err := json.Marshal(map[string]any{
@@ -652,6 +702,18 @@ func (c *Control) handleEvent(env *runtimev1.Envelope) {
 		return
 	}
 	if runstore.TerminalStatus(status) {
+		c.log.Info("control run terminal",
+			observe.FieldRunID, run.RunID,
+			observe.FieldTraceID, run.TraceID,
+			observe.FieldAppID, run.AppID,
+			observe.FieldAttempt, env.GetAttempt(),
+			observe.FieldStatus, status,
+		)
+		if c.metrics != nil {
+			c.metrics.Inc(observe.MetricRunsTotal, "Terminal runs by status and runtime.", map[string]string{
+				"status": status, "runtime": run.Runtime,
+			})
+		}
 		c.hub.Release(run.AssignedDaemonID)
 		if status == runstore.StatusCancelled {
 			c.cancelLocalTools(run.AppID, env.GetRunId(), "RUN_CANCELLED", "run cancelled")
@@ -669,6 +731,27 @@ func (c *Control) GapEvents() int64 { return c.gapEvents.Load() }
 
 // EphemeralEvents returns the number of skipped ephemeral events.
 func (c *Control) EphemeralEvents() int64 { return c.ephemeralEvents.Load() }
+
+func (c *Control) observeUsage(run runstore.Run, event *runtimev1.Event, data map[string]any) {
+	if c.metrics == nil || event.GetType() != runtimev1.EventType_USAGE {
+		return
+	}
+	input, _ := data["input_tokens"].(float64)
+	output, _ := data["output_tokens"].(float64)
+	if input == 0 && output == 0 {
+		return
+	}
+	model := "unknown"
+	var profile struct {
+		Model string `json:"model"`
+	}
+	if len(run.Model) > 0 && json.Unmarshal(run.Model, &profile) == nil && profile.Model != "" {
+		model = profile.Model
+	}
+	c.metrics.Add(observe.MetricTokenUsageTotal, "Token usage from USAGE events.", map[string]string{
+		"app": run.AppID, "model": model,
+	}, input+output)
+}
 
 func buildTaskAssign(run runstore.Run, attempt int) (*runtimev1.TaskAssign, error) {
 	params := map[string]any{}

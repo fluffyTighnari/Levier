@@ -1,6 +1,6 @@
           task_id           |           run_id           |  task_type   |  status   | attempt | max_attempts | lease_owner | lease_token | lease_expires_at |          updated_at           
 ----------------------------+----------------------------+--------------+-----------+---------+--------------+-------------+-------------+------------------+-------------------------------
- 01M6ZR4PJ9XPQWZF8Z1WCDNHPA | 01M6ZR4PJ61T659EQDCCMF56SW | RUN_DISPATCH | DONE      |       1 |            5 |             |           1 |                  | 2026-11-09 16:52:33.577684+08
- 01M6ZR4PJBKHZG3RQRVFEGV0JZ | 01M6ZR4PJ61T659EQDCCMF56SW | RUN_TIMEOUT  | CANCELLED |       0 |            3 |             |           0 |                  | 2026-11-09 16:52:33.582052+08
+ 01M6ZRN2WF24EWHZYXX5QDMVHA | 01M6ZRN2WB69AEAPVR0VMQP4Q2 | RUN_DISPATCH | DONE      |       1 |            5 |             |           1 |                  | 2026-11-09 17:01:30.460679+08
+ 01M6ZRN2WHQQE6PQ8CWJ4MTSD8 | 01M6ZRN2WB69AEAPVR0VMQP4Q2 | RUN_TIMEOUT  | CANCELLED |       0 |            3 |             |           0 |                  | 2026-11-09 17:01:30.466209+08
 (2 rows)
 

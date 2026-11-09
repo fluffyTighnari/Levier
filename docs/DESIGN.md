@@ -912,10 +912,17 @@ Daemon 重连 `Hello.running_runs`（`run_id + lease_epoch`）≠ MW 视角时�
 | mw_events_dropped_total | counter | reason（背压丢弃监控） |
 | mw_ws_connections | gauge | app |
 | mw_token_usage_total | counter | app, model（来自 USAGE 事件聚合） |
+| mw_http_requests_total | counter | method, route, status |
+| mw_http_request_duration_seconds | histogram | method, route |
+
+暴露方式：`GET /metrics` 输出 Prometheus text；workflow task 分布/年龄、daemon 容量在 scrape 时从 PostgreSQL/DaemonHub 采集。`/metrics` 不计入自身 HTTP 指标。
 
 ### 14.3 日志与回放
 
-- 结构化日志全链路带 `run_id / invocation_id / trace_id`。
+- 结构化日志全链路带 `request_id / trace_id / run_id / attempt / invocation_id / tool_name`。
+- HTTP `X-Request-ID` 同时作为创建 Run 的 `trace_id`；Daemon 的 `TaskAssign.trace_context` 继续传递该值。
+- 日志字段使用 `internal/observe` 的规范常量；请求日志记录 method/route/status/duration_ms/remote_addr。
+- `observe.RedactValue/RedactMap` 对 `authorization/api_key/token/secret/cookie/password` 等键统一输出 `[REDACTED]`。
 - `GET /runs/{id}/events` = 完整回放能力；后期 debug UI 直接消费该接口。
 
 ---

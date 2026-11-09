@@ -10,10 +10,12 @@ import (
 	"encoding/json"
 	"net/http"
 	"sync"
+	"time"
 
 	"golang.org/x/net/websocket"
 
 	"github.com/fluffyTighnari/middleware/internal/connection"
+	"github.com/fluffyTighnari/middleware/internal/observe"
 )
 
 type wsSink struct {
@@ -44,6 +46,26 @@ func (s *Server) handleWS(conn *websocket.Conn) {
 		_ = conn.Close()
 		return
 	}
+
+	started := time.Now()
+	if s.cfg.Metrics != nil {
+		s.cfg.Metrics.AddGauge(observe.MetricWSConnections, "Current App WebSocket connections.", map[string]string{
+			"app": appID,
+		}, 1)
+		defer s.cfg.Metrics.AddGauge(observe.MetricWSConnections, "Current App WebSocket connections.", map[string]string{
+			"app": appID,
+		}, -1)
+	}
+	s.log.Info("ws connected",
+		observe.FieldAppID, appID,
+		observe.FieldRemoteAddr, conn.Request().RemoteAddr,
+	)
+	defer func() {
+		s.log.Info("ws disconnected",
+			observe.FieldAppID, appID,
+			observe.FieldDurationMS, time.Since(started).Milliseconds(),
+		)
+	}()
 
 	appConn := s.appHub.Register(appID, &wsSink{conn: conn})
 	defer s.appHub.CloseConn(appConn)

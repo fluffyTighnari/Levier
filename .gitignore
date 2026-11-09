@@ -33,3 +33,4 @@ __pycache__/
 
 # Go
 vendor/
+/middleware

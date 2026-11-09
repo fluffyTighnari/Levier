@@ -81,6 +81,7 @@ func main() {
 	})
 	defer hub.Close()
 
+	metrics := observe.NewRegistry()
 	runs := runstore.New(pool)
 	registry := register.New(pool)
 	queue := workflow.NewPostgres(pool)
@@ -94,6 +95,7 @@ func main() {
 			"builtin:webhook": executor.NewWebhook(),
 		}),
 		gateway.WithInvocationStore(gateway.NewPostgresInvocationStore(pool)),
+		gateway.WithMetrics(metrics),
 	)
 	controller := control.New(runs, hub, control.Config{
 		Logger:     logger,
@@ -102,6 +104,7 @@ func main() {
 		Tools:      toolInvoker,
 		Tasks:      queue,
 		LocalTools: appHub,
+		Metrics:    metrics,
 	}, registry)
 	hub.SetOnEnvelope(func(daemonID string, env *runtimev1.Envelope) {
 		if env.GetToolCallRequest() != nil {
@@ -122,6 +125,62 @@ func main() {
 	})
 	workers.Start()
 	defer workers.Stop()
+
+	metricsCollector := func(ctx context.Context) {
+		stats, err := queue.Stats(ctx)
+		if err != nil {
+			logger.Warn("collect workflow metrics failed", "err", err)
+			return
+		}
+		for _, taskType := range []workflow.TaskType{
+			workflow.TaskDispatch, workflow.TaskRetry, workflow.TaskTimeout, workflow.TaskReconcile,
+		} {
+			for _, status := range []workflow.Status{
+				workflow.StatusPending, workflow.StatusLeased, workflow.StatusDone,
+				workflow.StatusDead, workflow.StatusCancelled,
+			} {
+				count := stats.ByTypeStatus[taskType][status]
+				metrics.Set(observe.MetricWorkflowTasks, "Run tasks by type and status.", map[string]string{
+					"type": string(taskType), "status": string(status),
+				}, float64(count))
+			}
+			metrics.Set(observe.MetricWorkflowTaskAge, "Age of the oldest pending task by type.", map[string]string{
+				"type": string(taskType),
+			}, stats.OldestPendingByType[taskType].Seconds())
+		}
+		snapshot := workers.Metrics().Snapshot()
+		metrics.SetCounter(observe.MetricWorkflowClaimsTotal, "Cumulative workflow task claims.", nil, float64(snapshot.Claims))
+		metrics.SetCounter(observe.MetricWorkflowAcksTotal, "Cumulative workflow task acks.", nil, float64(snapshot.Acks))
+		metrics.SetCounter(observe.MetricWorkflowNacksTotal, "Cumulative workflow task nacks.", nil, float64(snapshot.Nacks))
+		metrics.SetCounter(observe.MetricWorkflowFailsTotal, "Cumulative workflow task failures.", nil, float64(snapshot.Fails))
+		metrics.SetCounter(observe.MetricWorkflowDeadTotal, "Cumulative dead-lettered tasks.", nil, float64(snapshot.Dead))
+		metrics.SetCounter(observe.MetricWorkflowLeaseLostTotal, "Cumulative lost leases.", nil, float64(snapshot.LeaseLost))
+		metrics.SetCounter(observe.MetricWorkflowPanicsTotal, "Cumulative handler panics.", nil, float64(snapshot.Panics))
+		metrics.Set(observe.MetricWorkflowClaimDuration, "Average workflow claim duration in seconds.", nil, snapshot.ClaimAverage.Seconds())
+		metrics.Set(observe.MetricWorkflowHandlerDuration, "Average workflow handler duration in seconds.", nil, snapshot.HandlerAverage.Seconds())
+		metrics.SetCounter(observe.MetricStaleDaemonEventsTotal, "Dropped stale-epoch events.", nil, float64(controller.StaleEvents()))
+		metrics.SetCounter(observe.MetricEventGapsTotal, "Event sequence gaps.", nil, float64(controller.GapEvents()))
+		metrics.SetCounter(observe.MetricEphemeralEventsTotal, "Skipped ephemeral events.", nil, float64(controller.EphemeralEvents()))
+		for _, daemon := range hub.List() {
+			used := daemon.RunningCount
+			if daemon.Reserved > used {
+				used = daemon.Reserved
+			}
+			total := daemon.MaxConcurrentRuns
+			if total <= 0 {
+				total = 1
+			}
+			labels := map[string]string{
+				"daemon": daemon.DaemonID, "runtime": daemon.RuntimeType.String(),
+			}
+			metrics.Set(observe.MetricDaemonCapacity, "Daemon capacity by kind.", map[string]string{
+				"daemon": labels["daemon"], "runtime": labels["runtime"], "kind": "used",
+			}, float64(used))
+			metrics.Set(observe.MetricDaemonCapacity, "Daemon capacity by kind.", map[string]string{
+				"daemon": labels["daemon"], "runtime": labels["runtime"], "kind": "total",
+			}, float64(total))
+		}
+	}
 
 	listener, err := net.Listen("tcp", cfg.GRPC.Addr)
 	if err != nil {
@@ -146,6 +205,9 @@ func main() {
 		DefaultToolTimeoutMS: 60_000,
 		AppHub:               appHub,
 		Canceller:            controller,
+		Metrics:              metrics,
+		MetricsCollector:     metricsCollector,
+		Logger:               logger,
 	}, registry)
 	httpListener, err := net.Listen("tcp", cfg.HTTP.Addr)
 	if err != nil {

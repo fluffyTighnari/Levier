@@ -16,6 +16,7 @@ import (
 
 	runtimev1 "github.com/fluffyTighnari/middleware/gen/middleware/runtime/v1"
 	"github.com/fluffyTighnari/middleware/internal/connection"
+	"github.com/fluffyTighnari/middleware/internal/observe"
 	"github.com/fluffyTighnari/middleware/internal/register"
 )
 
@@ -90,6 +91,13 @@ func WithInvocationStore(store InvocationStore) InvokerOption {
 	}
 }
 
+// WithMetrics attaches a metrics registry.
+func WithMetrics(metrics *observe.Registry) InvokerOption {
+	return func(invoker *Invoker) {
+		invoker.metrics = metrics
+	}
+}
+
 // WithResultCache overrides the in-process cache TTL and capacity.
 func WithResultCache(ttl time.Duration, maxEntries int) InvokerOption {
 	return func(invoker *Invoker) {
@@ -104,6 +112,7 @@ type Invoker struct {
 	globals  *ExecutorRegistry
 	store    InvocationStore
 	state    *invocationState
+	metrics  *observe.Registry
 }
 
 // NewInvoker returns a tool invoker.
@@ -181,7 +190,7 @@ func (i *Invoker) execute(
 			err = i.store.Fail(ctx, invocationID, result)
 		}
 		if err != nil {
-			slog.Warn("gateway persist invocation failed", "invocation_id", invocationID, "err", err)
+			slog.Warn("gateway persist invocation failed", "run_id", runID, "invocation_id", invocationID, "err", err)
 		}
 	}
 	i.state.put(invocationID, result)
@@ -220,14 +229,28 @@ func (i *Invoker) invokeOnce(
 		timeout = defaultToolTimeout
 	}
 
+	started := time.Now()
+	var result *runtimev1.ToolCallResult
 	switch tool.Scope {
 	case "local":
-		return i.invokeLocal(ctx, runID, appID, request, timeout)
+		result = i.invokeLocal(ctx, runID, appID, request, timeout)
 	case "global":
-		return i.invokeGlobal(ctx, runID, appID, request, tool, timeout)
+		result = i.invokeGlobal(ctx, runID, appID, request, tool, timeout)
 	default:
-		return toolError(request.GetInvocationId(), "TOOL_EXEC_ERROR", fmt.Sprintf("unsupported tool scope %q", tool.Scope), false)
+		result = toolError(request.GetInvocationId(), "TOOL_EXEC_ERROR", fmt.Sprintf("unsupported tool scope %q", tool.Scope), false)
 	}
+	if i.metrics != nil {
+		status := "ok"
+		if !result.GetOk() {
+			status = "error"
+		}
+		labels := map[string]string{"tool": tool.Name, "scope": tool.Scope}
+		i.metrics.Inc(observe.MetricToolInvocationsTotal, "Tool executions by tool, scope, and status.",
+			map[string]string{"tool": tool.Name, "scope": tool.Scope, "status": status})
+		i.metrics.Observe(observe.MetricToolDuration, "Tool execution duration in seconds.",
+			labels, time.Since(started).Seconds())
+	}
+	return result
 }
 
 func (i *Invoker) invokeLocal(

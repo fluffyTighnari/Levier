@@ -15,6 +15,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log/slog"
 	"net/http"
 	"strconv"
 	"strings"
@@ -22,6 +23,7 @@ import (
 
 	"github.com/fluffyTighnari/middleware/internal/connection"
 	"github.com/fluffyTighnari/middleware/internal/id"
+	"github.com/fluffyTighnari/middleware/internal/observe"
 	"github.com/fluffyTighnari/middleware/internal/register"
 	"github.com/fluffyTighnari/middleware/internal/runstore"
 	"github.com/fluffyTighnari/middleware/internal/workflow"
@@ -77,6 +79,9 @@ type Config struct {
 	WSTokenTTL           time.Duration
 	AppHub               *connection.AppHub
 	Canceller            Canceller
+	Metrics              *observe.Registry
+	MetricsCollector     func(context.Context)
+	Logger               *slog.Logger
 }
 
 // Server implements the minimal App HTTP API.
@@ -89,6 +94,7 @@ type Server struct {
 	wsTokens  *WSTokenStore
 	canceller Canceller
 	cfg       Config
+	log       *slog.Logger
 	mux       *http.ServeMux
 }
 
@@ -107,10 +113,14 @@ func NewServer(runs RunStore, queue TaskQueue, cfg Config, registries ...AppRegi
 	if appHub == nil {
 		appHub = connection.NewAppHub()
 	}
+	if cfg.Logger == nil {
+		cfg.Logger = slog.Default()
+	}
 	server := &Server{
 		runs:      runs,
 		queue:     queue,
 		cfg:       cfg,
+		log:       cfg.Logger,
 		appHub:    appHub,
 		wsTokens:  NewWSTokenStore(cfg.WSTokenTTL),
 		canceller: cfg.Canceller,
@@ -128,11 +138,14 @@ func NewServer(runs RunStore, queue TaskQueue, cfg Config, registries ...AppRegi
 
 // Handler returns the HTTP handler.
 func (s *Server) Handler() http.Handler {
-	return requestIDMiddleware(s.mux)
+	return requestIDMiddleware(s.instrumentHandler(s.mux))
 }
 
 func (s *Server) routes() {
 	s.mux.HandleFunc("GET /healthz", s.handleHealth)
+	if s.cfg.Metrics != nil {
+		s.mux.HandleFunc("GET /metrics", s.handleMetrics)
+	}
 	s.mux.HandleFunc("POST "+APIPrefix+"/runs", s.handleCreateRun)
 	s.mux.HandleFunc("GET "+APIPrefix+"/runs/{run_id}", s.handleGetRun)
 	s.mux.HandleFunc("GET "+APIPrefix+"/runs/{run_id}/events", s.handleListEvents)
@@ -309,7 +322,7 @@ func (s *Server) handleCreateRun(w http.ResponseWriter, r *http.Request) {
 		SessionID:      request.SessionID,
 		RunTimeoutMS:   int(runTimeout),
 		ToolTimeoutMS:  int(toolTimeout),
-		TraceID:        id.New(),
+		TraceID:        traceIDFromRequest(r),
 	})
 	if errors.Is(err, runstore.ErrIdempotencyConflict) {
 		writeError(w, http.StatusConflict, "IDEMPOTENCY_CONFLICT", "idempotency key was reused with a different request", false)

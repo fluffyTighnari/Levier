@@ -1,2 +1,4 @@
-{"time":"2026-11-09T16:52:31.74618+08:00","level":"INFO","msg":"middleware starting","config":"config.example.yaml","database":"connected","grpc_addr":":9090","http_addr":":8080"}
-{"time":"2026-11-09T16:52:34.048069+08:00","level":"INFO","msg":"middleware stopped"}
+{"time":"2026-11-09T17:01:28.628418+08:00","level":"INFO","msg":"middleware starting","config":"config.example.yaml","database":"connected","grpc_addr":":9090","http_addr":":8080"}
+{"time":"2026-11-09T17:01:30.458826+08:00","level":"INFO","msg":"control assigned run","run_id":"01M6ZRN2WB69AEAPVR0VMQP4Q2","trace_id":"01M6ZRN2W8M01WF4JCNV88SZQR","app_id":"app-m1-e2e","attempt":1,"lease_epoch":1,"daemon_id":"daemon-local-1","runtime":"normal","strategy":"echo"}
+{"time":"2026-11-09T17:01:30.466043+08:00","level":"INFO","msg":"control run terminal","run_id":"01M6ZRN2WB69AEAPVR0VMQP4Q2","trace_id":"01M6ZRN2W8M01WF4JCNV88SZQR","app_id":"app-m1-e2e","attempt":1,"status":"completed"}
+{"time":"2026-11-09T17:01:30.97314+08:00","level":"INFO","msg":"middleware stopped"}

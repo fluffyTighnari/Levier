@@ -23,6 +23,17 @@ const (
 	FieldAttempt      = "attempt"
 	FieldLeaseEpoch   = "lease_epoch"
 	FieldSessionID    = "session_id"
+	FieldRequestID    = "request_id"
+	FieldToolName     = "tool_name"
+	FieldToolScope    = "tool_scope"
+	FieldStatus       = "status"
+	FieldErrorCode    = "error_code"
+	FieldEventType    = "event_type"
+	FieldReason       = "reason"
+	FieldMethod       = "method"
+	FieldRoute        = "route"
+	FieldDurationMS   = "duration_ms"
+	FieldRemoteAddr   = "remote_addr"
 )
 
 // NewLogger creates a structured logger writing to stdout.

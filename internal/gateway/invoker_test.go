@@ -6,13 +6,16 @@
 package gateway
 
 import (
+	"bytes"
 	"context"
 	"errors"
+	"strings"
 	"testing"
 	"time"
 
 	runtimev1 "github.com/fluffyTighnari/middleware/gen/middleware/runtime/v1"
 	"github.com/fluffyTighnari/middleware/internal/connection"
+	"github.com/fluffyTighnari/middleware/internal/observe"
 	"github.com/fluffyTighnari/middleware/internal/register"
 )
 
@@ -165,4 +168,30 @@ func TestInvokeInvalidAndResolverFailure(t *testing.T) {
 		t.Fatalf("resolver error = %+v", result)
 	}
 	_ = time.Second
+}
+
+func TestInvokerRecordsMetrics(t *testing.T) {
+	registry := observe.NewRegistry()
+	resolver := &fakeResolver{tools: map[string]register.ToolMaterial{
+		"search": {Name: "search", Scope: "local", TimeoutMS: 1000},
+	}}
+	local := &fakeLocal{result: connection.LocalToolResult{OK: true, ResultJSON: "3"}}
+	invoker := NewInvoker(resolver, local, nil, WithMetrics(registry))
+	if result := invoker.Invoke(context.Background(), "run-1", "app-1", requestWithID("inv-metrics", "search")); !result.GetOk() {
+		t.Fatalf("result = %+v", result)
+	}
+
+	var buf bytes.Buffer
+	if err := registry.WritePrometheus(&buf); err != nil {
+		t.Fatalf("WritePrometheus() error = %v", err)
+	}
+	output := buf.String()
+	for _, want := range []string{
+		`mw_tool_invocations_total{scope="local",status="ok",tool="search"} 1`,
+		`mw_tool_duration_seconds_count{scope="local",tool="search"} 1`,
+	} {
+		if !strings.Contains(output, want) {
+			t.Fatalf("metrics do not contain %q:\n%s", want, output)
+		}
+	}
 }

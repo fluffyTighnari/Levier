@@ -6,6 +6,7 @@
 package control
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -20,6 +21,7 @@ import (
 	runtimev1 "github.com/fluffyTighnari/middleware/gen/middleware/runtime/v1"
 	"github.com/fluffyTighnari/middleware/internal/connection"
 	"github.com/fluffyTighnari/middleware/internal/id"
+	"github.com/fluffyTighnari/middleware/internal/observe"
 	"github.com/fluffyTighnari/middleware/internal/protocol"
 	"github.com/fluffyTighnari/middleware/internal/register"
 	"github.com/fluffyTighnari/middleware/internal/runstore"
@@ -807,5 +809,52 @@ func TestStaleEpochEventIgnored(t *testing.T) {
 	defer runs.mu.Unlock()
 	if len(runs.events) != 0 || len(runs.statuses) != 0 {
 		t.Fatalf("stale event applied: events=%d statuses=%v", len(runs.events), runs.statuses)
+	}
+}
+
+func TestControlRecordsMetrics(t *testing.T) {
+	runs := &fakeRuns{
+		run:          newRun(),
+		appendResult: runstore.AppendResult{Inserted: true},
+	}
+	runs.run.Status = "running"
+	runs.run.Attempt = 1
+	runs.run.LeaseEpoch = 1
+	registry := observe.NewRegistry()
+	ctrl := New(runs, &fakeHub{}, Config{Metrics: registry})
+	defer ctrl.Close()
+
+	statusData, _ := structpb.NewStruct(map[string]any{"status": "completed"})
+	statusEnv, err := protocol.NewRun("run-1", 1, 1, &runtimev1.Event{
+		Seq: 1, Type: runtimev1.EventType_RUN_STATUS, Source: protocol.EventSourceDaemon, Data: statusData,
+	})
+	if err != nil {
+		t.Fatalf("NewRun() error = %v", err)
+	}
+	ctrl.handleEvent(statusEnv)
+
+	usageData, _ := structpb.NewStruct(map[string]any{"input_tokens": 10, "output_tokens": 5})
+	usageEnv, err := protocol.NewRun("run-1", 1, 1, &runtimev1.Event{
+		Seq: 2, Type: runtimev1.EventType_USAGE, Source: protocol.EventSourceDaemon, Data: usageData,
+	})
+	if err != nil {
+		t.Fatalf("NewRun() error = %v", err)
+	}
+	ctrl.handleEvent(usageEnv)
+
+	var buf bytes.Buffer
+	if err := registry.WritePrometheus(&buf); err != nil {
+		t.Fatalf("WritePrometheus() error = %v", err)
+	}
+	output := buf.String()
+	for _, want := range []string{
+		`mw_runs_total{runtime="normal",status="completed"} 1`,
+		`mw_events_total{type="RUN_STATUS"} 1`,
+		`mw_events_total{type="USAGE"} 1`,
+		`mw_token_usage_total{app="app-1",model="claude-test"} 15`,
+	} {
+		if !strings.Contains(output, want) {
+			t.Fatalf("metrics do not contain %q:\n%s", want, output)
+		}
 	}
 }

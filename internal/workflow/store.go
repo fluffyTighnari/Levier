@@ -12,11 +12,13 @@ import (
 
 // Stats summarizes queue depth and oldest age.
 type Stats struct {
-	Total            int64              `json:"total"`
-	ByStatus         map[Status]int64   `json:"by_status"`
-	ByType           map[TaskType]int64 `json:"by_type"`
-	OldestPending    time.Time          `json:"oldest_pending"`
-	OldestPendingAge time.Duration      `json:"oldest_pending_age"`
+	Total               int64                         `json:"total"`
+	ByStatus            map[Status]int64              `json:"by_status"`
+	ByType              map[TaskType]int64            `json:"by_type"`
+	ByTypeStatus        map[TaskType]map[Status]int64 `json:"by_type_status"`
+	OldestPending       time.Time                     `json:"oldest_pending"`
+	OldestPendingAge    time.Duration                 `json:"oldest_pending_age"`
+	OldestPendingByType map[TaskType]time.Duration    `json:"oldest_pending_by_type"`
 }
 
 // Store is the durable RunTaskQueue contract.

@@ -73,6 +73,13 @@ if [ -z "$ready" ]; then
   exit 1
 fi
 
+curl -fsS "$MW_URL/metrics" >"$ARTIFACT_DIR/metrics.txt"
+if ! grep -q 'mw_http_requests_total' "$ARTIFACT_DIR/metrics.txt"; then
+  echo "metrics endpoint did not expose mw_http_requests_total" >&2
+  exit 1
+fi
+echo "metrics: available" | tee -a "$ARTIFACT_DIR/summary.txt"
+
 PYTHONPATH=harness/src/gen:harness/src "$HARNESS_PYTHON" \
   -m middleware_harness --config "$HARNESS_CONFIG" >"$HARNESS_LOG" 2>&1 &
 HARNESS_PID=$!
@@ -115,6 +122,14 @@ assert events[2]["data"]["status"] == "completed", events[2]
 assert payload["next_attempt"] == 1 and payload["next_seq"] == 3, payload
 '
 echo "events: seq 1/2/3 valid" | tee -a "$ARTIFACT_DIR/summary.txt"
+
+curl -fsS "$MW_URL/metrics" >"$ARTIFACT_DIR/metrics.txt"
+if ! grep -Eq 'mw_runs_total\{runtime="normal",status="completed"\} 1' "$ARTIFACT_DIR/metrics.txt"; then
+  echo "run terminal metric is missing" >&2
+  cat "$ARTIFACT_DIR/metrics.txt" >&2
+  exit 1
+fi
+echo "metrics: run completed" | tee -a "$ARTIFACT_DIR/summary.txt"
 
 if [ "$state" != "completed" ]; then
   echo "run ended in state $state" >&2

@@ -4,7 +4,7 @@
 |---|---|
 | 计划版本 | V2.0 |
 | 日期 | 2026-11-03 |
-| 状态 | P0–P7 完成；G2–G7 功能通过；M1 垂直切片完成；镜像待 Docker 复核；取代 `IMPLEMENTATION_PLAN.md` v0.3 |
+| 状态 | P0–P7 完成；P8-62 观测基线完成；P8-59/60 暂缓；G2–G7 功能通过；M1 垂直切片完成；镜像待 Docker 复核；取代 `IMPLEMENTATION_PLAN.md` v0.3 |
 | 依据 | `docs/DESIGN.md` v0.1、`docs/WORKFLOW_ENGINE_AUDIT.md` |
 | 总步骤 | 72 个审查单元 |
 | 用法 | 一次只做一个 `Px-yy`；产出、验收、diff 都确认后再进入下一步 |
@@ -448,6 +448,7 @@ internal/control ──► internal/workflow (PostgreSQL run_tasks, SKIP LOCKED)
 - [ ] **P8-62 指标、追踪、日志**
   - §14.2 全指标、trace span、结构化字段、脱敏。
   - 验收：仪表盘/查询示例；无 PII/密钥。
+  - 进度：观测基线完成——`/metrics`、HTTP/Run/Queue/Tool/Workflow/Daemon/Event/Token 指标、trace_id=request_id、结构化字段、`RedactValue/RedactMap`、PromQL 示例；待补 OTel span、Grafana dashboard、直方图化 claim/handler；报告：`docs/reports/P8-62.md`。
 
 - [ ] **P8-63 压力与安全**
   - N run 并发、慢消费者、队列上限；认证/ACL/ws_token/跨 App/密钥。

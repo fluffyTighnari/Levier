@@ -98,8 +98,10 @@ func (s *PostgresStore) Stats(ctx context.Context) (Stats, error) {
 	}
 
 	stats := Stats{
-		ByStatus: make(map[Status]int64, 5),
-		ByType:   make(map[TaskType]int64, 4),
+		ByStatus:            make(map[Status]int64, 5),
+		ByType:              make(map[TaskType]int64, 4),
+		ByTypeStatus:        make(map[TaskType]map[Status]int64, 4),
+		OldestPendingByType: make(map[TaskType]time.Duration, 4),
 	}
 	for _, status := range []Status{StatusPending, StatusLeased, StatusDone, StatusDead, StatusCancelled} {
 		stats.ByStatus[status] = 0
@@ -144,6 +146,55 @@ func (s *PostgresStore) Stats(ctx context.Context) (Stats, error) {
 	if err := rows.Err(); err != nil {
 		rows.Close()
 		return Stats{}, fmt.Errorf("scan type counts: %w", err)
+	}
+	rows.Close()
+
+	rows, err = s.pool.Query(ctx, "SELECT task_type, status, count(*) FROM run_tasks GROUP BY task_type, status")
+	if err != nil {
+		return Stats{}, fmt.Errorf("count tasks by type/status: %w", err)
+	}
+	for rows.Next() {
+		var taskType, status string
+		var count int64
+		if err := rows.Scan(&taskType, &status, &count); err != nil {
+			rows.Close()
+			return Stats{}, fmt.Errorf("scan type/status count: %w", err)
+		}
+		if stats.ByTypeStatus[TaskType(taskType)] == nil {
+			stats.ByTypeStatus[TaskType(taskType)] = make(map[Status]int64, 5)
+		}
+		stats.ByTypeStatus[TaskType(taskType)][Status(status)] = count
+	}
+	if err := rows.Err(); err != nil {
+		rows.Close()
+		return Stats{}, fmt.Errorf("scan type/status counts: %w", err)
+	}
+	rows.Close()
+
+	rows, err = s.pool.Query(ctx, `
+		SELECT task_type, min(available_at)
+		FROM run_tasks
+		WHERE status = 'PENDING'
+		GROUP BY task_type
+	`)
+	if err != nil {
+		return Stats{}, fmt.Errorf("oldest pending by type: %w", err)
+	}
+	now := time.Now()
+	for rows.Next() {
+		var taskType string
+		var oldest time.Time
+		if err := rows.Scan(&taskType, &oldest); err != nil {
+			rows.Close()
+			return Stats{}, fmt.Errorf("scan oldest pending by type: %w", err)
+		}
+		if !oldest.IsZero() {
+			stats.OldestPendingByType[TaskType(taskType)] = now.Sub(oldest)
+		}
+	}
+	if err := rows.Err(); err != nil {
+		rows.Close()
+		return Stats{}, fmt.Errorf("scan oldest pending by type: %w", err)
 	}
 	rows.Close()
 
