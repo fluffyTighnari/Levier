@@ -80,7 +80,7 @@ func main() {
 
 	runs := runstore.New(pool)
 	registry := register.New(pool)
-	controller := control.New(runs, hub, control.Config{Logger: logger})
+	controller := control.New(runs, hub, control.Config{Logger: logger}, registry)
 	hub.SetOnEnvelope(controller.HandleEnvelope)
 	controller.Start(ctx)
 	defer controller.Close()

@@ -18,6 +18,7 @@ import (
 
 	runtimev1 "github.com/fluffyTighnari/middleware/gen/middleware/runtime/v1"
 	"github.com/fluffyTighnari/middleware/internal/protocol"
+	"github.com/fluffyTighnari/middleware/internal/register"
 	"github.com/fluffyTighnari/middleware/internal/runstore"
 	"github.com/fluffyTighnari/middleware/internal/workflow"
 )
@@ -99,6 +100,20 @@ func (f *fakeHub) Send(daemonID string, env *runtimev1.Envelope) error {
 	return nil
 }
 
+type fakeMaterials struct{}
+
+func (fakeMaterials) AssembleTaskMaterials(context.Context, string) (register.TaskMaterials, error) {
+	return register.TaskMaterials{
+		Tools: []register.ToolMaterial{{
+			Name: "search", Description: "search", SchemaJSON: `{"type":"object"}`, Scope: "local",
+		}},
+		MCPBindings: []register.MCPMaterial{{
+			ServerName: "github", Transport: "stdio", Command: "mcp-github",
+			AllowedTools: []string{"search"}, Namespace: "mcp__github__",
+		}},
+	}, nil
+}
+
 func newRun() runstore.Run {
 	return runstore.Run{
 		RunID:         "run-1",
@@ -154,6 +169,30 @@ func TestHandleDispatchAndAcceptedAck(t *testing.T) {
 	}
 	if assign.GetTimeouts().GetRunTimeoutMs() != 1800000 {
 		t.Fatalf("timeouts = %+v", assign.GetTimeouts())
+	}
+}
+
+func TestHandleIncludesAssembledMaterials(t *testing.T) {
+	runs := &fakeRuns{run: newRun()}
+	hub := &fakeHub{daemonID: "daemon-1"}
+	ctrl := New(runs, hub, Config{AckTimeout: time.Second}, fakeMaterials{})
+	hub.onSend = func(env *runtimev1.Envelope) {
+		go ctrl.HandleEnvelope("daemon-1", &runtimev1.Envelope{
+			CorrelationId: env.GetMsgId(),
+			Payload: &runtimev1.Envelope_TaskAck{
+				TaskAck: &runtimev1.TaskAck{Accepted: true},
+			},
+		})
+	}
+	if err := ctrl.Handle(context.Background(), testTask(), workflow.Lease{}); err != nil {
+		t.Fatalf("Handle() error = %v", err)
+	}
+	assign := hub.sent[0].GetTaskAssign()
+	if len(assign.GetTools()) != 1 || assign.GetTools()[0].GetScope() != runtimev1.ToolScope_LOCAL {
+		t.Fatalf("tools = %+v", assign.GetTools())
+	}
+	if len(assign.GetMcpBindings()) != 1 || assign.GetMcpBindings()[0].GetNamespace() != "mcp__github__" {
+		t.Fatalf("mcp bindings = %+v", assign.GetMcpBindings())
 	}
 }
 

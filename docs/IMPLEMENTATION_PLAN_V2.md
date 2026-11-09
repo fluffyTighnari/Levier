@@ -4,7 +4,7 @@
 |---|---|
 | 计划版本 | V2.0 |
 | 日期 | 2026-11-03 |
-| 状态 | P0–P4 完成；P5-37–P5-41 完成；G2 通过；G3 功能通过；M1/G4 功能通过；镜像待 Docker 复核；取代 `IMPLEMENTATION_PLAN.md` v0.3 |
+| 状态 | P0–P5 完成；G2/G3/G4/G5 功能通过；M1 垂直切片完成；镜像待 Docker 复核；取代 `IMPLEMENTATION_PLAN.md` v0.3 |
 | 依据 | `docs/DESIGN.md` v0.1、`docs/WORKFLOW_ENGINE_AUDIT.md` |
 | 总步骤 | 72 个审查单元 |
 | 用法 | 一次只做一个 `Px-yy`；产出、验收、diff 都确认后再进入下一步 |
@@ -336,9 +336,10 @@ internal/control ──► internal/workflow (PostgreSQL run_tasks, SKIP LOCKED)
   - 验收：明文仅返回一次；重复 name 幂等；越权更新拒绝。
   - 完成记录：`internal/register`、App key hash/rotate、Admin/App 鉴权、`/admin/apps`、`/apps`、rotate-key；API key 仅返回一次，重复 name 幂等，App 越权查询/创建被拒绝；报告：`docs/reports/P5-41.md`。
 
-- [ ] **P5-42 Tool/MCP/组装与 Gate**
+- [x] **P5-42 Tool/MCP/组装与 Gate**
   - local/global ToolDef、MCP defs、`auth_ref` env/file、`ResolveTool` 遮蔽/ACL、`AssembleTaskMaterials` 产出 `mcp_bindings`（含 allowed_tools/namespace）。
   - 验收：遮蔽/ACL 矩阵；未授权 MCP 工具不下发；密钥不落日志；G5 通过。
+  - 完成记录：`internal/register` Tool/MCP 目录、ACL/遮蔽、secret env/file、材料组装、Control 注入 TaskAssign；G5 功能通过；报告：`docs/reports/P5-42.md`、`docs/reports/G5.md`。
 
 **G5 审查物：** 迁移 diff、CAS/事件测试、注册 API 样例、密钥脱敏、材料组装快照。
 

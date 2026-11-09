@@ -30,12 +30,13 @@ const appColumns = `
 
 // Registry owns App registration and API-key authentication.
 type Registry struct {
-	pool *pgxpool.Pool
+	pool    *pgxpool.Pool
+	secrets SecretResolver
 }
 
 // New returns a PostgreSQL-backed registry.
 func New(pool *pgxpool.Pool) *Registry {
-	return &Registry{pool: pool}
+	return &Registry{pool: pool, secrets: EnvSecretResolver{}}
 }
 
 // RegisterApp creates an App and returns the plaintext API key once.

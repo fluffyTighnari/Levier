@@ -20,6 +20,7 @@ import (
 	"time"
 
 	"github.com/fluffyTighnari/middleware/internal/id"
+	"github.com/fluffyTighnari/middleware/internal/register"
 	"github.com/fluffyTighnari/middleware/internal/runstore"
 	"github.com/fluffyTighnari/middleware/internal/workflow"
 )
@@ -40,6 +41,12 @@ type AppRegistry interface {
 	AuthenticateAPIKey(ctx context.Context, key string) (runstore.App, error)
 	UpdateApp(ctx context.Context, appID, name string, multiagent bool) (runstore.App, error)
 	RotateAPIKey(ctx context.Context, appID string) (string, error)
+}
+
+// CatalogRegistry is the optional App tool/MCP catalog subset.
+type CatalogRegistry interface {
+	ReplaceLocalTools(ctx context.Context, appID string, tools []register.ToolInput) ([]register.ToolMaterial, error)
+	SetAppMCPRefs(ctx context.Context, appID string, names []string) error
 }
 
 // TaskQueue is the dispatch queue subset used by the HTTP API.
@@ -396,11 +403,47 @@ func (s *Server) handleAdminCreateApp(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, "INTERNAL", "create app failed", true)
 		return
 	}
+	if created && !s.applyAppCatalog(w, r, app.AppID, request) {
+		return
+	}
 	status := http.StatusOK
 	if created {
 		status = http.StatusCreated
 	}
 	writeJSON(w, status, CreateAppResponse{App: appView(app), APIKey: key})
+}
+
+func (s *Server) applyAppCatalog(w http.ResponseWriter, r *http.Request, appID string, request AppUpsertRequest) bool {
+	catalog, ok := s.apps.(CatalogRegistry)
+	if !ok {
+		return true
+	}
+	if request.Tools != nil {
+		tools := make([]register.ToolInput, 0, len(request.Tools))
+		for _, tool := range request.Tools {
+			schema := string(tool.Schema)
+			if schema == "" {
+				schema = "{}"
+			}
+			tools = append(tools, register.ToolInput{
+				Name:        tool.Name,
+				Description: tool.Description,
+				SchemaJSON:  schema,
+				TimeoutMS:   int(tool.TimeoutMS),
+			})
+		}
+		if _, err := catalog.ReplaceLocalTools(r.Context(), appID, tools); err != nil {
+			writeError(w, http.StatusBadRequest, "BAD_TOOL", err.Error(), false)
+			return false
+		}
+	}
+	if request.MCPRefs != nil {
+		if err := catalog.SetAppMCPRefs(r.Context(), appID, request.MCPRefs); err != nil {
+			writeError(w, http.StatusBadRequest, "BAD_MCP_REF", err.Error(), false)
+			return false
+		}
+	}
+	return true
 }
 
 func (s *Server) handleUpdateApp(w http.ResponseWriter, r *http.Request) {
@@ -425,6 +468,9 @@ func (s *Server) handleUpdateApp(w http.ResponseWriter, r *http.Request) {
 	}
 	if err != nil {
 		writeError(w, http.StatusConflict, "APP_NAME_CONFLICT", "app name is already in use", false)
+		return
+	}
+	if !s.applyAppCatalog(w, r, app.AppID, request) {
 		return
 	}
 	writeJSON(w, http.StatusOK, appView(updated))

@@ -20,6 +20,7 @@ import (
 
 	runtimev1 "github.com/fluffyTighnari/middleware/gen/middleware/runtime/v1"
 	"github.com/fluffyTighnari/middleware/internal/protocol"
+	"github.com/fluffyTighnari/middleware/internal/register"
 	"github.com/fluffyTighnari/middleware/internal/runstore"
 	"github.com/fluffyTighnari/middleware/internal/workflow"
 )
@@ -45,6 +46,11 @@ type RunStore interface {
 	AppendEvent(ctx context.Context, event runstore.Event) (runstore.AppendResult, error)
 }
 
+// MaterialAssembler supplies TaskAssign tools and MCP bindings.
+type MaterialAssembler interface {
+	AssembleTaskMaterials(ctx context.Context, appID string) (register.TaskMaterials, error)
+}
+
 // DaemonHub is the connection subset used by Control.
 type DaemonHub interface {
 	PickHealthy(runtimeType runtimev1.RuntimeType, strategy string, labels map[string]string) (string, bool)
@@ -53,10 +59,11 @@ type DaemonHub interface {
 
 // Control claims RUN_DISPATCH tasks, assigns daemons, and drives run state.
 type Control struct {
-	runs RunStore
-	hub  DaemonHub
-	cfg  Config
-	log  *slog.Logger
+	runs      RunStore
+	hub       DaemonHub
+	materials MaterialAssembler
+	cfg       Config
+	log       *slog.Logger
 
 	pendingMu sync.Mutex
 	pending   map[string]chan *runtimev1.TaskAck
@@ -72,7 +79,7 @@ type Control struct {
 }
 
 // New returns a Control instance.
-func New(runs RunStore, hub DaemonHub, cfg Config) *Control {
+func New(runs RunStore, hub DaemonHub, cfg Config, assemblers ...MaterialAssembler) *Control {
 	if cfg.AckTimeout <= 0 {
 		cfg.AckTimeout = 5 * time.Second
 	}
@@ -85,7 +92,7 @@ func New(runs RunStore, hub DaemonHub, cfg Config) *Control {
 	if cfg.Logger == nil {
 		cfg.Logger = slog.Default()
 	}
-	return &Control{
+	control := &Control{
 		runs:    runs,
 		hub:     hub,
 		cfg:     cfg,
@@ -93,6 +100,10 @@ func New(runs RunStore, hub DaemonHub, cfg Config) *Control {
 		pending: make(map[string]chan *runtimev1.TaskAck),
 		events:  make(chan *runtimev1.Envelope, cfg.EventBuffer),
 	}
+	if len(assemblers) > 0 {
+		control.materials = assemblers[0]
+	}
+	return control
 }
 
 // Start starts the asynchronous event consumer.
@@ -166,6 +177,14 @@ func (c *Control) Handle(ctx context.Context, task workflow.Task, _ workflow.Lea
 	assign, err := buildTaskAssign(run, attempt)
 	if err != nil {
 		return workflow.Permanent(err)
+	}
+	if c.materials != nil {
+		materials, err := c.materials.AssembleTaskMaterials(ctx, run.AppID)
+		if err != nil {
+			return workflow.Permanent(fmt.Errorf("assemble task materials: %w", err))
+		}
+		assign.Tools = toolManifests(materials.Tools)
+		assign.McpBindings = mcpBindings(materials.MCPBindings)
 	}
 	envelope, err := protocol.NewRun(run.RunID, int32(attempt), leaseEpoch, assign)
 	if err != nil {
@@ -406,6 +425,41 @@ func buildTaskAssign(run runstore.Run, attempt int) (*runtimev1.TaskAssign, erro
 		SessionId:    run.SessionID,
 		TraceContext: run.TraceID,
 	}, nil
+}
+
+func toolManifests(tools []register.ToolMaterial) []*runtimev1.ToolManifest {
+	result := make([]*runtimev1.ToolManifest, 0, len(tools))
+	for _, tool := range tools {
+		scope := runtimev1.ToolScope_GLOBAL
+		if tool.Scope == "local" {
+			scope = runtimev1.ToolScope_LOCAL
+		}
+		result = append(result, &runtimev1.ToolManifest{
+			Name:            tool.Name,
+			Description:     tool.Description,
+			InputSchemaJson: tool.SchemaJSON,
+			Scope:           scope,
+		})
+	}
+	return result
+}
+
+func mcpBindings(bindings []register.MCPMaterial) []*runtimev1.McpBinding {
+	result := make([]*runtimev1.McpBinding, 0, len(bindings))
+	for _, binding := range bindings {
+		result = append(result, &runtimev1.McpBinding{
+			ServerName:   binding.ServerName,
+			Transport:    binding.Transport,
+			Command:      binding.Command,
+			Args:         binding.Args,
+			Env:          binding.Env,
+			Url:          binding.URL,
+			Headers:      binding.Headers,
+			AllowedTools: binding.AllowedTools,
+			Namespace:    binding.Namespace,
+		})
+	}
+	return result
 }
 
 func runtimeType(value string) runtimev1.RuntimeType {
