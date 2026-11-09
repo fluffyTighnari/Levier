@@ -80,7 +80,12 @@ func main() {
 
 	runs := runstore.New(pool)
 	registry := register.New(pool)
-	controller := control.New(runs, hub, control.Config{Logger: logger}, registry)
+	appHub := connection.NewAppHub()
+	defer appHub.Close()
+	controller := control.New(runs, hub, control.Config{
+		Logger:    logger,
+		Publisher: appHub,
+	}, registry)
 	hub.SetOnEnvelope(controller.HandleEnvelope)
 	controller.Start(ctx)
 	defer controller.Close()
@@ -115,6 +120,7 @@ func main() {
 		AdminToken:           cfg.HTTP.AdminToken,
 		DefaultRunTimeoutMS:  1_800_000,
 		DefaultToolTimeoutMS: 60_000,
+		AppHub:               appHub,
 	}, registry)
 	httpListener, err := net.Listen("tcp", cfg.HTTP.Addr)
 	if err != nil {

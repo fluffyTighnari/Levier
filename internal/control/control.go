@@ -30,11 +30,17 @@ var (
 	errAckTimeout = errors.New("task ack timed out")
 )
 
+// EventPublisher pushes events to App WebSocket subscribers.
+type EventPublisher interface {
+	Publish(appID, runID string, payload []byte)
+}
+
 // Config controls the minimal Control loop.
 type Config struct {
 	AckTimeout  time.Duration
 	RetryDelay  time.Duration
 	EventBuffer int
+	Publisher   EventPublisher
 	Logger      *slog.Logger
 }
 
@@ -313,7 +319,25 @@ func (c *Control) handleEvent(env *runtimev1.Envelope) {
 			"gap", result.GapSize,
 		)
 	}
-	if !result.Inserted || event.GetType() != runtimev1.EventType_RUN_STATUS {
+	if !result.Inserted {
+		return
+	}
+	if c.cfg.Publisher != nil {
+		wsPayload, err := json.Marshal(map[string]any{
+			"type":       "event",
+			"run_id":     env.GetRunId(),
+			"attempt":    env.GetAttempt(),
+			"seq":        event.GetSeq(),
+			"source":     source,
+			"event_type": runtimev1.EventType_name[int32(event.GetType())],
+			"data":       eventData,
+			"ts_ms":      env.GetTsMs(),
+		})
+		if err == nil {
+			c.cfg.Publisher.Publish(run.AppID, env.GetRunId(), wsPayload)
+		}
+	}
+	if event.GetType() != runtimev1.EventType_RUN_STATUS {
 		return
 	}
 	statusValue, _ := eventData["status"].(string)
@@ -338,6 +362,16 @@ func (c *Control) handleEvent(env *runtimev1.Envelope) {
 			"status", status,
 			"err", err,
 		)
+		return
+	}
+	if c.cfg.Publisher != nil && runstore.TerminalStatus(status) {
+		payload, _ := json.Marshal(map[string]any{
+			"type":    "run_completed",
+			"run_id":  env.GetRunId(),
+			"status":  status,
+			"attempt": env.GetAttempt(),
+		})
+		c.cfg.Publisher.Publish(run.AppID, env.GetRunId(), payload)
 	}
 }
 

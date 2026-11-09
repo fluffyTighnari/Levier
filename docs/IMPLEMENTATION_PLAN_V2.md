@@ -4,7 +4,7 @@
 |---|---|
 | 计划版本 | V2.0 |
 | 日期 | 2026-11-03 |
-| 状态 | P0–P5 完成；P6-43–P6-45 完成；G2/G3/G4/G5 功能通过；M1 垂直切片完成；镜像待 Docker 复核；取代 `IMPLEMENTATION_PLAN.md` v0.3 |
+| 状态 | P0–P5 完成；P6-43–P6-46 完成；G2/G3/G4/G5 功能通过；M1 垂直切片完成；镜像待 Docker 复核；取代 `IMPLEMENTATION_PLAN.md` v0.3 |
 | 依据 | `docs/DESIGN.md` v0.1、`docs/WORKFLOW_ENGINE_AUDIT.md` |
 | 总步骤 | 72 个审查单元 |
 | 用法 | 一次只做一个 `Px-yy`；产出、验收、diff 都确认后再进入下一步 |
@@ -360,9 +360,10 @@ internal/control ──► internal/workflow (PostgreSQL run_tasks, SKIP LOCKED)
   - 验收：假时钟 30s 判死；容量漂移可校准。
   - 完成记录：`Sweep`/reaper、`OnHeartbeat`/`OnOffline`/`OnError`、panic 隔离、容量校准；假时钟 30s 判死测试通过；报告：`docs/reports/P6-45.md`。
 
-- [ ] **P6-46 AppHub WS**
+- [x] **P6-46 AppHub WS**
   - ws_token 鉴权、app 绑定、连接注册、fanout、订阅归属校验。
   - 验收：跨 App 订阅拒绝；多连接同时收到。
+  - 完成记录：`connection.AppHub`、`WSTokenStore`、WS subscribe/replay/caught_up、Control Publisher；跨 App 订阅拒绝与 fanout 测试通过；报告：`docs/reports/P6-46.md`。
 
 - [ ] **P6-47 local tool 挂起表**
   - `CallLocalTool`、pending map、结果路由、超时/取消/断线快速失败。

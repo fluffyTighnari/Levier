@@ -19,6 +19,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/fluffyTighnari/middleware/internal/connection"
 	"github.com/fluffyTighnari/middleware/internal/id"
 	"github.com/fluffyTighnari/middleware/internal/register"
 	"github.com/fluffyTighnari/middleware/internal/runstore"
@@ -61,15 +62,19 @@ type Config struct {
 	DefaultRunTimeoutMS  int
 	DefaultToolTimeoutMS int
 	MaxBodyBytes         int64
+	WSTokenTTL           time.Duration
+	AppHub               *connection.AppHub
 }
 
 // Server implements the minimal App HTTP API.
 type Server struct {
-	runs  RunStore
-	queue TaskQueue
-	apps  AppRegistry
-	cfg   Config
-	mux   *http.ServeMux
+	runs     RunStore
+	queue    TaskQueue
+	apps     AppRegistry
+	appHub   *connection.AppHub
+	wsTokens *WSTokenStore
+	cfg      Config
+	mux      *http.ServeMux
 }
 
 // NewServer builds the HTTP handler.
@@ -83,7 +88,18 @@ func NewServer(runs RunStore, queue TaskQueue, cfg Config, registries ...AppRegi
 	if cfg.MaxBodyBytes <= 0 {
 		cfg.MaxBodyBytes = defaultMaxBodyBytes
 	}
-	server := &Server{runs: runs, queue: queue, cfg: cfg, mux: http.NewServeMux()}
+	appHub := cfg.AppHub
+	if appHub == nil {
+		appHub = connection.NewAppHub()
+	}
+	server := &Server{
+		runs:     runs,
+		queue:    queue,
+		cfg:      cfg,
+		appHub:   appHub,
+		wsTokens: NewWSTokenStore(cfg.WSTokenTTL),
+		mux:      http.NewServeMux(),
+	}
 	if len(registries) > 0 {
 		server.apps = registries[0]
 	}
@@ -105,6 +121,7 @@ func (s *Server) routes() {
 	s.mux.HandleFunc("POST /admin/apps/{app_id}/rotate-key", s.handleAdminRotateKey)
 	s.mux.HandleFunc("POST "+APIPrefix+"/apps", s.handleUpdateApp)
 	s.mux.HandleFunc("GET "+APIPrefix+"/apps/{app_id}", s.handleGetApp)
+	s.mux.Handle(APIPrefix+"/ws", websocketHandler(s.handleWS))
 }
 
 func (s *Server) authDisabled() bool {
@@ -284,9 +301,10 @@ func (s *Server) handleCreateRun(w http.ResponseWriter, r *http.Request) {
 	}
 
 	writeJSON(w, http.StatusAccepted, CreateRunResponse{
-		RunID:  run.RunID,
-		Status: RunStatus(run.Status),
-		WSURL:  WSURL,
+		RunID:   run.RunID,
+		Status:  RunStatus(run.Status),
+		WSURL:   WSURL,
+		WSToken: s.wsTokens.Issue(appID),
 	})
 }
 
