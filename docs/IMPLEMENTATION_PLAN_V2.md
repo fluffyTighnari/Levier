@@ -4,7 +4,7 @@
 |---|---|
 | 计划版本 | V2.0 |
 | 日期 | 2026-11-03 |
-| 状态 | P0–P5 完成；P6-43–P6-50 完成；G2/G3/G4/G5 功能通过；M1 垂直切片完成；镜像待 Docker 复核；取代 `IMPLEMENTATION_PLAN.md` v0.3 |
+| 状态 | P0–P6 完成；G2–G6 功能通过；M1 垂直切片完成；镜像待 Docker 复核；取代 `IMPLEMENTATION_PLAN.md` v0.3 |
 | 依据 | `docs/DESIGN.md` v0.1、`docs/WORKFLOW_ENGINE_AUDIT.md` |
 | 总步骤 | 72 个审查单元 |
 | 用法 | 一次只做一个 `Px-yy`；产出、验收、diff 都确认后再进入下一步 |
@@ -385,9 +385,10 @@ internal/control ──► internal/workflow (PostgreSQL run_tasks, SKIP LOCKED)
   - 验收：取消/完成竞态单终态；超时必终态。
   - 完成记录：`CancelRun`、HTTP cancel、RUN_TIMEOUT 入队/处理、Cancel 下发、local tool 取消；竞态/超时测试通过；报告：`docs/reports/P6-50.md`。
 
-- [ ] **P6-51 对账与重启恢复**
+- [x] **P6-51 对账与重启恢复**
   - Hello `running_run_ids`、daemon lost 重排队、MW 重启恢复、lease 防双跑。
   - 验收：DESIGN §12.2 三行逐条通过；G6 通过。
+  - 完成记录：`ReconcileDaemon`/`HandleDaemonOffline`、`ListActiveRunsForDaemon`/`RequeueRun`、Hello/Offline 回调；§12.2 分支与 G6 通过；报告：`docs/reports/P6-51.md`、`docs/reports/G6.md`。
 
 **G6 审查物：** 调度选主表、背压测试、12.2 对账报告、竞态测试。
 

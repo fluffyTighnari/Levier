@@ -19,6 +19,7 @@ import (
 	"google.golang.org/protobuf/types/known/structpb"
 
 	runtimev1 "github.com/fluffyTighnari/middleware/gen/middleware/runtime/v1"
+	"github.com/fluffyTighnari/middleware/internal/connection"
 	"github.com/fluffyTighnari/middleware/internal/protocol"
 	"github.com/fluffyTighnari/middleware/internal/register"
 	"github.com/fluffyTighnari/middleware/internal/runstore"
@@ -43,14 +44,15 @@ type Config struct {
 	EventBuffer          int
 	Publisher            EventPublisher
 	Scheduler            Scheduler
-	Tasks                TaskCanceller
+	Tasks                TaskStore
 	LocalTools           LocalToolCanceller
 	Logger               *slog.Logger
 }
 
-// TaskCanceller cancels durable RunTasks.
-type TaskCanceller interface {
+// TaskStore cancels and enqueues durable RunTasks.
+type TaskStore interface {
 	CancelRun(ctx context.Context, runID, reason string) (int, error)
+	Enqueue(ctx context.Context, task workflow.Task) (workflow.Task, error)
 }
 
 // LocalToolCanceller fails pending App tool calls for a run.
@@ -64,6 +66,8 @@ type RunStore interface {
 	AssignRun(ctx context.Context, assignment runstore.Assignment) (runstore.Run, error)
 	Transition(ctx context.Context, transition runstore.Transition) (runstore.Run, error)
 	AppendEvent(ctx context.Context, event runstore.Event) (runstore.AppendResult, error)
+	ListActiveRunsForDaemon(ctx context.Context, daemonID string) ([]runstore.Run, error)
+	RequeueRun(ctx context.Context, runID string) (runstore.Run, error)
 }
 
 // MaterialAssembler supplies TaskAssign tools and MCP bindings.
@@ -316,6 +320,86 @@ func (c *Control) removePending(msgID string) {
 	c.pendingMu.Lock()
 	delete(c.pending, msgID)
 	c.pendingMu.Unlock()
+}
+
+// HandleDaemonOffline requeues runs owned by a lost daemon.
+func (c *Control) HandleDaemonOffline(daemonID string) {
+	ctx := context.Background()
+	runs, err := c.runs.ListActiveRunsForDaemon(ctx, daemonID)
+	if err != nil {
+		c.log.Warn("control list daemon runs failed", "daemon_id", daemonID, "err", err)
+		return
+	}
+	for _, run := range runs {
+		c.requeueRun(ctx, run, "daemon lost")
+	}
+}
+
+// ReconcileDaemon compares Hello.running_runs with persisted run state.
+func (c *Control) ReconcileDaemon(info connection.DaemonInfo) {
+	ctx := context.Background()
+	runs, err := c.runs.ListActiveRunsForDaemon(ctx, info.DaemonID)
+	if err != nil {
+		c.log.Warn("control reconcile list failed", "daemon_id", info.DaemonID, "err", err)
+		return
+	}
+	running := make(map[string]connection.RunRef, len(info.RunningRuns))
+	for _, run := range info.RunningRuns {
+		running[run.RunID] = run
+	}
+	cancelIDs := make([]string, 0)
+	for _, run := range runs {
+		if runstore.TerminalStatus(run.Status) {
+			if _, ok := running[run.RunID]; ok {
+				cancelIDs = append(cancelIDs, run.RunID)
+				delete(running, run.RunID)
+			}
+			continue
+		}
+		reported, ok := running[run.RunID]
+		if !ok {
+			if run.Status == runstore.StatusRunning {
+				c.requeueRun(ctx, run, "daemon lost run")
+			}
+			continue
+		}
+		if reported.LeaseEpoch != run.LeaseEpoch {
+			cancelIDs = append(cancelIDs, run.RunID)
+		}
+		delete(running, run.RunID)
+	}
+	for runID := range running {
+		cancelIDs = append(cancelIDs, runID)
+	}
+	if len(cancelIDs) > 0 {
+		envelope, err := protocol.New(&runtimev1.Reconcile{CancelRunIds: cancelIDs})
+		if err != nil {
+			c.log.Warn("control build reconcile failed", "daemon_id", info.DaemonID, "err", err)
+			return
+		}
+		if err := c.hub.Send(info.DaemonID, envelope); err != nil {
+			c.log.Warn("control send reconcile failed", "daemon_id", info.DaemonID, "err", err)
+		}
+	}
+}
+
+func (c *Control) requeueRun(ctx context.Context, run runstore.Run, reason string) {
+	requeued, err := c.runs.RequeueRun(ctx, run.RunID)
+	if err != nil {
+		if !errors.Is(err, runstore.ErrRunNotAssignable) {
+			c.log.Warn("control requeue run failed", "run_id", run.RunID, "err", err)
+		}
+		return
+	}
+	c.hub.Release(run.AssignedDaemonID)
+	c.cancelLocalTools(run.AppID, run.RunID, "DAEMON_LOST", reason)
+	if c.cfg.Tasks != nil {
+		if _, err := c.cfg.Tasks.Enqueue(ctx, workflow.NewTask(
+			requeued.RunID, workflow.TaskRetry, time.Now(), 0,
+		)); err != nil {
+			c.log.Warn("control enqueue retry failed", "run_id", run.RunID, "err", err)
+		}
+	}
 }
 
 // CancelRun cancels one non-terminal run and notifies its daemon.

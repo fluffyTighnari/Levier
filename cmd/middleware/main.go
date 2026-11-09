@@ -91,6 +91,8 @@ func main() {
 		LocalTools: appHub,
 	}, registry)
 	hub.SetOnEnvelope(controller.HandleEnvelope)
+	hub.SetOnHello(controller.ReconcileDaemon)
+	hub.SetOnOffline(controller.HandleDaemonOffline)
 	controller.Start(ctx)
 	defer controller.Close()
 

@@ -94,6 +94,7 @@ type Config struct {
 	OutboundBuffer       int
 	Authenticate         Authenticator
 	OnEnvelope           func(daemonID string, env *runtimev1.Envelope)
+	OnHello              func(info DaemonInfo)
 	OnHeartbeat          func(daemonID string, runningCount int32)
 	OnOffline            func(daemonID string)
 	OnError              func(error)
@@ -109,6 +110,8 @@ type Hub struct {
 	mu         sync.RWMutex
 	daemons    map[string]*daemonConn
 	onEnvelope func(daemonID string, env *runtimev1.Envelope)
+	onHello    func(info DaemonInfo)
+	onOffline  func(daemonID string)
 	closed     bool
 	wg         sync.WaitGroup
 	stopCh     chan struct{}
@@ -158,6 +161,8 @@ func New(cfg Config) *Hub {
 		cfg:        cfg,
 		daemons:    make(map[string]*daemonConn),
 		onEnvelope: cfg.OnEnvelope,
+		onHello:    cfg.OnHello,
+		onOffline:  cfg.OnOffline,
 		stopCh:     make(chan struct{}),
 	}
 	go hub.reaper()
@@ -168,6 +173,20 @@ func New(cfg Config) *Hub {
 func (h *Hub) SetOnEnvelope(handler func(daemonID string, env *runtimev1.Envelope)) {
 	h.mu.Lock()
 	h.onEnvelope = handler
+	h.mu.Unlock()
+}
+
+// SetOnHello replaces the Hello callback.
+func (h *Hub) SetOnHello(handler func(info DaemonInfo)) {
+	h.mu.Lock()
+	h.onHello = handler
+	h.mu.Unlock()
+}
+
+// SetOnOffline replaces the offline callback.
+func (h *Hub) SetOnOffline(handler func(daemonID string)) {
+	h.mu.Lock()
+	h.onOffline = handler
 	h.mu.Unlock()
 }
 
@@ -237,6 +256,7 @@ func (h *Hub) Channel(stream runtimev1.RuntimeService_ChannelServer) error {
 	h.wg.Add(1)
 	h.mu.Unlock()
 
+	h.notifyHello(info)
 	defer h.wg.Done()
 	defer func() {
 		if h.remove(conn) {
@@ -606,10 +626,24 @@ func (h *Hub) reaper() {
 	}
 }
 
-func (h *Hub) notifyOffline(daemonID string) {
+func (h *Hub) notifyHello(info DaemonInfo) {
+	h.mu.RLock()
+	handler := h.onHello
+	h.mu.RUnlock()
 	h.safeCall(func() {
-		if h.cfg.OnOffline != nil {
-			h.cfg.OnOffline(daemonID)
+		if handler != nil {
+			handler(info)
+		}
+	})
+}
+
+func (h *Hub) notifyOffline(daemonID string) {
+	h.mu.RLock()
+	handler := h.onOffline
+	h.mu.RUnlock()
+	h.safeCall(func() {
+		if handler != nil {
+			handler(daemonID)
 		}
 	})
 }

@@ -299,6 +299,71 @@ func (s *Store) Transition(ctx context.Context, transition Transition) (Run, err
 	return run, nil
 }
 
+// ListActiveRunsForDaemon returns runs currently assigned to a daemon.
+func (s *Store) ListActiveRunsForDaemon(ctx context.Context, daemonID string) ([]Run, error) {
+	if s == nil || s.pool == nil {
+		return nil, fmt.Errorf("runstore: postgres pool is nil")
+	}
+	if daemonID == "" {
+		return nil, fmt.Errorf("%w: daemon_id is required", ErrInvalidRun)
+	}
+	rows, err := s.pool.Query(ctx, `
+		SELECT `+runColumns+`
+		FROM runs
+		WHERE assigned_daemon_id = $1
+		  AND status IN ('assigned', 'running')
+		ORDER BY run_id
+	`, daemonID)
+	if err != nil {
+		return nil, fmt.Errorf("list active runs: %w", err)
+	}
+	defer rows.Close()
+	runs := make([]Run, 0)
+	for rows.Next() {
+		run, err := scanRun(rows)
+		if err != nil {
+			return nil, fmt.Errorf("list active runs: scan: %w", err)
+		}
+		runs = append(runs, run)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("list active runs: %w", err)
+	}
+	return runs, nil
+}
+
+// RequeueRun moves an assigned/running run back to queued with a new epoch.
+func (s *Store) RequeueRun(ctx context.Context, runID string) (Run, error) {
+	if s == nil || s.pool == nil {
+		return Run{}, fmt.Errorf("runstore: postgres pool is nil")
+	}
+	if runID == "" {
+		return Run{}, fmt.Errorf("%w: run_id is required", ErrInvalidRun)
+	}
+	run, err := scanRun(s.pool.QueryRow(ctx, `
+		UPDATE runs
+		SET status = 'queued',
+		    lease_epoch = lease_epoch + 1,
+		    assigned_daemon_id = NULL,
+		    assigned_at = NULL,
+		    updated_at = now()
+		WHERE run_id = $1
+		  AND status IN ('assigned', 'running')
+		RETURNING `+runColumns,
+		runID,
+	))
+	if errors.Is(err, pgx.ErrNoRows) {
+		if _, getErr := s.GetRun(ctx, runID); errors.Is(getErr, ErrRunNotFound) {
+			return Run{}, ErrRunNotFound
+		}
+		return Run{}, ErrRunNotAssignable
+	}
+	if err != nil {
+		return Run{}, fmt.Errorf("requeue run: %w", err)
+	}
+	return run, nil
+}
+
 // AppendEvent inserts one event idempotently and advances the run projection.
 // It validates the run lease epoch and reports out-of-window sequence gaps.
 func (s *Store) AppendEvent(ctx context.Context, event Event) (AppendResult, error) {

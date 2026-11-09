@@ -613,6 +613,38 @@ func TestEventDoesNotChangeRunStatus(t *testing.T) {
 	}
 }
 
+func TestListActiveRunsAndRequeue(t *testing.T) {
+	store := New(testPool(t))
+	ctx := context.Background()
+	app := createApp(t, store)
+	run, _ := store.CreateRun(ctx, Run{RunID: "run-" + id.New(), AppID: app.AppID})
+	if _, err := store.AssignRun(ctx, Assignment{
+		RunID: run.RunID, ExpectedStatus: StatusQueued,
+		ExpectedAttempt: 0, ExpectedLeaseEpoch: 0,
+		Attempt: 1, LeaseEpoch: 1, DaemonID: "daemon-1",
+	}); err != nil {
+		t.Fatalf("AssignRun() error = %v", err)
+	}
+	active, err := store.ListActiveRunsForDaemon(ctx, "daemon-1")
+	if err != nil || len(active) != 1 || active[0].RunID != run.RunID {
+		t.Fatalf("active = %+v, %v", active, err)
+	}
+	requeued, err := store.RequeueRun(ctx, run.RunID)
+	if err != nil {
+		t.Fatalf("RequeueRun() error = %v", err)
+	}
+	if requeued.Status != StatusQueued || requeued.Attempt != 1 || requeued.LeaseEpoch != 2 {
+		t.Fatalf("requeued = %+v", requeued)
+	}
+	if requeued.AssignedDaemonID != "" || requeued.AssignedAt != nil {
+		t.Fatalf("assignment was not cleared: %+v", requeued)
+	}
+	active, err = store.ListActiveRunsForDaemon(ctx, "daemon-1")
+	if err != nil || len(active) != 0 {
+		t.Fatalf("active after requeue = %+v, %v", active, err)
+	}
+}
+
 func TestRunPersistsAcrossStoreInstances(t *testing.T) {
 	pool := testPool(t)
 	store := New(pool)

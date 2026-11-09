@@ -18,6 +18,7 @@ import (
 	"google.golang.org/protobuf/types/known/structpb"
 
 	runtimev1 "github.com/fluffyTighnari/middleware/gen/middleware/runtime/v1"
+	"github.com/fluffyTighnari/middleware/internal/connection"
 	"github.com/fluffyTighnari/middleware/internal/protocol"
 	"github.com/fluffyTighnari/middleware/internal/register"
 	"github.com/fluffyTighnari/middleware/internal/runstore"
@@ -32,6 +33,7 @@ type fakeRuns struct {
 	statuses     []string
 	events       []runstore.Event
 	appendResult runstore.AppendResult
+	active       []runstore.Run
 }
 
 func (f *fakeRuns) GetRun(context.Context, string) (runstore.Run, error) {
@@ -62,6 +64,24 @@ func (f *fakeRuns) Transition(_ context.Context, transition runstore.Transition)
 	}
 	f.statuses = append(f.statuses, transition.ToStatus)
 	f.run.Status = transition.ToStatus
+	return f.run, nil
+}
+
+func (f *fakeRuns) ListActiveRunsForDaemon(context.Context, string) ([]runstore.Run, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	if f.active != nil {
+		return append([]runstore.Run(nil), f.active...), nil
+	}
+	return []runstore.Run{f.run}, nil
+}
+
+func (f *fakeRuns) RequeueRun(_ context.Context, _ string) (runstore.Run, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.run.Status = "queued"
+	f.run.AssignedDaemonID = ""
+	f.run.LeaseEpoch++
 	return f.run, nil
 }
 
@@ -144,14 +164,20 @@ func (f *fakeScheduler) Pick(request PlacementRequest) (string, bool) {
 }
 
 type fakeTaskCanceller struct {
-	calls int
-	runID string
+	calls        int
+	enqueueCalls int
+	runID        string
 }
 
 func (f *fakeTaskCanceller) CancelRun(_ context.Context, runID, _ string) (int, error) {
 	f.calls++
 	f.runID = runID
 	return 1, nil
+}
+
+func (f *fakeTaskCanceller) Enqueue(_ context.Context, task workflow.Task) (workflow.Task, error) {
+	f.enqueueCalls++
+	return task, nil
 }
 
 type fakeLocalTools struct {
@@ -367,6 +393,93 @@ func TestHandleRetriesNextCandidateOnAckTimeout(t *testing.T) {
 	}
 	if _, excluded := scheduler.requests[1].ExcludeDaemonIDs["d1"]; !excluded {
 		t.Fatal("timed-out daemon was not excluded")
+	}
+}
+
+func TestReconcileDaemonCases(t *testing.T) {
+	info := connection.DaemonInfo{DaemonID: "d1", RunningRuns: []connection.RunRef{
+		{RunID: "run-1", LeaseEpoch: 1},
+	}}
+
+	t.Run("same epoch no action", func(t *testing.T) {
+		runs := &fakeRuns{run: newRun()}
+		runs.run.Status = "running"
+		runs.run.Attempt = 1
+		runs.run.LeaseEpoch = 1
+		runs.run.AssignedDaemonID = "d1"
+		hub := &fakeHub{}
+		ctrl := New(runs, hub, Config{})
+		ctrl.ReconcileDaemon(info)
+		if len(hub.sent) != 0 {
+			t.Fatalf("reconcile sent %+v", hub.sent)
+		}
+	})
+
+	t.Run("missing run requeues", func(t *testing.T) {
+		runs := &fakeRuns{run: newRun()}
+		runs.run.Status = "running"
+		runs.run.Attempt = 1
+		runs.run.LeaseEpoch = 1
+		runs.run.AssignedDaemonID = "d1"
+		tasks := &fakeTaskCanceller{}
+		ctrl := New(runs, &fakeHub{}, Config{Tasks: tasks})
+		ctrl.ReconcileDaemon(connection.DaemonInfo{DaemonID: "d1"})
+		current, _ := runs.GetRun(context.Background(), "run-1")
+		if current.Status != "queued" || current.Attempt != 1 || current.LeaseEpoch != 2 {
+			t.Fatalf("requeued = %+v", current)
+		}
+		if tasks.enqueueCalls != 1 {
+			t.Fatalf("retry enqueue calls = %d", tasks.enqueueCalls)
+		}
+	})
+
+	t.Run("terminal run is cancelled on daemon", func(t *testing.T) {
+		runs := &fakeRuns{run: newRun()}
+		runs.run.Status = "completed"
+		runs.run.Attempt = 1
+		runs.run.LeaseEpoch = 1
+		runs.run.AssignedDaemonID = "d1"
+		hub := &fakeHub{}
+		ctrl := New(runs, hub, Config{})
+		ctrl.ReconcileDaemon(info)
+		if len(hub.sent) != 1 || hub.sent[0].GetReconcile() == nil {
+			t.Fatalf("reconcile = %+v", hub.sent)
+		}
+	})
+
+	t.Run("epoch mismatch cancels old execution", func(t *testing.T) {
+		runs := &fakeRuns{run: newRun()}
+		runs.run.Status = "running"
+		runs.run.Attempt = 2
+		runs.run.LeaseEpoch = 2
+		runs.run.AssignedDaemonID = "d1"
+		hub := &fakeHub{}
+		ctrl := New(runs, hub, Config{})
+		ctrl.ReconcileDaemon(connection.DaemonInfo{
+			DaemonID:    "d1",
+			RunningRuns: []connection.RunRef{{RunID: "run-1", LeaseEpoch: 1}},
+		})
+		if len(hub.sent) != 1 || hub.sent[0].GetReconcile() == nil {
+			t.Fatalf("reconcile = %+v", hub.sent)
+		}
+	})
+}
+
+func TestHandleDaemonOfflineRequeues(t *testing.T) {
+	runs := &fakeRuns{run: newRun()}
+	runs.run.Status = "running"
+	runs.run.Attempt = 1
+	runs.run.LeaseEpoch = 1
+	runs.run.AssignedDaemonID = "d1"
+	tasks := &fakeTaskCanceller{}
+	ctrl := New(runs, &fakeHub{}, Config{Tasks: tasks})
+	ctrl.HandleDaemonOffline("d1")
+	current, _ := runs.GetRun(context.Background(), "run-1")
+	if current.Status != "queued" || current.Attempt != 1 {
+		t.Fatalf("run = %+v", current)
+	}
+	if tasks.enqueueCalls != 1 {
+		t.Fatalf("enqueue calls = %d", tasks.enqueueCalls)
 	}
 }
 
