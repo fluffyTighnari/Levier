@@ -26,6 +26,7 @@ const (
 	defaultHelloTimeout     = 3 * time.Second
 	defaultHeartbeatTimeout = 30 * time.Second
 	defaultOutboundBuffer   = 256
+	defaultCloseTimeout     = 5 * time.Second
 )
 
 var (
@@ -64,6 +65,7 @@ type DaemonInfo struct {
 type Config struct {
 	HelloTimeout     time.Duration
 	HeartbeatTimeout time.Duration
+	CloseTimeout     time.Duration
 	OutboundBuffer   int
 	Authenticate     Authenticator
 	OnEnvelope       func(daemonID string, env *runtimev1.Envelope)
@@ -80,6 +82,7 @@ type Hub struct {
 	daemons    map[string]*daemonConn
 	onEnvelope func(daemonID string, env *runtimev1.Envelope)
 	closed     bool
+	wg         sync.WaitGroup
 }
 
 type daemonConn struct {
@@ -97,6 +100,9 @@ func New(cfg Config) *Hub {
 	}
 	if cfg.HeartbeatTimeout <= 0 {
 		cfg.HeartbeatTimeout = defaultHeartbeatTimeout
+	}
+	if cfg.CloseTimeout <= 0 {
+		cfg.CloseTimeout = defaultCloseTimeout
 	}
 	if cfg.OutboundBuffer <= 0 {
 		cfg.OutboundBuffer = defaultOutboundBuffer
@@ -176,8 +182,10 @@ func (h *Hub) Channel(stream runtimev1.RuntimeService_ChannelServer) error {
 		)
 	}
 	h.daemons[info.DaemonID] = conn
+	h.wg.Add(1)
 	h.mu.Unlock()
 
+	defer h.wg.Done()
 	defer h.remove(conn)
 	go conn.writeLoop()
 
@@ -312,6 +320,16 @@ func (h *Hub) Close() {
 	for _, conn := range conns {
 		conn.close()
 	}
+
+	done := make(chan struct{})
+	go func() {
+		h.wg.Wait()
+		close(done)
+	}()
+	select {
+	case <-done:
+	case <-time.After(h.cfg.CloseTimeout):
+	}
 }
 
 func (h *Hub) receiveHello(stream runtimev1.RuntimeService_ChannelServer) (*runtimev1.Envelope, error) {
@@ -345,13 +363,31 @@ func (h *Hub) receiveHello(stream runtimev1.RuntimeService_ChannelServer) (*runt
 
 func (h *Hub) readLoop(conn *daemonConn) error {
 	for {
-		env, err := conn.stream.Recv()
-		if err != nil {
-			if errors.Is(err, io.EOF) {
+		type received struct {
+			env *runtimev1.Envelope
+			err error
+		}
+		ch := make(chan received, 1)
+		go func() {
+			env, err := conn.stream.Recv()
+			ch <- received{env: env, err: err}
+		}()
+
+		var got received
+		select {
+		case <-conn.done:
+			return nil
+		case <-conn.stream.Context().Done():
+			return nil
+		case got = <-ch:
+		}
+		if got.err != nil {
+			if errors.Is(got.err, io.EOF) {
 				return nil
 			}
-			return err
+			return got.err
 		}
+		env := got.env
 		if err := protocol.Validate(env); err != nil {
 			return status.Error(codes.InvalidArgument, err.Error())
 		}

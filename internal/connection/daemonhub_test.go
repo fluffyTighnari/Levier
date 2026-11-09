@@ -170,6 +170,14 @@ func TestDuplicateDaemonIDIsRejected(t *testing.T) {
 		t.Fatalf("first Dial() error = %v", err)
 	}
 	defer first.Close()
+	received := make(chan *runtimev1.Envelope, 1)
+	first.SetOnMessage(func(_ context.Context, env *runtimev1.Envelope, _ *fakedaemon.Daemon) error {
+		select {
+		case received <- env:
+		default:
+		}
+		return nil
+	})
 	if !waitFor(t, time.Second, func() bool { return hub.Count() == 1 }) {
 		t.Fatal("first daemon was not registered")
 	}
@@ -185,6 +193,21 @@ func TestDuplicateDaemonIDIsRejected(t *testing.T) {
 	}
 	if hub.Count() != 1 {
 		t.Fatalf("hub count = %d, want 1", hub.Count())
+	}
+
+	env, err := protocol.NewRun("run-1", 1, 1, &runtimev1.Event{
+		Seq: 1, Type: runtimev1.EventType_RUN_STATUS, Source: protocol.EventSourceDaemon,
+	})
+	if err != nil {
+		t.Fatalf("NewRun() error = %v", err)
+	}
+	if err := hub.Send("daemon-1", env); err != nil {
+		t.Fatalf("Send() after duplicate error = %v", err)
+	}
+	select {
+	case <-received:
+	case <-time.After(time.Second):
+		t.Fatal("first connection did not receive the event")
 	}
 }
 
@@ -241,6 +264,79 @@ func TestSendAndOffline(t *testing.T) {
 
 	if err := hub.Send("missing", env); err != ErrDaemonOffline {
 		t.Fatalf("Send(missing) error = %v, want ErrDaemonOffline", err)
+	}
+}
+
+func TestHubCloseStopsConnections(t *testing.T) {
+	hub, addr := startHub(t, Config{
+		HelloTimeout: time.Second,
+		CloseTimeout: time.Second,
+		Authenticate: func(daemonID, token string) bool { return true },
+	})
+	cfg := fakedaemon.DefaultConfig()
+	cfg.DaemonID = "daemon-close"
+	daemon, err := fakedaemon.Dial(context.Background(), addr, cfg)
+	if err != nil {
+		t.Fatalf("Dial() error = %v", err)
+	}
+	defer daemon.Close()
+	if !waitFor(t, time.Second, func() bool { return hub.Count() == 1 }) {
+		t.Fatal("daemon was not registered")
+	}
+
+	hub.Close()
+	if hub.Count() != 0 {
+		t.Fatalf("hub count after Close = %d", hub.Count())
+	}
+	env, err := protocol.NewRun("run-1", 1, 1, &runtimev1.Event{
+		Seq: 1, Type: runtimev1.EventType_RUN_STATUS, Source: protocol.EventSourceDaemon,
+	})
+	if err != nil {
+		t.Fatalf("NewRun() error = %v", err)
+	}
+	if err := hub.Send("daemon-close", env); err != ErrHubClosed {
+		t.Fatalf("Send() after Close = %v, want ErrHubClosed", err)
+	}
+}
+
+func TestPickHealthyLabelsAndStrategies(t *testing.T) {
+	hub, addr := startHub(t, Config{
+		HelloTimeout: time.Second,
+		Authenticate: func(daemonID, token string) bool { return true },
+	})
+	firstCfg := fakedaemon.DefaultConfig()
+	firstCfg.DaemonID = "daemon-a"
+	firstCfg.Labels = map[string]string{"pool": "a", "region": "cn"}
+	firstCfg.SupportedStrategies = []string{"echo"}
+	first, err := fakedaemon.Dial(context.Background(), addr, firstCfg)
+	if err != nil {
+		t.Fatalf("first Dial() error = %v", err)
+	}
+	defer first.Close()
+	secondCfg := fakedaemon.DefaultConfig()
+	secondCfg.DaemonID = "daemon-b"
+	secondCfg.Labels = map[string]string{"pool": "b", "region": "cn"}
+	secondCfg.SupportedStrategies = []string{"echo"}
+	second, err := fakedaemon.Dial(context.Background(), addr, secondCfg)
+	if err != nil {
+		t.Fatalf("second Dial() error = %v", err)
+	}
+	defer second.Close()
+	if !waitFor(t, time.Second, func() bool { return hub.Count() == 2 }) {
+		t.Fatal("daemons were not registered")
+	}
+
+	if id, ok := hub.PickHealthy(runtimev1.RuntimeType_NORMAL, "echo", map[string]string{"pool": "a"}); !ok || id != "daemon-a" {
+		t.Fatalf("pool a = %q, %v", id, ok)
+	}
+	if id, ok := hub.PickHealthy(runtimev1.RuntimeType_NORMAL, "echo", map[string]string{"pool": "b"}); !ok || id != "daemon-b" {
+		t.Fatalf("pool b = %q, %v", id, ok)
+	}
+	if _, ok := hub.PickHealthy(runtimev1.RuntimeType_NORMAL, "react", nil); ok {
+		t.Fatal("unsupported react strategy matched")
+	}
+	if _, ok := hub.PickHealthy(runtimev1.RuntimeType_NORMAL, "echo", map[string]string{"pool": "missing"}); ok {
+		t.Fatal("missing label matched")
 	}
 }
 
