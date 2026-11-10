@@ -135,6 +135,20 @@ DEEPSEEK_MODEL    ← deepseek-flash
 
 ## P1 Counter 本地逻辑
 
+P1 的目标不是接 Middleware，而是把 standalone App 的“工具执行层”从模型循环里抽出来：
+
+```text
+改造前：main.py 里直接找 tool_calls 并调用硬编码函数
+改造后：main.py 仍跑模型循环，但工具执行统一走 dispatch_counter_tool()
+```
+
+P1 结束后：
+
+- standalone 行为不变（final=5，add/add/get）。
+- 工具执行入口的输入/输出与 Middleware WS 契约一致。
+- 注册元数据已明确。
+- P1.8 才把 `main.py` 接到 dispatcher，之前的步骤只做局部单测。
+
 | ID | 逻辑链 | 代码/操作 | 断言 | 层级 |
 |---|---|---|---|---|
 | P1.1 | L→L | 抽出 `counterAdd/Get/Reset` 纯函数 | add(2)=2；add(3)=5；reset=0 | unit |
@@ -144,11 +158,11 @@ DEEPSEEK_MODEL    ← deepseek-flash
 | P1.5 | T→错误 | 未知工具 | 返回 `unknown tool`，不 panic | unit |
 | P1.6 | T→错误 | 非法 JSON / 缺 delta | 返回结构化错误 | unit |
 | P1.7 | M→M | 生成三个工具 manifest | name/description/schema 合法 JSON | unit |
-| P1.8 | L→基线 | 用同一提示词再跑 standalone | final=5，仍调用 3 次工具 | integration |
+| P1.8 | L→基线 | `main.py` 接到 dispatcher；用同一提示词跑 standalone | final=5，仍调用 3 次工具；不再直接调用旧 execute_tool | integration |
 
 **注意**：P1 不接触 MW、不接触网络。
 
-进度：P1.1 完成（`docs/reports/RETROFIT-P1.1.md`）；P1.2 完成（`docs/reports/RETROFIT-P1.2.md`）；P1.3–P1.8 待做。
+进度：P1.1 完成（`docs/reports/RETROFIT-P1.1.md`）；P1.2 完成（`docs/reports/RETROFIT-P1.2.md`）；P1.3–P1.4 完成（`docs/reports/RETROFIT-P1.3-P1.4.md`）；P1.5–P1.8 待做。
 
 ---
 

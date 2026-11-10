@@ -1,4 +1,4 @@
-"""Middleware — Counter App local tool dispatcher (P1.2).
+"""Middleware — Counter App local tool dispatcher (P1.2–P1.4).
 
 The dispatcher accepts the two fields Middleware sends to a local tool:
 `tool_name` and `arguments_json`. It returns the success/error shape used by
@@ -40,6 +40,10 @@ def _parse_arguments(arguments_json: str) -> dict[str, Any]:
     return parsed
 
 
+def _success(value: int) -> dict[str, Any]:
+    return {"ok": True, "result_json": json.dumps({"value": value})}
+
+
 def dispatch_counter_tool(
     counter: Counter,
     tool_name: str,
@@ -47,16 +51,21 @@ def dispatch_counter_tool(
 ) -> dict[str, Any]:
     """Dispatch one local counter tool call.
 
-    P1.2 intentionally implements only `counter_add`. Later P1 steps add
-    `counter_get`, `counter_reset`, and error cases.
+    P1.2–P1.4 cover the three success paths; P1.5/P1.6 add the remaining
+    error cases. The WS layer later adds correlation/invocation IDs.
     """
-    if tool_name != "counter_add":
+    if tool_name not in {"counter_add", "counter_get", "counter_reset"}:
         return _error("TOOL_NOT_FOUND", f"unknown tool {tool_name}")
 
     try:
         arguments = _parse_arguments(arguments_json)
     except (json.JSONDecodeError, TypeError) as exc:
         return _error("TOOL_EXEC_ERROR", f"invalid arguments_json: {exc}")
+
+    if tool_name == "counter_get":
+        return _success(counter.get())
+    if tool_name == "counter_reset":
+        return _success(counter.reset())
 
     delta = arguments.get("delta")
     if not isinstance(delta, int) or isinstance(delta, bool):
@@ -67,4 +76,4 @@ def dispatch_counter_tool(
     except TypeError as exc:
         return _error("TOOL_EXEC_ERROR", str(exc))
 
-    return {"ok": True, "result_json": json.dumps({"value": value})}
+    return _success(value)
