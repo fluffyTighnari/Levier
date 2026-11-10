@@ -36,6 +36,9 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--mw-url", default=os.environ.get("MW_URL", "http://127.0.0.1:8080"))
     parser.add_argument("--hold-seconds", type=float, default=0.0)
     parser.add_argument("--ping", action="store_true", help="send one ping and require pong")
+    parser.add_argument("--subscribe-run", default="", help="subscribe to one run and wait for caught_up")
+    parser.add_argument("--last-attempt", type=int, default=0)
+    parser.add_argument("--last-seq", type=int, default=0)
     return parser
 
 
@@ -63,6 +66,25 @@ def main(argv: list[str] | None = None) -> int:
             print(json.dumps({"pong": pong, "reply": reply}), flush=True)
             if not pong:
                 return 1
+        if args.subscribe_run:
+            socket.send_json(
+                {
+                    "type": "subscribe",
+                    "run_id": args.subscribe_run,
+                    "last_attempt": args.last_attempt,
+                    "last_seq": args.last_seq,
+                }
+            )
+            events = 0
+            while True:
+                reply = socket.recv_json(timeout=5.0)
+                if reply.get("type") == "caught_up":
+                    print(json.dumps({"caught_up": reply, "events": events}), flush=True)
+                    break
+                if reply.get("type") == "error":
+                    print(json.dumps({"error": reply}), flush=True)
+                    return 1
+                events += 1
         if args.hold_seconds > 0:
             time.sleep(args.hold_seconds)
     finally:
