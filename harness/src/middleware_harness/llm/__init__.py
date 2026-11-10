@@ -14,6 +14,7 @@ from middleware_harness.llm.base import (
     ToolCall,
     ToolSpec,
 )
+from middleware_harness.llm.openai import OpenAICompatibleProvider
 from middleware_harness.llm.http import (
     HTTPRequest,
     HTTPResponse,
@@ -33,6 +34,7 @@ __all__ = [
     "LLMProvider",
     "LLMResponse",
     "Message",
+    "OpenAICompatibleProvider",
     "ModelConfig",
     "ToolCall",
     "ToolSpec",
