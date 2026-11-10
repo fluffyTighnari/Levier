@@ -1,0 +1,7 @@
+step: P2.1
+commit: 1316e49
+time_utc: 2026-11-10T05:35:08Z
+expected: read MW_URL/MW_ADMIN_TOKEN/MW_APP_NAME; validate; never print token
+observed: 5 tests passed; defaults/overrides/errors/secret masking verified; no network calls
+evidence: test.log
+design: DESIGN §4.2 §13.1; docs/APP_RETROFIT_PLAN.md P2.1

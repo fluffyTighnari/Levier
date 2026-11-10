@@ -1,0 +1,10 @@
+test_p2_1_defaults (test_config.ConfigTest) ... ok
+test_p2_1_overrides_and_trailing_slash (test_config.ConfigTest) ... ok
+test_p2_1_rejects_bad_url (test_config.ConfigTest) ... ok
+test_p2_1_requires_admin_token (test_config.ConfigTest) ... ok
+test_p2_1_secret_not_printed (test_config.ConfigTest) ... ok
+
+----------------------------------------------------------------------
+Ran 5 tests in 0.000s
+
+OK

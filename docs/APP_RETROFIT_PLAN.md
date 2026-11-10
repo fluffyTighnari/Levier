@@ -172,7 +172,7 @@ P1 结束后：
 
 | ID | 逻辑链 | 代码/操作 | 断言 | 层级 |
 |---|---|---|---|---|
-| P2.1 | 配置→内存 | 读取 `MW_URL`、`MW_ADMIN_TOKEN`、`DEEPSEEK_*` | 缺失时明确报错；不打印值 | unit |
+| P2.1 | 配置→内存 | 读取 `MW_URL`、`MW_ADMIN_TOKEN`、`MW_APP_NAME` | 缺失时明确报错；不打印值 | unit |
 | P2.2 | H→mock | 构造 `/admin/apps` 请求 | method/header/body 正确 | unit |
 | P2.3 | mock→H | 解析 App 响应 | app_id/api_key 正确；key 不进日志 | unit |
 | P2.4 | H→mock | 构造工具注册请求 | schema/timeout 正确 | unit |
@@ -183,8 +183,13 @@ P1 结束后：
 | P2.9 | W→mock | 构造 `local_tool_result` | correlation=msg_id；ok/error 分支正确 | unit |
 | P2.10 | W→mock | ping/pong | 收到 pong | unit |
 
-**决策**：App 使用 Node 24 内置 `fetch` + `WebSocket`，零 npm 依赖。
-理由：同时完成 WS 语言无关验证；若 Node WebSocket 不支持所需能力，回退 Python 标准库最小 WS 客户端。
+**决策**：App 使用 Python 标准库，与现有 `counter_agent` 同语言。
+
+- HTTP 用 `urllib.request`。
+- WS 在 P2.7 实现最小握手/文本帧客户端，不引入第三方包。
+- P8 再补独立语言客户端验证（HTTP 已有 Python stdlib 客户端）。
+
+进度：P2.1 完成（`docs/reports/RETROFIT-P2.1.md`）；P2.2–P2.10 待做。
 
 ---
 
