@@ -78,6 +78,27 @@ Middleware 的正式模型是：
 
 这样可以比较改造前后的行为差异，而不是只验证“新写了一个 demo”。
 
+## 注册元数据（P1.1）
+
+`tools.py` 中的 `TOOL_DEFINITIONS` 就是 Middleware 的注册格式：
+
+```json
+{
+  "tools": [
+    {
+      "name": "counter_add",
+      "description": "...",
+      "schema": {"type": "object", "...": "..."},
+      "timeout_ms": 10000
+    }
+  ]
+}
+```
+
+详细合同与实测：
+
+- `docs/reports/REGISTRATION-CONTRACT.md`
+
 ## 改造计划
 
 逐边调试步骤见：

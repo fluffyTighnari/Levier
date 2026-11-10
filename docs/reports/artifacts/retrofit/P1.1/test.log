@@ -1,0 +1,9 @@
+cd examples/counter_agent && python3 -m unittest -v test_tools
+test_p1_1_counter_add_get_reset (test_tools.CounterTest) ... ok
+test_p1_1_counter_rejects_non_integer (test_tools.CounterTest) ... ok
+test_p1_1_tool_definitions_match_registration_shape (test_tools.CounterTest) ... ok
+
+----------------------------------------------------------------------
+Ran 3 tests in 0.000s
+
+OK

@@ -1,0 +1,41 @@
+{
+  "tools": [
+    {
+      "name": "counter_add",
+      "description": "Add an integer delta to the counter.",
+      "schema": {
+        "type": "object",
+        "properties": {
+          "delta": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "delta"
+        ],
+        "additionalProperties": false
+      },
+      "timeout_ms": 10000
+    },
+    {
+      "name": "counter_get",
+      "description": "Read the current counter value.",
+      "schema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "timeout_ms": 10000
+    },
+    {
+      "name": "counter_reset",
+      "description": "Reset the counter to zero.",
+      "schema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "timeout_ms": 10000
+    }
+  ]
+}

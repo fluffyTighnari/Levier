@@ -1,0 +1,7 @@
+step: P1.1
+commit: 76e35ca
+time_utc: 2026-11-10T02:53:41Z
+expected: counter add/get/reset extracted; registration tool metadata explicit; standalone behavior unchanged
+observed: 3 unit tests pass; TOOL_DEFINITIONS serializable; standalone final=5 with add/add/get
+evidence: test.log, tool_definitions.json, standalone.log
+design: DESIGN §5.3; DESIGN §4.2; proto ToolManifest; internal/httpapi/contracts.go ToolDefinition

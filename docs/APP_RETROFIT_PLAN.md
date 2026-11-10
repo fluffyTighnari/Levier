@@ -148,6 +148,8 @@ DEEPSEEK_MODEL    ← deepseek-flash
 
 **注意**：P1 不接触 MW、不接触网络。
 
+进度：P1.1 完成（`docs/reports/RETROFIT-P1.1.md`）；P1.2–P1.8 待做。
+
 ---
 
 ## P2 App 壳与协议适配
