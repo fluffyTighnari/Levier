@@ -39,6 +39,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--subscribe-run", default="", help="subscribe to one run and wait for caught_up")
     parser.add_argument("--last-attempt", type=int, default=0)
     parser.add_argument("--last-seq", type=int, default=0)
+    parser.add_argument("--listen-seconds", type=float, default=0.0)
     return parser
 
 
@@ -75,16 +76,42 @@ def main(argv: list[str] | None = None) -> int:
                     "last_seq": args.last_seq,
                 }
             )
-            events = 0
+            received: list[dict] = []
             while True:
                 reply = socket.recv_json(timeout=5.0)
                 if reply.get("type") == "caught_up":
-                    print(json.dumps({"caught_up": reply, "events": events}), flush=True)
+                    print(
+                        json.dumps({"caught_up": reply, "events_before": len(received)}),
+                        flush=True,
+                    )
                     break
                 if reply.get("type") == "error":
                     print(json.dumps({"error": reply}), flush=True)
                     return 1
-                events += 1
+                received.append(reply)
+            if args.listen_seconds > 0:
+                deadline = time.monotonic() + args.listen_seconds
+                while time.monotonic() < deadline:
+                    remaining = deadline - time.monotonic()
+                    try:
+                        reply = socket.recv_json(timeout=min(0.5, max(0.1, remaining)))
+                    except socket.timeout:
+                        continue
+                    if reply.get("type") == "error":
+                        print(json.dumps({"error": reply}), flush=True)
+                        return 1
+                    received.append(reply)
+                summaries = [
+                    {
+                        "type": item.get("type"),
+                        "event_type": item.get("event_type"),
+                        "attempt": item.get("attempt"),
+                        "seq": item.get("seq"),
+                        "status": item.get("status"),
+                    }
+                    for item in received
+                ]
+                print(json.dumps({"received": summaries}), flush=True)
         if args.hold_seconds > 0:
             time.sleep(args.hold_seconds)
     finally:
