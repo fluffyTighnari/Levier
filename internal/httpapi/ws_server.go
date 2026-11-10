@@ -8,7 +8,6 @@ package httpapi
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"sync"
 	"time"
@@ -37,18 +36,22 @@ func (s *wsSink) Close() error {
 func (s *Server) websocketHandler(handler func(*websocket.Conn)) http.Handler {
 	// Validate app_id/token before the Upgrade so expired or cross-App tokens
 	// receive an HTTP rejection instead of a socket that closes immediately.
-	return websocket.Server{
-		Handshake: func(_ *websocket.Config, r *http.Request) error {
-			appID := r.URL.Query().Get("app_id")
-			token := r.URL.Query().Get("token")
-			tokenAppID, ok := s.wsTokens.Validate(token)
-			if !ok || appID == "" || tokenAppID != appID {
-				return fmt.Errorf("invalid ws token")
-			}
-			return nil
-		},
-		Handler: handler,
+	// The x/net Server still gets a permissive handshake so non-browser
+	// clients that omit Origin are accepted after token validation.
+	websocketServer := websocket.Server{
+		Handshake: func(*websocket.Config, *http.Request) error { return nil },
+		Handler:   handler,
 	}
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		appID := r.URL.Query().Get("app_id")
+		token := r.URL.Query().Get("token")
+		tokenAppID, ok := s.wsTokens.Validate(token)
+		if !ok || appID == "" || tokenAppID != appID {
+			http.Error(w, "invalid ws token", http.StatusForbidden)
+			return
+		}
+		websocketServer.ServeHTTP(w, r)
+	})
 }
 
 func (s *Server) handleWS(conn *websocket.Conn) {
