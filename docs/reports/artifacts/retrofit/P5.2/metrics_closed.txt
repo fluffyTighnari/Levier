@@ -1,0 +1,3 @@
+# HELP mw_ws_connections Current App WebSocket connections.
+# TYPE mw_ws_connections gauge
+mw_ws_connections{app="app_01M72N2PK1YN9NWG52J75SDA00"} 0

@@ -1,0 +1,7 @@
+step: P5.2
+commit: 81559ac
+time_utc: 2026-11-10T11:57:02Z
+expected: real non-browser WS handshake with ws_token; gauge 1 while connected; 0 after close
+observed: app_id=app_01M72N2PK1YN9NWG52J75SDA00; connected=true; mw_ws_connections=1; closed=true; mw_ws_connections=0; server logged ws connected/disconnected duration_ms=3005
+evidence: bootstrap.json, ws_connect.log, ws_connect.err, metrics_connected.txt, metrics_closed.txt, middleware.log, summary.txt
+design: DESIGN §4.3; internal/httpapi websocketHandler/handleWS; mw_ws_connections metric
