@@ -82,6 +82,7 @@
 | `docs/reports/BOUNDARY_DATA_FLOW.md` | Middleware/Daemon 数据结构与边界流：Envelope、Task、事件、工具、重连 |
 | `docs/reports/APP-BASELINE.md` | 0 依赖 Counter Agent 基线与语言无关 HTTP 验证 |
 | `docs/reports/RETROFIT-P0.md` | App 改造 P0：基线冻结与环境验证 |
+| `docs/reports/RETROFIT-P1.md` | App 改造 P1：Counter 本地逻辑与设计依据映射 |
 
 **规则：**
 

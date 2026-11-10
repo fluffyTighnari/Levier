@@ -1,0 +1,7 @@
+step: P1.3
+commit: 1aeb046
+time_utc: 2026-11-10T02:33:38Z
+expected: counter_get reads state without mutation
+observed: 1 test passed
+evidence: test.log
+design: DESIGN §5.3; proto ToolCallResult

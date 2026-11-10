@@ -1,0 +1,11 @@
+✔ examples/counter_app/test/counter.test.js (40.065708ms)
+✔ examples/counter_app/test/manifests.test.js (38.842375ms)
+✔ P1.3 dispatcher counter_get (0.91175ms)
+ℹ tests 3
+ℹ suites 0
+ℹ pass 3
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 45.741292

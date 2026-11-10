@@ -1,0 +1,7 @@
+step: P1.7
+commit: 1aeb046
+time_utc: 2026-11-10T02:33:38Z
+expected: toolDefinitions and toolManifests match registration/TaskAssign shapes
+observed: 2 tests passed
+evidence: test.log
+design: DESIGN §4.2 §5.3; proto ToolManifest; httpapi ToolDefinition
