@@ -1,7 +1,0 @@
-step: P1.4
-commit: 1aeb046
-time_utc: 2026-11-10T02:33:38Z
-expected: counter_reset returns zero
-observed: 1 test passed
-evidence: test.log
-design: DESIGN §5.3; proto ToolCallResult

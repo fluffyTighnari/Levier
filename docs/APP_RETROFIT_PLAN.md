@@ -147,9 +147,6 @@ DEEPSEEK_MODEL    ← deepseek-flash
 
 **注意**：P1 不接触 MW、不接触网络。
 
-执行记录：`docs/reports/RETROFIT-P1.md`。
-设计依据映射：`examples/counter_app/DESIGN_MAPPING.md`。
-
 ---
 
 ## P2 App 壳与协议适配

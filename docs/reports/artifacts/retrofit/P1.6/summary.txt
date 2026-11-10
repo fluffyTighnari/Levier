@@ -1,7 +1,0 @@
-step: P1.6
-commit: 1aeb046
-time_utc: 2026-11-10T02:33:38Z
-expected: invalid JSON/missing/wrong delta return TOOL_EXEC_ERROR
-observed: 1 test passed
-evidence: test.log
-design: DESIGN §4.5; proto ErrorInfo

@@ -1,7 +1,0 @@
-step: P1.8
-commit: 1aeb046
-time_utc: 2026-11-10T02:33:38Z
-expected: standalone baseline remains final=5 with add/add/get
-observed: final=5 steps=4 tool calls=3
-evidence: standalone.log
-design: docs/reports/APP-BASELINE.md
