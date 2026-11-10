@@ -1,0 +1,8 @@
+test_p6a_5_env_credentials (tests.test_llm_openai.OpenAIProviderTest.test_p6a_5_env_credentials) ... ok
+test_p6a_5_missing_key_fails_before_request (tests.test_llm_openai.OpenAIProviderTest.test_p6a_5_missing_key_fails_before_request) ... ok
+test_p6a_5_explicit_key_overrides_env (tests.test_llm_openai.OpenAIProviderTest.test_p6a_5_explicit_key_overrides_env) ... ok
+
+----------------------------------------------------------------------
+Ran 3 tests in 0.007s
+
+OK
