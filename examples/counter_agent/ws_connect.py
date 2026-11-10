@@ -35,6 +35,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--credentials", default="", help="0600 credential file path")
     parser.add_argument("--mw-url", default=os.environ.get("MW_URL", "http://127.0.0.1:8080"))
     parser.add_argument("--hold-seconds", type=float, default=0.0)
+    parser.add_argument("--ping", action="store_true", help="send one ping and require pong")
     return parser
 
 
@@ -53,7 +54,15 @@ def main(argv: list[str] | None = None) -> int:
         return 1
 
     print(json.dumps({"connected": True, "app_id": credentials.app_id, "ws_url": token.ws_url}), flush=True)
+    pong = False
     try:
+        if args.ping:
+            socket.send_json({"type": "ping"})
+            reply = socket.recv_json(timeout=5.0)
+            pong = reply.get("type") == "pong"
+            print(json.dumps({"pong": pong, "reply": reply}), flush=True)
+            if not pong:
+                return 1
         if args.hold_seconds > 0:
             time.sleep(args.hold_seconds)
     finally:
