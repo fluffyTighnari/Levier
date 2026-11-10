@@ -84,6 +84,7 @@
 | `docs/reports/RETROFIT-P0.md` | App 改造 P0：基线冻结与环境验证 |
 | `docs/reports/REGISTRATION-CONTRACT.md` | App/local tool 注册格式与落库/TaskAssign 实测 |
 | `docs/reports/RETROFIT-P1.1.md` | App 改造 P1.1：Counter 函数与注册元数据抽取 |
+| `docs/reports/RETROFIT-P1.2.md` | App 改造 P1.2：dispatcher counter_add |
 
 **规则：**
 
