@@ -45,7 +45,7 @@ class Counter:
 TOOL_DEFINITIONS: list[dict[str, Any]] = [
     {
         "name": "counter_add",
-        "description": "Add an integer delta to the counter.",
+        "description": "Add an integer delta to the counter. Use this for every arithmetic change.",
         "schema": {
             "type": "object",
             "properties": {"delta": {"type": "integer"}},
@@ -56,7 +56,7 @@ TOOL_DEFINITIONS: list[dict[str, Any]] = [
     },
     {
         "name": "counter_get",
-        "description": "Read the current counter value.",
+        "description": "Read the current counter value. Use this before reporting state.",
         "schema": {
             "type": "object",
             "properties": {},

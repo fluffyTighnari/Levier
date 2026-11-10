@@ -17,7 +17,8 @@ import urllib.request
 from pathlib import Path
 from typing import Any
 
-from tools import Counter
+from dispatch import dispatch_counter_tool
+from tools import TOOL_DEFINITIONS, Counter
 
 DEFAULT_BASE_URL = "https://api.deepseek.com"
 DEFAULT_MODEL = "deepseek-flash"
@@ -25,45 +26,22 @@ MAX_STEPS = 8
 REQUEST_TIMEOUT_SECONDS = 120
 
 
-TOOLS = [
-    {
-        "type": "function",
-        "function": {
-            "name": "counter_add",
-            "description": "Add an integer delta to the counter. Use this for every arithmetic change.",
-            "parameters": {
-                "type": "object",
-                "properties": {"delta": {"type": "integer"}},
-                "required": ["delta"],
-                "additionalProperties": False,
+def _openai_tools() -> list[dict[str, Any]]:
+    """Build OpenAI/DeepSeek tool specs from the same registration definitions."""
+    return [
+        {
+            "type": "function",
+            "function": {
+                "name": tool["name"],
+                "description": tool["description"],
+                "parameters": tool["schema"],
             },
-        },
-    },
-    {
-        "type": "function",
-        "function": {
-            "name": "counter_get",
-            "description": "Read the current counter value. Use this before reporting state.",
-            "parameters": {
-                "type": "object",
-                "properties": {},
-                "additionalProperties": False,
-            },
-        },
-    },
-    {
-        "type": "function",
-        "function": {
-            "name": "counter_reset",
-            "description": "Reset the counter to zero.",
-            "parameters": {
-                "type": "object",
-                "properties": {},
-                "additionalProperties": False,
-            },
-        },
-    },
-]
+        }
+        for tool in TOOL_DEFINITIONS
+    ]
+
+
+TOOLS = _openai_tools()
 
 SYSTEM_PROMPT = """You are a counter agent.
 You MUST use the provided tools for every counter read or write.
@@ -131,21 +109,16 @@ def chat(
 
 
 def execute_tool(counter: Counter, name: str, arguments_json: str) -> dict[str, Any]:
-    try:
-        arguments = json.loads(arguments_json or "{}")
-    except json.JSONDecodeError as exc:
-        return {"error": f"invalid arguments JSON: {exc}"}
-
-    try:
-        if name == "counter_add":
-            return {"value": counter.add(int(arguments.get("delta", 0)))}
-        if name == "counter_get":
-            return {"value": counter.get()}
-        if name == "counter_reset":
-            return {"value": counter.reset()}
-    except (TypeError, ValueError) as exc:
-        return {"error": str(exc)}
-    return {"error": f"unknown tool {name}"}
+    """Adapt the local tool dispatcher result for the model message."""
+    result = dispatch_counter_tool(counter, name, arguments_json)
+    if result["ok"]:
+        return json.loads(result["result_json"])
+    error = result["error"]
+    return {
+        "error": error["message"],
+        "code": error["code"],
+        "retryable": error["retryable"],
+    }
 
 
 def run(prompt: str) -> int:
