@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import os
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Mapping
 from urllib.parse import urlsplit
 
@@ -71,6 +72,22 @@ def _validate_url(value: str) -> str:
     if parts.scheme not in ("http", "https") or not parts.netloc:
         raise ConfigError("MW_URL must be an absolute http(s) URL")
     return value.rstrip("/")
+
+
+def load_dotenv(path: Path | None = None) -> None:
+    """Load the repository .env without python-dotenv or secret printing."""
+    target = path or Path(__file__).resolve().parents[2] / ".env"
+    if not target.exists():
+        return
+    for raw in target.read_text(encoding="utf-8").splitlines():
+        line = raw.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, value = line.split("=", 1)
+        key = key.strip()
+        value = value.strip().strip("\"'")
+        if key and key not in os.environ:
+            os.environ[key] = value
 
 
 def from_env(environ: Mapping[str, str] | None = None) -> AppConfig:

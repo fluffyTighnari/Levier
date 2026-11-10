@@ -15,6 +15,8 @@ Copyright 2026 The Middleware Authors.
 from __future__ import annotations
 
 import json
+import urllib.error
+import urllib.request
 from dataclasses import dataclass
 from typing import Protocol
 
@@ -117,6 +119,40 @@ def parse_create_app_response(response: HttpResponse) -> AppRegistration:
     if not isinstance(name, str):
         raise HttpError(response.status, "BAD_RESPONSE", "app.name must be a string")
     return AppRegistration(app_id=app_id, name=name, api_key=Secret(api_key))
+
+
+class HttpTransportError(RuntimeError):
+    """Network/transport failure before an HTTP response was received."""
+
+
+class UrllibTransport:
+    """Stdlib HTTP transport for real Middleware calls."""
+
+    def __init__(self, timeout: float = 15.0) -> None:
+        self.timeout = timeout
+
+    def send(self, request: HttpRequest) -> HttpResponse:
+        outgoing = urllib.request.Request(
+            request.url,
+            data=request.body or None,
+            headers=request.headers,
+            method=request.method,
+        )
+        try:
+            with urllib.request.urlopen(outgoing, timeout=self.timeout) as response:
+                return HttpResponse(
+                    status=response.status,
+                    headers=dict(response.headers.items()),
+                    body=response.read(),
+                )
+        except urllib.error.HTTPError as exc:
+            return HttpResponse(
+                status=exc.code,
+                headers=dict(exc.headers.items()),
+                body=exc.read(),
+            )
+        except urllib.error.URLError as exc:
+            raise HttpTransportError(str(exc.reason)) from exc
 
 
 class HttpClient:
