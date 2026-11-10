@@ -189,7 +189,7 @@ P1 结束后：
 - WS 在 P2.7 实现最小握手/文本帧客户端，不引入第三方包。
 - P8 再补独立语言客户端验证（HTTP 已有 Python stdlib 客户端）。
 
-进度：P2.1 完成（`docs/reports/RETROFIT-P2.1.md`）；P3.1 完成（`docs/reports/RETROFIT-P3.1.md`）；P3.2 完成（`docs/reports/RETROFIT-P3.2.md`）；P3.3 完成（`docs/reports/RETROFIT-P3.3.md`）。通用流程见 `docs/APP_ONBOARDING.md`。
+进度：P2.1 完成（`docs/reports/RETROFIT-P2.1.md`）；P3.1 完成（`docs/reports/RETROFIT-P3.1.md`）；P3.2 完成（`docs/reports/RETROFIT-P3.2.md`）；P3.3 完成（`docs/reports/RETROFIT-P3.3.md`）；P3.4 完成（`docs/reports/RETROFIT-P3.4.md`）。通用流程见 `docs/APP_ONBOARDING.md`。
 
 **计划调整**：P2.2–P2.10 的 mock 里程碑取消。P2.2/P2.3 的代码保留为普通单测 guardrail，但不再单独作为链路步骤。P3.1 已走真实 HTTP。
 
