@@ -55,6 +55,34 @@ class AppAuthTest(unittest.TestCase):
         self.assertEqual(app.app_id, "app-1")
         self.assertEqual(app.status, "active")
 
+    def test_p3_4_update_tools_request(self) -> None:
+        transport = RecordingTransport(
+            HttpResponse(
+                200,
+                {},
+                json.dumps({"app_id": "app-1", "name": "counter-app", "status": "active"}).encode(),
+            )
+        )
+        client = AppClient("http://127.0.0.1:8080", "app-1", Secret("mw_secret"), transport)
+        tools = [
+            {
+                "name": "counter_add",
+                "description": "add",
+                "schema": {"type": "object"},
+                "timeout_ms": 10000,
+            }
+        ]
+        response = client.update_tools("counter-app", tools)
+        app = parse_app_view(response)
+
+        request = transport.requests[0]
+        self.assertEqual(request.method, "POST")
+        self.assertEqual(request.url, "http://127.0.0.1:8080/api/v1/apps")
+        self.assertEqual(request.headers["Authorization"], "Bearer mw_secret")
+        self.assertEqual(request.json_body()["name"], "counter-app")
+        self.assertEqual(request.json_body()["tools"], tools)
+        self.assertEqual(app.app_id, "app-1")
+
     def test_p3_3_get_app_rejects_bad_key(self) -> None:
         transport = RecordingTransport(
             HttpResponse(

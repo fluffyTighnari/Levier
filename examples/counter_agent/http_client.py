@@ -259,6 +259,25 @@ class AppClient:
         )
         return self.transport.send(request)
 
+    def update_tools(self, app_name: str, tools: list[dict]) -> HttpResponse:
+        """POST /api/v1/apps with the full local tool list."""
+        payload = {
+            "name": app_name,
+            "multiagent": False,
+            "tools": tools,
+        }
+        request = HttpRequest(
+            method="POST",
+            url=self.mw_url + "/api/v1/apps",
+            headers={
+                "Authorization": "Bearer " + self.api_key.reveal(),
+                "Content-Type": "application/json",
+                "Accept": "application/json",
+            },
+            body=json.dumps(payload, separators=(",", ":")).encode("utf-8"),
+        )
+        return self.transport.send(request)
+
 
 class RecordingTransport:
     """In-memory transport used by tests; never opens a socket."""
