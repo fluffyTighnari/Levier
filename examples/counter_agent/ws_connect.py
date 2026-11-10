@@ -102,17 +102,17 @@ def main(argv: list[str] | None = None) -> int:
                         print(json.dumps({"error": reply}), flush=True)
                         return 1
                     received.append(reply)
-                summaries = [
-                    {
-                        "type": item.get("type"),
-                        "event_type": item.get("event_type"),
-                        "attempt": item.get("attempt"),
-                        "seq": item.get("seq"),
-                        "status": item.get("status"),
-                    }
-                    for item in received
-                ]
-                print(json.dumps({"received": summaries}), flush=True)
+            summaries = [
+                {
+                    "type": item.get("type"),
+                    "event_type": item.get("event_type"),
+                    "attempt": item.get("attempt"),
+                    "seq": item.get("seq"),
+                    "status": item.get("status"),
+                }
+                for item in received
+            ]
+            print(json.dumps({"received": summaries}), flush=True)
         if args.hold_seconds > 0:
             time.sleep(args.hold_seconds)
     finally:
