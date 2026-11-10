@@ -71,6 +71,15 @@ class HttpError(RuntimeError):
 
 
 @dataclass(frozen=True)
+class AppView:
+    """Parsed GET /api/v1/apps/{app_id} response."""
+
+    app_id: str
+    name: str
+    status: str
+
+
+@dataclass(frozen=True)
 class AppRegistration:
     """Parsed POST /admin/apps response."""
 
@@ -155,8 +164,42 @@ class UrllibTransport:
             raise HttpTransportError(str(exc.reason)) from exc
 
 
+def parse_rotate_key_response(response: HttpResponse) -> Secret:
+    """Parse POST /admin/apps/{id}/rotate-key."""
+    if response.status != 200:
+        raise _error_from_response(response)
+    try:
+        payload = json.loads(response.body.decode("utf-8"))
+    except (json.JSONDecodeError, UnicodeDecodeError) as exc:
+        raise HttpError(response.status, "BAD_RESPONSE", f"invalid JSON: {exc}") from exc
+    api_key = payload.get("api_key")
+    if not isinstance(api_key, str) or not api_key:
+        raise HttpError(response.status, "BAD_RESPONSE", "api_key is required")
+    return Secret(api_key)
+
+
+def parse_app_view(response: HttpResponse) -> AppView:
+    """Parse GET /api/v1/apps/{app_id}."""
+    if response.status != 200:
+        raise _error_from_response(response)
+    try:
+        payload = json.loads(response.body.decode("utf-8"))
+    except (json.JSONDecodeError, UnicodeDecodeError) as exc:
+        raise HttpError(response.status, "BAD_RESPONSE", f"invalid JSON: {exc}") from exc
+    app_id = payload.get("app_id")
+    name = payload.get("name")
+    status = payload.get("status")
+    if not isinstance(app_id, str) or not app_id:
+        raise HttpError(response.status, "BAD_RESPONSE", "app_id is required")
+    if not isinstance(name, str) or not name:
+        raise HttpError(response.status, "BAD_RESPONSE", "name is required")
+    if not isinstance(status, str) or not status:
+        raise HttpError(response.status, "BAD_RESPONSE", "status is required")
+    return AppView(app_id=app_id, name=name, status=status)
+
+
 class HttpClient:
-    """Builds App/admin HTTP requests and delegates transport I/O."""
+    """Builds Admin HTTP requests and delegates transport I/O."""
 
     def __init__(self, config: AppConfig, transport: Transport) -> None:
         self.config = config
@@ -177,6 +220,42 @@ class HttpClient:
                 "Accept": "application/json",
             },
             body=json.dumps(payload, separators=(",", ":")).encode("utf-8"),
+        )
+        return self.transport.send(request)
+
+    def rotate_app_key(self, app_id: str) -> HttpResponse:
+        """POST /admin/apps/{app_id}/rotate-key."""
+        request = HttpRequest(
+            method="POST",
+            url=self.config.mw_url + f"/admin/apps/{app_id}/rotate-key",
+            headers={
+                "Authorization": "Bearer " + self.config.admin_token.reveal(),
+                "Accept": "application/json",
+            },
+            body=b"",
+        )
+        return self.transport.send(request)
+
+
+class AppClient:
+    """Builds App-scoped HTTP requests using an App API key."""
+
+    def __init__(self, mw_url: str, app_id: str, api_key: Secret, transport: Transport) -> None:
+        self.mw_url = mw_url.rstrip("/")
+        self.app_id = app_id
+        self.api_key = api_key
+        self.transport = transport
+
+    def get_app(self) -> HttpResponse:
+        """GET /api/v1/apps/{app_id} with the App key."""
+        request = HttpRequest(
+            method="GET",
+            url=self.mw_url + f"/api/v1/apps/{self.app_id}",
+            headers={
+                "Authorization": "Bearer " + self.api_key.reveal(),
+                "Accept": "application/json",
+            },
+            body=b"",
         )
         return self.transport.send(request)
 
