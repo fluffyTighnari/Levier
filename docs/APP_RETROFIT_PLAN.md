@@ -252,7 +252,7 @@ P1 结束后：
 
 ### P6A 模型提供方（先独立测）
 
-进度：P6A.1 完成（`docs/reports/RETROFIT-P6A.1.md`）；P6A.2 完成（`docs/reports/RETROFIT-P6A.2.md`）；P6A.3 完成（`docs/reports/RETROFIT-P6A.3.md`）；P6A.4–P6A.5 待做。
+进度：P6A.1 完成（`docs/reports/RETROFIT-P6A.1.md`）；P6A.2 完成（`docs/reports/RETROFIT-P6A.2.md`）；P6A.3 完成（`docs/reports/RETROFIT-P6A.3.md`）；P6A.4 完成（`docs/reports/RETROFIT-P6A.4.md`）；P6A.5 待做。
 
 | ID | 逻辑链 | 操作 | 断言 |
 |---|---|---|---|

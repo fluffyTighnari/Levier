@@ -1,0 +1,7 @@
+step: P6A.4
+commit: 795fe03
+time_utc: 2026-11-10T13:28:45Z
+expected: anthropic routes Anthropic; deepseek/openai route OpenAI-compatible; unknown -> BAD_REQUEST
+observed: 2 tests passed; empty provider defaults to anthropic for compatibility; unknown rejected
+evidence: test.log
+design: harness ProviderRouter; ReactStrategy provider injection; ModelConfig.provider
