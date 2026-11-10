@@ -1,0 +1,3 @@
+{"connected": true, "app_id": "app_01M72PRFVJY5RV3Q51MSKJY1YR", "ws_url": "/api/v1/ws"}
+{"caught_up": {"type": "caught_up", "run_id": "01M72PRFYS7T24H35CFAXJBK79", "attempt": 0, "seq": 0}, "events": 0}
+{"closed": true}

@@ -104,6 +104,7 @@
 | `docs/reports/RETROFIT-P5.1.md` | App 改造 P5.1：App key 换 ws_token |
 | `docs/reports/RETROFIT-P5.2.md` | App 改造 P5.2：真实 WebSocket 连接 |
 | `docs/reports/RETROFIT-P5.3.md` | App 改造 P5.3：真实 WebSocket ping/pong |
+| `docs/reports/RETROFIT-P5.4.md` | App 改造 P5.4：subscribe 空 Run 与 caught_up |
 | `docs/APP_ONBOARDING.md` | 任意 App 接入 Middleware 的标准流程 |
 
 **规则：**
