@@ -41,6 +41,8 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--last-attempt", type=int, default=0)
     parser.add_argument("--last-seq", type=int, default=0)
     parser.add_argument("--listen-seconds", type=float, default=0.0)
+    parser.add_argument("--delay-seconds", type=float, default=0.0, help="wait after token issuance")
+    parser.add_argument("--app-id-override", default="", help="test-only app_id override")
     return parser
 
 
@@ -52,13 +54,16 @@ def main(argv: list[str] | None = None) -> int:
         client = AppClient(args.mw_url, credentials.app_id, credentials.api_key, UrllibTransport())
         response = client.create_ws_token()
         token = parse_ws_token_response(response)
-        url = websocket_url(args.mw_url, token.ws_url, credentials.app_id, token.token.reveal())
+        if args.delay_seconds > 0:
+            time.sleep(args.delay_seconds)
+        connect_app_id = args.app_id_override or credentials.app_id
+        url = websocket_url(args.mw_url, token.ws_url, connect_app_id, token.token.reveal())
         ws = WebSocketClient.connect(url)
     except (CredentialsError, HttpError, HttpTransportError, WebSocketError, OSError) as exc:
         print(f"ws connect failed: {exc}", file=sys.stderr)
         return 1
 
-    print(json.dumps({"connected": True, "app_id": credentials.app_id, "ws_url": token.ws_url}), flush=True)
+    print(json.dumps({"connected": True, "app_id": connect_app_id, "ws_url": token.ws_url}), flush=True)
     pong = False
     try:
         if args.ping:

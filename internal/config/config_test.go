@@ -42,6 +42,9 @@ func TestParseDefaultsAndOverrides(t *testing.T) {
 	if cfg.HTTP.AllowLegacyBearer {
 		t.Fatal("AllowLegacyBearer default = true, want false")
 	}
+	if cfg.HTTP.WSTokenTTL.Std() != 10*time.Minute {
+		t.Fatalf("WSTokenTTL default = %v", cfg.HTTP.WSTokenTTL.Std())
+	}
 	if cfg.Workflow.Workers != 4 {
 		t.Fatalf("Workflow.Workers default = %d", cfg.Workflow.Workers)
 	}

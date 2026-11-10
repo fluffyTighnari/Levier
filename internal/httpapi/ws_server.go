@@ -8,6 +8,7 @@ package httpapi
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"sync"
 	"time"
@@ -33,13 +34,20 @@ func (s *wsSink) Close() error {
 	return s.conn.Close()
 }
 
-func websocketHandler(handler func(*websocket.Conn)) http.Handler {
-	// App auth is the ws_token query parameter. The default x/net Handler
-	// rejects non-browser clients that omit Origin, so accept the handshake
-	// here and let handleWS validate app_id/token.
+func (s *Server) websocketHandler(handler func(*websocket.Conn)) http.Handler {
+	// Validate app_id/token before the Upgrade so expired or cross-App tokens
+	// receive an HTTP rejection instead of a socket that closes immediately.
 	return websocket.Server{
-		Handshake: func(*websocket.Config, *http.Request) error { return nil },
-		Handler:   handler,
+		Handshake: func(_ *websocket.Config, r *http.Request) error {
+			appID := r.URL.Query().Get("app_id")
+			token := r.URL.Query().Get("token")
+			tokenAppID, ok := s.wsTokens.Validate(token)
+			if !ok || appID == "" || tokenAppID != appID {
+				return fmt.Errorf("invalid ws token")
+			}
+			return nil
+		},
+		Handler: handler,
 	}
 }
 

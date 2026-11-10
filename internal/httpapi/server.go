@@ -158,7 +158,7 @@ func (s *Server) routes() {
 	s.mux.HandleFunc("POST /admin/apps/{app_id}/rotate-key", s.handleAdminRotateKey)
 	s.mux.HandleFunc("POST "+APIPrefix+"/apps", s.handleUpdateApp)
 	s.mux.HandleFunc("GET "+APIPrefix+"/apps/{app_id}", s.handleGetApp)
-	s.mux.Handle(APIPrefix+"/ws", websocketHandler(s.handleWS))
+	s.mux.Handle(APIPrefix+"/ws", s.websocketHandler(s.handleWS))
 }
 
 func (s *Server) authDisabled() bool {

@@ -36,6 +36,7 @@ type HTTPConfig struct {
 	BearerToken       string   `yaml:"bearer_token"`
 	AdminToken        string   `yaml:"admin_token"`
 	AllowLegacyBearer bool     `yaml:"allow_legacy_bearer"`
+	WSTokenTTL        Duration `yaml:"ws_token_ttl"`
 }
 
 // GRPCConfig configures the daemon-facing gRPC server.
@@ -78,6 +79,7 @@ func Default() Config {
 			ReadTimeout:     Duration(15 * time.Second),
 			WriteTimeout:    Duration(30 * time.Second),
 			ShutdownTimeout: Duration(10 * time.Second),
+			WSTokenTTL:      Duration(10 * time.Minute),
 		},
 		GRPC: GRPCConfig{
 			Addr:            ":9090",
@@ -152,6 +154,9 @@ func ApplyEnv(cfg *Config, lookup func(string) (string, bool)) error {
 	if err := durationOverride(lookup, "MIDDLEWARE_HTTP_SHUTDOWN_TIMEOUT", &cfg.HTTP.ShutdownTimeout); err != nil {
 		return err
 	}
+	if err := durationOverride(lookup, "MIDDLEWARE_HTTP_WS_TOKEN_TTL", &cfg.HTTP.WSTokenTTL); err != nil {
+		return err
+	}
 	if err := durationOverride(lookup, "MIDDLEWARE_GRPC_SHUTDOWN_TIMEOUT", &cfg.GRPC.ShutdownTimeout); err != nil {
 		return err
 	}
@@ -188,6 +193,9 @@ func (c Config) Validate() error {
 	}
 	if c.HTTP.ShutdownTimeout.Std() <= 0 {
 		problems = append(problems, "http.shutdown_timeout must be positive")
+	}
+	if c.HTTP.WSTokenTTL.Std() <= 0 {
+		problems = append(problems, "http.ws_token_ttl must be positive")
 	}
 	if c.GRPC.ShutdownTimeout.Std() <= 0 {
 		problems = append(problems, "grpc.shutdown_timeout must be positive")

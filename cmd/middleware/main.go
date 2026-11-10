@@ -202,6 +202,7 @@ func main() {
 		BearerToken:          cfg.HTTP.BearerToken,
 		AdminToken:           cfg.HTTP.AdminToken,
 		AllowLegacyBearer:    cfg.HTTP.AllowLegacyBearer,
+		WSTokenTTL:           cfg.HTTP.WSTokenTTL.Std(),
 		DefaultRunTimeoutMS:  1_800_000,
 		DefaultToolTimeoutMS: 60_000,
 		AppHub:               appHub,
