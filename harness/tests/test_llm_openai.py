@@ -6,8 +6,10 @@ Copyright 2026 The Middleware Authors.
 from __future__ import annotations
 
 import json
+import os
 import unittest
 from typing import AsyncIterator
+from unittest.mock import patch
 
 from middleware_harness.llm import (
     HTTPRequest,
@@ -279,6 +281,62 @@ class OpenAIProviderTest(unittest.IsolatedAsyncioTestCase):
             await provider.complete([Message(role="user", content="hi")], [], MODEL)
         self.assertEqual(caught.exception.code, "RATE_LIMITED")
         self.assertTrue(caught.exception.retryable)
+
+    async def test_p6a_5_env_credentials(self) -> None:
+        body = json.dumps({"choices": [{"message": {"content": "ok"}}]}).encode()
+        transport = FakeTransport(body)
+        provider = OpenAICompatibleProvider(transport, stream=False)
+        with patch.dict(
+            os.environ,
+            {
+                "DEEPSEEK_API_KEY": "env-key",
+                "DEEPSEEK_BASE_URL": "https://env.example/v1",
+                "DEEPSEEK_MODEL": "env-model",
+            },
+            clear=False,
+        ):
+            response = await provider.complete(
+                [Message(role="user", content="hi")],
+                [],
+                ModelConfig(provider="deepseek"),
+            )
+
+        self.assertEqual(response.content, "ok")
+        request = transport.requests[0]
+        self.assertEqual(request.url, "https://env.example/v1/chat/completions")
+        self.assertEqual(request.headers["Authorization"], "Bearer env-key")
+        payload = json.loads(request.body.decode())
+        self.assertEqual(payload["model"], "env-model")
+
+    async def test_p6a_5_missing_key_fails_before_request(self) -> None:
+        transport = FakeTransport(b"{}")
+        provider = OpenAICompatibleProvider(transport, stream=False)
+        with patch.dict(os.environ, {"DEEPSEEK_API_KEY": ""}, clear=False):
+            with self.assertRaises(LLMError) as caught:
+                await provider.complete(
+                    [Message(role="user", content="hi")],
+                    [],
+                    ModelConfig(provider="deepseek"),
+                )
+        self.assertEqual(caught.exception.code, "PROVIDER_UNAVAILABLE")
+        self.assertFalse(caught.exception.retryable)
+        self.assertIn("DEEPSEEK_API_KEY", str(caught.exception))
+        self.assertEqual(transport.requests, [])
+
+    async def test_p6a_5_explicit_key_overrides_env(self) -> None:
+        body = json.dumps({"choices": [{"message": {"content": "ok"}}]}).encode()
+        transport = FakeTransport(body)
+        provider = OpenAICompatibleProvider(transport, stream=False)
+        with patch.dict(os.environ, {"DEEPSEEK_API_KEY": "env-key"}, clear=False):
+            await provider.complete(
+                [Message(role="user", content="hi")],
+                [],
+                ModelConfig(provider="deepseek", model="m", api_key="model-key"),
+            )
+        self.assertEqual(
+            transport.requests[0].headers["Authorization"],
+            "Bearer model-key",
+        )
 
 
 if __name__ == "__main__":

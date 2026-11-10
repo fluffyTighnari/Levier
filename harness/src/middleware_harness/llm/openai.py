@@ -9,6 +9,8 @@ Copyright 2026 The Middleware Authors.
 from __future__ import annotations
 
 import json
+import os
+from dataclasses import replace
 from typing import AsyncIterator, Sequence
 
 from middleware_harness.llm.base import (
@@ -28,6 +30,7 @@ from middleware_harness.llm.http import (
 )
 
 _DEFAULT_BASE_URL = "https://api.deepseek.com"
+_DEFAULT_DEEPSEEK_MODEL = "deepseek-flash"
 _RETRYABLE_STATUS = {408, 409, 429, 500, 502, 503, 504, 529}
 
 
@@ -75,6 +78,7 @@ class OpenAICompatibleProvider:
         model: ModelConfig,
     ) -> HTTPRequest:
         """Build one non-streaming chat-completions request."""
+        model = _resolve_model(model)
         if not model.model:
             raise LLMError("BAD_REQUEST", "model is required", retryable=False)
 
@@ -113,6 +117,22 @@ class OpenAICompatibleProvider:
             headers=headers,
             body=json.dumps(body, ensure_ascii=False).encode("utf-8"),
         )
+
+
+def _resolve_model(model: ModelConfig) -> ModelConfig:
+    """Apply the DeepSeek experiment environment when fields are empty."""
+    if (model.provider or "").lower() != "deepseek":
+        return model
+    api_key = model.api_key or os.environ.get("DEEPSEEK_API_KEY", "").strip()
+    if not api_key:
+        raise LLMError(
+            "PROVIDER_UNAVAILABLE",
+            "DEEPSEEK_API_KEY is required for provider deepseek",
+            retryable=False,
+        )
+    base_url = model.base_url or os.environ.get("DEEPSEEK_BASE_URL", "").strip() or _DEFAULT_BASE_URL
+    model_name = model.model or os.environ.get("DEEPSEEK_MODEL", "").strip() or _DEFAULT_DEEPSEEK_MODEL
+    return replace(model, api_key=api_key, base_url=base_url, model=model_name)
 
 
 def _convert_message(message: Message) -> dict[str, object]:
