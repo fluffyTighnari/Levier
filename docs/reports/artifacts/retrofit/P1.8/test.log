@@ -1,0 +1,7 @@
+test_p1_8_execute_tool_delegates_to_dispatcher (test_main.MainWiringTest) ... ok
+test_p1_8_main_tools_match_registration (test_main.MainWiringTest) ... ok
+
+----------------------------------------------------------------------
+Ran 2 tests in 0.001s
+
+OK
