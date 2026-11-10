@@ -1,0 +1,7 @@
+step: P5.7
+commit: 4c1b079
+time_utc: 2026-11-10T12:58:18Z
+expected: valid token connects; token older than 1s TTL rejected; token from App1 cannot connect as App2
+observed: valid=101/connected; expired=403 handshake failed; cross-app=403 handshake failed; MW logs 101 then 403/403
+evidence: bootstrap_app1.json, bootstrap_app2.json, valid.log, expired.log, expired.err, cross_app.log, cross_app.err, middleware.log, summary.txt
+design: DESIGN §4.3 §13.1; internal/httpapi ws_tokens Validate; pre-hijack token check

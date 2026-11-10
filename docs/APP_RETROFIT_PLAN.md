@@ -234,7 +234,7 @@ P1 结束后：
 
 ## P5 WS 传输
 
-进度：P5.1 完成（`docs/reports/RETROFIT-P5.1.md`）；P5.2 完成（`docs/reports/RETROFIT-P5.2.md`）；P5.3 完成（`docs/reports/RETROFIT-P5.3.md`）；P5.4 完成（`docs/reports/RETROFIT-P5.4.md`）；P5.5 完成（`docs/reports/RETROFIT-P5.5.md`）；P5.6 完成（`docs/reports/RETROFIT-P5.6.md`）；P5.7 待做。
+进度：P5.1 完成（`docs/reports/RETROFIT-P5.1.md`）；P5.2 完成（`docs/reports/RETROFIT-P5.2.md`）；P5.3 完成（`docs/reports/RETROFIT-P5.3.md`）；P5.4 完成（`docs/reports/RETROFIT-P5.4.md`）；P5.5 完成（`docs/reports/RETROFIT-P5.5.md`）；P5.6 完成（`docs/reports/RETROFIT-P5.6.md`）；P5.7 完成（`docs/reports/RETROFIT-P5.7.md`）；P5 收口。
 
 | ID | 逻辑链 | 操作 | 断言 | 证据 |
 |---|---|---|---|---|
@@ -244,7 +244,7 @@ P1 结束后：
 | P5.4 | W→EV | `subscribe` 空 Run | 收到 `caught_up`，seq=0 | `P5.4/`（完成） |
 | P5.5 | EV→W | 创建 echo Run | 收到 `RUN_STATUS/MESSAGE_COMPLETED/RUN_STATUS` | `P5.5/`（完成） |
 | P5.6 | EV→W | 带 cursor 重连 | 只收到 cursor 之后的事件；无重无漏 | `P5.6/`（完成） |
-| P5.7 | 错误 token | 过期/跨 App token | 连接被拒绝 | `token_reject.log` |
+| P5.7 | 错误 token | 过期/跨 App token | 连接被拒绝 | `P5.7/`（完成） |
 
 ---
 
