@@ -162,7 +162,7 @@ P1 结束后：
 
 **注意**：P1 不接触 MW、不接触网络。
 
-进度：P1.1 完成（`docs/reports/RETROFIT-P1.1.md`）；P1.2 完成（`docs/reports/RETROFIT-P1.2.md`）；P1.3–P1.4 完成（`docs/reports/RETROFIT-P1.3-P1.4.md`）；P1.5–P1.8 待做。
+进度：P1.1 完成（`docs/reports/RETROFIT-P1.1.md`）；P1.2 完成（`docs/reports/RETROFIT-P1.2.md`）；P1.3–P1.4 完成（`docs/reports/RETROFIT-P1.3-P1.4.md`）；P1.5–P1.6 完成（`docs/reports/RETROFIT-P1.5-P1.6.md`）；P1.7–P1.8 待做。
 
 ---
 

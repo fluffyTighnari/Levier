@@ -86,6 +86,7 @@
 | `docs/reports/RETROFIT-P1.1.md` | App 改造 P1.1：Counter 函数与注册元数据抽取 |
 | `docs/reports/RETROFIT-P1.2.md` | App 改造 P1.2：dispatcher counter_add |
 | `docs/reports/RETROFIT-P1.3-P1.4.md` | App 改造 P1.3–P1.4：dispatcher get/reset |
+| `docs/reports/RETROFIT-P1.5-P1.6.md` | App 改造 P1.5–P1.6：dispatcher 异常处理 |
 
 **规则：**
 

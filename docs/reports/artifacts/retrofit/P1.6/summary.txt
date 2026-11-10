@@ -1,0 +1,7 @@
+step: P1.6
+commit: 92bd589
+time_utc: 2026-11-10T03:15:57Z
+expected: malformed/array/missing/wrong-type/non-string arguments return TOOL_EXEC_ERROR, retryable=false
+observed: 6 subcases passed; counter never mutated
+evidence: test.log
+design: DESIGN §4.5; proto ErrorInfo
