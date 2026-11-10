@@ -1,0 +1,7 @@
+             tool_id             | scope |             app_id             |     name      |                                description                                 |                                                  schema_json                                                  | timeout_ms | version 
+---------------------------------+-------+--------------------------------+---------------+----------------------------------------------------------------------------+---------------------------------------------------------------------------------------------------------------+------------+---------
+ tool_01M72BNV4CE1B1KNF1X95DTYF1 | local | app_01M72BNV0VX8A1BHP7W6CN7KE6 | counter_add   | Add an integer delta to the counter. Use this for every arithmetic change. | {"type":"object","properties":{"delta":{"type":"integer"}},"required":["delta"],"additionalProperties":false} |      10000 |       1
+ tool_01M72BNV4D5DX0EQY6MEBAF032 | local | app_01M72BNV0VX8A1BHP7W6CN7KE6 | counter_get   | Read the current counter value. Use this before reporting state.           | {"type":"object","properties":{},"additionalProperties":false}                                                |      10000 |       1
+ tool_01M72BNV4D5DX0EQY6MJ44G66D | local | app_01M72BNV0VX8A1BHP7W6CN7KE6 | counter_reset | Reset the counter to zero.                                                 | {"type":"object","properties":{},"additionalProperties":false}                                                |      10000 |       1
+(3 rows)
+

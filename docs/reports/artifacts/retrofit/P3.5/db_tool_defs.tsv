@@ -1,0 +1,3 @@
+counter_add	{"type":"object","properties":{"delta":{"type":"integer"}},"required":["delta"],"additionalProperties":false}	10000	1	local	app_01M72BNV0VX8A1BHP7W6CN7KE6
+counter_get	{"type":"object","properties":{},"additionalProperties":false}	10000	1	local	app_01M72BNV0VX8A1BHP7W6CN7KE6
+counter_reset	{"type":"object","properties":{},"additionalProperties":false}	10000	1	local	app_01M72BNV0VX8A1BHP7W6CN7KE6

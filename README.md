@@ -1,6 +1,6 @@
-<!-- Middleware — repository landing page. -->
+<!-- Middleware-Harness_Scheduler — repository landing page. -->
 
-# Middleware
+# Middleware-Harness_Scheduler
 
 Middleware is the control plane and tool/event mediation layer for agent
 runs executed by a stripped-down Python harness.
