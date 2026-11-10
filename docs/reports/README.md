@@ -90,6 +90,7 @@
 | `docs/reports/RETROFIT-P1.7.md` | App 改造 P1.7：注册 schema 与 TaskAssign manifest |
 | `docs/reports/RETROFIT-P1.8.md` | App 改造 P1.8：main 接 dispatcher，P1 收口 |
 | `docs/reports/RETROFIT-P2.1.md` | App 改造 P2.1：HTTP 配置读取 |
+| `docs/reports/RETROFIT-P2.2.md` | App 改造 P2.2：构造 `/admin/apps` 请求 |
 
 **规则：**
 

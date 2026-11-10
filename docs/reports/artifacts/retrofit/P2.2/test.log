@@ -1,0 +1,6 @@
+test_p2_2_builds_admin_app_request (test_http_client.HttpRequestTest) ... ok
+
+----------------------------------------------------------------------
+Ran 1 test in 0.000s
+
+OK
