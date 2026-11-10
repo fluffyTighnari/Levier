@@ -71,6 +71,16 @@ class HttpError(RuntimeError):
 
 
 @dataclass(frozen=True)
+class RunAccepted:
+    """Parsed POST /api/v1/runs response."""
+
+    run_id: str
+    status: str
+    ws_url: str
+    ws_token: Secret
+
+
+@dataclass(frozen=True)
 class AppView:
     """Parsed GET /api/v1/apps/{app_id} response."""
 
@@ -237,6 +247,27 @@ class HttpClient:
         return self.transport.send(request)
 
 
+def parse_run_response(response: HttpResponse) -> RunAccepted:
+    """Parse a 202 POST /api/v1/runs response."""
+    if response.status != 202:
+        raise _error_from_response(response)
+    try:
+        payload = json.loads(response.body.decode("utf-8"))
+    except (json.JSONDecodeError, UnicodeDecodeError) as exc:
+        raise HttpError(response.status, "BAD_RESPONSE", f"invalid JSON: {exc}") from exc
+    run_id = payload.get("run_id")
+    status = payload.get("status")
+    ws_url = payload.get("ws_url", "")
+    ws_token = payload.get("ws_token", "")
+    if not isinstance(run_id, str) or not run_id:
+        raise HttpError(response.status, "BAD_RESPONSE", "run_id is required")
+    if not isinstance(status, str) or not status:
+        raise HttpError(response.status, "BAD_RESPONSE", "status is required")
+    if not isinstance(ws_url, str) or not isinstance(ws_token, str):
+        raise HttpError(response.status, "BAD_RESPONSE", "ws_url/ws_token must be strings")
+    return RunAccepted(run_id=run_id, status=status, ws_url=ws_url, ws_token=Secret(ws_token))
+
+
 class AppClient:
     """Builds App-scoped HTTP requests using an App API key."""
 
@@ -256,6 +287,20 @@ class AppClient:
                 "Accept": "application/json",
             },
             body=b"",
+        )
+        return self.transport.send(request)
+
+    def create_run(self, payload: dict) -> HttpResponse:
+        """POST /api/v1/runs with the App key."""
+        request = HttpRequest(
+            method="POST",
+            url=self.mw_url + "/api/v1/runs",
+            headers={
+                "Authorization": "Bearer " + self.api_key.reveal(),
+                "Content-Type": "application/json",
+                "Accept": "application/json",
+            },
+            body=json.dumps(payload, separators=(",", ":")).encode("utf-8"),
         )
         return self.transport.send(request)
 

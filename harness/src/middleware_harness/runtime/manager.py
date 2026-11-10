@@ -77,6 +77,24 @@ class RunManager:
             await self._send_ack(envelope, accepted=False, reason=reason)
             return
 
+        self.logger.info("task assign received", extra={
+            "run_id": assign.run_id,
+            "app_id": assign.app_id,
+            "strategy": assign.strategy,
+            "attempt": envelope.attempt,
+            "lease_epoch": envelope.lease_epoch,
+            "trace_context": assign.trace_context,
+            "tool_count": len(assign.tools),
+            "tools": [
+                {
+                    "name": tool.name,
+                    "scope": runtime_pb2.ToolScope.Name(tool.scope),
+                    "schema_len": len(tool.input_schema_json),
+                }
+                for tool in assign.tools
+            ],
+        })
+
         existing = self.active.get(assign.run_id)
         if existing is not None:
             if existing.lease_epoch == envelope.lease_epoch:
