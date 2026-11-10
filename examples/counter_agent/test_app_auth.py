@@ -17,6 +17,7 @@ from http_client import (
     parse_app_view,
     parse_rotate_key_response,
     parse_run_response,
+    parse_ws_token_response,
 )
 
 
@@ -111,6 +112,29 @@ class AppAuthTest(unittest.TestCase):
         self.assertEqual(run.run_id, "run-1")
         self.assertEqual(run.status, "queued")
         self.assertNotIn("ws-secret", repr(run))
+
+    def test_p5_1_ws_token_request(self) -> None:
+        transport = RecordingTransport(
+            HttpResponse(
+                200,
+                {},
+                json.dumps(
+                    {"ws_url": "/api/v1/ws", "ws_token": "ws-secret", "expires_in": 600}
+                ).encode(),
+            )
+        )
+        client = AppClient("http://127.0.0.1:8080", "app-1", Secret("mw_secret"), transport)
+        response = client.create_ws_token()
+        token = parse_ws_token_response(response)
+
+        request = transport.requests[0]
+        self.assertEqual(request.method, "POST")
+        self.assertEqual(request.url, "http://127.0.0.1:8080/api/v1/ws-token")
+        self.assertEqual(request.headers["Authorization"], "Bearer mw_secret")
+        self.assertEqual(token.ws_url, "/api/v1/ws")
+        self.assertEqual(token.expires_in, 600)
+        self.assertEqual(token.token.reveal(), "ws-secret")
+        self.assertNotIn("ws-secret", repr(token))
 
     def test_p3_3_get_app_rejects_bad_key(self) -> None:
         transport = RecordingTransport(

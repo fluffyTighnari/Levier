@@ -71,6 +71,15 @@ class HttpError(RuntimeError):
 
 
 @dataclass(frozen=True)
+class WsToken:
+    """Parsed POST /api/v1/ws-token response."""
+
+    ws_url: str
+    token: Secret
+    expires_in: int
+
+
+@dataclass(frozen=True)
 class RunAccepted:
     """Parsed POST /api/v1/runs response."""
 
@@ -268,6 +277,26 @@ def parse_run_response(response: HttpResponse) -> RunAccepted:
     return RunAccepted(run_id=run_id, status=status, ws_url=ws_url, ws_token=Secret(ws_token))
 
 
+def parse_ws_token_response(response: HttpResponse) -> WsToken:
+    """Parse a 200 POST /api/v1/ws-token response."""
+    if response.status != 200:
+        raise _error_from_response(response)
+    try:
+        payload = json.loads(response.body.decode("utf-8"))
+    except (json.JSONDecodeError, UnicodeDecodeError) as exc:
+        raise HttpError(response.status, "BAD_RESPONSE", f"invalid JSON: {exc}") from exc
+    ws_url = payload.get("ws_url")
+    token = payload.get("ws_token")
+    expires_in = payload.get("expires_in")
+    if not isinstance(ws_url, str) or not ws_url:
+        raise HttpError(response.status, "BAD_RESPONSE", "ws_url is required")
+    if not isinstance(token, str) or not token:
+        raise HttpError(response.status, "BAD_RESPONSE", "ws_token is required")
+    if not isinstance(expires_in, int) or expires_in <= 0:
+        raise HttpError(response.status, "BAD_RESPONSE", "expires_in must be positive")
+    return WsToken(ws_url=ws_url, token=Secret(token), expires_in=expires_in)
+
+
 class AppClient:
     """Builds App-scoped HTTP requests using an App API key."""
 
@@ -282,6 +311,19 @@ class AppClient:
         request = HttpRequest(
             method="GET",
             url=self.mw_url + f"/api/v1/apps/{self.app_id}",
+            headers={
+                "Authorization": "Bearer " + self.api_key.reveal(),
+                "Accept": "application/json",
+            },
+            body=b"",
+        )
+        return self.transport.send(request)
+
+    def create_ws_token(self) -> HttpResponse:
+        """POST /api/v1/ws-token with the App key."""
+        request = HttpRequest(
+            method="POST",
+            url=self.mw_url + "/api/v1/ws-token",
             headers={
                 "Authorization": "Bearer " + self.api_key.reveal(),
                 "Accept": "application/json",
