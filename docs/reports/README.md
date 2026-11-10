@@ -100,6 +100,7 @@
 | `docs/reports/RETROFIT-P4.1-P4.3.md` | App 改造 P4.1–P4.3：TaskAssign 工具可见 |
 | `docs/reports/RETROFIT-P4.4.md` | App 改造 P4.4：TaskAssign schema 精确对比 |
 | `docs/reports/RETROFIT-P4.5.md` | App 改造 P4.5：App 间工具隔离 |
+| `docs/reports/RETROFIT-P4.6.md` | App 改造 P4.6：删除工具后 TaskAssign 更新 |
 | `docs/APP_ONBOARDING.md` | 任意 App 接入 Middleware 的标准流程 |
 
 **规则：**

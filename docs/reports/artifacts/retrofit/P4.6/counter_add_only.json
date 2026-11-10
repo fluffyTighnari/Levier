@@ -1,0 +1,19 @@
+[
+  {
+    "name": "counter_add",
+    "description": "Add an integer delta to the counter. Use this for every arithmetic change.",
+    "schema": {
+      "type": "object",
+      "properties": {
+        "delta": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "delta"
+      ],
+      "additionalProperties": false
+    },
+    "timeout_ms": 10000
+  }
+]

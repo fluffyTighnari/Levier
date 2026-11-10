@@ -226,9 +226,9 @@ P1 结束后：
 | P4.3 | REG→CTL | 创建 echo Run | TaskAssign 到达 Harness；工具列表包含已注册工具 | `P4.1/`（完成） |
 | P4.4 | REG→CTL | 校验工具 schema | Harness 日志中的 schema 与 DB 精确一致 | `P4.4/`（完成） |
 | P4.5 | App2→CTL | App2 创建 Run | TaskAssign 不含 App1 的工具 | `P4.5/`（完成） |
-| P4.6 | 旧状态→CTL | 删除工具后新建 Run | TaskAssign 不含已删除工具 | `pruned_tools.txt` |
+| P4.6 | 旧状态→CTL | 删除工具后新建 Run | TaskAssign 不含已删除工具 | `P4.6/`（完成） |
 
-进度：P4.1–P4.3 完成（`docs/reports/RETROFIT-P4.1-P4.3.md`）；P4.4 完成（`docs/reports/RETROFIT-P4.4.md`）；P4.5 完成（`docs/reports/RETROFIT-P4.5.md`）；P4.6 待做。
+进度：P4.1–P4.3 完成（`docs/reports/RETROFIT-P4.1-P4.3.md`）；P4.4 完成（`docs/reports/RETROFIT-P4.4.md`）；P4.5 完成（`docs/reports/RETROFIT-P4.5.md`）；P4.6 完成（`docs/reports/RETROFIT-P4.6.md`）；P4 收口。
 
 ---
 

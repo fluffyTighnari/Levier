@@ -1,0 +1,5 @@
+    name     | scope | version | timeout_ms 
+-------------+-------+---------+------------
+ counter_add | local |       2 |      10000
+(1 row)
+
