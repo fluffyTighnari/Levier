@@ -252,6 +252,8 @@ P1 结束后：
 
 ### P6A 模型提供方（先独立测）
 
+进度：P6A.1 完成（`docs/reports/RETROFIT-P6A.1.md`）；P6A.2–P6A.5 待做。
+
 | ID | 逻辑链 | 操作 | 断言 |
 |---|---|---|---|
 | P6A.1 | LLM→mock | 新增 OpenAI-compatible provider | 非流式 JSON 解析正确 |

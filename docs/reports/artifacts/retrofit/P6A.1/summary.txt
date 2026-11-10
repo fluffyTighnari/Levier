@@ -1,0 +1,7 @@
+step: P6A.1
+commit: ad9b1e9
+time_utc: 2026-11-10T13:03:49Z
+expected: OpenAI-compatible non-stream JSON parses content/tool_calls/usage; request uses Chat Completions shape
+observed: 3 tests passed; content/model/usage/tool_calls correct; tools and messages converted correctly
+evidence: test.log
+design: DESIGN §5.3; harness llm base contracts; DeepSeek /chat/completions

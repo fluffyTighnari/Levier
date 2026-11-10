@@ -108,6 +108,7 @@
 | `docs/reports/RETROFIT-P5.5.md` | App 改造 P5.5：subscribe 后接收真实事件 |
 | `docs/reports/RETROFIT-P5.6.md` | App 改造 P5.6：断线重连与 cursor |
 | `docs/reports/RETROFIT-P5.7.md` | App 改造 P5.7：ws_token 过期与跨 App 拒绝 |
+| `docs/reports/RETROFIT-P6A.1.md` | App 改造 P6A.1：OpenAI-compatible JSON 解析 |
 | `docs/APP_ONBOARDING.md` | 任意 App 接入 Middleware 的标准流程 |
 
 **规则：**
