@@ -189,7 +189,7 @@ P1 结束后：
 - WS 在 P2.7 实现最小握手/文本帧客户端，不引入第三方包。
 - P8 再补独立语言客户端验证（HTTP 已有 Python stdlib 客户端）。
 
-进度：P2.1 完成（`docs/reports/RETROFIT-P2.1.md`）；P2.2 完成（`docs/reports/RETROFIT-P2.2.md`）；P2.3–P2.10 待做。
+进度：P2.1 完成（`docs/reports/RETROFIT-P2.1.md`）；P2.2 完成（`docs/reports/RETROFIT-P2.2.md`）；P2.3 完成（`docs/reports/RETROFIT-P2.3.md`）；P2.4–P2.10 待做。
 
 ---
 
