@@ -1,0 +1,7 @@
+step: P5.3
+commit: dcb9ad5
+time_utc: 2026-11-10T12:24:38Z
+expected: real WS client sends ping; MW returns pong; connection closes cleanly
+observed: app_id=app_01M72PNH8JHXTC4ECZETCTX989; connected=true; pong=true; reply={"type":"pong"}; closed=true
+evidence: bootstrap.json, ping.log, ping.err, middleware.log, migrate.log, summary.txt
+design: DESIGN §4.3; internal/httpapi ws.go PingMessage/PongMessage; handleWS
