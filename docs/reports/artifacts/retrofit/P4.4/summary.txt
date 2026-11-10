@@ -1,0 +1,7 @@
+step: P4.4
+commit: 2155135
+time_utc: 2026-11-10T09:37:34Z
+expected: TaskAssign.tools[].input_schema_json exactly equals tool_defs.schema_json for all tools
+observed: app_id=app_01M72D3HZVNZN9E22A5KSFBE1B; run_id=01M72D3J6SBFK9NVH6PRW4R920; 3/3 exact matches; lengths 109/62/62; run completed
+evidence: task_assign.json, db_schema.tsv, schema_compare.json, harness.log, middleware.log, db_run.txt
+design: DESIGN §5.3; proto ToolManifest.input_schema_json; internal/control toolManifests

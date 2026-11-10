@@ -1,0 +1,27 @@
+{
+  "run_id": "01M72D3J6SBFK9NVH6PRW4R920",
+  "tools": [
+    {
+      "name": "counter_add",
+      "scope": "LOCAL",
+      "exact_match": true,
+      "db_len": 109,
+      "assign_len": 109
+    },
+    {
+      "name": "counter_get",
+      "scope": "LOCAL",
+      "exact_match": true,
+      "db_len": 62,
+      "assign_len": 62
+    },
+    {
+      "name": "counter_reset",
+      "scope": "LOCAL",
+      "exact_match": true,
+      "db_len": 62,
+      "assign_len": 62
+    }
+  ],
+  "all_exact": true
+}
