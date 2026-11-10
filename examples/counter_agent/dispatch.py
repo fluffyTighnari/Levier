@@ -1,4 +1,4 @@
-"""Middleware — Counter App local tool dispatcher (P1.2–P1.4).
+"""Middleware — Counter App local tool dispatcher (P1.2–P1.6).
 
 The dispatcher accepts the two fields Middleware sends to a local tool:
 `tool_name` and `arguments_json`. It returns the success/error shape used by
@@ -32,7 +32,11 @@ def _error(code: str, message: str, retryable: bool = False) -> dict[str, Any]:
 
 
 def _parse_arguments(arguments_json: str) -> dict[str, Any]:
-    if arguments_json is None or arguments_json.strip() == "":
+    if arguments_json is None:
+        return {}
+    if not isinstance(arguments_json, str):
+        raise TypeError("arguments_json must be a string")
+    if arguments_json.strip() == "":
         return {}
     parsed = json.loads(arguments_json)
     if not isinstance(parsed, dict):
@@ -67,7 +71,9 @@ def dispatch_counter_tool(
     if tool_name == "counter_reset":
         return _success(counter.reset())
 
-    delta = arguments.get("delta")
+    if "delta" not in arguments:
+        return _error("TOOL_EXEC_ERROR", "counter_add.delta is required")
+    delta = arguments["delta"]
     if not isinstance(delta, int) or isinstance(delta, bool):
         return _error("TOOL_EXEC_ERROR", "counter_add.delta must be an integer")
 
