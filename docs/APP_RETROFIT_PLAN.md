@@ -234,9 +234,11 @@ P1 结束后：
 
 ## P5 WS 传输
 
+进度：P5.1 完成（`docs/reports/RETROFIT-P5.1.md`）；P5.2–P5.7 待做。
+
 | ID | 逻辑链 | 操作 | 断言 | 证据 |
 |---|---|---|---|---|
-| P5.1 | H→API | `POST /ws-token` | 200；expires_in=600 | `ws_token.json` |
+| P5.1 | H→API | `POST /ws-token` | 200；expires_in=600 | `P5.1/`（完成） |
 | P5.2 | W→API | 建连 | 101/连接成功；`mw_ws_connections` +1 | `ws_connect.log` |
 | P5.3 | W→API | `ping` | 收到 `pong` | `ping.log` |
 | P5.4 | W→EV | `subscribe` 空 Run | 收到 `caught_up`，seq=0 | `caught_up.log` |

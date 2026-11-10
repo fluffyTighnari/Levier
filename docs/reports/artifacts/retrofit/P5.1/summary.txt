@@ -1,0 +1,7 @@
+step: P5.1
+commit: 171fdcd
+time_utc: 2026-11-10T09:53:22Z
+expected: App key POST /api/v1/ws-token -> 200; ws_url; expires_in=600; token not printed
+observed: app_id=app_01M72E0F85DRDSBGXD7X4Z2G42; status=200; ws_url=/api/v1/ws; expires_in=600; has_ws_token=true; MW log route POST /api/v1/ws-token status=200
+evidence: bootstrap.json, ws_token.json, middleware.log, migrate.log, summary.txt
+design: DESIGN §4.2 §4.3; internal/httpapi ws_tokens.go; WSTokenStore
