@@ -34,7 +34,13 @@ func (s *wsSink) Close() error {
 }
 
 func websocketHandler(handler func(*websocket.Conn)) http.Handler {
-	return websocket.Handler(handler)
+	// App auth is the ws_token query parameter. The default x/net Handler
+	// rejects non-browser clients that omit Origin, so accept the handshake
+	// here and let handleWS validate app_id/token.
+	return websocket.Server{
+		Handshake: func(*websocket.Config, *http.Request) error { return nil },
+		Handler:   handler,
+	}
 }
 
 func (s *Server) handleWS(conn *websocket.Conn) {
