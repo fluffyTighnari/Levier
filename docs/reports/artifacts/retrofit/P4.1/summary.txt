@@ -1,0 +1,7 @@
+step: P4.1
+commit: b130d29
+time_utc: 2026-11-10T09:25:26Z
+expected: real Harness receives TaskAssign carrying tools from tool_defs; run completes
+observed: app_id=app_01M72CD43AXKP68KQ0G5N3FZWT; run_id=01M72CD4A5D508M14ZVF4D6PTS; tool_count=3; scopes LOCAL; schema_len 109/62/62; run status=completed
+evidence: bootstrap.json, register_tools.json, submit_run.json, harness.log, middleware.log, db_run.txt, summary.txt
+design: DESIGN §5.3; proto TaskAssign/ToolManifest; internal/control buildTaskAssign; harness runtime manager

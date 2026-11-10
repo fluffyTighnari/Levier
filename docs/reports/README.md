@@ -97,6 +97,7 @@
 | `docs/reports/RETROFIT-P3.3.md` | App 改造 P3.3：App key 认证与可复用 bootstrap |
 | `docs/reports/RETROFIT-P3.4.md` | App 改造 P3.4：真实注册 local tools |
 | `docs/reports/RETROFIT-P3.5.md` | App 改造 P3.5：确认 tool_defs 真实落库 |
+| `docs/reports/RETROFIT-P4.1-P4.3.md` | App 改造 P4.1–P4.3：TaskAssign 工具可见 |
 | `docs/APP_ONBOARDING.md` | 任意 App 接入 Middleware 的标准流程 |
 
 **规则：**

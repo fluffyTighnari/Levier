@@ -221,12 +221,14 @@ P1 结束后：
 
 | ID | 逻辑链 | 操作 | 断言 | 证据 |
 |---|---|---|---|---|
-| P4.1 | HAR→MW | 启动真实 Harness echo | Hello/Heartbeat 正常 | `harness_hello.log` |
-| P4.2 | HAR log | 在 Harness 增加 TaskAssign 工具日志 | 日志含 run_id、工具名列表 | `task_assign.log` |
-| P4.3 | REG→CTL | 创建 echo Run | TaskAssign 到达 Harness；工具列表包含已注册工具 | `task_assign.json` |
+| P4.1 | HAR→MW | 启动真实 Harness echo | Hello/Heartbeat 正常 | `P4.1/`（完成） |
+| P4.2 | HAR log | 在 Harness 增加 TaskAssign 工具日志 | 日志含 run_id、工具名列表 | `P4.1/`（完成） |
+| P4.3 | REG→CTL | 创建 echo Run | TaskAssign 到达 Harness；工具列表包含已注册工具 | `P4.1/`（完成） |
 | P4.4 | REG→CTL | 校验工具 schema | Harness 日志中的 schema 与 DB 一致 | `schema_compare.txt` |
 | P4.5 | App2→CTL | App2 创建 Run | TaskAssign 不含 App1 的工具 | `app2_tools.txt` |
 | P4.6 | 旧状态→CTL | 删除工具后新建 Run | TaskAssign 不含已删除工具 | `pruned_tools.txt` |
+
+进度：P4.1–P4.3 完成（`docs/reports/RETROFIT-P4.1-P4.3.md`）；P4.4–P4.6 待做。
 
 ---
 
