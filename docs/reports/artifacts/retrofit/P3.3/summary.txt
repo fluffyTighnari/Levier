@@ -1,0 +1,7 @@
+step: P3.3
+commit: 02e5da7
+time_utc: 2026-11-10T09:05:02Z
+expected: bootstrap saves 0600 credentials; correct App key GET /apps/{id}=200; wrong key=401
+observed: app_id=app_01M72B7V133Z0K257WKM1WRDVQ; name=retrofit-p3.3-1794301488; credentials mode=600; correct key 200 active; wrong key 401 UNAUTHORIZED; key never printed
+evidence: bootstrap.json, check_app.json, wrong_key.json, credentials_mode.txt, middleware.log, summary.txt
+design: DESIGN §4.2 §13.1; internal/register AuthenticateAPIKey; internal/httpapi handleGetApp

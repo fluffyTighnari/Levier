@@ -189,7 +189,7 @@ P1 结束后：
 - WS 在 P2.7 实现最小握手/文本帧客户端，不引入第三方包。
 - P8 再补独立语言客户端验证（HTTP 已有 Python stdlib 客户端）。
 
-进度：P2.1 完成（`docs/reports/RETROFIT-P2.1.md`）；P3.1 完成（`docs/reports/RETROFIT-P3.1.md`）；P3.2 完成（`docs/reports/RETROFIT-P3.2.md`）。
+进度：P2.1 完成（`docs/reports/RETROFIT-P2.1.md`）；P3.1 完成（`docs/reports/RETROFIT-P3.1.md`）；P3.2 完成（`docs/reports/RETROFIT-P3.2.md`）；P3.3 完成（`docs/reports/RETROFIT-P3.3.md`）。通用流程见 `docs/APP_ONBOARDING.md`。
 
 **计划调整**：P2.2–P2.10 的 mock 里程碑取消。P2.2/P2.3 的代码保留为普通单测 guardrail，但不再单独作为链路步骤。P3.1 已走真实 HTTP。
 
@@ -203,7 +203,7 @@ P1 结束后：
 |---|---|---|---|---|
 | P3.1 | H→API | 实现 `UrllibTransport`；App 真实 `POST /admin/apps` | 真实 MW 返回 201/200；解析 app_id；记录真实响应 | `P3.1/`（完成） |
 | P3.2 | API→REG | 查 `apps` | 行存在；`api_key_hash` 非明文；status=active | `P3.2/`（完成） |
-| P3.3 | H→API | App key `GET /apps/{id}` | 200；字段匹配 | `get_app.json` |
+| P3.3 | H→API | App key `GET /apps/{id}` | 200；字段匹配 | `P3.3/`（完成） |
 | P3.4 | H→API | 错误 key 查询 | 401 统一错误信封 | `auth_fail.json` |
 | P3.5 | H→API | App 更新写入 `counter_add` | 200 | `register_tool.json` |
 | P3.6 | API→REG | 查 `tool_defs` | scope=local、app_id、name、schema、timeout、version=1 | `db_tool_1.txt` |
