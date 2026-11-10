@@ -21,6 +21,11 @@ _LOG_FIELDS = (
     "strategy",
     "step",
     "invocation_id",
+    "app_id",
+    "trace_context",
+    "tool_count",
+    "tools",
+    "session_id",
 )
 
 
