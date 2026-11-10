@@ -90,6 +90,7 @@ class RunManager:
                     "name": tool.name,
                     "scope": runtime_pb2.ToolScope.Name(tool.scope),
                     "schema_len": len(tool.input_schema_json),
+                    "input_schema_json": tool.input_schema_json,
                 }
                 for tool in assign.tools
             ],
