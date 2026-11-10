@@ -128,6 +128,8 @@ DEEPSEEK_MODEL    ← deepseek-flash
 
 **退出**：P0.1 的 final=5 与 tool call 次数成为后续对照基准。
 
+执行记录：`docs/reports/RETROFIT-P0.md`。
+
 ---
 
 ## P1 Counter 本地逻辑

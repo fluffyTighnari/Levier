@@ -1,0 +1,6 @@
+step: P0.2
+commit: 75b93bd
+time_utc: 2026-11-10T02:18:24Z
+expected: migrations applied; /healthz=200; /metrics readable
+observed: migrate rc=0; health={"status":"ok"}; metrics captured
+evidence: migrate.log, health.json, metrics.txt

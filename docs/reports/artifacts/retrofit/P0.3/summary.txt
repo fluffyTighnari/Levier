@@ -1,0 +1,6 @@
+step: P0.3
+commit: 75b93bd
+time_utc: 2026-11-10T02:18:24Z
+expected: real Harness Hello accepted; daemon-local-1 visible
+observed: harness starting daemon-local-1; mw_daemon_capacity present with total=4
+evidence: harness.log, daemon_metrics.txt, daemon.txt

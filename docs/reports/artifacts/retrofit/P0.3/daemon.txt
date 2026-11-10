@@ -1,0 +1,2 @@
+mw_daemon_capacity{daemon="daemon-local-1",kind="total",runtime="NORMAL"} 4
+mw_daemon_capacity{daemon="daemon-local-1",kind="used",runtime="NORMAL"} 0
