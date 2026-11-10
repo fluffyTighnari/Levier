@@ -125,10 +125,11 @@ DEEPSEEK_MODEL    ← deepseek-flash
 | P0.2 | 环境→健康 | 启动 PostgreSQL、迁移、启动 MW | `/healthz` 200；`/metrics` 可读 | `health.json`、`metrics.txt` |
 | P0.3 | Harness→MW | 启动 echo Harness | Hello 成功；daemon online；无 Auth 错误 | `harness.log` |
 | P0.4 | 测试隔离 | 记录 commit、时间、DB URL 指纹 | 不包含密钥 | `env.txt` |
+| P0.5 | 注册合同→DB→TaskAssign | 创建 App + 2 个工具；查 DB；观察 TaskAssign | App/tool_defs 落库；TaskAssign 含 2 个 LOCAL 工具 | `REG-01/` |
 
-**退出**：P0.1 的 final=5 与 tool call 次数成为后续对照基准。
+**退出**：P0.1 的 final=5 与 tool call 次数成为后续对照基准；P0.5 注册格式已验证。
 
-执行记录：`docs/reports/RETROFIT-P0.md`。
+执行记录：`docs/reports/RETROFIT-P0.md`、`docs/reports/REGISTRATION-CONTRACT.md`。
 
 ---
 

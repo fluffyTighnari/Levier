@@ -1,0 +1,5 @@
+             app_id             |          name           | multiagent | status | hash_len | hash_prefix 
+--------------------------------+-------------------------+------------+--------+----------+-------------
+ app_01M71NKR6DPKZVWSAGF1N455RX | retrofit-reg-8aa2db039d | f          | active |       64 | 0b730ac8
+(1 row)
+

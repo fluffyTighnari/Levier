@@ -1,0 +1,62 @@
+{
+  "app_id": "app_01M71NKR6DPKZVWSAGF1N455RX",
+  "app_name": "retrofit-reg-8aa2db039d",
+  "app_view": {
+    "app_id": "app_01M71NKR6DPKZVWSAGF1N455RX",
+    "name": "retrofit-reg-8aa2db039d",
+    "multiagent": false,
+    "status": "active",
+    "created_at": "2026-11-10T10:46:49.805338+08:00",
+    "updated_at": "2026-11-10T10:46:49.808894+08:00"
+  },
+  "registered_tools": [
+    {
+      "name": "counter_add",
+      "description": "Add an integer delta to the counter.",
+      "schema": {
+        "type": "object",
+        "properties": {
+          "delta": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "delta"
+        ],
+        "additionalProperties": false
+      },
+      "timeout_ms": 10000
+    },
+    {
+      "name": "counter_get",
+      "description": "Read the current counter value.",
+      "schema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "timeout_ms": 10000
+    }
+  ],
+  "run_id": "01M71NKR71MMWYJRHACYM5C7Q5",
+  "task_assign": {
+    "run_id": "01M71NKR71MMWYJRHACYM5C7Q5",
+    "app_id": "app_01M71NKR6DPKZVWSAGF1N455RX",
+    "strategy": "echo",
+    "tool_count": 2,
+    "tools": [
+      {
+        "name": "counter_add",
+        "description": "Add an integer delta to the counter.",
+        "input_schema_json": "{\"type\": \"object\", \"properties\": {\"delta\": {\"type\": \"integer\"}}, \"required\": [\"delta\"], \"additionalProperties\": false}",
+        "scope": "LOCAL"
+      },
+      {
+        "name": "counter_get",
+        "description": "Read the current counter value.",
+        "input_schema_json": "{\"type\": \"object\", \"properties\": {}, \"additionalProperties\": false}",
+        "scope": "LOCAL"
+      }
+    ]
+  }
+}

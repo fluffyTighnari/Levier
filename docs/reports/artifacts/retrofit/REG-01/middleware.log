@@ -1,0 +1,3 @@
+{"time":"2026-11-10T10:46:49.378446+08:00","level":"INFO","msg":"middleware starting","config":"config.example.yaml","database":"connected","grpc_addr":":9090","http_addr":":8080"}
+{"time":"2026-11-10T10:46:50.000734+08:00","level":"INFO","msg":"control assigned run","run_id":"01M71NKR71MMWYJRHACYM5C7Q5","trace_id":"01M71NKR70XG90CK1FEB02RWM8","app_id":"app_01M71NKR6DPKZVWSAGF1N455RX","attempt":1,"lease_epoch":1,"daemon_id":"daemon-local-1","runtime":"normal","strategy":"echo"}
+{"time":"2026-11-10T10:47:11.9443+08:00","level":"INFO","msg":"middleware stopped"}
