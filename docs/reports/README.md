@@ -91,7 +91,8 @@
 | `docs/reports/RETROFIT-P1.8.md` | App 改造 P1.8：main 接 dispatcher，P1 收口 |
 | `docs/reports/RETROFIT-P2.1.md` | App 改造 P2.1：HTTP 配置读取 |
 | `docs/reports/RETROFIT-P2.2.md` | App 改造 P2.2：构造 `/admin/apps` 请求 |
-| `docs/reports/RETROFIT-P2.3.md` | App 改造 P2.3：解析 Admin App 响应 |
+| `docs/reports/RETROFIT-P2.3.md` | App 改造 P2.3：解析 Admin App 响应（mock guardrail） |
+| `docs/reports/RETROFIT-P3.1.md` | App 改造 P3.1：真实调用 `POST /admin/apps` |
 
 **规则：**
 

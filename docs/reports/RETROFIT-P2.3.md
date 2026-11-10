@@ -2,6 +2,8 @@
 
 # Retrofit P2.3：解析 Admin App 响应
 
+> 说明：本步解析的是 mock 响应，不是真实 MW 响应；真实链路见 `docs/reports/RETROFIT-P3.1.md`。
+
 | 项目 | 内容 |
 |---|---|
 | 日期 | 2026-11-10 |

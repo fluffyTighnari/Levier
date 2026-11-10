@@ -1,0 +1,4 @@
+{"time":"2026-11-10T16:40:14.217722+08:00","level":"INFO","msg":"middleware starting","config":"config.example.yaml","database":"connected","grpc_addr":":9090","http_addr":":8080"}
+{"time":"2026-11-10T16:40:14.411444+08:00","level":"DEBUG","msg":"http request","request_id":"01M729TVTBCA8XMFS0YWH8PWVE","method":"GET","route":"GET /healthz","status":200,"duration_ms":0,"remote_addr":"127.0.0.1:61968"}
+{"time":"2026-11-10T16:40:14.539146+08:00","level":"DEBUG","msg":"http request","request_id":"01M729TVY81SWTWR27340A6R26","method":"POST","route":"POST /admin/apps","status":201,"duration_ms":2,"remote_addr":"127.0.0.1:61969"}
+{"time":"2026-11-10T16:40:14.558395+08:00","level":"INFO","msg":"middleware stopped"}

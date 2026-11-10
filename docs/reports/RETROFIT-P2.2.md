@@ -2,6 +2,8 @@
 
 # Retrofit P2.2：构造 `/admin/apps` 请求
 
+> 说明：本步是 mock transport 的单测 guardrail，不是真实链路里程碑；真实调用见 `docs/reports/RETROFIT-P3.1.md`。
+
 | 项目 | 内容 |
 |---|---|
 | 日期 | 2026-11-10 |
