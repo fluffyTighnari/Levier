@@ -17,28 +17,12 @@ import urllib.request
 from pathlib import Path
 from typing import Any
 
+from tools import Counter
+
 DEFAULT_BASE_URL = "https://api.deepseek.com"
 DEFAULT_MODEL = "deepseek-flash"
 MAX_STEPS = 8
 REQUEST_TIMEOUT_SECONDS = 120
-
-
-class Counter:
-    """The only state this baseline app owns."""
-
-    def __init__(self) -> None:
-        self.value = 0
-
-    def add(self, delta: int) -> dict[str, Any]:
-        self.value += delta
-        return {"value": self.value}
-
-    def get(self) -> dict[str, Any]:
-        return {"value": self.value}
-
-    def reset(self) -> dict[str, Any]:
-        self.value = 0
-        return {"value": self.value}
 
 
 TOOLS = [
@@ -154,11 +138,11 @@ def execute_tool(counter: Counter, name: str, arguments_json: str) -> dict[str, 
 
     try:
         if name == "counter_add":
-            return counter.add(int(arguments.get("delta", 0)))
+            return {"value": counter.add(int(arguments.get("delta", 0)))}
         if name == "counter_get":
-            return counter.get()
+            return {"value": counter.get()}
         if name == "counter_reset":
-            return counter.reset()
+            return {"value": counter.reset()}
     except (TypeError, ValueError) as exc:
         return {"error": str(exc)}
     return {"error": f"unknown tool {name}"}
