@@ -20,7 +20,7 @@ from middleware_harness import __version__
 from middleware_harness.channel import ChannelClient, ChannelConfig
 from middleware_harness.config import ConfigError, Settings, load_settings
 from middleware_harness.health import HealthState
-from middleware_harness.llm import AnthropicProvider
+from middleware_harness.llm import ProviderRouter
 from middleware_harness.logging import configure_logging, get_logger
 from middleware_harness.mcp import McpRuntimeClient
 from middleware_harness.runtime import ManagerConfig, RunManager
@@ -130,7 +130,7 @@ def _build_runner(
     tools = ToolRouter(bridge=ToolBridge(channel), mcp=mcp_client)
     available = {
         "echo": EchoStrategy(),
-        "react": ReactStrategy(AnthropicProvider(), tools),
+        "react": ReactStrategy(ProviderRouter(), tools),
     }
     unknown = [name for name in settings.daemon.strategies if name not in available]
     if unknown:
