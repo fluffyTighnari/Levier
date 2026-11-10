@@ -1,0 +1,7 @@
+step: P1.4
+commit: e172bdc
+time_utc: 2026-11-10T03:11:52Z
+expected: dispatcher counter_reset returns zero
+observed: Counter(9) -> {"value":0}; counter state becomes 0
+evidence: test.log
+design: DESIGN §5.3; proto ToolCallResult

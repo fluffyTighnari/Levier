@@ -85,6 +85,7 @@
 | `docs/reports/REGISTRATION-CONTRACT.md` | App/local tool 注册格式与落库/TaskAssign 实测 |
 | `docs/reports/RETROFIT-P1.1.md` | App 改造 P1.1：Counter 函数与注册元数据抽取 |
 | `docs/reports/RETROFIT-P1.2.md` | App 改造 P1.2：dispatcher counter_add |
+| `docs/reports/RETROFIT-P1.3-P1.4.md` | App 改造 P1.3–P1.4：dispatcher get/reset |
 
 **规则：**
 

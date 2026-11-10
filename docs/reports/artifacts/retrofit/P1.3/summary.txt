@@ -1,0 +1,7 @@
+step: P1.3
+commit: e172bdc
+time_utc: 2026-11-10T03:11:52Z
+expected: dispatcher counter_get returns current value without mutation
+observed: Counter(7) -> {"value":7}; counter state remains 7
+evidence: test.log
+design: DESIGN §5.3; proto ToolCallResult
