@@ -1,0 +1,7 @@
+step: P4.5
+commit: 4521393
+time_utc: 2026-11-10T09:39:16Z
+expected: App1 TaskAssign has only counter_*; App2 TaskAssign has only other_ping; no cross-app tools
+observed: app1=app_01M72D6KTZQDDY3T1G4E120NE1 tools=[counter_add,counter_get,counter_reset]; app2=app_01M72D6M1JF0X60QGYV05JH84S tools=[other_ping]; isolated=true; both runs completed
+evidence: bootstrap_app1.json, register_app1.json, bootstrap_app2.json, register_app2.json, app2_tools.json, submit_app1.json, submit_app2.json, harness.log, isolation.json, db_tools.txt, db_runs.txt
+design: DESIGN §5.3; internal/register AssembleTaskMaterials app_id filter; Control toolManifests

@@ -1,0 +1,8 @@
+             app_id             |     name      | scope 
+--------------------------------+---------------+-------
+ app_01M72D6KTZQDDY3T1G4E120NE1 | counter_add   | local
+ app_01M72D6KTZQDDY3T1G4E120NE1 | counter_get   | local
+ app_01M72D6KTZQDDY3T1G4E120NE1 | counter_reset | local
+ app_01M72D6M1JF0X60QGYV05JH84S | other_ping    | local
+(4 rows)
+

@@ -1,0 +1,20 @@
+{
+  "app1": {
+    "app_id": "app_01M72D6KTZQDDY3T1G4E120NE1",
+    "tools": [
+      "counter_add",
+      "counter_get",
+      "counter_reset"
+    ]
+  },
+  "app2": {
+    "app_id": "app_01M72D6M1JF0X60QGYV05JH84S",
+    "tools": [
+      "other_ping"
+    ]
+  },
+  "app1_ok": true,
+  "app2_ok": true,
+  "app2_has_app1_tool": false,
+  "isolated": true
+}
