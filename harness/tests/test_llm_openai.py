@@ -21,20 +21,33 @@ from middleware_harness.llm import (
 
 
 class FakeTransport:
-    def __init__(self, body: bytes, status: int = 200) -> None:
+    def __init__(
+        self,
+        body: bytes,
+        status: int = 200,
+        *,
+        content_type: str = "application/json",
+        chunk_size: int = 0,
+    ) -> None:
         self.body = body
         self.status = status
+        self.content_type = content_type
+        self.chunk_size = chunk_size
         self.requests: list[HTTPRequest] = []
 
     async def open(self, request: HTTPRequest) -> HTTPResponse:
         self.requests.append(request)
 
         async def chunks() -> AsyncIterator[bytes]:
-            yield self.body
+            if self.chunk_size <= 0:
+                yield self.body
+                return
+            for start in range(0, len(self.body), self.chunk_size):
+                yield self.body[start:start + self.chunk_size]
 
         return HTTPResponse(
             status=self.status,
-            headers={"content-type": "application/json"},
+            headers={"content-type": self.content_type},
             body=chunks(),
         )
 
@@ -78,7 +91,7 @@ class OpenAIProviderTest(unittest.IsolatedAsyncioTestCase):
             }
         ).encode()
         transport = FakeTransport(body)
-        provider = OpenAICompatibleProvider(transport)
+        provider = OpenAICompatibleProvider(transport, stream=False)
 
         response = await provider.complete(
             [Message(role="user", content="add 2")],
@@ -115,7 +128,7 @@ class OpenAIProviderTest(unittest.IsolatedAsyncioTestCase):
                 "choices": [{"message": {"role": "assistant", "content": "done"}}],
             }
         ).encode()
-        provider = OpenAICompatibleProvider(FakeTransport(body))
+        provider = OpenAICompatibleProvider(FakeTransport(body), stream=False)
 
         response = await provider.complete([Message(role="user", content="hi")], [], MODEL)
         self.assertEqual(response.content, "done")
@@ -124,7 +137,7 @@ class OpenAIProviderTest(unittest.IsolatedAsyncioTestCase):
     async def test_p6a_1_message_conversion(self) -> None:
         body = json.dumps({"choices": [{"message": {"content": "ok"}}]}).encode()
         transport = FakeTransport(body)
-        provider = OpenAICompatibleProvider(transport)
+        provider = OpenAICompatibleProvider(transport, stream=False)
         messages = [
             Message(role="system", content="system"),
             Message(role="user", content="hi"),
@@ -142,6 +155,79 @@ class OpenAIProviderTest(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(payload["messages"][0], {"role": "system", "content": "system"})
         self.assertEqual(payload["messages"][2]["tool_calls"][0]["id"], "call_1")
         self.assertEqual(payload["messages"][3]["tool_call_id"], "call_1")
+
+    async def test_p6a_2_sse_text_and_tool_call(self) -> None:
+        events = [
+            {"model": "deepseek-flash", "choices": [{"delta": {"content": "Hel"}}]},
+            {"choices": [{"delta": {"content": "lo"}}]},
+            {
+                "choices": [
+                    {
+                        "delta": {
+                            "tool_calls": [
+                                {
+                                    "index": 0,
+                                    "id": "call_1",
+                                    "type": "function",
+                                    "function": {
+                                        "name": "counter_add",
+                                        "arguments": '{"delta":',
+                                    },
+                                }
+                            ]
+                        }
+                    }
+                ]
+            },
+            {
+                "choices": [
+                    {
+                        "delta": {
+                            "tool_calls": [
+                                {"index": 0, "function": {"arguments": "2}"}}
+                            ]
+                        }
+                    }
+                ]
+            },
+            {"usage": {"prompt_tokens": 3, "completion_tokens": 4, "total_tokens": 7}},
+        ]
+        body = b"".join(
+            f"data: {json.dumps(event)}\n\n".encode("utf-8") for event in events
+        ) + b"data: [DONE]\n\n"
+        transport = FakeTransport(
+            body,
+            content_type="text/event-stream",
+            chunk_size=7,
+        )
+        provider = OpenAICompatibleProvider(transport)
+
+        deltas: list[str] = []
+
+        async def on_delta(text: str) -> None:
+            deltas.append(text)
+
+        response = await provider.complete(
+            [Message(role="user", content="add 2")],
+            [ToolSpec("counter_add", "add", '{"type":"object"}')],
+            MODEL,
+            on_delta=on_delta,
+        )
+
+        self.assertEqual(response.content, "Hello")
+        self.assertEqual(deltas, ["Hel", "lo"])
+        self.assertEqual(response.usage, {
+            "prompt_tokens": 3,
+            "completion_tokens": 4,
+            "total_tokens": 7,
+        })
+        self.assertEqual(len(response.tool_calls), 1)
+        call = response.tool_calls[0]
+        self.assertEqual(call.call_id, "call_1")
+        self.assertEqual(call.name, "counter_add")
+        self.assertEqual(call.arguments_json, '{"delta":2}')
+        payload = json.loads(transport.requests[0].body.decode())
+        self.assertTrue(payload["stream"])
 
 
 if __name__ == "__main__":

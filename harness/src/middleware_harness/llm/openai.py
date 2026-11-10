@@ -34,8 +34,14 @@ _RETRYABLE_STATUS = {408, 409, 429, 500, 502, 503, 504, 529}
 class OpenAICompatibleProvider:
     """Provider for DeepSeek/OpenAI-style /chat/completions APIs."""
 
-    def __init__(self, transport: HTTPTransport | None = None) -> None:
+    def __init__(
+        self,
+        transport: HTTPTransport | None = None,
+        *,
+        stream: bool = True,
+    ) -> None:
         self.transport = transport or UrllibTransport()
+        self.stream = stream
 
     async def complete(
         self,
@@ -52,10 +58,13 @@ class OpenAICompatibleProvider:
         except HTTPTransportError as exc:
             raise LLMError("PROVIDER_UNAVAILABLE", str(exc), retryable=True) from exc
 
-        body = await _read_body(response.body)
         if response.status != 200:
+            body = await _read_body(response.body)
             raise _http_error(response.status, body)
-        return _parse_json_response(body, model)
+        if "application/json" in response.headers.get("content-type", ""):
+            body = await _read_body(response.body)
+            return _parse_json_response(body, model)
+        return await _parse_stream(response.body, model, on_delta)
 
     def build_request(
         self,
@@ -70,7 +79,7 @@ class OpenAICompatibleProvider:
         body: dict[str, object] = {
             "model": model.model,
             "messages": [_convert_message(message) for message in messages],
-            "stream": False,
+            "stream": self.stream,
         }
         if tools:
             body["tools"] = [_tool_schema(tool) for tool in tools]
@@ -182,6 +191,95 @@ def _parse_json_response(body: bytes, model: ModelConfig) -> LLMResponse:
         usage=usage,
         model=str(payload.get("model") or model.model),
     )
+
+
+async def _parse_stream(
+    chunks: AsyncIterator[bytes],
+    model: ModelConfig,
+    on_delta: DeltaCallback | None,
+) -> LLMResponse:
+    text_parts: list[str] = []
+    tool_calls: dict[int, dict[str, str]] = {}
+    usage: dict[str, int] = {}
+    response_model = model.model
+
+    async for event in _iter_sse(chunks):
+        if event.get("error"):
+            error = event.get("error") or {}
+            raise LLMError(
+                "PROVIDER_ERROR",
+                str((error or {}).get("message") or "provider stream error"),
+                retryable=False,
+            )
+        if event.get("model"):
+            response_model = str(event["model"])
+        raw_usage = event.get("usage")
+        if isinstance(raw_usage, dict):
+            for key, value in raw_usage.items():
+                if isinstance(value, int) and not isinstance(value, bool):
+                    usage[key] = value
+        for choice in event.get("choices") or []:
+            delta = choice.get("delta") or {}
+            content = delta.get("content")
+            if content:
+                text_parts.append(str(content))
+                if on_delta is not None:
+                    await on_delta(str(content))
+            for call in delta.get("tool_calls") or []:
+                index = int(call.get("index", 0))
+                entry = tool_calls.setdefault(index, {
+                    "call_id": "",
+                    "name": "",
+                    "arguments": "",
+                })
+                if call.get("id"):
+                    entry["call_id"] = str(call["id"])
+                function = call.get("function") or {}
+                if function.get("name"):
+                    entry["name"] = str(function["name"])
+                arguments = function.get("arguments")
+                if arguments:
+                    entry["arguments"] += str(arguments)
+
+    return LLMResponse(
+        content="".join(text_parts),
+        tool_calls=[
+            ToolCall(
+                call_id=entry["call_id"] or f"call_{index}",
+                name=entry["name"],
+                arguments_json=entry["arguments"] or "{}",
+            )
+            for index, entry in sorted(tool_calls.items())
+        ],
+        usage=usage,
+        model=response_model,
+    )
+
+
+async def _iter_sse(chunks: AsyncIterator[bytes]) -> AsyncIterator[dict[str, object]]:
+    buffer = ""
+    async for chunk in chunks:
+        buffer += chunk.decode("utf-8", errors="replace")
+        while "\n" in buffer:
+            line, buffer = buffer.split("\n", 1)
+            line = line.rstrip("\r")
+            if not line or line.startswith(":"):
+                continue
+            if not line.startswith("data:"):
+                continue
+            data = line[len("data:"):].strip()
+            if data == "[DONE]":
+                return
+            try:
+                parsed = json.loads(data)
+            except json.JSONDecodeError as exc:
+                raise LLMError(
+                    "BAD_RESPONSE",
+                    "provider returned invalid SSE JSON",
+                    retryable=False,
+                ) from exc
+            if isinstance(parsed, dict):
+                yield parsed
 
 
 async def _read_body(chunks: AsyncIterator[bytes]) -> bytes:
