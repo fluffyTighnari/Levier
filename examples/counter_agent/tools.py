@@ -14,6 +14,7 @@ Copyright 2026 The Middleware Authors.
 
 from __future__ import annotations
 
+import json
 from typing import Any
 
 
@@ -74,3 +75,19 @@ TOOL_DEFINITIONS: list[dict[str, Any]] = [
         "timeout_ms": 10000,
     },
 ]
+
+
+def tool_manifests() -> list[dict[str, str]]:
+    """Return the TaskAssign ToolManifest shape.
+
+    Middleware stores registration `schema` as `schema_json`, then emits it
+    to Harness as `ToolManifest.input_schema_json`.
+    """
+    return [
+        {
+            "name": tool["name"],
+            "description": tool["description"],
+            "input_schema_json": json.dumps(tool["schema"]),
+        }
+        for tool in TOOL_DEFINITIONS
+    ]
