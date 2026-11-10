@@ -12,6 +12,8 @@ from typing import AsyncIterator
 from middleware_harness.llm import (
     HTTPRequest,
     HTTPResponse,
+    HTTPTransportError,
+    LLMError,
     Message,
     ModelConfig,
     OpenAICompatibleProvider,
@@ -58,6 +60,11 @@ MODEL = ModelConfig(
     api_key="test-key",
     base_url="https://api.deepseek.com",
 )
+
+
+class RaisingTransport:
+    async def open(self, request: HTTPRequest) -> HTTPResponse:
+        raise HTTPTransportError("timed out", timeout=True)
 
 
 class OpenAIProviderTest(unittest.IsolatedAsyncioTestCase):
@@ -228,6 +235,50 @@ class OpenAIProviderTest(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(call.arguments_json, '{"delta":2}')
         payload = json.loads(transport.requests[0].body.decode())
         self.assertTrue(payload["stream"])
+
+    async def test_p6a_3_http_errors(self) -> None:
+        cases = [
+            (401, "authentication_error", "AUTH_FAILED", False),
+            (429, "rate_limit_exceeded", "RATE_LIMITED", True),
+            (500, "server_error", "PROVIDER_UNAVAILABLE", True),
+            (400, "invalid_request_error", "BAD_REQUEST", False),
+        ]
+        for status, error_type, code, retryable in cases:
+            with self.subTest(status=status):
+                body = json.dumps(
+                    {
+                        "error": {
+                            "type": error_type,
+                            "message": f"status {status}",
+                        }
+                    }
+                ).encode()
+                provider = OpenAICompatibleProvider(
+                    FakeTransport(body, status=status),
+                    stream=False,
+                )
+                with self.assertRaises(LLMError) as caught:
+                    await provider.complete([Message(role="user", content="hi")], [], MODEL)
+                self.assertEqual(caught.exception.code, code)
+                self.assertEqual(caught.exception.retryable, retryable)
+                self.assertEqual(caught.exception.status, status)
+
+    async def test_p6a_3_transport_timeout(self) -> None:
+        provider = OpenAICompatibleProvider(RaisingTransport(), stream=True)
+        with self.assertRaises(LLMError) as caught:
+            await provider.complete([Message(role="user", content="hi")], [], MODEL)
+        self.assertEqual(caught.exception.code, "TIMEOUT")
+        self.assertTrue(caught.exception.retryable)
+
+    async def test_p6a_3_stream_error(self) -> None:
+        body = b'data: {"error":{"type":"rate_limit_exceeded","message":"slow down"}}\n\n'
+        provider = OpenAICompatibleProvider(
+            FakeTransport(body, content_type="text/event-stream")
+        )
+        with self.assertRaises(LLMError) as caught:
+            await provider.complete([Message(role="user", content="hi")], [], MODEL)
+        self.assertEqual(caught.exception.code, "RATE_LIMITED")
+        self.assertTrue(caught.exception.retryable)
 
 
 if __name__ == "__main__":

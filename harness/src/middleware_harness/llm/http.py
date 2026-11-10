@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import asyncio
 import http.client
+import socket
 import threading
 from dataclasses import dataclass, field
 from typing import AsyncIterator
@@ -38,6 +39,14 @@ class HTTPResponse:
 
 class HTTPTransportError(RuntimeError):
     """Raised when the transport cannot complete a request."""
+
+    def __init__(self, message: str, *, timeout: bool = False) -> None:
+        super().__init__(message)
+        self.timeout = timeout
+
+
+def _is_timeout(exc: object) -> bool:
+    return isinstance(exc, (TimeoutError, socket.timeout))
 
 
 class HTTPTransport:
@@ -96,7 +105,7 @@ class UrllibTransport(HTTPTransport):
 
         kind, value = await queue.get()
         if kind == "error":
-            raise HTTPTransportError(str(value))
+            raise HTTPTransportError(str(value), timeout=_is_timeout(value))
         if kind != "status":
             raise HTTPTransportError("transport did not return a response status")
         status, headers = value
@@ -117,7 +126,7 @@ class UrllibTransport(HTTPTransport):
                 if kind == "chunk":
                     yield value  # type: ignore[misc]
                 elif kind == "error":
-                    raise HTTPTransportError(str(value))
+                    raise HTTPTransportError(str(value), timeout=_is_timeout(value))
                 elif kind == "done":
                     break
         finally:

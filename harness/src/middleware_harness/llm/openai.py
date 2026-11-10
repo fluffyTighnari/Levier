@@ -56,6 +56,8 @@ class OpenAICompatibleProvider:
         try:
             response = await self.transport.open(request)
         except HTTPTransportError as exc:
+            if getattr(exc, "timeout", False):
+                raise LLMError("TIMEOUT", str(exc), retryable=True) from exc
             raise LLMError("PROVIDER_UNAVAILABLE", str(exc), retryable=True) from exc
 
         if response.status != 200:
@@ -205,12 +207,7 @@ async def _parse_stream(
 
     async for event in _iter_sse(chunks):
         if event.get("error"):
-            error = event.get("error") or {}
-            raise LLMError(
-                "PROVIDER_ERROR",
-                str((error or {}).get("message") or "provider stream error"),
-                retryable=False,
-            )
+            raise _stream_error(event)
         if event.get("model"):
             response_model = str(event["model"])
         raw_usage = event.get("usage")
@@ -298,15 +295,49 @@ def _http_error(status: int, body: bytes) -> LLMError:
     code = "PROVIDER_UNAVAILABLE" if status in _RETRYABLE_STATUS else "PROVIDER_ERROR"
     if status in {401, 403}:
         code = "AUTH_FAILED"
+    elif status == 408:
+        code = "TIMEOUT"
     elif status == 429:
         code = "RATE_LIMITED"
+    elif status in {400, 404, 422}:
+        code = "BAD_REQUEST"
     message = f"provider returned HTTP {status}"
     try:
         payload = json.loads(body.decode("utf-8"))
         error = payload.get("error") or {}
         if isinstance(error, dict) and error.get("message"):
             message = str(error["message"])
+        mapped = _ERROR_CODE_BY_TYPE.get(str(error.get("type", ""))) if isinstance(error, dict) else None
+        if mapped:
+            code = mapped
     except (UnicodeDecodeError, json.JSONDecodeError):
         pass
-    return LLMError(code, message, retryable=status in _RETRYABLE_STATUS, status=status)
+    retryable = code in {"TIMEOUT", "RATE_LIMITED", "PROVIDER_UNAVAILABLE"}
+    return LLMError(code, message, retryable=retryable, status=status)
+
+
+def _stream_error(event: dict[str, object]) -> LLMError:
+    error = event.get("error") or {}
+    if not isinstance(error, dict):
+        error = {}
+    error_type = str(error.get("type", ""))
+    code = _ERROR_CODE_BY_TYPE.get(error_type, "PROVIDER_ERROR")
+    return LLMError(
+        code,
+        str(error.get("message") or "provider stream error"),
+        retryable=code in {"TIMEOUT", "RATE_LIMITED", "PROVIDER_UNAVAILABLE"},
+    )
+
+
+_ERROR_CODE_BY_TYPE = {
+    "authentication_error": "AUTH_FAILED",
+    "invalid_api_key": "AUTH_FAILED",
+    "invalid_request_error": "BAD_REQUEST",
+    "rate_limit_error": "RATE_LIMITED",
+    "rate_limit_exceeded": "RATE_LIMITED",
+    "overloaded_error": "PROVIDER_UNAVAILABLE",
+    "server_error": "PROVIDER_UNAVAILABLE",
+    "timeout": "TIMEOUT",
+    "timeout_error": "TIMEOUT",
+}
 
