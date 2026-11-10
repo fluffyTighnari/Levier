@@ -1,0 +1,15 @@
+{"time":"2026-11-10T20:44:43.325861+08:00","level":"INFO","msg":"middleware starting","config":"config.example.yaml","database":"connected","grpc_addr":":9090","http_addr":":8080"}
+{"time":"2026-11-10T20:44:43.524913+08:00","level":"DEBUG","msg":"http request","request_id":"01M72QTH44N2NFASTM8W9HFVZB","method":"GET","route":"GET /healthz","status":200,"duration_ms":0,"remote_addr":"127.0.0.1:53463"}
+{"time":"2026-11-10T20:44:45.712715+08:00","level":"DEBUG","msg":"http request","request_id":"01M72QTK8D1580QKVG4W9WNNZ2","method":"POST","route":"POST /admin/apps","status":201,"duration_ms":3,"remote_addr":"127.0.0.1:53466"}
+{"time":"2026-11-10T20:44:45.818847+08:00","level":"DEBUG","msg":"http request","request_id":"01M72QTKBNMENZBA21T5QGE96P","method":"POST","route":"POST /api/v1/runs","status":202,"duration_ms":5,"remote_addr":"127.0.0.1:53467"}
+{"time":"2026-11-10T20:44:45.966334+08:00","level":"INFO","msg":"control assigned run","run_id":"01M72QTKBP5FEP93KNCB6SV48H","trace_id":"01M72QTKBNMENZBA21T5QGE96P","app_id":"app_01M72QTK8EZM510ZN93XW2H8C0","attempt":1,"lease_epoch":1,"daemon_id":"daemon-local-1","runtime":"normal","strategy":"echo"}
+{"time":"2026-11-10T20:44:45.973573+08:00","level":"INFO","msg":"control run terminal","run_id":"01M72QTKBP5FEP93KNCB6SV48H","trace_id":"01M72QTKBNMENZBA21T5QGE96P","app_id":"app_01M72QTK8EZM510ZN93XW2H8C0","attempt":1,"status":"completed"}
+{"time":"2026-11-10T20:44:48.999416+08:00","level":"DEBUG","msg":"http request","request_id":"01M72QTPF6ASP78VYD9027VAPD","method":"POST","route":"POST /api/v1/ws-token","status":200,"duration_ms":0,"remote_addr":"127.0.0.1:53469"}
+{"time":"2026-11-10T20:44:49.000011+08:00","level":"INFO","msg":"ws connected","app_id":"app_01M72QTK8EZM510ZN93XW2H8C0","remote_addr":"127.0.0.1:53470"}
+{"time":"2026-11-10T20:44:49.00226+08:00","level":"INFO","msg":"ws disconnected","app_id":"app_01M72QTK8EZM510ZN93XW2H8C0","duration_ms":2}
+{"time":"2026-11-10T20:44:49.00228+08:00","level":"DEBUG","msg":"http request","request_id":"01M72QTPF7T9XH3KN8Z5F4655G","method":"GET","route":"/api/v1/ws","status":101,"duration_ms":2,"remote_addr":"127.0.0.1:53470"}
+{"time":"2026-11-10T20:44:49.103811+08:00","level":"DEBUG","msg":"http request","request_id":"01M72QTPJF36088JKX318TSEC3","method":"POST","route":"POST /api/v1/ws-token","status":200,"duration_ms":0,"remote_addr":"127.0.0.1:53471"}
+{"time":"2026-11-10T20:44:49.1044+08:00","level":"INFO","msg":"ws connected","app_id":"app_01M72QTK8EZM510ZN93XW2H8C0","remote_addr":"127.0.0.1:53472"}
+{"time":"2026-11-10T20:44:49.10533+08:00","level":"INFO","msg":"ws disconnected","app_id":"app_01M72QTK8EZM510ZN93XW2H8C0","duration_ms":0}
+{"time":"2026-11-10T20:44:49.105349+08:00","level":"DEBUG","msg":"http request","request_id":"01M72QTPJG4PCT0DJ54SK8CFH4","method":"GET","route":"/api/v1/ws","status":101,"duration_ms":0,"remote_addr":"127.0.0.1:53472"}
+{"time":"2026-11-10T20:44:49.249508+08:00","level":"INFO","msg":"middleware stopped"}

@@ -1,0 +1,7 @@
+step: P5.6
+commit: c318e60
+time_utc: 2026-11-10T12:44:57Z
+expected: first replay gets seq 1,2,3; reconnect with cursor (1,1) gets only seq 2,3; no duplicate 1, no missing 2/3
+observed: app_id=app_01M72QTK8EZM510ZN93XW2H8C0; run_id=01M72QTKBP5FEP93KNCB6SV48H; first seqs=[1,2,3] caught_up=(1,3); second seqs=[2,3] caught_up=(1,3); no_duplicate_seq1=true; no_missing_seq2_3=true
+evidence: replay_first.log, replay_second.log, replay_compare.json, db_events.txt, middleware.log, summary.txt
+design: DESIGN §4.3/§10.3; internal/httpapi replayWS; run_events (run_id,attempt,seq); AppConn cursor

@@ -1,0 +1,31 @@
+{
+  "first": {
+    "caught_up": {
+      "type": "caught_up",
+      "run_id": "01M72QTKBP5FEP93KNCB6SV48H",
+      "attempt": 1,
+      "seq": 3
+    },
+    "event_seqs": [
+      1,
+      2,
+      3
+    ]
+  },
+  "second": {
+    "caught_up": {
+      "type": "caught_up",
+      "run_id": "01M72QTKBP5FEP93KNCB6SV48H",
+      "attempt": 1,
+      "seq": 3
+    },
+    "event_seqs": [
+      2,
+      3
+    ]
+  },
+  "first_ok": true,
+  "second_ok": true,
+  "no_duplicate_seq1": true,
+  "no_missing_seq2_3": true
+}
