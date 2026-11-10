@@ -8,6 +8,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import socket
 import sys
 import time
 from pathlib import Path
@@ -52,7 +53,7 @@ def main(argv: list[str] | None = None) -> int:
         response = client.create_ws_token()
         token = parse_ws_token_response(response)
         url = websocket_url(args.mw_url, token.ws_url, credentials.app_id, token.token.reveal())
-        socket = WebSocketClient.connect(url)
+        ws = WebSocketClient.connect(url)
     except (CredentialsError, HttpError, HttpTransportError, WebSocketError, OSError) as exc:
         print(f"ws connect failed: {exc}", file=sys.stderr)
         return 1
@@ -61,14 +62,14 @@ def main(argv: list[str] | None = None) -> int:
     pong = False
     try:
         if args.ping:
-            socket.send_json({"type": "ping"})
-            reply = socket.recv_json(timeout=5.0)
+            ws.send_json({"type": "ping"})
+            reply = ws.recv_json(timeout=5.0)
             pong = reply.get("type") == "pong"
             print(json.dumps({"pong": pong, "reply": reply}), flush=True)
             if not pong:
                 return 1
         if args.subscribe_run:
-            socket.send_json(
+            ws.send_json(
                 {
                     "type": "subscribe",
                     "run_id": args.subscribe_run,
@@ -78,7 +79,7 @@ def main(argv: list[str] | None = None) -> int:
             )
             received: list[dict] = []
             while True:
-                reply = socket.recv_json(timeout=5.0)
+                reply = ws.recv_json(timeout=5.0)
                 if reply.get("type") == "caught_up":
                     print(
                         json.dumps({"caught_up": reply, "events_before": len(received)}),
@@ -94,7 +95,7 @@ def main(argv: list[str] | None = None) -> int:
                 while time.monotonic() < deadline:
                     remaining = deadline - time.monotonic()
                     try:
-                        reply = socket.recv_json(timeout=min(0.5, max(0.1, remaining)))
+                        reply = ws.recv_json(timeout=min(0.5, max(0.1, remaining)))
                     except socket.timeout:
                         continue
                     if reply.get("type") == "error":
@@ -115,7 +116,7 @@ def main(argv: list[str] | None = None) -> int:
         if args.hold_seconds > 0:
             time.sleep(args.hold_seconds)
     finally:
-        socket.close()
+        ws.close()
     print(json.dumps({"closed": True}), flush=True)
     return 0
 
