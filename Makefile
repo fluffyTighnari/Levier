@@ -95,4 +95,4 @@ http-smoke:
 	$(PYTHON) examples/http_client/client.py
 
 counter-agent-test:
-	cd examples/counter_agent && python3 -m unittest -v test_tools
+	cd examples/counter_agent && python3 -m unittest discover -s . -p 'test_*.py' -v
