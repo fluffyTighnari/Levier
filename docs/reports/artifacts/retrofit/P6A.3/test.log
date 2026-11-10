@@ -1,0 +1,8 @@
+test_p6a_3_http_errors (tests.test_llm_openai.OpenAIProviderTest.test_p6a_3_http_errors) ... ok
+test_p6a_3_transport_timeout (tests.test_llm_openai.OpenAIProviderTest.test_p6a_3_transport_timeout) ... ok
+test_p6a_3_stream_error (tests.test_llm_openai.OpenAIProviderTest.test_p6a_3_stream_error) ... ok
+
+----------------------------------------------------------------------
+Ran 3 tests in 0.008s
+
+OK

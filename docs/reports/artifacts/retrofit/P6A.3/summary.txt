@@ -1,0 +1,7 @@
+step: P6A.3
+commit: ad7a3eb
+time_utc: 2026-11-10T13:26:45Z
+expected: 401->AUTH_FAILED, 429->RATE_LIMITED, 5xx->PROVIDER_UNAVAILABLE, 400->BAD_REQUEST, timeout->TIMEOUT; stream error mapped
+observed: 3 tests passed covering all mappings; retryable flags correct
+evidence: test.log
+design: DESIGN §4.5; harness LLMError; HTTPTransportError.timeout
