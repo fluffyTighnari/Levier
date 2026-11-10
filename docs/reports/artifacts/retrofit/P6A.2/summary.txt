@@ -1,0 +1,7 @@
+step: P6A.2
+commit: 77279b2
+time_utc: 2026-11-10T13:12:55Z
+expected: SSE content deltas and split tool_call arguments parse correctly; request stream=true
+observed: 4 tests passed; deltas [Hel,lo]; tool arguments assembled to {"delta":2}; usage merged; stream=true
+evidence: test.log
+design: DeepSeek /chat/completions SSE; harness LLMResponse/ToolCall

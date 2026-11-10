@@ -1,0 +1,9 @@
+test_p6a_1_json_text_and_tool_call (tests.test_llm_openai.OpenAIProviderTest.test_p6a_1_json_text_and_tool_call) ... ok
+test_p6a_1_message_conversion (tests.test_llm_openai.OpenAIProviderTest.test_p6a_1_message_conversion) ... ok
+test_p6a_1_plain_text_response (tests.test_llm_openai.OpenAIProviderTest.test_p6a_1_plain_text_response) ... ok
+test_p6a_2_sse_text_and_tool_call (tests.test_llm_openai.OpenAIProviderTest.test_p6a_2_sse_text_and_tool_call) ... ok
+
+----------------------------------------------------------------------
+Ran 4 tests in 0.008s
+
+OK
