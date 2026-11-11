@@ -1,0 +1,4 @@
+step: M4-C concurrent sessions
+expected: two runs get independent sessions and processes; both complete; no leaked children
+observed: sessions 1->3; echo_pid returned 82542 and 82543 in separate runs; both completed; 0 secret_echo_server processes after close
+evidence: catalog.json, db.txt, result.txt, run_1.json, run_2.json

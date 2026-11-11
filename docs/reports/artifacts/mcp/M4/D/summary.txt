@@ -1,0 +1,4 @@
+step: M4-D runtime unavailable
+expected: open fails with MCP_RUNTIME_UNAVAILABLE and the run still completes
+observed: ERROR MCP_RUNTIME_UNAVAILABLE retryable=true; run completed
+evidence: db.txt, result.txt, submit_run.json

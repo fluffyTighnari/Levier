@@ -1,0 +1,17 @@
+           run_id           | seq |          tool          |  ok  |                                                result                                                 
+----------------------------+-----+------------------------+------+-------------------------------------------------------------------------------------------------------
+ 01M75C0CQXXB3FZED4QFJ1454G |   1 |                        |      | 
+ 01M75C0CQXXB3FZED4QFJ1454G |   5 | mcp__m4allow__echo_pid | true | {"content":[{"type":"text","text":"82542"}],"structured_content":{"result":"82542"},"is_error":false}
+ 01M75C0CQXXB3FZED4QFJ1454G |   8 |                        |      | 
+ 01M75C0CQYW8F51HPS0BNQREK6 |   1 |                        |      | 
+ 01M75C0CQYW8F51HPS0BNQREK6 |   5 | mcp__m4allow__echo_pid | true | {"content":[{"type":"text","text":"82543"}],"structured_content":{"result":"82543"},"is_error":false}
+ 01M75C0CQYW8F51HPS0BNQREK6 |   8 |                        |      | 
+(6 rows)
+
+           run_id           |            final             
+----------------------------+------------------------------
+ 01M75C0CQXXB3FZED4QFJ1454G | I'll call that tool now.
+ 01M75C0CQXXB3FZED4QFJ1454G | The tool returned: **82542**
+ 01M75C0CQYW8F51HPS0BNQREK6 | The tool returned: **82543**
+(3 rows)
+

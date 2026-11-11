@@ -1,0 +1,4 @@
+step: M4-B missing secret
+expected: runtime fails before connecting and the run still completes with an explanatory error
+observed: ERROR SECRET_MISSING "secret 'not_configured' is not configured"; no new session opened; run completed
+evidence: catalog.json, db.txt, result.txt, submit_run.json

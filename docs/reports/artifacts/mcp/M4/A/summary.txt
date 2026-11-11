@@ -1,0 +1,4 @@
+step: M4-A allowlist
+expected: only allowed tools are visible; direct call to a filtered tool is denied
+observed: visible_tools=["mcp__m4allow__echo_token"]; direct call other_tool -> TOOL_DENIED
+evidence: probe.py, probe.json

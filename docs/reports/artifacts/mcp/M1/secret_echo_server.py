@@ -15,5 +15,17 @@ def echo_token() -> str:
     return os.environ.get("PROBE_TOKEN", "")
 
 
+@server.tool()
+def echo_pid() -> str:
+    """Return this MCP server process id."""
+    return str(os.getpid())
+
+
+@server.tool()
+def other_tool() -> str:
+    """A second tool used for allowlist tests."""
+    return "other"
+
+
 if __name__ == "__main__":
     server.run("stdio")

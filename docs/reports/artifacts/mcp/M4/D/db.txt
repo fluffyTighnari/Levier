@@ -1,0 +1,9 @@
+ seq |       type        |          code           | retryable |  status   
+-----+-------------------+-------------------------+-----------+-----------
+   1 | RUN_STATUS        |                         |           | running
+   2 | ERROR             | MCP_RUNTIME_UNAVAILABLE | true      | 
+   3 | USAGE             |                         |           | 
+   4 | MESSAGE_COMPLETED |                         |           | 
+   5 | RUN_STATUS        |                         |           | completed
+(5 rows)
+

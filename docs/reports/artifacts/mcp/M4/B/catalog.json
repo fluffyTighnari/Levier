@@ -1,0 +1,1 @@
+{"name":"m4missing","transport":"stdio","allowed_tools":["echo_token"],"secret_refs":["not_configured"]}

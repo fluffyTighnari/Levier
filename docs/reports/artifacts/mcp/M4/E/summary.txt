@@ -1,0 +1,5 @@
+step: M4-E runtime shutdown with connected client
+expected: SIGTERM stops the runtime even while a client is connected
+before_fix: SIGTERM left the process alive; Python 3.12 Server.wait_closed() waits for active connections
+after_fix: writers are closed before wait_closed; process stopped in 121 ms and logged "mcp runtime stopped"
+evidence: runtime_sigterm.log, result.txt

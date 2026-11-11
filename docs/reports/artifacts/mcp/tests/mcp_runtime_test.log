@@ -10,6 +10,7 @@ test_file_resolver_load (test_secrets.ResolveStringTest.test_file_resolver_load)
 test_missing_secret_raises (test_secrets.ResolveStringTest.test_missing_secret_raises) ... ok
 test_plain_string_untouched (test_secrets.ResolveStringTest.test_plain_string_untouched) ... ok
 test_replaces_all_placeholders (test_secrets.ResolveStringTest.test_replaces_all_placeholders) ... ok
+test_close_with_connected_client_completes (test_server.McpRuntimeServerTest.test_close_with_connected_client_completes) ... ok
 test_disconnect_closes_owned_sessions (test_server.McpRuntimeServerTest.test_disconnect_closes_owned_sessions) ... ok
 test_health_open_call_close (test_server.McpRuntimeServerTest.test_health_open_call_close) ... ok
 test_invalid_json (test_server.McpRuntimeServerTest.test_invalid_json) ... ok
@@ -27,6 +28,6 @@ test_open_resolves_secret_placeholders (test_sessions.SessionManagerTest.test_op
 test_open_and_call_stdio_server (test_stdio.StdioIntegrationTest.test_open_and_call_stdio_server) ... ok
 
 ----------------------------------------------------------------------
-Ran 26 tests in 0.474s
+Ran 27 tests in 0.462s
 
 OK

@@ -54,7 +54,7 @@ test_json_formatter_includes_fields (test_logging.LoggingTest.test_json_formatte
 test_health_open_call_close (test_mcp_client.McpRuntimeClientTest.test_health_open_call_close) ... ok
 test_missing_socket_is_retryable (test_mcp_client.McpRuntimeClientTest.test_missing_socket_is_retryable) ... ok
 test_runtime_error_is_mapped (test_mcp_client.McpRuntimeClientTest.test_runtime_error_is_mapped) ... ok
-test_open_call_and_close_through_runtime (test_mcp_integration.McpRuntimeIntegrationTest.test_open_call_and_close_through_runtime) ... I1111 20:55:26.226449 14977463 fork_posix.cc:71] Other threads are currently calling into gRPC, skipping fork() handlers
+test_open_call_and_close_through_runtime (test_mcp_integration.McpRuntimeIntegrationTest.test_open_call_and_close_through_runtime) ... I1111 21:17:49.368457 14993875 fork_posix.cc:71] Other threads are currently calling into gRPC, skipping fork() handlers
 ok
 test_react_cancel_interrupts (test_react.ReactStrategyTest.test_react_cancel_interrupts) ... ok
 test_react_completes_without_tools (test_react.ReactStrategyTest.test_react_completes_without_tools) ... ok
@@ -84,6 +84,6 @@ test_open_and_route_mcp_and_bridge (test_tool_router.ToolRouterTest.test_open_an
 test_open_failure_emits_error_and_continues (test_tool_router.ToolRouterTest.test_open_failure_emits_error_and_continues) ... ok
 
 ----------------------------------------------------------------------
-Ran 82 tests in 1.145s
+Ran 82 tests in 1.144s
 
 OK
