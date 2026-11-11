@@ -1,0 +1,11 @@
+{"time":"2026-11-11T11:39:30.948405+08:00","level":"INFO","msg":"middleware starting","config":"config.example.yaml","database":"connected","grpc_addr":":9090","http_addr":":8080"}
+{"time":"2026-11-11T11:39:33.455769+08:00","level":"INFO","msg":"ws connected","app_id":"app_01M74B10JPQKZ2KJD7PFDM8REE","remote_addr":"127.0.0.1:53418"}
+{"time":"2026-11-11T11:39:33.476995+08:00","level":"INFO","msg":"ws disconnected","app_id":"app_01M74B10JPQKZ2KJD7PFDM8REE","duration_ms":21}
+{"time":"2026-11-11T11:39:43.969296+08:00","level":"INFO","msg":"ws connected","app_id":"app_01M74B1AR60NQTNASGA9QBWJ46","remote_addr":"127.0.0.1:53621"}
+{"time":"2026-11-11T11:39:44.284733+08:00","level":"INFO","msg":"control assigned run","run_id":"01M74B1B2ND2TH7ZF1HQDY5ZQ0","trace_id":"01M74B1B2M57W3MB81GRNHPWY3","app_id":"app_01M74B1AR60NQTNASGA9QBWJ46","attempt":1,"lease_epoch":1,"daemon_id":"daemon-local-1","runtime":"normal","strategy":"react"}
+{"time":"2026-11-11T11:39:48.951117+08:00","level":"INFO","msg":"ws disconnected","app_id":"app_01M74B1AR60NQTNASGA9QBWJ46","duration_ms":4982}
+{"time":"2026-11-11T11:39:49.060703+08:00","level":"INFO","msg":"ws connected","app_id":"app_01M74B1AR60NQTNASGA9QBWJ46","remote_addr":"127.0.0.1:53755"}
+{"time":"2026-11-11T11:39:49.320979+08:00","level":"INFO","msg":"control assigned run","run_id":"01M74B1G1PD3SF1FYVEMPP9C3R","trace_id":"01M74B1G1NBR5VGNJ1PMZNBB48","app_id":"app_01M74B1AR60NQTNASGA9QBWJ46","attempt":1,"lease_epoch":1,"daemon_id":"daemon-local-1","runtime":"normal","strategy":"react"}
+{"time":"2026-11-11T11:39:49.732362+08:00","level":"INFO","msg":"control run terminal","run_id":"01M74B1B2ND2TH7ZF1HQDY5ZQ0","trace_id":"01M74B1B2M57W3MB81GRNHPWY3","app_id":"app_01M74B1AR60NQTNASGA9QBWJ46","attempt":1,"status":"completed"}
+{"time":"2026-11-11T11:39:50.865818+08:00","level":"INFO","msg":"ws disconnected","app_id":"app_01M74B1AR60NQTNASGA9QBWJ46","duration_ms":1805}
+{"time":"2026-11-11T11:39:51.654303+08:00","level":"INFO","msg":"control run terminal","run_id":"01M74B1G1PD3SF1FYVEMPP9C3R","trace_id":"01M74B1G1NBR5VGNJ1PMZNBB48","app_id":"app_01M74B1AR60NQTNASGA9QBWJ46","attempt":1,"status":"completed"}
