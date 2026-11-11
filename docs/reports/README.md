@@ -123,6 +123,7 @@
 | `docs/reports/RETROFIT-P6.7.md` | App 改造 P6.7：工具事件成对与字段完整 |
 | `docs/reports/RETROFIT-P6.8.md` | App 改造 P6.8：Run 终态与最终回答 |
 | `docs/reports/RETROFIT-LATENCY.md` | App 改造：P6B 链路延迟测量 |
+| `docs/reports/RETROFIT-P6C.md` | App 改造 P6C：与基线对照（P6.9–P6.11） |
 | `docs/APP_ONBOARDING.md` | 任意 App 接入 Middleware 的标准流程 |
 
 **规则：**

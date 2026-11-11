@@ -1,0 +1,28 @@
+           run_id           |  status   | attempt 
+----------------------------+-----------+---------
+ 01M74BHTYSGSBTVQBZXCZJAJWK | completed |       1
+(1 row)
+
+ seq |       type        |    tool     |     args     |    result    |                                       content                                        
+-----+-------------------+-------------+--------------+--------------+--------------------------------------------------------------------------------------
+   1 | RUN_STATUS        |             |              |              | 
+   3 | MESSAGE_COMPLETED |             |              |              | I'll add 2, then 3, then read the result.
+   4 | TOOL_CALL_BEGIN   | counter_add | {"delta": 2} |              | 
+   5 | TOOL_CALL_END     | counter_add |              | {"value": 2} | 
+   7 | MESSAGE_COMPLETED |             |              |              | 
+   8 | TOOL_CALL_BEGIN   | counter_add | {"delta": 3} |              | 
+   9 | TOOL_CALL_END     | counter_add |              | {"value": 5} | 
+  11 | MESSAGE_COMPLETED |             |              |              | 
+  12 | TOOL_CALL_BEGIN   | counter_get | {}           |              | 
+  13 | TOOL_CALL_END     | counter_get |              | {"value": 5} | 
+  15 | MESSAGE_COMPLETED |             |              |              | Added 2 (counter = 2), then added 3 (counter = 5). The final counter value is **5**.
+  16 | RUN_STATUS        |             |              |              | 
+(12 rows)
+
+  tool_name  |  status   | result_json  
+-------------+-----------+--------------
+ counter_add | completed | {"value": 2}
+ counter_add | completed | {"value": 5}
+ counter_get | completed | {"value": 5}
+(3 rows)
+

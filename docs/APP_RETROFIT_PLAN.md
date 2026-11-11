@@ -280,6 +280,8 @@ P1 结束后：
 
 ### P6C 与基线对照
 
+进度：P6C 完成（`docs/reports/RETROFIT-P6C.md`）；P6.9–P6.11 全部一致。
+
 | ID | 检查 | 断言 |
 |---|---|---|
 | P6.9 | final counter | 与 P0.1 相同 |

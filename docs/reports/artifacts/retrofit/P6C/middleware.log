@@ -1,0 +1,12 @@
+{"time":"2026-11-11T11:48:41.915582+08:00","level":"INFO","msg":"middleware starting","config":"config.example.yaml","database":"connected","grpc_addr":":9090","http_addr":":8080"}
+{"time":"2026-11-11T11:48:42.115227+08:00","level":"DEBUG","msg":"http request","request_id":"01M74BHRG3YSZK7DVZ3WDWP5N9","method":"GET","route":"GET /healthz","status":200,"duration_ms":0,"remote_addr":"127.0.0.1:51307"}
+{"time":"2026-11-11T11:48:44.288062+08:00","level":"DEBUG","msg":"http request","request_id":"01M74BHTKXBA38XDTHYY3PZAQ4","method":"POST","route":"POST /admin/apps","status":201,"duration_ms":2,"remote_addr":"127.0.0.1:51376"}
+{"time":"2026-11-11T11:48:44.401558+08:00","level":"DEBUG","msg":"http request","request_id":"01M74BHTQAKME15NQ189FRS88D","method":"POST","route":"POST /api/v1/apps","status":200,"duration_ms":6,"remote_addr":"127.0.0.1:51377"}
+{"time":"2026-11-11T11:48:44.507489+08:00","level":"DEBUG","msg":"http request","request_id":"01M74BHTTVJ499TVC8JZHXMG6X","method":"POST","route":"POST /api/v1/ws-token","status":200,"duration_ms":0,"remote_addr":"127.0.0.1:51379"}
+{"time":"2026-11-11T11:48:44.508123+08:00","level":"INFO","msg":"ws connected","app_id":"app_01M74BHTKXBA38XDTHZ14Y14VE","remote_addr":"127.0.0.1:51380"}
+{"time":"2026-11-11T11:48:44.637525+08:00","level":"DEBUG","msg":"http request","request_id":"01M74BHTYPHPCBXAWCA7QSRB72","method":"POST","route":"POST /api/v1/runs","status":202,"duration_ms":6,"remote_addr":"127.0.0.1:51387"}
+{"time":"2026-11-11T11:48:44.767062+08:00","level":"INFO","msg":"control assigned run","run_id":"01M74BHTYSGSBTVQBZXCZJAJWK","trace_id":"01M74BHTYPHPCBXAWCA7QSRB72","app_id":"app_01M74BHTKXBA38XDTHZ14Y14VE","attempt":1,"lease_epoch":1,"daemon_id":"daemon-local-1","runtime":"normal","strategy":"react"}
+{"time":"2026-11-11T11:48:47.570284+08:00","level":"INFO","msg":"ws disconnected","app_id":"app_01M74BHTKXBA38XDTHZ14Y14VE","duration_ms":3062}
+{"time":"2026-11-11T11:48:47.570352+08:00","level":"DEBUG","msg":"http request","request_id":"01M74BHTTW364X8ECJJRXZ3FHS","method":"GET","route":"/api/v1/ws","status":101,"duration_ms":3062,"remote_addr":"127.0.0.1:51380"}
+{"time":"2026-11-11T11:48:48.575029+08:00","level":"INFO","msg":"control run terminal","run_id":"01M74BHTYSGSBTVQBZXCZJAJWK","trace_id":"01M74BHTYPHPCBXAWCA7QSRB72","app_id":"app_01M74BHTKXBA38XDTHZ14Y14VE","attempt":1,"status":"completed"}
+{"time":"2026-11-11T11:48:49.920528+08:00","level":"INFO","msg":"middleware stopped"}

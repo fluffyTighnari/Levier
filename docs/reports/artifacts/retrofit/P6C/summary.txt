@@ -1,0 +1,8 @@
+step: P6C (P6.9-P6.11)
+commit: 5685fd2
+time_utc: 2026-11-11T03:48:59Z
+baseline: P0.1 final=5, 3 tool calls (add, add, get), steps=4
+observed: app=app_01M74BHTKXBA38XDTHZ14Y14VE; run=01M74BHTYSGSBTVQBZXCZJAJWK; order counter_add{"delta":2} -> counter_add{"delta":3} -> counter_get{}; results 2,5,5; final=5; 3 completed invocations; run completed via Middleware
+recheck: same-day baseline rerun reproduced add 2 / add 3 / get / final 5 / steps 4
+verdict: P6.9 final counter equal; P6.10 tool call count equal; P6.11 call order equal
+evidence: baseline_recheck.log, tool_host.log, db_run.txt, submit_run.json, bootstrap.json, register_tools.json, middleware.log, harness.log, migrate.log
