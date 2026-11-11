@@ -264,7 +264,7 @@ P1 结束后：
 
 ### P6B 工具往返
 
-进度：P6.1 完成（`docs/reports/RETROFIT-P6.1.md`）；P6.2 完成（`docs/reports/RETROFIT-P6.2.md`）；P6.3–P6.8 待做。
+进度：P6.1 完成（`docs/reports/RETROFIT-P6.1.md`）；P6.2 完成（`docs/reports/RETROFIT-P6.2.md`）；P6.3 完成（`docs/reports/RETROFIT-P6.3.md`）；P6.3f/P6.4–P6.8 待做。
 
 | ID | 逻辑链 | 操作 | 断言 | 证据 |
 |---|---|---|---|---|
@@ -276,6 +276,7 @@ P1 结束后：
 | P6.6 | GW→REG | 查 `tool_invocations` | status=completed；result_json 正确 | `db_invocation.txt` |
 | P6.7 | HAR→EV | 工具事件 | 有 TOOL_CALL_BEGIN/END | `tool_events.json` |
 | P6.8 | HAR→终态 | 模型最终回答 | Run terminal=completed | `run.json` |
+| P6.3f | CTL→REG | 终态与 daemon 下线并发 | terminal 事件后 `runs.status` 不被 requeue 覆盖；Transition 失败不发布 terminal | `p6.3f_test.log` |
 
 ### P6C 与基线对照
 

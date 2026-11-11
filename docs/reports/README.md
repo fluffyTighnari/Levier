@@ -115,6 +115,7 @@
 | `docs/reports/RETROFIT-P6A.5.md` | App 改造 P6A.5：DeepSeek 凭据与真实 smoke |
 | `docs/reports/RETROFIT-P6.1.md` | App 改造 P6.1：真实 react Run + TaskAssign tools |
 | `docs/reports/RETROFIT-P6.2.md` | App 改造 P6.2：DeepSeek tool_call → ToolCallRequest |
+| `docs/reports/RETROFIT-P6.3.md` | App 改造 P6.3：App 收到 local_tool_call |
 | `docs/APP_ONBOARDING.md` | 任意 App 接入 Middleware 的标准流程 |
 
 **规则：**
