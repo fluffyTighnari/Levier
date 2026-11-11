@@ -1,0 +1,8 @@
+step: P6.5
+commit: 6c1f214
+time_utc: 2026-11-11T03:12:18Z
+expected: the App tool result re-enters the Harness conversation and the next model completion can use it
+observed: app=app_01M749EJ48N46C4KKXRQXY12RZ; run=01M749EJEGMWHH39SXMFCB43SS; counter initial=41 never present in input; tool result {"value": 41}; step2 assistant answered 41; prompt_tokens 407 -> 467 after the tool message; run completed
+control: prompt and input_json contain no 41 (grep count 0), so 41 could only come from the tool result
+evidence: tool_host.log, db_run.txt, submit_run.json, harness.log, middleware.log, migrate.log
+design: ReactStrategy appends role=tool Message(call_id, result_json) then calls provider again
