@@ -1,0 +1,16 @@
+## node log fields
+{"local_tool_call":{"msg_id":"01M74FJEQNY0XYH9460R69RJ2Y","invocation_id":"01M74FJEQE1S68F8ZCK2YS4VM1","tool_name":"counter_add","arguments_json":"{\"delta\": 2}"},"local_tool_result":{"type":"local_tool_result","correlation_id":"01M74FJEQNY0XYH9460R69RJ2Y","invocation_id":"01M74FJEQE1S68F8ZCK2YS4VM1","ok":true,"result_json":"{\"value\":2}"},"counter":2}
+
+## DESIGN contract
+23:| ADR-7 | 幂等语义 | 全链路幂等键：`run_id / invocation_id`；tool 结果可缓存重放 | 以去重表换 at-least-once 下的安全重试 |
+105:3. **回调不存在**：一切请求/响应都在既有长连接上以 `correlation_id` 闭环。
+124:| **ToolInvocation** | invocation_id 主键, run_id, tool_name, status, result_json, created_at, completed_at | 幂等去重 + 审计 |
+251:  invocation_id TEXT PRIMARY KEY,            -- 幂等键
+255:  result_json   TEXT,
+269:| `tool:result:{invocation_id}` | 已完成工具结果（TTL 1h） | 幂等去重快速路径（DB 兜底） |
+296:  string msg_id = 1;          // 消息唯一 ID（ULID）
+297:  string correlation_id = 2;  // 请求-响应关联：响应方回填请求方 msg_id
+441:  string invocation_id = 1;           // ULID，幂等键（daemon 生成）
+443:  string arguments_json = 3;
+448:  string invocation_id = 1;
+450:  string result_json = 3;             // ok=true 时的内容（harness 协议契约对齐）

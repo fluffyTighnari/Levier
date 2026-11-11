@@ -1,0 +1,6 @@
+{"serving":true,"app_id":"app_01M74FHZ1N9Q6EZTNAWH7QNWPX","registered_tools":["counter_add","counter_get","counter_reset"],"counter":0}
+{"pong":true}
+{"local_tool_call":{"msg_id":"01M74FJEQNY0XYH9460R69RJ2Y","invocation_id":"01M74FJEQE1S68F8ZCK2YS4VM1","tool_name":"counter_add","arguments_json":"{\"delta\": 2}"},"local_tool_result":{"type":"local_tool_result","correlation_id":"01M74FJEQNY0XYH9460R69RJ2Y","invocation_id":"01M74FJEQE1S68F8ZCK2YS4VM1","ok":true,"result_json":"{\"value\":2}"},"counter":2}
+{"local_tool_call":{"msg_id":"01M74FJFR80NBWAMVA8K28SVGY","invocation_id":"01M74FJFR5T04D4ENN6NADQVYF","tool_name":"counter_add","arguments_json":"{\"delta\": 3}"},"local_tool_result":{"type":"local_tool_result","correlation_id":"01M74FJFR80NBWAMVA8K28SVGY","invocation_id":"01M74FJFR5T04D4ENN6NADQVYF","ok":true,"result_json":"{\"value\":5}"},"counter":5}
+{"local_tool_call":{"msg_id":"01M74FJGEN9S1WZZHT9KA6J1BZ","invocation_id":"01M74FJGEBT7R41M9VH5YAHTAP","tool_name":"counter_get","arguments_json":"{}"},"local_tool_result":{"type":"local_tool_result","correlation_id":"01M74FJGEN9S1WZZHT9KA6J1BZ","invocation_id":"01M74FJGEBT7R41M9VH5YAHTAP","ok":true,"result_json":"{\"value\":5}"},"counter":5}
+{"stopped":true,"reason":"count","handled":3,"counter":5}

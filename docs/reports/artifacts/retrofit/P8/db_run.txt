@@ -1,0 +1,24 @@
+           run_id           |  status   | attempt 
+----------------------------+-----------+---------
+ 01M74FJAQ4ZJXPG0S971D4FG6W | completed |       1
+(1 row)
+
+ seq |      type       |    tool     |   result    
+-----+-----------------+-------------+-------------
+   1 | RUN_STATUS      |             | 
+   4 | TOOL_CALL_BEGIN | counter_add | 
+   5 | TOOL_CALL_END   | counter_add | {"value":2}
+   8 | TOOL_CALL_BEGIN | counter_add | 
+   9 | TOOL_CALL_END   | counter_add | {"value":5}
+  12 | TOOL_CALL_BEGIN | counter_get | 
+  13 | TOOL_CALL_END   | counter_get | {"value":5}
+  16 | RUN_STATUS      |             | 
+(8 rows)
+
+  tool_name  |  status   | result_json 
+-------------+-----------+-------------
+ counter_add | completed | {"value":2}
+ counter_add | completed | {"value":5}
+ counter_get | completed | {"value":5}
+(3 rows)
+

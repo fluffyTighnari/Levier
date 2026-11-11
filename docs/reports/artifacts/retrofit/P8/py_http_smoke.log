@@ -1,0 +1,9 @@
+harness/.venv/bin/python examples/http_client/client.py
+health: ok request_id=01M74FHMJQJMKQJSXS3XX66G81
+app: app_01M6ZSK8AXQE6TQH69YEMXYW15
+ws_token: url=/api/v1/ws expires_in=600
+run: 01M74FHMJYZ9Q8Q8XETTAJ4SSJ status=queued request_id=01M74FHMJYZ9Q8Q8XETQMCACBA
+run_status: queued attempt=0
+events: count=0 caught_up=True
+error_envelope: ok
+cancel: ok

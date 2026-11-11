@@ -1,0 +1,14 @@
+## imports in serve.mjs
+12:import http from "node:http";
+13:import https from "node:https";
+14:import { readFileSync } from "node:fs";
+
+## SDK / generated imports
+count: 0
+note: the words middleware/proto appear only in comments
+
+package.json present: no
+node_modules present: no
+
+node v24.21.0 global WebSocket: function
+node --check: ok

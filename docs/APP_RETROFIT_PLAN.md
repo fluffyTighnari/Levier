@@ -327,6 +327,8 @@ P1 结束后：
 
 ## P8 语言无关
 
+进度：P8 完成（`docs/reports/RETROFIT-P8.md`）；P8.1–P8.5 全部通过。
+
 | ID | 逻辑链 | 操作 | 断言 |
 |---|---|---|---|
 | P8.1 | Python→API | 运行 `make http-smoke` | 全流程 200/404 预期通过 |
