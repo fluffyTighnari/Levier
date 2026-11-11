@@ -1,0 +1,5 @@
+{"app_id": "app_01M749QBBE2S3Z9HBJTBM476EF", "connected": true, "counter": 0}
+{"counter": 2, "local_tool_call": {"arguments_json": "{\"delta\": 2}", "invocation_id": "01M749QCEX5SJZKZK9H69C9T97", "msg_id": "01M749QCF45ABN5A5JFF620PQP", "tool_name": "counter_add"}, "local_tool_result": {"correlation_id": "01M749QCF45ABN5A5JFF620PQP", "invocation_id": "01M749QCEX5SJZKZK9H69C9T97", "ok": true, "result_json": "{\"value\": 2}", "type": "local_tool_result"}}
+{"counter": 2, "local_tool_call": {"arguments_json": "{}", "invocation_id": "01M749QD5YJ5WQC6HMKDJPVARY", "msg_id": "01M749QD683A581V3JM8EWD0RT", "tool_name": "counter_get"}, "local_tool_result": {"correlation_id": "01M749QD683A581V3JM8EWD0RT", "invocation_id": "01M749QD5YJ5WQC6HMKDJPVARY", "ok": true, "result_json": "{\"value\": 2}", "type": "local_tool_result"}}
+{"handled": 2, "idle_timeout": true}
+{"closed": true, "counter": 2, "handled": 2}

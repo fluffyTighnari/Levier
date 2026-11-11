@@ -121,6 +121,7 @@
 | `docs/reports/RETROFIT-P6.5.md` | App 改造 P6.5：ToolCallResult 进入下一轮模型输入 |
 | `docs/reports/RETROFIT-P6.6.md` | App 改造 P6.6：tool_invocations 落库 |
 | `docs/reports/RETROFIT-P6.7.md` | App 改造 P6.7：工具事件成对与字段完整 |
+| `docs/reports/RETROFIT-P6.8.md` | App 改造 P6.8：Run 终态与最终回答 |
 | `docs/APP_ONBOARDING.md` | 任意 App 接入 Middleware 的标准流程 |
 
 **规则：**
