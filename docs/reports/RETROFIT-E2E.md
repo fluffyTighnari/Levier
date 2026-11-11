@@ -171,7 +171,23 @@ Residual processes  无
 make retrofit-e2e
 ```
 
-## 12. 证据
+## 12. P9 修复后复跑
+
+P9 的恢复修复（queued sweep、App 自动重连、503 映射）合入后再次执行：
+
+```text
+run_id: 01M74MKJJ03N02PHEB3VJZSN62
+trace_id: retrofit-e2e-20261111T062656Z
+status: completed
+tool_calls: begin=3 end=3 invocations=3
+final_value: {"value": 5}
+events: 16/16/16
+retrofit-e2e: PASS
+```
+
+日志：`docs/reports/artifacts/retrofit/P10/retrofit_e2e_after_p9.log`
+
+## 13. 证据
 
 ```text
 docs/reports/artifacts/retrofit/P10/
