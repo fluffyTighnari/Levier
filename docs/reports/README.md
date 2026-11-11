@@ -117,6 +117,7 @@
 | `docs/reports/RETROFIT-P6.2.md` | App 改造 P6.2：DeepSeek tool_call → ToolCallRequest |
 | `docs/reports/RETROFIT-P6.3.md` | App 改造 P6.3：App 收到 local_tool_call |
 | `docs/reports/RETROFIT-P6.3f.md` | App 改造 P6.3f：终态与 requeue 竞态 |
+| `docs/reports/RETROFIT-P6.4.md` | App 改造 P6.4：App 返回 local_tool_result |
 | `docs/APP_ONBOARDING.md` | 任意 App 接入 Middleware 的标准流程 |
 
 **规则：**

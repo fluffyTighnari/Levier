@@ -264,7 +264,7 @@ P1 结束后：
 
 ### P6B 工具往返
 
-进度：P6.1 完成（`docs/reports/RETROFIT-P6.1.md`）；P6.2 完成（`docs/reports/RETROFIT-P6.2.md`）；P6.3 完成（`docs/reports/RETROFIT-P6.3.md`）；P6.3f 完成（`docs/reports/RETROFIT-P6.3f.md`）；P6.4–P6.8 待做。
+进度：P6.1 完成（`docs/reports/RETROFIT-P6.1.md`）；P6.2 完成（`docs/reports/RETROFIT-P6.2.md`）；P6.3 完成（`docs/reports/RETROFIT-P6.3.md`）；P6.3f 完成（`docs/reports/RETROFIT-P6.3f.md`）；P6.4 完成（`docs/reports/RETROFIT-P6.4.md`）；P6.5–P6.8 待做。
 
 | ID | 逻辑链 | 操作 | 断言 | 证据 |
 |---|---|---|---|---|

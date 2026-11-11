@@ -1,0 +1,7 @@
+step: P6.4
+commit: e27afd3
+time_utc: 2026-11-11T03:07:33Z
+expected: App receives local_tool_call, executes counter_add/counter_get locally, returns local_tool_result with correlation_id=msg_id; gateway accepts it
+observed: app_id=app_01M7495H9P27CZE393YYSY6M3R; run_id=01M7495HKZ1CD5SDCHNXACFKG2; 2 calls handled; results {"value": 2}; gateway recorded TOOL_CALL_END ok=true with result_json; run completed with 2 completed tool_invocations
+evidence: bootstrap.json, register_tools.json, submit_run.json, tool_host.log, tool_host.err, harness.log, middleware.log, db_run.txt, migrate.log
+design: DESIGN §5.3 §7.1; WS LocalToolResultMessage; AppHub.ResolveLocalToolChecked; gateway pending invocation
