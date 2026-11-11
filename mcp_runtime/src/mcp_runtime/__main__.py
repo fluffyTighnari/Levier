@@ -14,6 +14,7 @@ from typing import Sequence
 
 from mcp_runtime import __version__
 from mcp_runtime.server import McpRuntimeServer, serve_stdio
+from mcp_runtime.secrets import ChainResolver, EnvSecretResolver, FileSecretResolver
 from mcp_runtime.sessions import SessionManager
 
 _DEFAULT_SOCKET = "/tmp/middleware-mcp.sock"
@@ -33,6 +34,11 @@ def build_parser() -> argparse.ArgumentParser:
         help="serve one client over stdin/stdout instead of a Unix socket",
     )
     parser.add_argument(
+        "--secrets-file",
+        default=os.environ.get("MCP_RUNTIME_SECRETS_FILE", ""),
+        help="optional 0600 JSON file of secret name -> value",
+    )
+    parser.add_argument(
         "--log-level",
         default=os.environ.get("MCP_RUNTIME_LOG_LEVEL", "info"),
         help="debug, info, warning, or error",
@@ -48,7 +54,10 @@ def main(argv: Sequence[str] | None = None) -> int:
         format="%(asctime)s %(levelname)s %(name)s %(message)s",
     )
     logger = logging.getLogger("mcp_runtime")
-    manager = SessionManager()
+    resolver = EnvSecretResolver()
+    if args.secrets_file:
+        resolver = ChainResolver([FileSecretResolver.load(args.secrets_file), resolver])
+    manager = SessionManager(secrets=resolver)
 
     if args.stdio:
         asyncio.run(serve_stdio(manager, version=__version__, logger=logger))

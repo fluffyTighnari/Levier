@@ -14,6 +14,7 @@ import (
 	"regexp"
 	"sort"
 	"strings"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
@@ -48,6 +49,23 @@ type MCPServerInput struct {
 	ConfigJSON       string `json:"config_json"`
 	AllowedToolsJSON string `json:"allowed_tools_json"`
 }
+
+// MCPServerInfo is the admin-visible catalog view. It never includes config
+// values, only the secret names referenced by placeholders.
+type MCPServerInfo struct {
+	Name         string    `json:"name"`
+	Transport    string    `json:"transport"`
+	AllowedTools []string  `json:"allowed_tools"`
+	SecretRefs   []string  `json:"secret_refs"`
+	UpdatedAt    time.Time `json:"updated_at"`
+}
+
+var (
+	// ErrMCPServerNotFound reports a missing catalog entry.
+	ErrMCPServerNotFound = errors.New("register: MCP server not found")
+	// ErrMCPServerInUse reports an entry still referenced by an App.
+	ErrMCPServerInUse = errors.New("register: MCP server is referenced by an app")
+)
 
 // ToolMaterial is one resolved tool for TaskAssign.
 type ToolMaterial struct {
@@ -279,6 +297,76 @@ func (r *Registry) UpsertMCPServer(ctx context.Context, input MCPServerInput) er
 	return nil
 }
 
+// ListMCPServers returns the admin catalog view without config values.
+func (r *Registry) ListMCPServers(ctx context.Context) ([]MCPServerInfo, error) {
+	if r == nil || r.pool == nil {
+		return nil, fmt.Errorf("register: postgres pool is nil")
+	}
+	rows, err := r.pool.Query(ctx, `
+		SELECT name, transport, config_json, COALESCE(allowed_tools_json, ''), updated_at
+		FROM mcp_server_defs
+		ORDER BY name
+	`)
+	if err != nil {
+		return nil, fmt.Errorf("register: list MCP servers: %w", err)
+	}
+	defer rows.Close()
+	servers := make([]MCPServerInfo, 0)
+	for rows.Next() {
+		var info MCPServerInfo
+		var configJSON, allowedJSON string
+		if err := rows.Scan(&info.Name, &info.Transport, &configJSON, &allowedJSON, &info.UpdatedAt); err != nil {
+			return nil, fmt.Errorf("register: scan MCP server: %w", err)
+		}
+		if allowedJSON != "" {
+			if err := json.Unmarshal([]byte(allowedJSON), &info.AllowedTools); err != nil {
+				return nil, fmt.Errorf("register: parse MCP %q allowed tools: %w", info.Name, err)
+			}
+		}
+		info.SecretRefs = extractSecretRefs(configJSON)
+		servers = append(servers, info)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("register: iterate MCP servers: %w", err)
+	}
+	return servers, nil
+}
+
+// DeleteMCPServer removes one catalog entry. Referenced entries are rejected
+// unless force is set, which also drops the App references.
+func (r *Registry) DeleteMCPServer(ctx context.Context, name string, force bool) error {
+	if r == nil || r.pool == nil {
+		return fmt.Errorf("register: postgres pool is nil")
+	}
+	if name == "" {
+		return fmt.Errorf("register: MCP name is required")
+	}
+	var mcpID string
+	if err := r.pool.QueryRow(ctx,
+		"SELECT mcp_id FROM mcp_server_defs WHERE name = $1", name,
+	).Scan(&mcpID); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return ErrMCPServerNotFound
+		}
+		return fmt.Errorf("register: lookup MCP server: %w", err)
+	}
+	if !force {
+		var refs int
+		if err := r.pool.QueryRow(ctx,
+			"SELECT count(*) FROM app_mcp_refs WHERE mcp_id = $1", mcpID,
+		).Scan(&refs); err != nil {
+			return fmt.Errorf("register: count MCP refs: %w", err)
+		}
+		if refs > 0 {
+			return ErrMCPServerInUse
+		}
+	}
+	if _, err := r.pool.Exec(ctx, "DELETE FROM mcp_server_defs WHERE mcp_id = $1", mcpID); err != nil {
+		return fmt.Errorf("register: delete MCP server: %w", err)
+	}
+	return nil
+}
+
 // SetAppMCPRefs replaces an App's MCP server references.
 func (r *Registry) SetAppMCPRefs(ctx context.Context, appID string, names []string) error {
 	if r == nil || r.pool == nil {
@@ -475,23 +563,8 @@ func (r *Registry) buildMCPMaterial(ctx context.Context, name, transport, config
 	if err := json.Unmarshal([]byte(configJSON), &config); err != nil {
 		return MCPMaterial{}, fmt.Errorf("register: parse MCP %q config: %w", name, err)
 	}
-	var err error
-	config.Command, err = r.resolveString(ctx, config.Command)
-	if err != nil {
-		return MCPMaterial{}, err
-	}
-	config.URL, err = r.resolveString(ctx, config.URL)
-	if err != nil {
-		return MCPMaterial{}, err
-	}
-	config.Env, err = r.resolveMap(ctx, config.Env)
-	if err != nil {
-		return MCPMaterial{}, err
-	}
-	config.Headers, err = r.resolveMap(ctx, config.Headers)
-	if err != nil {
-		return MCPMaterial{}, err
-	}
+	// Secret placeholders (${secret:name}) are resolved by mcp_runtime, not by
+	// the control plane, so TaskAssign never carries plaintext credentials.
 	allowed := []string{}
 	if allowedJSON != "" {
 		if err := json.Unmarshal([]byte(allowedJSON), &allowed); err != nil {
@@ -510,6 +583,41 @@ func (r *Registry) buildMCPMaterial(ctx context.Context, name, transport, config
 		AllowedTools: allowed,
 		Namespace:    namespace,
 	}, nil
+}
+
+var secretRefPattern = regexp.MustCompile(`\$\{secret:([^}]+)\}`)
+
+// extractSecretRefs lists the secret names referenced by a config document.
+func extractSecretRefs(configJSON string) []string {
+	var value any
+	if err := json.Unmarshal([]byte(configJSON), &value); err != nil {
+		return nil
+	}
+	seen := map[string]struct{}{}
+	var walk func(any)
+	walk = func(node any) {
+		switch typed := node.(type) {
+		case string:
+			for _, match := range secretRefPattern.FindAllStringSubmatch(typed, -1) {
+				seen[match[1]] = struct{}{}
+			}
+		case []any:
+			for _, item := range typed {
+				walk(item)
+			}
+		case map[string]any:
+			for _, item := range typed {
+				walk(item)
+			}
+		}
+	}
+	walk(value)
+	refs := make([]string, 0, len(seen))
+	for name := range seen {
+		refs = append(refs, name)
+	}
+	sort.Strings(refs)
+	return refs
 }
 
 func (r *Registry) resolveString(ctx context.Context, value string) (string, error) {

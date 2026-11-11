@@ -12,6 +12,7 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from mcp_runtime.errors import McpRuntimeError
+from mcp_runtime.secrets import FileSecretResolver
 from mcp_runtime.sessions import SessionManager
 
 
@@ -116,6 +117,39 @@ class SessionManagerTest(unittest.IsolatedAsyncioTestCase):
             [tool["name"] for tool in opened["tools"]],
             ["custom__a", "custom__b"],
         )
+
+    async def test_open_resolves_secret_placeholders(self) -> None:
+        session = FakeSession([FakeTool("add")])
+        connector = FakeConnector(session)
+        self.manager = SessionManager(
+            connector,
+            secrets=FileSecretResolver({"token": "s3"}),
+        )
+
+        await self.manager.open({
+            "server_name": "srv",
+            "transport": "stdio",
+            "command": "cmd-${secret:token}",
+            "env": {"TOKEN": "Bearer ${secret:token}"},
+        }, "owner-1")
+
+        self.assertEqual(connector.bindings[0]["command"], "cmd-s3")
+        self.assertEqual(connector.bindings[0]["env"]["TOKEN"], "Bearer s3")
+
+    async def test_open_missing_secret_fails_before_connect(self) -> None:
+        connector = FakeConnector(FakeSession([]))
+        self.manager = SessionManager(connector, secrets=FileSecretResolver({}))
+
+        with self.assertRaises(McpRuntimeError) as caught:
+            await self.manager.open({
+                "server_name": "srv",
+                "transport": "stdio",
+                "command": "cmd",
+                "env": {"TOKEN": "${secret:missing}"},
+            }, "owner-1")
+
+        self.assertEqual(caught.exception.code, "SECRET_MISSING")
+        self.assertEqual(connector.bindings, [])
 
     async def test_call_maps_namespaced_tool_and_returns_text(self) -> None:
         session = FakeSession([FakeTool("add")])

@@ -7,6 +7,7 @@ package register
 
 import (
 	"context"
+	"errors"
 	"os"
 	"strings"
 	"testing"
@@ -80,9 +81,8 @@ func TestToolShadowingACLAndAssembly(t *testing.T) {
 	}
 }
 
-func TestMCPBindingAssemblyAndSecrets(t *testing.T) {
-	t.Setenv("TEST_SECRET_GITHUB_TOKEN", "secret-token")
-	registry := NewWithSecrets(testPool(t), EnvSecretResolver{Prefix: "TEST_SECRET_"})
+func TestMCPBindingAssemblyKeepsPlaceholders(t *testing.T) {
+	registry := New(testPool(t))
 	ctx := context.Background()
 	app, _, _, err := registry.RegisterApp(ctx, "mcp-app", false)
 	if err != nil {
@@ -118,14 +118,11 @@ func TestMCPBindingAssemblyAndSecrets(t *testing.T) {
 	if binding.Command != "mcp-github" || len(binding.Args) != 1 {
 		t.Fatalf("command = %q args=%v", binding.Command, binding.Args)
 	}
-	if binding.Env["TOKEN"] != "secret-token" {
-		t.Fatalf("env = %+v", binding.Env)
+	if binding.Env["TOKEN"] != "${secret:github_token}" {
+		t.Fatalf("control plane must not resolve MCP secrets: %+v", binding.Env)
 	}
 	if len(binding.AllowedTools) != 2 || binding.Namespace != "mcp__github__" {
 		t.Fatalf("allowed/namespace = %+v", binding)
-	}
-	if binding.Env["TOKEN"] == "${secret:github_token}" {
-		t.Fatal("secret placeholder was not resolved")
 	}
 
 	if err := registry.SetAppMCPRefs(ctx, app.AppID, []string{"missing"}); err == nil {
@@ -133,21 +130,65 @@ func TestMCPBindingAssemblyAndSecrets(t *testing.T) {
 	}
 }
 
-func TestMCPMissingSecretFailsAssembly(t *testing.T) {
-	registry := NewWithSecrets(testPool(t), FileSecretResolver{Values: map[string]string{}})
+func TestListAndDeleteMCPServers(t *testing.T) {
+	registry := New(testPool(t))
 	ctx := context.Background()
-	app, _, _, _ := registry.RegisterApp(ctx, "mcp-secret-app", false)
+	app, _, _, _ := registry.RegisterApp(ctx, "mcp-catalog-app", false)
 	if err := registry.UpsertMCPServer(ctx, MCPServerInput{
-		Name: "github", Transport: "sse",
-		ConfigJSON: `{"url":"https://example.test/sse","headers":{"Authorization":"Bearer ${secret:missing}"}}`,
+		Name: "github", Transport: "stdio",
+		ConfigJSON:       `{"command":"mcp-github","env":{"TOKEN":"${secret:github_token}"}}`,
+		AllowedToolsJSON: `["search"]`,
 	}); err != nil {
-		t.Fatalf("UpsertMCPServer() error = %v", err)
+		t.Fatalf("UpsertMCPServer(github) error = %v", err)
+	}
+	if err := registry.UpsertMCPServer(ctx, MCPServerInput{
+		Name: "filesystem", Transport: "stdio",
+		ConfigJSON: `{"command":"mcp-fs"}`,
+	}); err != nil {
+		t.Fatalf("UpsertMCPServer(filesystem) error = %v", err)
 	}
 	if err := registry.SetAppMCPRefs(ctx, app.AppID, []string{"github"}); err != nil {
 		t.Fatalf("SetAppMCPRefs() error = %v", err)
 	}
-	if _, err := registry.AssembleTaskMaterials(ctx, app.AppID); err == nil {
-		t.Fatal("AssembleTaskMaterials() error = nil, want missing secret")
+
+	servers, err := registry.ListMCPServers(ctx)
+	if err != nil {
+		t.Fatalf("ListMCPServers() error = %v", err)
+	}
+	if len(servers) != 2 {
+		t.Fatalf("servers = %+v", servers)
+	}
+	var github MCPServerInfo
+	for _, server := range servers {
+		if server.Name == "github" {
+			github = server
+		}
+	}
+	if len(github.SecretRefs) != 1 || github.SecretRefs[0] != "github_token" {
+		t.Fatalf("secret refs = %v", github.SecretRefs)
+	}
+	if len(github.AllowedTools) != 1 || github.AllowedTools[0] != "search" {
+		t.Fatalf("allowed tools = %v", github.AllowedTools)
+	}
+
+	if err := registry.DeleteMCPServer(ctx, "github", false); !errors.Is(err, ErrMCPServerInUse) {
+		t.Fatalf("DeleteMCPServer(in use) error = %v", err)
+	}
+	if err := registry.DeleteMCPServer(ctx, "filesystem", false); err != nil {
+		t.Fatalf("DeleteMCPServer(filesystem) error = %v", err)
+	}
+	if err := registry.DeleteMCPServer(ctx, "github", true); err != nil {
+		t.Fatalf("DeleteMCPServer(force) error = %v", err)
+	}
+	if err := registry.DeleteMCPServer(ctx, "github", false); !errors.Is(err, ErrMCPServerNotFound) {
+		t.Fatalf("DeleteMCPServer(missing) error = %v", err)
+	}
+	materials, err := registry.AssembleTaskMaterials(ctx, app.AppID)
+	if err != nil {
+		t.Fatalf("AssembleTaskMaterials() error = %v", err)
+	}
+	if len(materials.MCPBindings) != 0 {
+		t.Fatalf("forced delete left bindings: %+v", materials.MCPBindings)
 	}
 }
 

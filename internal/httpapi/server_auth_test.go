@@ -14,6 +14,7 @@ import (
 	"testing"
 
 	"github.com/fluffyTighnari/middleware/internal/id"
+	"github.com/fluffyTighnari/middleware/internal/register"
 	"github.com/fluffyTighnari/middleware/internal/runstore"
 )
 
@@ -22,13 +23,17 @@ type fakeApps struct {
 	apps    map[string]runstore.App
 	byName  map[string]string
 	keys    map[string]string
+	mcp     map[string]register.MCPServerInput
+	mcpRefs map[string]int
 }
 
 func newFakeApps() *fakeApps {
 	return &fakeApps{
-		apps:   make(map[string]runstore.App),
-		byName: make(map[string]string),
-		keys:   make(map[string]string),
+		apps:    make(map[string]runstore.App),
+		byName:  make(map[string]string),
+		keys:    make(map[string]string),
+		mcp:     make(map[string]register.MCPServerInput),
+		mcpRefs: make(map[string]int),
 	}
 }
 
@@ -340,4 +345,112 @@ func TestRunAuthBackendUnavailable(t *testing.T) {
 	if body.Error.Code != "DEPENDENCY_UNAVAILABLE" {
 		t.Fatalf("code = %q", body.Error.Code)
 	}
+}
+
+func (f *fakeApps) UpsertMCPServer(_ context.Context, input register.MCPServerInput) error {
+	f.mcp[input.Name] = input
+	return nil
+}
+
+func (f *fakeApps) ListMCPServers(_ context.Context) ([]register.MCPServerInfo, error) {
+	servers := make([]register.MCPServerInfo, 0, len(f.mcp))
+	for name, input := range f.mcp {
+		info := register.MCPServerInfo{Name: name, Transport: input.Transport}
+		if input.AllowedToolsJSON != "" {
+			_ = json.Unmarshal([]byte(input.AllowedToolsJSON), &info.AllowedTools)
+		}
+		servers = append(servers, info)
+	}
+	return servers, nil
+}
+
+func (f *fakeApps) DeleteMCPServer(_ context.Context, name string, force bool) error {
+	if _, ok := f.mcp[name]; !ok {
+		return register.ErrMCPServerNotFound
+	}
+	if f.mcpRefs[name] > 0 && !force {
+		return register.ErrMCPServerInUse
+	}
+	delete(f.mcp, name)
+	return nil
+}
+
+func TestAdminMCPCatalogLifecycle(t *testing.T) {
+	_, _, apps, server := newAppTestServer(t)
+
+	resp := request(t, http.MethodPost, server.URL+"/admin/mcp", "admin-token", []byte(`{
+		"name":"fake","transport":"stdio",
+		"config":{"command":"python","env":{"TOKEN":"${secret:fake_token}"}},
+		"allowed_tools":["add"]
+	}`))
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("upsert status = %d", resp.StatusCode)
+	}
+	resp.Body.Close()
+
+	resp = request(t, http.MethodGet, server.URL+"/admin/mcp", "admin-token", nil)
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("list status = %d", resp.StatusCode)
+	}
+	var listed MCPListResponse
+	if err := json.NewDecoder(resp.Body).Decode(&listed); err != nil {
+		t.Fatalf("decode list: %v", err)
+	}
+	resp.Body.Close()
+	if len(listed.Servers) != 1 || listed.Servers[0].Name != "fake" {
+		t.Fatalf("servers = %+v", listed.Servers)
+	}
+	if len(listed.Servers[0].AllowedTools) != 1 || listed.Servers[0].AllowedTools[0] != "add" {
+		t.Fatalf("allowed = %+v", listed.Servers[0].AllowedTools)
+	}
+	for _, server := range listed.Servers {
+		if server.Name == "fake" && len(server.SecretRefs) != 0 {
+			t.Fatalf("fake registry should not report refs, got %v", server.SecretRefs)
+		}
+	}
+
+	apps.mcpRefs["fake"] = 1
+	resp = request(t, http.MethodDelete, server.URL+"/admin/mcp/fake", "admin-token", nil)
+	if resp.StatusCode != http.StatusConflict {
+		t.Fatalf("delete in-use status = %d", resp.StatusCode)
+	}
+	resp.Body.Close()
+
+	resp = request(t, http.MethodDelete, server.URL+"/admin/mcp/fake?force=true", "admin-token", nil)
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("force delete status = %d", resp.StatusCode)
+	}
+	resp.Body.Close()
+	if len(apps.mcp) != 0 {
+		t.Fatalf("catalog not empty: %+v", apps.mcp)
+	}
+}
+
+func TestAdminMCPValidation(t *testing.T) {
+	_, _, _, server := newAppTestServer(t)
+	cases := []struct {
+		name string
+		body string
+	}{
+		{"missing name", `{"transport":"stdio","config":{"command":"x"}}`},
+		{"bad transport", `{"name":"x","transport":"tcp","config":{"command":"x"}}`},
+		{"stdio without command", `{"name":"x","transport":"stdio","config":{}}`},
+		{"http without url", `{"name":"x","transport":"sse","config":{}}`},
+		{"array config", `{"name":"x","transport":"stdio","config":[]}`},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			resp := request(t, http.MethodPost, server.URL+"/admin/mcp", "admin-token", []byte(tc.body))
+			defer resp.Body.Close()
+			if resp.StatusCode != http.StatusBadRequest {
+				t.Fatalf("status = %d", resp.StatusCode)
+			}
+		})
+	}
+
+	resp := request(t, http.MethodPost, server.URL+"/admin/mcp", "wrong", []byte(`{}`))
+	if resp.StatusCode != http.StatusUnauthorized {
+		t.Fatalf("non-admin status = %d", resp.StatusCode)
+	}
+	resp.Body.Close()
 }

@@ -7,7 +7,9 @@ from __future__ import annotations
 
 import asyncio
 import json
+import logging
 import re
+import time
 import uuid
 from contextlib import AsyncExitStack
 from dataclasses import dataclass, field
@@ -19,6 +21,7 @@ from mcp.client.stdio import StdioServerParameters, stdio_client
 from mcp.client.streamable_http import create_mcp_http_client, streamable_http_client
 
 from mcp_runtime.errors import McpRuntimeError
+from mcp_runtime.secrets import EnvSecretResolver, SecretNotFound, SecretResolver, resolve_binding
 
 _OPEN_TIMEOUT_SECONDS = 30.0
 _DEFAULT_CALL_TIMEOUT_MS = 60_000
@@ -95,8 +98,15 @@ class Session:
 class SessionManager:
     """Owns MCP sessions and enforces namespace and allowlists."""
 
-    def __init__(self, connector: Connector | None = None) -> None:
+    def __init__(
+        self,
+        connector: Connector | None = None,
+        *,
+        secrets: SecretResolver | None = None,
+    ) -> None:
         self.connector = connector or SdkConnector()
+        self.secrets = secrets or EnvSecretResolver()
+        self.logger = logging.getLogger("mcp_runtime.sessions")
         self.sessions: dict[str, Session] = {}
         self._lock = asyncio.Lock()
 
@@ -112,6 +122,12 @@ class SessionManager:
         namespace = _namespace(binding.get("namespace"), server_name)
         allowed = {str(name) for name in binding.get("allowed_tools") or []}
 
+        try:
+            binding = resolve_binding(binding, self.secrets)
+        except SecretNotFound as exc:
+            raise McpRuntimeError("SECRET_MISSING", str(exc), retryable=False) from exc
+
+        started = time.monotonic()
         try:
             session, stack = await asyncio.wait_for(
                 self.connector.connect(binding),
@@ -178,6 +194,15 @@ class SessionManager:
         )
         async with self._lock:
             self.sessions[session_id] = opened
+        self.logger.info(
+            "mcp session opened",
+            extra={
+                "server": server_name,
+                "session_id": session_id,
+                "tools": len(tools),
+                "duration_ms": int((time.monotonic() - started) * 1000),
+            },
+        )
         return {"session_id": session_id, "tools": tools}
 
     async def call(
@@ -234,6 +259,13 @@ class SessionManager:
             opened = self.sessions.pop(session_id, None)
         if opened is not None:
             await _close_stack(opened.stack)
+            self.logger.info(
+                "mcp session closed",
+                extra={
+                    "server": opened.binding.get("server_name", ""),
+                    "session_id": session_id,
+                },
+            )
 
     async def close_owner(self, owner: str) -> None:
         """Close every session opened by one runtime connection."""

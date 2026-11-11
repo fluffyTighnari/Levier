@@ -25,6 +25,8 @@ _LOG_FIELDS = (
     "trace_context",
     "tool_count",
     "tools",
+    "mcp_binding_count",
+    "mcp_bindings",
     "session_id",
 )
 

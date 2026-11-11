@@ -85,6 +85,15 @@ class RunManager:
             "lease_epoch": envelope.lease_epoch,
             "trace_context": assign.trace_context,
             "tool_count": len(assign.tools),
+            "mcp_binding_count": len(assign.mcp_bindings),
+            "mcp_bindings": [
+                {
+                    "server_name": binding.server_name,
+                    "transport": binding.transport,
+                    "allowed_tool_count": len(binding.allowed_tools),
+                }
+                for binding in assign.mcp_bindings
+            ],
             "tools": [
                 {
                     "name": tool.name,
