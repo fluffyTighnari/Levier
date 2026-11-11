@@ -1,5 +1,5 @@
 step: P8 (P8.1-P8.5)
-commit: 292cc0e
+commit: 62a225c
 time_utc: 2026-11-11T04:59:46Z
 P8.1: python stdlib http smoke passed (health, bootstrap, ws-token, run, events, error envelope, cancel)
 P8.2: Node 24 built-in WebSocket connected with ws_token and received pong

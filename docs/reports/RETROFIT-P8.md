@@ -7,7 +7,7 @@
 | 日期 | 2026-11-11 |
 | 计划 | `docs/APP_RETROFIT_PLAN.md` P8 |
 | 状态 | 完成 |
-| 代码提交 | `292cc0e` |
+| 代码提交 | `62a225c` |
 | 参考实现 | `examples/node_counter_agent/serve.mjs` |
 
 ## 1. 目的
