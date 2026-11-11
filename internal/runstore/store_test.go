@@ -682,6 +682,37 @@ func TestRequeueRunKeepsTerminalAttempt(t *testing.T) {
 	}
 }
 
+func TestListQueuedRuns(t *testing.T) {
+	store := New(testPool(t))
+	ctx := context.Background()
+	app := createApp(t, store)
+	queued, _ := store.CreateRun(ctx, Run{RunID: "run-" + id.New(), AppID: app.AppID})
+	assigned, _ := store.CreateRun(ctx, Run{RunID: "run-" + id.New(), AppID: app.AppID})
+	if _, err := store.AssignRun(ctx, Assignment{
+		RunID: assigned.RunID, ExpectedStatus: StatusQueued,
+		ExpectedAttempt: 0, ExpectedLeaseEpoch: 0,
+		Attempt: 1, LeaseEpoch: 1, DaemonID: "daemon-1",
+	}); err != nil {
+		t.Fatalf("AssignRun() error = %v", err)
+	}
+	runs, err := store.ListQueuedRuns(ctx)
+	if err != nil {
+		t.Fatalf("ListQueuedRuns() error = %v", err)
+	}
+	found := false
+	for _, run := range runs {
+		if run.RunID == assigned.RunID {
+			t.Fatalf("assigned run listed as queued")
+		}
+		if run.RunID == queued.RunID {
+			found = true
+		}
+	}
+	if !found {
+		t.Fatalf("queued run missing from %+v", runs)
+	}
+}
+
 func TestRunPersistsAcrossStoreInstances(t *testing.T) {
 	pool := testPool(t)
 	store := New(pool)

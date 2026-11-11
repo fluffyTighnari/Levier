@@ -37,6 +37,7 @@ type fakeRuns struct {
 	events       []runstore.Event
 	appendResult runstore.AppendResult
 	active       []runstore.Run
+	queued       []runstore.Run
 }
 
 func (f *fakeRuns) GetRun(context.Context, string) (runstore.Run, error) {
@@ -77,6 +78,18 @@ func (f *fakeRuns) ListActiveRunsForDaemon(context.Context, string) ([]runstore.
 		return append([]runstore.Run(nil), f.active...), nil
 	}
 	return []runstore.Run{f.run}, nil
+}
+
+func (f *fakeRuns) ListQueuedRuns(context.Context) ([]runstore.Run, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	if f.queued != nil {
+		return append([]runstore.Run(nil), f.queued...), nil
+	}
+	if f.run.Status == "queued" {
+		return []runstore.Run{f.run}, nil
+	}
+	return nil, nil
 }
 
 func (f *fakeRuns) RequeueRun(_ context.Context, _ string) (runstore.Run, error) {
@@ -190,6 +203,7 @@ func (f *fakeTaskCanceller) CancelRun(_ context.Context, runID, _ string) (int, 
 
 func (f *fakeTaskCanceller) Enqueue(_ context.Context, task workflow.Task) (workflow.Task, error) {
 	f.enqueueCalls++
+	f.runID = task.RunID
 	return task, nil
 }
 
@@ -469,6 +483,34 @@ func TestReconcileDaemonCases(t *testing.T) {
 		}
 		if tasks.enqueueCalls != 1 {
 			t.Fatalf("retry enqueue calls = %d", tasks.enqueueCalls)
+		}
+	})
+
+	t.Run("queued run is rescheduled on reconnect", func(t *testing.T) {
+		runs := &fakeRuns{run: newRun()}
+		runs.run.Status = "queued"
+		tasks := &fakeTaskCanceller{}
+		ctrl := New(runs, &fakeHub{}, Config{Tasks: tasks})
+		ctrl.ReconcileDaemon(connection.DaemonInfo{
+			DaemonID:    "d1",
+			RuntimeType: runtimev1.RuntimeType_NORMAL,
+		})
+		if tasks.enqueueCalls != 1 || tasks.runID != "run-1" {
+			t.Fatalf("queued run was not rescheduled: %+v", tasks)
+		}
+	})
+
+	t.Run("queued run for another runtime is left alone", func(t *testing.T) {
+		runs := &fakeRuns{run: newRun()}
+		runs.run.Status = "queued"
+		tasks := &fakeTaskCanceller{}
+		ctrl := New(runs, &fakeHub{}, Config{Tasks: tasks})
+		ctrl.ReconcileDaemon(connection.DaemonInfo{
+			DaemonID:    "d1",
+			RuntimeType: runtimev1.RuntimeType_SANDBOX,
+		})
+		if tasks.enqueueCalls != 0 {
+			t.Fatalf("queued run scheduled for a mismatched runtime")
 		}
 	})
 

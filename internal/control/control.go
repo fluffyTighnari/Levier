@@ -71,6 +71,7 @@ type LocalToolCanceller interface {
 // RunStore is the persistence subset used by Control.
 type RunStore interface {
 	GetRun(ctx context.Context, runID string) (runstore.Run, error)
+	ListQueuedRuns(ctx context.Context) ([]runstore.Run, error)
 	AssignRun(ctx context.Context, assignment runstore.Assignment) (runstore.Run, error)
 	Transition(ctx context.Context, transition runstore.Transition) (runstore.Run, error)
 	AppendEvent(ctx context.Context, event runstore.Event) (runstore.AppendResult, error)
@@ -389,6 +390,7 @@ func (c *Control) HandleDaemonOffline(daemonID string) {
 // ReconcileDaemon compares Hello.running_runs with persisted run state.
 func (c *Control) ReconcileDaemon(info connection.DaemonInfo) {
 	ctx := context.Background()
+	c.scheduleQueuedRuns(ctx, info)
 	runs, err := c.runs.ListActiveRunsForDaemon(ctx, info.DaemonID)
 	if err != nil {
 		c.log.Warn("control reconcile list failed", "daemon_id", info.DaemonID, "err", err)
@@ -431,6 +433,40 @@ func (c *Control) ReconcileDaemon(info connection.DaemonInfo) {
 		if err := c.hub.Send(info.DaemonID, envelope); err != nil {
 			c.log.Warn("control send reconcile failed", "daemon_id", info.DaemonID, "err", err)
 		}
+	}
+}
+
+// scheduleQueuedRuns re-arms runs left queued while no daemon was available.
+// Enqueue is idempotent while a retry is pending, and creates a new task once
+// the previous one is dead, so a daemon reconnect recovers the backlog.
+func (c *Control) scheduleQueuedRuns(ctx context.Context, info connection.DaemonInfo) {
+	if c.cfg.Tasks == nil {
+		return
+	}
+	runs, err := c.runs.ListQueuedRuns(ctx)
+	if err != nil {
+		c.log.Warn("control list queued runs failed", "daemon_id", info.DaemonID, "err", err)
+		return
+	}
+	scheduled := 0
+	for _, run := range runs {
+		if info.RuntimeType != runtimev1.RuntimeType_RUNTIME_TYPE_UNSPECIFIED &&
+			runtimeType(run.Runtime) != info.RuntimeType {
+			continue
+		}
+		if _, err := c.cfg.Tasks.Enqueue(ctx, workflow.NewTask(
+			run.RunID, workflow.TaskRetry, time.Now(), 0,
+		)); err != nil {
+			c.log.Warn("control enqueue queued run failed", "run_id", run.RunID, "err", err)
+			continue
+		}
+		scheduled++
+	}
+	if scheduled > 0 {
+		c.log.Info("control scheduled queued runs",
+			"daemon_id", info.DaemonID,
+			"count", scheduled,
+		)
 	}
 }
 

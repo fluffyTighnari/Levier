@@ -299,6 +299,36 @@ func (s *Store) Transition(ctx context.Context, transition Transition) (Run, err
 	return run, nil
 }
 
+// ListQueuedRuns returns runs waiting for a daemon.
+func (s *Store) ListQueuedRuns(ctx context.Context) ([]Run, error) {
+	if s == nil || s.pool == nil {
+		return nil, fmt.Errorf("runstore: postgres pool is nil")
+	}
+	rows, err := s.pool.Query(ctx, `
+		SELECT `+runColumns+`
+		FROM runs
+		WHERE status = 'queued'
+		ORDER BY created_at
+		LIMIT 1000
+	`)
+	if err != nil {
+		return nil, fmt.Errorf("list queued runs: %w", err)
+	}
+	defer rows.Close()
+	runs := make([]Run, 0)
+	for rows.Next() {
+		run, err := scanRun(rows)
+		if err != nil {
+			return nil, fmt.Errorf("list queued runs: scan: %w", err)
+		}
+		runs = append(runs, run)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("list queued runs: %w", err)
+	}
+	return runs, nil
+}
+
 // ListActiveRunsForDaemon returns runs currently assigned to a daemon.
 func (s *Store) ListActiveRunsForDaemon(ctx context.Context, daemonID string) ([]Run, error) {
 	if s == nil || s.pool == nil {

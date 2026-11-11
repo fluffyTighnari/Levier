@@ -113,7 +113,7 @@ def main(argv: list[str] | None = None) -> int:
                     "event_type": item.get("event_type"),
                     "attempt": item.get("attempt"),
                     "seq": item.get("seq"),
-                    "status": item.get("status"),
+                    "data_status": (item.get("data") or {}).get("status"),
                 }
                 for item in received
             ]

@@ -18,9 +18,10 @@ import (
 )
 
 type fakeApps struct {
-	apps   map[string]runstore.App
-	byName map[string]string
-	keys   map[string]string
+	authErr error
+	apps    map[string]runstore.App
+	byName  map[string]string
+	keys    map[string]string
 }
 
 func newFakeApps() *fakeApps {
@@ -57,6 +58,9 @@ func (f *fakeApps) GetApp(_ context.Context, appID string) (runstore.App, error)
 }
 
 func (f *fakeApps) AuthenticateAPIKey(_ context.Context, key string) (runstore.App, error) {
+	if f.authErr != nil {
+		return runstore.App{}, f.authErr
+	}
 	appID, ok := f.keys[key]
 	if !ok {
 		return runstore.App{}, runstore.ErrAppNotFound
@@ -318,4 +322,22 @@ func TestCrossAppRunEventAndCancelDenied(t *testing.T) {
 		t.Fatalf("admin run status = %d", resp.StatusCode)
 	}
 	resp.Body.Close()
+}
+
+func TestRunAuthBackendUnavailable(t *testing.T) {
+	_, _, apps, server := newAppTestServer(t)
+	apps.authErr = errors.New("connection refused")
+
+	resp := request(t, http.MethodPost, server.URL+"/api/v1/runs", "any-key", []byte(validBody))
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusServiceUnavailable {
+		t.Fatalf("status = %d, want 503", resp.StatusCode)
+	}
+	var body ErrorResponse
+	if err := json.NewDecoder(resp.Body).Decode(&body); err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+	if body.Error.Code != "DEPENDENCY_UNAVAILABLE" {
+		t.Fatalf("code = %q", body.Error.Code)
+	}
 }

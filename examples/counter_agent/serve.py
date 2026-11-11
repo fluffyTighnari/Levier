@@ -19,6 +19,7 @@ import argparse
 import json
 import os
 import sys
+import time
 from pathlib import Path
 
 from credentials import CredentialsError, load_credentials
@@ -98,16 +99,44 @@ def main(argv: list[str] | None = None) -> int:
         "registered_tools": [tool["name"] for tool in tools],
         "counter": counter.get(),
     })
-    try:
-        handled, reason = serve_calls(
-            ws,
-            counter,
-            receive_count=args.receive_count,
-            timeout=args.timeout,
-            emit=_log,
-        )
-    finally:
-        ws.close()
+
+    handled = 0
+    reason = "idle"
+    while True:
+        if args.receive_count > 0 and handled >= args.receive_count:
+            reason = "count"
+            break
+        if ws is None:
+            try:
+                token = parse_ws_token_response(client.create_ws_token())
+                url = websocket_url(args.mw_url, token.ws_url, credentials.app_id, token.token.reveal())
+                ws = WebSocketClient.connect(url)
+            except (HttpError, HttpTransportError, WebSocketError, OSError) as exc:
+                _log({"reconnect_failed": str(exc)})
+                time.sleep(1.0)
+                continue
+        try:
+            remaining = 0
+            if args.receive_count > 0:
+                remaining = max(1, args.receive_count - handled)
+            got, reason = serve_calls(
+                ws,
+                counter,
+                receive_count=remaining,
+                timeout=args.timeout,
+                emit=_log,
+            )
+            handled += got
+        except (WebSocketError, OSError) as exc:
+            _log({"connection_lost": str(exc)})
+            reason = "disconnected"
+        finally:
+            ws.close()
+            ws = None
+        if reason in {"count", "completed", "idle"}:
+            break
+        time.sleep(0.5)
+
     _log({"stopped": True, "reason": reason, "handled": handled, "counter": counter.get()})
     return 0
 
