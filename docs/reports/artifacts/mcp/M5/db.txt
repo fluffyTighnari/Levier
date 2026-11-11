@@ -1,0 +1,31 @@
+ seq |       type        |           tool            |  ok  |                                                                        result                                                                        |  status   
+-----+-------------------+---------------------------+------+------------------------------------------------------------------------------------------------------------------------------------------------------+-----------
+   1 | RUN_STATUS        |                           |      |                                                                                                                                                      | running
+   2 | USAGE             |                           |      |                                                                                                                                                      | 
+   3 | MESSAGE_COMPLETED |                           |      |                                                                                                                                                      | 
+   4 | TOOL_CALL_BEGIN   | mcp__m5fs__read_text_file |      |                                                                                                                                                      | 
+   5 | TOOL_CALL_END     | mcp__m5fs__read_text_file | true | {"content":[{"type":"text","text":"m5-content-from-filesystem\n"}],"structured_content":{"content":"m5-content-from-filesystem\n"},"is_error":false} | 
+   6 | USAGE             |                           |      |                                                                                                                                                      | 
+   7 | MESSAGE_COMPLETED |                           |      |                                                                                                                                                      | 
+   8 | RUN_STATUS        |                           |      |                                                                                                                                                      | completed
+(8 rows)
+
+ mcp_invocations 
+-----------------
+               0
+(1 row)
+
+psql: error: connection to server on socket "/tmp/.s.PGSQL.5432" failed: No such file or directory
+	Is the server running locally and accepting connections on that socket?
+                                                                                                 final                                                                                                  
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ I'll read that file for you.
+ The tool returned:                                                                                                                                                                                    +
+                                                                                                                                                                                                       +
+ ```                                                                                                                                                                                                   +
+ m5-content-from-filesystem                                                                                                                                                                            +
+ ```                                                                                                                                                                                                   +
+                                                                                                                                                                                                       +
+ Exact text payload: `"m5-content-from-filesystem\n"` — one line of text, `m5-content-from-filesystem`, followed by a trailing newline. The response reported `is_error: false`, so the read succeeded.
+(2 rows)
+

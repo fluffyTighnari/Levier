@@ -1,0 +1,1 @@
+{"name":"m5fs","transport":"stdio","allowed_tools":["read_text_file","list_directory"],"secret_refs":[]}

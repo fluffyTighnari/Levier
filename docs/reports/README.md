@@ -131,6 +131,7 @@
 | `docs/reports/MCP-M1-M2.md` | MCP 链路改造：runtime 凭据 + 目录 API |
 | `docs/reports/MCP-M3.md` | MCP M3：目录 → TaskAssign → Runtime 端到端 |
 | `docs/reports/MCP-M4.md` | MCP M4：allowlist / 缺失 secret / 并发 / 停机 |
+| `docs/reports/MCP-M5.md` | MCP M5：真实第三方 filesystem server |
 | `docs/reports/RETROFIT-E2E.md` | App 改造 P10：回归与一键收口 |
 | `docs/APP_ONBOARDING.md` | 任意 App 接入 Middleware 的标准流程 |
 
