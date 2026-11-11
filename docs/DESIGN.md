@@ -357,7 +357,7 @@ message TaskAssign {
   repeated ChatMessage input = 5;
   ModelProfile model = 6;
   repeated ToolManifest tools = 7;           // 已合并去重的工具清单（local 遮蔽同名 global）
-  repeated McpBinding mcp_bindings = 8;      // 已解析的 MCP 连接描述（含凭据，见 §13.2）
+  repeated McpBinding mcp_bindings = 8;      // MCP 连接描述；凭据为 ${secret:*} 占位，由 mcp_runtime 解析
   TimeoutProfile timeouts = 9;
   string session_id = 10;                    // longterm：空 = 新会话
   Checkpoint resume_from = 11;               // longterm：恢复快照（可空）
@@ -758,7 +758,7 @@ v2 候选：`builtin:expression`（表达式求值）、沙箱化脚本执行（
 
 - **App 注册**：`POST /apps` 幂等 upsert（按 name）；携带 local ToolDef 列表、mcp_refs（按 name 引用 McpServerDef）、multiagent 标志。返回 api_key（仅注册时明文返回一次，库存 hash）。
 - **Tool 注册**：global 工具独立管理接口（运维侧）：`POST /admin/tools`；local 工具随 App 注册全量替换（版本 +1）。
-- **MCP 注册**：`POST /admin/mcp`；`config_json` 中凭据以 `auth_ref` 占位符（如 `${secret:github_token}`）存储；`allowed_tools_json` 控制工具白名单。连接由独立 `mcp_runtime` 建立，Register 不持有连接。
+- **MCP 注册**：`POST /admin/mcp`；`config_json` 中凭据以 `${secret:name}` 占位符存储；`allowed_tools_json` 控制工具白名单。总控不解析占位符，连接与凭据解析都由独立 `mcp_runtime` 负责。
 - **Daemon 注册**：预分配模式 —— 运维在配置表中创建 daemon_id + auth_token；daemon 启动持令牌 Hello。**不支持**运行时自助注册（v1 简化，避免注册风暴与伪造）。
 
 ### 9.2 TaskAssign 材料组装（Register 提供给 Control 的查询）
@@ -766,7 +766,7 @@ v2 候选：`builtin:expression`（表达式求值）、沙箱化脚本执行（
 `AssembleTaskMaterials(app_id) → {tools[], mcp_bindings[], model_credentials}`：
 
 1. local tools = ToolDef(scope=local, app_id)；global tools = ACL 通过的 ToolDef(scope=global)；local 遮蔽同名 global。
-2. mcp_refs → McpServerDef → 合并 `allowed_tools_json` → 生成 `McpBinding`（含 namespace）→ 解析 `${secret:*}` 占位（§13.2）。
+2. mcp_refs → McpServerDef → 合并 `allowed_tools_json` → 生成 `McpBinding`（含 namespace）→ **保留 `${secret:*}` 占位**，由 `mcp_runtime` 解析（§13.2）。
 3. model：App 请求中的 model profile + MW 配置中的 provider 凭据。
 4. MCP 连接不在本函数中建立；只产出连接描述。
 
@@ -877,8 +877,9 @@ Daemon 重连 `Hello.running_runs`（`run_id + lease_epoch`）≠ MW 视角时�
 
 ### 13.2 密钥管理
 
-- LLM api_key、MCP 凭据：存储于 MW 配置/密钥介质，注册表只存 `auth_ref`；TaskAssign 组装时解析注入（明文过 gRPC）。
-- ⚠️ **v1 风险**：凭据到达 Harness 进程内存。缓解：v1 网络层可信（同集群/同 VPC，可选 mTLS）；v2 引入短期凭据代理（Harness 不持长期密钥）。
+- LLM api_key：由 MW 配置/密钥介质注入 TaskAssign，Harness 需要它调用模型。
+- MCP 凭据：注册表只存 `${secret:name}` 占位；TaskAssign 原样下发；`mcp_runtime` 用自己的密钥介质（环境变量或 0600 文件）解析。Harness 不见明文。
+- ⚠️ **v1 风险**：LLM 凭据仍会到达 Harness 进程内存。缓解：v1 网络层可信（同集群/同 VPC，可选 mTLS）；v2 引入短期凭据代理。
 - MCP 连接只由独立 `mcp_runtime` 建立；middleware 不持有连接、不代理工具结果。
 - api_key 仅注册时明文返回一次。
 

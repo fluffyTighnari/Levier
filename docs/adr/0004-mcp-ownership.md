@@ -165,3 +165,16 @@ P3-29 必须覆盖：
 5. `allowed_tools` 白名单、命名空间、session 隔离。
 6. Runtime 崩溃/不可达时，MCP 工具失败但不阻塞 Run。
 7. Middleware 代码中不存在 MCP 连接或 MCP session。
+
+---
+
+## 5. 补充（2026-11-11）：凭据解析归属
+
+实现 MCP 链路时明确一条：**总控不解析 MCP 凭据**。
+
+- 目录 API：`POST /admin/mcp`、`GET /admin/mcp`、`DELETE /admin/mcp/{name}`。
+- `config_json` 中的凭据写成 `${secret:name}` 占位符。
+- Control 组装 `TaskAssign.mcp_bindings` 时保留占位符，不做替换。
+- `mcp_runtime` 在建立连接前解析：环境变量 `MIDDLEWARE_SECRET_<NAME>`，或 `--secrets-file` 指定的 0600 JSON。
+- 缺少 secret 时返回 `SECRET_MISSING`，Harness 收到错误事件，不启动该 server。
+- 这样 Harness 只转发描述，不接触 MCP 明文凭据；总控仍不持有连接。

@@ -1,0 +1,2 @@
+{"time":"2026-11-11T20:54:33.089903+08:00","level":"INFO","msg":"middleware starting","config":"config.example.yaml","database":"connected","grpc_addr":":9090","http_addr":":8080"}
+{"time":"2026-11-11T20:54:33.613122+08:00","level":"INFO","msg":"http request","request_id":"01M75AS8CCAM8CZXF7TES56D6D","method":"DELETE","route":"DELETE /admin/mcp/{name}","status":409,"duration_ms":0,"remote_addr":"127.0.0.1:57032"}
