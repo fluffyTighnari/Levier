@@ -1,0 +1,6 @@
+step: P6.14
+time_utc: 2026-11-11T04:08:00Z
+expected: an unknown invocation_id is rejected with LOCAL_TOOL_UNKNOWN and the pending call survives
+observed: run 01M74CKJVG3852Q9QQQG5KS4M9 completed; server error LOCAL_TOOL_UNKNOWN for the fabricated id; the real result completed the call
+evidence: fault_host.log, db.txt, submit_run.json
+design: AppHub.ResolveLocalToolChecked / CallLocalTool timeout / Invoker error mapping

@@ -1,0 +1,4 @@
+{"app_id": "app_01M74CJ5QZ2JR3ZF033BC3P9CH", "connected": true, "counter": 0, "foreign_app_id": "", "mode": "duplicate"}
+{"sent": {"correlation_id": "01M74CJQN4DABMTV466J4CC7VN", "invocation_id": "01M74CJQMSA9E7JCY9X2858XVM", "ok": true, "result_json": "{\"value\": 1}", "type": "local_tool_result"}}
+{"invocation_id": "01M74CJQMSA9E7JCY9X2858XVM", "sent_duplicate": true}
+{"closed": true, "counter": 1, "handled": 1, "mode": "duplicate"}

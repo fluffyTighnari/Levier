@@ -290,6 +290,8 @@ P1 结束后：
 
 ### P6D 负向
 
+进度：P6D 完成（`docs/reports/RETROFIT-P6D.md`）；P6.12–P6.17 全部通过。
+
 | ID | 场景 | 断言 |
 |---|---|---|
 | P6.12 | 重复 local_tool_result | 第二次不重复投递 |

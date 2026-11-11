@@ -1,0 +1,6 @@
+step: P6.16
+time_utc: 2026-11-11T04:08:00Z
+expected: closing the App connection fails the pending call with APP_UNREACHABLE
+observed: run 01M74CMNBX5F38GDYY4FGWWR72 completed; TOOL_CALL_END ok=false APP_UNREACHABLE in 10 ms; invocation failed with retryable=true
+evidence: fault_host.log, db.txt, submit_run.json
+design: AppHub.ResolveLocalToolChecked / CallLocalTool timeout / Invoker error mapping

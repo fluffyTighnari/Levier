@@ -1,0 +1,18 @@
+           run_id           |  status   | attempt 
+----------------------------+-----------+---------
+ 01M74CKJVG3852Q9QQQG5KS4M9 | completed |       1
+(1 row)
+
+ seq |      type       |            inv             |  ok  |    result    
+-----+-----------------+----------------------------+------+--------------
+   1 | RUN_STATUS      |                            |      | 
+   4 | TOOL_CALL_BEGIN | 01M74CKKMHEKWMPSFRTZX4Q9NS |      | 
+   5 | TOOL_CALL_END   | 01M74CKKMHEKWMPSFRTZX4Q9NS | true | {"value": 3}
+   8 | RUN_STATUS      |                            |      | 
+(4 rows)
+
+       invocation_id        |  status   | result_json  
+----------------------------+-----------+--------------
+ 01M74CKKMHEKWMPSFRTZX4Q9NS | completed | {"value": 3}
+(1 row)
+

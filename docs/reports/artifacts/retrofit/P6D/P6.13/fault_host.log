@@ -1,0 +1,5 @@
+{"app_id": "app_01M74CJ5QZ2JR3ZF033BC3P9CH", "connected": true, "counter": 0, "foreign_app_id": "", "mode": "mismatch"}
+{"sent_bad_correlation": "bogus-01M74CK2B6A8XG1JP8JQWJ8WRW"}
+{"server_error": {"error": {"code": "LOCAL_TOOL_CORRELATION_MISMATCH", "message": "correlation_id does not match the local tool call"}, "type": "error"}}
+{"sent_correct": {"correlation_id": "01M74CK2B6A8XG1JP8JQWJ8WRW", "invocation_id": "01M74CK2AY01Q7CPTH640EXBNR", "ok": true, "result_json": "{\"value\": 2}", "type": "local_tool_result"}}
+{"closed": true, "counter": 2, "handled": 1, "mode": "mismatch"}

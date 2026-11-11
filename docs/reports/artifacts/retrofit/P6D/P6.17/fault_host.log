@@ -1,0 +1,5 @@
+{"app_id": "app_01M74CJ5QZ2JR3ZF033BC3P9CH", "connected": true, "counter": 0, "foreign_app_id": "", "mode": "slow"}
+{"invocation_id": "01M74CN9KV05CFC3EY848E2FD3", "sleeping": 3.0}
+{"invocation_id": "01M74CN9KV05CFC3EY848E2FD3", "sent_late": true}
+{"server_error": {"error": {"code": "LOCAL_TOOL_UNKNOWN", "message": "local tool invocation is not pending"}, "type": "error"}}
+{"closed": true, "counter": 6, "handled": 1, "mode": "slow"}
