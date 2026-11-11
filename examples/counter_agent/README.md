@@ -1,113 +1,144 @@
-<!-- Middleware — zero-dependency counter agent example. -->
+<!-- Middleware — counter agent: baseline + Middleware runtime. -->
 
-# Counter Agent（0 依赖基线）
+# Counter Agent（参考接入实现）
 
-这是一个“已经存在的简单 Agent 应用”，用于模拟改造为 Middleware App 之前的状态。
-
-## 特征
-
-- 单个 `main.py`。
-- 只用 Python 标准库：`json`、`os`、`sys`、`urllib`。
-- 没有 Middleware 注册、HTTP 服务、SDK、生成代码或第三方包。
-- 硬编码计数器工具：
-  - `counter_add(delta)`
-  - `counter_get()`
-  - `counter_reset()`
-- 自带最小 ReAct 循环，直接调用 DeepSeek OpenAI-compatible API。
-- 系统提示强制模型必须调用工具，不能自己心算计数器。
-
-## 运行
-
-根目录 `.env`：
-
-```dotenv
-DEEPSEEK_API_KEY=...
-```
-
-可选：
-
-```dotenv
-DEEPSEEK_MODEL=deepseek-flash
-DEEPSEEK_BASE_URL=https://api.deepseek.com
-```
-
-执行：
-
-```sh
-python3 examples/counter_agent/main.py
-```
-
-自定义任务：
-
-```sh
-python3 examples/counter_agent/main.py \
-  "Reset the counter, add 7, subtract 2 by adding -2, then read the value."
-```
-
-预期输出类似：
+这个目录同时承载两件事：
 
 ```text
-[model] deepseek-flash
-[user] Add 2, then add 3, then read the counter and tell me the final value...
-[tool] counter_add({"delta": 2}) -> {"value": 2}
-[tool] counter_add({"delta": 3}) -> {"value": 5}
-[tool] counter_get({}) -> {"value": 5}
-[assistant] The final counter value is 5.
-[final] counter=5 steps=4
+main.py    接入前的基线 App（进程内 ReAct，不连 Middleware）
+serve.py   接入后的 App 运行时（Middleware 托管模型循环，App 只执行本地工具）
 ```
 
-## 与 Middleware 架构的关系
+两者共用 `tools.py` / `dispatch.py` 的计数器语义，因此可以直接对照行为。
 
-当前这个基线把 **ReAct 循环 + 工具实现 + 模型调用** 都放在一个进程里。
+## 1. 两种模式
 
-Middleware 的正式模型是：
+| | 基线 `main.py` | 接入 `serve.py` |
+|---|---|---|
+| 谁跑 ReAct 循环 | App 自己 | Middleware Harness |
+| 谁调模型 | App 自己 | Harness（DeepSeek） |
+| 工具在哪执行 | App 进程内 | App 进程内，经 WS 触发 |
+| 是否需要 MW | 否 | 是 |
+| 用途 | P0.1 基线、P6C 对照 | 真实接入 |
 
-| 职责 | 改造后归属 |
-|---|---|
-| App 注册、Run 提交、状态/事件 | App → HTTP API |
-| 计数器函数 | App 本地工具，通过 WS `local_tool_call/local_tool_result` 执行 |
-| ReAct 循环、LLM 调用 | Harness `react` strategy |
-| 工具路由、幂等、ACL | Middleware Gateway |
+`main.py` 保持冻结是刻意的：P0.1 与 P6.9–P6.11 的行为对照依赖它。
+接入没有“把 main 搬进 Middleware”，而是拆成两条职责：
 
-因此后续改造不是“把整个 main 搬进 Middleware”，而是拆分：
+```text
+App：业务函数 + 工具元数据 + WebSocket 通道
+MW ：注册表、调度、工具路由、幂等、事件
+Harness：ReAct 循环 + 模型调用
+```
 
-1. 保留计数器函数，增加 App WebSocket 客户端，响应 `local_tool_call`。
-2. 删除本地 ReAct 循环，改为 `POST /api/v1/runs`。
-3. Harness 使用 DeepSeek provider 执行同一套工具调用。
-4. 通过 HTTP events / WS 验证与基线相同的最终计数器结果。
+## 2. 接入模式怎么跑
 
-这样可以比较改造前后的行为差异，而不是只验证“新写了一个 demo”。
+### 2.1 一次性 bootstrap
 
-## 注册元数据（P1.1）
+需要 MW 地址与 Admin token：
 
-`tools.py` 中的 `TOOL_DEFINITIONS` 就是 Middleware 的注册格式：
+```sh
+MW_URL=http://127.0.0.1:8080 \
+MW_ADMIN_TOKEN=... \
+MW_APP_NAME=counter-app \
+python3 examples/counter_agent/bootstrap_app.py --credentials-out ~/.config/middleware/counter.json
+```
+
+产物是 0600 凭据文件：`app_id` / `app_name` / `api_key`。
+key 只在这里出现一次，之后不再打印。
+
+### 2.2 启动 App
+
+```sh
+python3 examples/counter_agent/serve.py \
+  --credentials ~/.config/middleware/counter.json \
+  --mw-url http://127.0.0.1:8080
+```
+
+`serve.py` 启动时依次做：
+
+```text
+load credentials
+→ GET  /api/v1/apps/{app_id}      验证 key 与 active 状态
+→ POST /api/v1/apps               全量注册 local tools
+→ POST /api/v1/ws-token           换短期 token
+→ GET  /api/v1/ws                 建立通道
+→ 循环处理 local_tool_call / 回 local_tool_result
+```
+
+启动日志：
 
 ```json
 {
-  "tools": [
-    {
-      "name": "counter_add",
-      "description": "...",
-      "schema": {"type": "object", "...": "..."},
-      "timeout_ms": 10000
-    }
-  ]
+  "serving": true,
+  "app_id": "app_...",
+  "app_name": "counter-app",
+  "registered_tools": ["counter_add", "counter_get", "counter_reset"],
+  "counter": 0
 }
 ```
 
-详细合同与实测：
+### 2.3 提交 Run
 
-- `docs/reports/REGISTRATION-CONTRACT.md`
+```sh
+python3 examples/counter_agent/submit_run.py \
+  --credentials ~/.config/middleware/counter.json \
+  --mw-url http://127.0.0.1:8080 \
+  --strategy react \
+  --provider deepseek --model deepseek-flash \
+  --prompt "Add 2, then add 3, then read the counter and tell me the final value."
+```
 
-## 改造计划
+Harness 跑模型循环，调用 `counter_add`/`counter_get` 时经 WS 回到 App，
+App 执行后把结果返回，直到模型给出最终回答。
 
-逐边调试步骤见：
+## 3. 真实运行结果
 
-- `docs/APP_RETROFIT_PLAN.md`
+用基线同一条提示词跑接入模式（`serve.py`）：
 
-## 设计约束
+```text
+counter_add({"delta": 2}) -> {"value": 2}
+counter_add({"delta": 3}) -> {"value": 5}
+counter_get({})           -> {"value": 5}
+run status: completed
+```
 
-- 不读取或打印 API key。
-- 只调用 `chat/completions`，不依赖厂商 SDK。
-- 工具调用和结果都打印为可核对的行。
-- 失败时返回非零退出码。
+与 `main.py` 基线的 final=5、3 次调用、add/add/get 顺序一致。
+证据：`docs/reports/artifacts/onboarding/serve-e2e/`。
+
+## 4. 目录职责（示例，不是接入规范）
+
+| 文件 | 职责 |
+|---|---|
+| `tools.py` | 计数器状态与注册元数据 |
+| `dispatch.py` | `tool_name + arguments_json → 结果/错误` |
+| `credentials.py` | 0600 凭据读写 |
+| `http_client.py` | App API（验证、注册、Run、ws-token） |
+| `ws_client.py` | 标准库 WebSocket 帧与握手 |
+| `bootstrap_app.py` | 一次性创建/轮换 App |
+| `serve.py` | 运行时入口：验证 → 注册 → 连 WS → 服务 |
+| `ws_tool_host.py` | 只连 WS 的诊断/探针（可 injected 初始值、计数退出） |
+| `submit_run.py` | 提交 Run |
+| `main.py` | 冻结的基线，不参与接入 |
+
+接入其他 App 时不要求这个布局，见 `docs/APP_ONBOARDING.md`。
+
+## 5. 安全
+
+- App key 不写入源码、日志、证据、git。
+- Admin token 只用于 bootstrap/rotate，不进入运行时。
+- ws_token 只放内存。
+- 工具结果按字符串透传，不做二次编码。
+
+## 6. 测试
+
+```sh
+make counter-agent-test
+```
+
+覆盖：计数器语义、分发错误、凭据、HTTP 解析、WS 帧、工具回包、服务循环。
+
+## 7. 相关文档
+
+- `docs/APP_ONBOARDING.md`：接入流程（本项目版）
+- `docs/APP_RETROFIT_PLAN.md`：逐边验证计划
+- `docs/reports/REGISTRATION-CONTRACT.md`：注册合同实测

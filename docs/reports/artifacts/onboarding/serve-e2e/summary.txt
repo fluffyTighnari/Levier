@@ -1,0 +1,5 @@
+step: onboarding serve entrypoint
+expected: one command verifies the App key, registers tools, opens WS, serves local_tool_call, and completes a run
+observed: serve.py registered counter_add/get/reset, handled add 2 -> 2, add 3 -> 5, get -> 5, run completed, 3 completed invocations
+control: same prompt as P0.1 baseline; final=5 and order add/add/get match
+evidence: serve.log, db_run.txt, submit_run.json, bootstrap.json, middleware.log, harness.log, migrate.log, serve.err

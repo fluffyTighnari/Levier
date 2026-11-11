@@ -1,7 +1,11 @@
 """Middleware — App WebSocket local tool host (P6.3–P6.4).
 
-Connects as the App, executes `local_tool_call` messages against the local
-counter, and returns `local_tool_result` correlated by `msg_id`.
+Hosts the App's local tools over the Middleware WebSocket: receive
+`local_tool_call`, execute the App function, return `local_tool_result`
+correlated by `msg_id`.
+
+This module is also the shared serving loop used by `serve.py`, the App
+runtime entrypoint. It is not the standalone baseline (`main.py`).
 
 Copyright 2026 The Middleware Authors.
 """
@@ -14,7 +18,7 @@ import os
 import socket
 import sys
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 
 from credentials import CredentialsError, load_credentials
 from dispatch import dispatch_counter_tool
@@ -77,6 +81,53 @@ def build_local_tool_result(counter: Counter, message: dict[str, Any]) -> dict[s
     return result
 
 
+def serve_calls(
+    ws: Any,
+    counter: Counter,
+    *,
+    receive_count: int = 0,
+    timeout: float = 10.0,
+    emit: Callable[[dict[str, Any]], None] | None = None,
+) -> tuple[int, str]:
+    """Serve local tool calls until a count, idle timeout, or run completion.
+
+    Returns (handled, reason) where reason is one of:
+    "count", "idle", "completed".
+    """
+    log = emit or (lambda payload: None)
+    handled = 0
+    while receive_count <= 0 or handled < receive_count:
+        try:
+            message = ws.recv_json(timeout=timeout)
+        except socket.timeout:
+            return handled, "idle"
+
+        kind = message.get("type")
+        if kind == "local_tool_call":
+            if not message.get("msg_id") or not message.get("invocation_id"):
+                log({"ignored": "local_tool_call without correlation ids"})
+                continue
+            result = build_local_tool_result(counter, message)
+            ws.send_json(result)
+            handled += 1
+            log({
+                "local_tool_call": {
+                    "msg_id": message.get("msg_id"),
+                    "invocation_id": message.get("invocation_id"),
+                    "tool_name": message.get("tool_name"),
+                    "arguments_json": message.get("arguments_json"),
+                },
+                "local_tool_result": result,
+                "counter": counter.get(),
+            })
+        elif kind == "run_completed":
+            log({"run_completed": message, "handled": handled})
+            return handled, "completed"
+        elif kind == "error":
+            log({"error": message})
+    return handled, "count"
+
+
 def _log(payload: dict[str, Any]) -> None:
     print(json.dumps(payload, ensure_ascii=False, sort_keys=True), flush=True)
 
@@ -96,43 +147,21 @@ def main(argv: list[str] | None = None) -> int:
 
     counter = Counter(args.initial)
     _log({"connected": True, "app_id": credentials.app_id, "counter": counter.get()})
-    handled = 0
     try:
-        while args.receive_count <= 0 or handled < args.receive_count:
-            try:
-                message = ws.recv_json(timeout=args.timeout)
-            except socket.timeout:
-                if handled > 0:
-                    _log({"idle_timeout": True, "handled": handled})
-                    break
-                print("tool host timed out waiting for local_tool_call", file=sys.stderr)
-                return 1
-
-            kind = message.get("type")
-            if kind == "local_tool_call":
-                if not message.get("msg_id") or not message.get("invocation_id"):
-                    print("tool host ignored local_tool_call without correlation ids", file=sys.stderr)
-                    continue
-                result = build_local_tool_result(counter, message)
-                ws.send_json(result)
-                handled += 1
-                _log({
-                    "local_tool_call": {
-                        "msg_id": message.get("msg_id"),
-                        "invocation_id": message.get("invocation_id"),
-                        "tool_name": message.get("tool_name"),
-                        "arguments_json": message.get("arguments_json"),
-                    },
-                    "local_tool_result": result,
-                    "counter": counter.get(),
-                })
-            elif kind == "run_completed":
-                _log({"run_completed": message, "handled": handled})
-                break
-            elif kind == "error":
-                _log({"error": message})
+        handled, reason = serve_calls(
+            ws,
+            counter,
+            receive_count=args.receive_count,
+            timeout=args.timeout,
+            emit=_log,
+        )
     finally:
         ws.close()
+    if reason == "idle" and handled == 0:
+        print("tool host timed out waiting for local_tool_call", file=sys.stderr)
+        return 1
+    if reason == "idle":
+        _log({"idle_timeout": True, "handled": handled})
     _log({"closed": True, "handled": handled, "counter": counter.get()})
     return 0
 

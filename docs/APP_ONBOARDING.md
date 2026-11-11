@@ -1,141 +1,62 @@
-<!-- Middleware — language-neutral App onboarding procedure. -->
+<!-- Middleware — App onboarding, current runtime contract. -->
 
-# App 接入 Middleware 标准流程（语言无关）
+# App 接入 Middleware
 
-Middleware 不托管 App 代码，也不要求 App 使用特定语言或 SDK。  
-App 只需要能发 HTTP、解析 JSON、安全保存凭据。
-
-下面用自然语言和伪代码描述“任何 App 如何接入”。
+这份文档描述**当前可用**的接入方式，对应 P6B 已闭环的实现。
+它以 Counter Agent 为参考，但内容不绑定语言、SDK 或文件布局。
 
 ---
 
-## 1. 接入前必须确定的三个值
+## 1. 心智模型
 
-每个 App 接入前，先确定：
+接入后职责被拆成三段：
 
 ```text
-MW_URL          Middleware HTTP 地址，例如 http://127.0.0.1:8080
+App      ：业务函数 + 工具元数据 + 一条 WebSocket 通道
+          （没有模型循环，也不直接决定什么时候调用工具）
+
+Middleware：注册表、调度、工具路由、幂等、事件流
+          （不执行你的业务代码）
+
+Harness  ：ReAct 循环 + 模型调用
+          （只通过 Middleware 请求工具）
+```
+
+一次带工具调用的 Run：
+
+```text
+App 提交 Run
+  → MW 调度到某台 Harness
+  → Harness 调模型
+  → 模型返回 tool_call
+  → Harness 发 ToolCallRequest
+  → MW 路由到该 App 的 WebSocket
+  → App 执行，回 local_tool_result
+  → MW 落库并回给 Harness
+  → Harness 把结果加入下一轮模型输入
+  → Run 终态
+```
+
+App 需要实现的只有：
+
+```text
+1. 注册自己的身份与工具
+2. 保持一条 WebSocket
+3. 收到 local_tool_call 时执行并回 local_tool_result
+4. 提交 Run（或由调用方提交）
+```
+
+---
+
+## 2. 接入前需要什么
+
+```text
+MW_URL          Middleware HTTP 地址（非秘密）
 MW_ADMIN_TOKEN  管理凭据，只用于创建/轮换 App
-APP_NAME        App 自己选择的唯一名称
+APP_NAME        App 自己选定的全局唯一名称
 ```
 
-说明：
-
-- `MW_URL`：由 Middleware 部署方提供，不是秘密。
-- `MW_ADMIN_TOKEN`：由 Middleware 运维方提供，是 bootstrap 凭据。
-- `APP_NAME`：App 自己决定，但必须全局唯一。
-
-App 长期运行时还需要：
-
-```text
-APP_ID           Middleware 生成，客户端保存
-APP_KEY          Middleware 生成，客户端安全保存
-```
-
----
-
-## 2. 第一步：创建或找回 App
-
-App 或运维工具发送：
-
-```http
-POST {MW_URL}/admin/apps
-Authorization: Bearer {MW_ADMIN_TOKEN}
-Content-Type: application/json
-```
-
-Body：
-
-```json
-{
-  "name": "{APP_NAME}",
-  "multiagent": false
-}
-```
-
-响应可能是：
-
-### 新建成功
-
-```http
-201 Created
-```
-
-```json
-{
-  "app": {
-    "app_id": "app_...",
-    "name": "{APP_NAME}",
-    "status": "active"
-  },
-  "api_key": "mw_..."
-}
-```
-
-### App 已存在
-
-```http
-200 OK
-```
-
-```json
-{
-  "app": {
-    "app_id": "app_...",
-    "name": "{APP_NAME}",
-    "status": "active"
-  },
-  "api_key": ""
-}
-```
-
-因为 API key 只在创建时返回一次。
-
-如果 `api_key` 为空，需要 rotate：
-
-```http
-POST {MW_URL}/admin/apps/{app_id}/rotate-key
-Authorization: Bearer {MW_ADMIN_TOKEN}
-```
-
-```json
-{"api_key": "mw_..."}
-```
-
-伪代码：
-
-```text
-resp = POST /admin/apps {name: APP_NAME}
-app_id = resp.app.app_id
-if resp.api_key is not empty:
-    app_key = resp.api_key
-else:
-    app_key = POST /admin/apps/{app_id}/rotate-key .api_key
-
-save_secret(app_id, app_key)
-```
-
----
-
-## 3. 第二步：安全保存 App 凭据
-
-需要保存：
-
-```text
-APP_ID   非秘密，但运行时需要
-APP_KEY  秘密
-```
-
-要求：
-
-- 不写入源码。
-- 不提交 git。
-- 不打印日志。
-- 不放进错误信息。
-- 不放进普通数据库明文。
-- 推荐：环境变量、密钥管理服务、权限 0600 的本地密钥文件。
-
-App 运行时读取：
+运行时只需要：
 
 ```text
 APP_ID
@@ -143,75 +64,90 @@ APP_KEY
 MW_URL
 ```
 
-Admin token 不应进入 App 长期运行环境。
+---
 
-伪代码：
+## 3. 一次性 bootstrap
 
-```text
-credentials = load_secret_store()
-if credentials.missing:
-    fail("run bootstrap first")
+```http
+POST {MW_URL}/admin/apps
+Authorization: Bearer {MW_ADMIN_TOKEN}
+Content-Type: application/json
+```
 
-runtime_config = {
-    mw_url: MW_URL,
-    app_id: credentials.app_id,
-    app_key: credentials.app_key,
+```json
+{"name": "{APP_NAME}", "multiagent": false}
+```
+
+新建（201）：
+
+```json
+{
+  "app": {"app_id": "app_...", "name": "...", "status": "active"},
+  "api_key": "mw_..."
 }
 ```
 
+已存在（200）：
+
+```json
+{
+  "app": {"app_id": "app_...", "name": "...", "status": "active"},
+  "api_key": ""
+}
+```
+
+`api_key` 只在创建时返回一次。为空说明需要轮换：
+
+```http
+POST {MW_URL}/admin/apps/{APP_ID}/rotate-key
+Authorization: Bearer {MW_ADMIN_TOKEN}
+```
+
+```json
+{"api_key": "mw_..."}
+```
+
+保存：
+
+```text
+app_id / app_name 非秘密
+api_key           秘密
+```
+
+> Admin token 不要进入 App 的长期运行环境。
+
 ---
 
-## 4. 第三步：验证 App key
-
-发送：
+## 4. 运行时自检
 
 ```http
 GET {MW_URL}/api/v1/apps/{APP_ID}
 Authorization: Bearer {APP_KEY}
 ```
 
-期望：
-
 ```text
-200 + status=active
+200 + status=active   → key 有效
+401                   → key 错误或已轮换
 ```
 
-错误：
-
-```text
-401 UNAUTHORIZED
-```
-
-这一步只验证：
-
-```text
-APP_KEY 是否属于这个 APP_ID
-```
-
-不验证工具，不验证 Run。
-
-伪代码：
-
-```text
-resp = GET /api/v1/apps/{APP_ID} with Bearer APP_KEY
-if resp.status != 200:
-    fail("app key invalid")
-```
+这一步只验证 key 与 App 的归属，不验证工具。
 
 ---
 
-## 5. 第四步：准备本地工具元数据
+## 5. 工具声明与注册
 
-App 把自己已有的函数整理成工具：
+### 5.1 声明
+
+每个工具需要：
 
 ```text
-name         工具名，必须唯一
-description  给模型看的说明
-schema       JSON Schema，描述参数
-timeout_ms   工具超时
+name          唯一
+description   给模型看的说明
+schema        JSON Schema
+timeout_ms    超时（请求未指定时的兜底）
 ```
 
-例如：
+示例：
 
 ```json
 {
@@ -219,9 +155,7 @@ timeout_ms   工具超时
   "description": "Add an integer delta to the counter.",
   "schema": {
     "type": "object",
-    "properties": {
-      "delta": {"type": "integer"}
-    },
+    "properties": {"delta": {"type": "integer"}},
     "required": ["delta"],
     "additionalProperties": false
   },
@@ -229,17 +163,7 @@ timeout_ms   工具超时
 }
 ```
 
-注意：
-
-- 业务函数仍然是 App 自己的代码。
-- Middleware 只存元数据。
-- 模型看到的是 schema，不看到实现。
-
----
-
-## 6. 第五步：注册工具
-
-发送：
+### 5.2 注册
 
 ```http
 POST {MW_URL}/api/v1/apps
@@ -247,243 +171,336 @@ Authorization: Bearer {APP_KEY}
 Content-Type: application/json
 ```
 
-Body：
-
 ```json
 {
   "name": "{APP_NAME}",
   "multiagent": false,
-  "tools": [
-    { "name": "...", "description": "...", "schema": {...}, "timeout_ms": 10000 }
-  ]
+  "tools": [ ... ]
 }
 ```
 
 规则：
 
-- `tools` 是**全量替换**。
-- 新增工具时必须提交完整列表。
-- `"tools": []` 清空。
-- 不传 `tools` 不修改。
-- `schema` 为空时 Middleware 会补 `{}`。
-- 同名工具重写会使 `version` 增加。
-
-伪代码：
-
 ```text
-resp = POST /api/v1/apps {
-    name: APP_NAME,
-    tools: local_tool_definitions,
-} with Bearer APP_KEY
-
-if resp.status != 200:
-    fail(resp.error)
+tools 是全量替换
+新增工具必须提交完整列表
+"tools": [] 清空
+不传 tools 不修改
+schema 为空时补 {}
+重名会提升 version
 ```
 
----
-
-## 7. 第六步：验证工具真的写入
-
-注册接口返回的是 App 信息，不返回工具列表。  
-要验证工具，需要查 Middleware 的 PostgreSQL：
+### 5.3 确认落库（运维）
 
 ```sql
-SELECT name, scope, app_id, schema_json, timeout_ms, version
-FROM tool_defs
-WHERE app_id = '{APP_ID}'
-ORDER BY name;
+SELECT name, scope, schema_json, timeout_ms, version
+FROM tool_defs WHERE app_id = '{APP_ID}' ORDER BY name;
 ```
 
-期望：
-
-```text
-scope = local
-app_id = APP_ID
-schema_json = 注册时的 schema
-timeout_ms = 注册值
-version = 1
-```
-
-这一步确认：
-
-```text
-HTTP 注册 → tool_defs 落库
-```
+期望 `scope = local`，`schema_json` 与注册内容一致。
 
 ---
 
-## 8. 第七步：确认 TaskAssign 可见
+## 6. 建立 App 通道（WebSocket）
 
-App 自己不直接看到 TaskAssign；它由 Middleware 发给 Harness/Daemon。
+### 6.1 换 token
 
-运维或诊断工具应确认 TaskAssign 中有：
-
-```text
-tools[].name
-tools[].input_schema_json
-tools[].scope = LOCAL
+```http
+POST {MW_URL}/api/v1/ws-token
+Authorization: Bearer {APP_KEY}
 ```
 
-这证明：
+```json
+{"ws_url": "/api/v1/ws", "ws_token": "...", "expires_in": 60}
+```
+
+token 是短期的，只放内存。
+
+### 6.2 连接
 
 ```text
-tool_defs
-  → Control 组装
-  → TaskAssign
-  → Harness
+GET {MW_URL}{ws_url}?app_id={APP_ID}&token={ws_token}
+ Upgrade: websocket
 ```
+
+服务端会校验 token 与 app_id 是否匹配，不匹配直接断开。
+
+### 6.3 可选：hello / ping / subscribe
+
+```json
+{"type": "hello", "protocol": 1}
+{"type": "ping"}
+{"type": "subscribe", "run_id": "...", "last_attempt": 0, "last_seq": 0}
+```
+
+- `ping` → 服务端回 `pong`。
+- `subscribe` → 先补历史事件，再回 `caught_up`，之后实时推送 `event`。
+- 订阅只影响**事件流**，不是接收工具调用的前提。
 
 ---
 
-## 9. 第八步：提交 Run
+## 7. 服务 local_tool_call
 
-App 运行时发送：
+### 7.1 收到的消息
+
+```json
+{
+  "type": "local_tool_call",
+  "msg_id": "01...",
+  "invocation_id": "01...",
+  "tool_name": "counter_add",
+  "arguments_json": "{\"delta\": 2}",
+  "timeout_ms": 10000
+}
+```
+
+要点：
+
+```text
+arguments_json 是字符串，不是对象
+invocation_id 是幂等键
+msg_id 是本次投递的相关性键
+timeout_ms 是本次调用的截止时间
+```
+
+### 7.2 执行
+
+```text
+parse arguments_json as JSON object
+verify tool_name is one you registered
+run your business function
+serialize the result as JSON text
+```
+
+不要在这里调用模型，也不要依赖自己的循环决定顺序。
+
+### 7.3 回包
+
+成功：
+
+```json
+{
+  "type": "local_tool_result",
+  "correlation_id": "<原样回传 msg_id>",
+  "invocation_id": "<原样回传>",
+  "ok": true,
+  "result_json": "{\"value\": 2}"
+}
+```
+
+失败：
+
+```json
+{
+  "type": "local_tool_result",
+  "correlation_id": "<msg_id>",
+  "invocation_id": "<invocation_id>",
+  "ok": false,
+  "error": {
+    "code": "TOOL_EXEC_ERROR",
+    "message": "delta must be an integer",
+    "retryable": false
+  }
+}
+```
+
+校验规则（服务端强制）：
+
+```text
+type 必须是 local_tool_result
+correlation_id 必填，且等于 msg_id
+invocation_id 必填
+ok=true 时不能带 error
+ok=false 时必须带 error
+result_json 必须是字符串
+```
+
+### 7.4 服务端如何判定
+
+```text
+找不到 invocation_id            → LOCAL_TOOL_UNKNOWN
+invocation_id 属于别的 App      → LOCAL_TOOL_FORBIDDEN
+correlation_id 不匹配           → LOCAL_TOOL_CORRELATION_MISMATCH（原调用继续等待）
+同一结果重复发送                → 静默忽略
+```
+
+`LOCAL_TOOL_CORRELATION_MISMATCH` 时**不要换一个 id 重发**，应修正为原 `msg_id`。
+
+### 7.5 生命周期
+
+```text
+收到调用 → 执行 → 回包 → 继续等下一条
+连接断开 → 该 App 的 pending 调用失败（APP_UNREACHABLE）
+超过 timeout_ms 未回 → TOOL_TIMEOUT
+```
+
+一个连接可以连续处理多次调用；不要在第一次回包后退出。
+
+---
+
+## 8. 提交 Run
 
 ```http
 POST {MW_URL}/api/v1/runs
 Authorization: Bearer {APP_KEY}
 Content-Type: application/json
+Idempotency-Key: {可选}
 ```
-
-示例：
 
 ```json
 {
   "runtime": "normal",
   "strategy": {"name": "react", "params": {"max_steps": 8}},
-  "input": [
-    {"role": "user", "content": "Add 2 then 3 and read the counter."}
-  ],
+  "input": [{"role": "user", "content": "Add 2, then add 3, then read the counter."}],
   "model": {"provider": "deepseek", "model": "deepseek-flash"},
   "timeouts": {"run_ms": 60000, "tool_ms": 10000}
 }
 ```
 
-期望：
+响应：
 
 ```http
 202 Accepted
 ```
 
 ```json
-{
-  "run_id": "01...",
-  "status": "queued",
-  "ws_url": "/api/v1/ws",
-  "ws_token": "..."
-}
+{"run_id": "01...", "status": "queued", "ws_url": "/api/v1/ws", "ws_token": "..."}
 ```
 
-App 需要保存：
+说明：
 
-```text
-run_id   非秘密，用于查询/WS
-ws_token 短期秘密，只放内存
-```
+- 工具清单不需要在 Run 里传，MW 按 `app_id` 从注册表组装。
+- `tool_ms` 控制本地工具单次调用的上限。
+- 相同 `Idempotency-Key` 重试不会重复建 Run（内容不同则 409）。
 
----
-
-## 10. 第九步：查询状态与事件
+查询：
 
 ```http
 GET {MW_URL}/api/v1/runs/{run_id}
-GET {MW_URL}/api/v1/runs/{run_id}/events
-Authorization: Bearer {APP_KEY}
-```
-
-用途：
-
-- 查询终态。
-- 断线后补拉事件。
-- 调试工具调用事件。
-
----
-
-## 11. 第十步：WebSocket（后续单独文档）
-
-WS 接入尚未写入本流程。
-
-后续需要说明：
-
-- 如何用 App key 换 ws_token。
-- 如何建立 WS。
-- 如何接收 `local_tool_call`。
-- 如何返回 `local_tool_result`。
-- 如何订阅事件、补拉、ping/pong。
-
-在 WS 文档完成前，App 只能提交/查询 Run，不能执行 local tools。
-
----
-
-## 12. 任意语言的实现要点
-
-只需要满足：
-
-```text
-1. 能发 HTTPS/HTTP 请求
-2. 能解析和生成 JSON
-3. 能安全保存 APP_ID/APP_KEY
-4. 能按字符串处理 schema/arguments/result JSON
-```
-
-不需要：
-
-```text
-Middleware SDK
-特定语言
-生成的 protobuf 代码
-文件布局
-```
-
-伪代码总览：
-
-```text
-bootstrap:
-    ensure APP_NAME
-    POST /admin/apps
-    if no key: POST rotate-key
-    save_secret(app_id, app_key)
-
-runtime:
-    load MW_URL, APP_ID, APP_KEY
-    GET /apps/{APP_ID} to verify
-    POST /api/v1/apps with tools
-    POST /api/v1/runs
-    poll/stream events
+GET {MW_URL}/api/v1/runs/{run_id}/events?attempt=&seq=
 ```
 
 ---
 
-## 13. 验收清单
+## 9. 事件流（可选）
 
-| 检查 | 期望 |
+订阅后收到：
+
+```json
+{
+  "type": "event",
+  "run_id": "01...",
+  "attempt": 1,
+  "seq": 5,
+  "source": "daemon",
+  "event_type": "TOOL_CALL_END",
+  "data": {"tool_name": "counter_add", "ok": true, "result_json": "{\"value\": 2}"},
+  "ts_ms": 1794368388919
+}
+```
+
+断线重连时用 `last_attempt` / `last_seq` 续传；服务端会先补历史再发 `caught_up`。
+
+不订阅也能正常执行工具；订阅只影响可观测性。
+
+---
+
+## 10. 错误与重试矩阵
+
+| 现象 | 服务端行为 | App 应该做什么 |
+|---|---|---|
+| 未连接 | `APP_UNREACHABLE`，可重试 | 重连后继续服务 |
+| 超时未回 | `TOOL_TIMEOUT`，可重试 | 检查是否卡死 |
+| 工具不存在 | `TOOL_NOT_FOUND` | 核对注册名 |
+| 跨 App 调用 | `TOOL_DENIED` / `LOCAL_TOOL_FORBIDDEN` | 不应出现，检查 app_id |
+| App 返回 ok=false | 错误码透传给模型 | 用稳定、可读的 code |
+| correlation 错误 | `LOCAL_TOOL_CORRELATION_MISMATCH` | 用原 msg_id 重发 |
+| 重复回包 | 忽略 | 不要主动重发成功结果 |
+| 非法消息 | `BAD_MESSAGE`（连接保留） | 修正 JSON |
+
+---
+
+## 11. 安全红线
+
+```text
+App key       不进源码、日志、证据、git
+Admin token   只用于 bootstrap/rotate
+ws_token      只放内存，不入库
+日志          不打印 Authorization、token、完整凭据文件
+错误信息      不回显 key
+```
+
+凭据文件建议 0600。
+
+---
+
+## 12. 验收清单
+
+| 检查 | 期望 | 已实测 |
+|---|---|---|
+| 创建 App | 201/200，key 只返回一次 | P3.1 |
+| `apps` 落库 | 只存 hash | P3.2 |
+| App key 认证 | 200；错误 key 401 | P3.3 |
+| 工具注册 | 200 | P3.4 |
+| `tool_defs` | local + app_id + schema + timeout | P3.5 |
+| TaskAssign | 含注册工具，schema 一致 | P4.1–P4.2 |
+| App 隔离 | 只能看到自己的工具 | P4.3 |
+| WS token | 可签发、过期/跨 App 拒绝 | P5.1–P5.7 |
+| `local_tool_call` | invocation_id / args / timeout 正确 | P6.3 |
+| `local_tool_result` | correlation=msg_id，网关接受 | P6.4 |
+| 结果进入下一轮 | 模型引用工具结果 | P6.5 |
+| `tool_invocations` | completed + result_json | P6.6 |
+| 事件成对 | BEGIN/END 一一对应 | P6.7 |
+| 终态 | completed，且不被离线 requeue | P6.8 |
+
+---
+
+## 13. 参考实现
+
+`examples/counter_agent/` 是一个可运行的参考，**不是规范**：
+
+| 文件 | 职责 |
 |---|---|
-| App 创建 | 201/200 |
-| App key | 只返回一次 |
-| DB `apps` | hash 非明文 |
-| App key 认证 | 200 |
-| 错误 key | 401 |
-| 工具注册 | 200 |
-| `tool_defs` | local + app_id + schema + timeout |
-| TaskAssign | 包含工具 |
-| Run 提交 | 202 |
-| Run 终态 | completed/failed |
-| 日志/证据 | 无 key/token/secret |
+| `serve.py` | 运行时入口：验证 → 注册 → 连 WS → 服务 |
+| `bootstrap_app.py` | 一次性创建/轮换 |
+| `tools.py` / `dispatch.py` | 业务函数与本地分发 |
+| `ws_tool_host.py` | 仅 WS 的诊断探针 |
+| `http_client.py` / `ws_client.py` | HTTP 与 WS 的标准库实现 |
+| `main.py` | 接入前基线，不参与接入 |
+
+其他语言只需满足：
+
+```text
+能发 HTTP/WS
+能解析与生成 JSON
+能安全保存 APP_ID/APP_KEY
+把 arguments_json / result_json 当字符串处理
+```
+
+不需要 SDK、生成代码或特定目录结构。
 
 ---
 
-## 14. 参考实现
+## 14. 常见坑
 
-`examples/counter_agent/` 是一个具体实现，用于演示上述流程：
+1. **把 `arguments_json` 当对象解析两次。** 它已经是字符串。
+2. **回包后断开连接。** 后续调用会变成 `APP_UNREACHABLE`。
+3. **用新的 msg_id 回包。** 必须是收到的那个。
+4. **以为要订阅 Run 才能收到工具调用。** 不需要。
+5. **在 Run 里传工具。** 工具来自注册表。
+6. **多实例 App 同时连同一 app_id。** 工具调用会广播到所有连接，只有一个能正确回包；
+   需要多实例时先做连接归属设计。
+7. **把 key 写进日志便于排查。** 排查用 app_id / invocation_id / run_id。
+
+---
+
+## 15. 相关文档
 
 ```text
-P3.1 真实 POST /admin/apps
-P3.2 apps 落库
-P3.3 App key 200/401
-P3.4 工具注册
-P3.5 tool_defs 落库
-P4.1–P4.3 TaskAssign 可见
+docs/DESIGN.md                  架构与契约
+docs/APP_RETROFIT_PLAN.md       逐边验证计划与进度
+docs/reports/REGISTRATION-CONTRACT.md   注册合同实测
+docs/reports/RETROFIT-P6.3.md   工具调用下发
+docs/reports/RETROFIT-P6.4.md   工具结果回传
+docs/reports/RETROFIT-P6C.md    与基线对照
 ```
-
-它只是参考，不是接入标准。  
-其他语言按本文件第 1–13 节实现同样的 HTTP 行为即可。
