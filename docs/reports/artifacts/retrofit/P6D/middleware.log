@@ -49,3 +49,4 @@
 {"time":"2026-11-11T12:08:09.293732+08:00","level":"INFO","msg":"control run terminal","run_id":"01M74CN8NA0CGH5BSDDGQSWXVW","trace_id":"01M74CN8N94D7QD0XSHC3WYBR3","app_id":"app_01M74CJ5QZ2JR3ZF033BC3P9CH","attempt":1,"status":"completed"}
 {"time":"2026-11-11T12:08:09.536304+08:00","level":"INFO","msg":"ws disconnected","app_id":"app_01M74CJ5QZ2JR3ZF033BC3P9CH","duration_ms":4085}
 {"time":"2026-11-11T12:08:09.53638+08:00","level":"DEBUG","msg":"http request","request_id":"01M74CN8JAYE19DXHTTEYPCH6K","method":"GET","route":"/api/v1/ws","status":101,"duration_ms":4085,"remote_addr":"127.0.0.1:65350"}
+{"time":"2026-11-11T12:09:05.32631+08:00","level":"INFO","msg":"middleware stopped"}

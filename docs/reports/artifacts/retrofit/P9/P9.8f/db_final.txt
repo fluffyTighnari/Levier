@@ -1,0 +1,32 @@
+  status   | attempt | lease_epoch 
+-----------+---------+-------------
+ completed |       2 |           3
+(1 row)
+
+  task_type   |  status   | attempt 
+--------------+-----------+---------
+ RUN_DISPATCH | DONE      |       1
+ RUN_TIMEOUT  | CANCELLED |       0
+ RUN_RETRY    | DEAD      |       3
+ RUN_RETRY    | DONE      |       1
+(4 rows)
+
+ attempt | events | max_seq 
+---------+--------+---------
+       1 |      1 |       1
+       2 |     16 |      16
+(2 rows)
+
+ attempt | seq |      type       |  status   |    tool     |  ok   
+---------+-----+-----------------+-----------+-------------+-------
+       1 |   1 | RUN_STATUS      | running   |             | 
+       2 |   1 | RUN_STATUS      | running   |             | 
+       2 |   4 | TOOL_CALL_BEGIN |           | counter_add | 
+       2 |   5 | TOOL_CALL_END   |           | counter_add | false
+       2 |   8 | TOOL_CALL_BEGIN |           | counter_get | 
+       2 |   9 | TOOL_CALL_END   |           | counter_get | false
+       2 |  12 | TOOL_CALL_BEGIN |           | counter_add | 
+       2 |  13 | TOOL_CALL_END   |           | counter_add | false
+       2 |  16 | RUN_STATUS      | completed |             | 
+(9 rows)
+

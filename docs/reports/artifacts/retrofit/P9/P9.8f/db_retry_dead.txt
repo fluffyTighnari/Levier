@@ -1,0 +1,7 @@
+  task_type   | status  | attempt |                   last_error                    
+--------------+---------+---------+-------------------------------------------------
+ RUN_DISPATCH | DONE    |       1 | 
+ RUN_TIMEOUT  | PENDING |       0 | 
+ RUN_RETRY    | DEAD    |       3 | no healthy daemon available: no eligible daemon
+(3 rows)
+

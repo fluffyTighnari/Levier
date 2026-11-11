@@ -1,0 +1,7 @@
+  task_type   | status  | attempt 
+--------------+---------+---------
+ RUN_DISPATCH | DONE    |       1
+ RUN_TIMEOUT  | PENDING |       0
+ RUN_RETRY    | DEAD    |       3
+(3 rows)
+

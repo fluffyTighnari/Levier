@@ -1,0 +1,5 @@
+step: P9.1
+time_utc: 2026-11-11T06:30:00Z
+expected: app disconnect then reconnect replays events
+observed: run 01M74KZJH8MQDRDJ63R4DAY96D completed after the host exited; tool calls 2/3 failed APP_UNREACHABLE; reconnect from (0,0) replayed 16 events and caught_up seq=16, last RUN_STATUS completed
+evidence: serve.log, reconnect.log, db.txt, submit_run.json

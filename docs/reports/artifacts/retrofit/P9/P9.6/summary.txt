@@ -1,0 +1,5 @@
+step: P9.6
+time_utc: 2026-11-11T06:30:00Z
+expected: LLM 429/5xx is mapped and the run fails with an explanatory event
+observed: 429 -> ERROR RATE_LIMITED retryable=true, run failed; 500 -> ERROR PROVIDER_UNAVAILABLE retryable=true, run failed
+evidence: submit_429.json, submit_500.json, db_429.txt, db_500.txt, stub.log

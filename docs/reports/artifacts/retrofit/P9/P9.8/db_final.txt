@@ -1,0 +1,22 @@
+           run_id           | status  | attempt | lease_epoch | assigned_daemon_id 
+----------------------------+---------+---------+-------------+--------------------
+ 01M74M19N3YQ5REAPVGA57AS0E | timeout |       1 |           2 | 
+(1 row)
+
+ attempt | events | min_seq | max_seq 
+---------+--------+---------+---------
+       1 |      1 |       1 |       1
+(1 row)
+
+  task_type   | status | attempt 
+--------------+--------+---------
+ RUN_DISPATCH | DONE   |       1
+ RUN_TIMEOUT  | DONE   |       1
+ RUN_RETRY    | DEAD   |       3
+(3 rows)
+
+ attempt | seq |    type    | status  | tool | ok 
+---------+-----+------------+---------+------+----
+       1 |   1 | RUN_STATUS | running |      | 
+(1 row)
+

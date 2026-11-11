@@ -1,0 +1,5 @@
+step: P9.9
+time_utc: 2026-11-11T06:30:00Z
+expected: authentication backend outage is reported as 503, not 401
+observed: PostgreSQL stopped -> POST /api/v1/runs 503 DEPENDENCY_UNAVAILABLE retryable=true; after restart health and app auth return 200
+evidence: result.txt, response.json, middleware.log

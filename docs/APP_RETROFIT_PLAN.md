@@ -351,6 +351,8 @@ HTTP smoke: Python stdlib
 
 ## P9 故障与恢复
 
+进度：P9 完成（`docs/reports/RETROFIT-P9.md`）；P9.10 慢消费者未验证。
+
 每条故障单独执行，不与其他故障叠加。
 
 | ID | 故障 | 期望 |

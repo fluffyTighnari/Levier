@@ -1,0 +1,5 @@
+step: P9.8
+time_utc: 2026-11-11T06:30:00Z
+expected: MW restart keeps queued runs; on-hello sweep recovers after an expired retry budget
+observed: queued run survived restart; retry died at attempt 3 while no daemon; after harness reconnect the sweep enqueued a new retry and the run completed as attempt 2 / epoch 3 with both tools ok
+evidence: P9.8/db_after_restart.txt, P9.8f2/db_retry_dead.txt, P9.8f2/db_final.txt, P9.8f2/serve.log

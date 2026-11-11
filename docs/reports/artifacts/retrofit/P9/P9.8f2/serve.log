@@ -1,0 +1,5 @@
+{"app_id": "app_01M74KZ9BEXX0Y9R9FYN155SGB", "app_name": "p9-app-1794377753", "counter": 0, "registered_tools": ["counter_add", "counter_get", "counter_reset"], "serving": true}
+{"connection_lost": "server closed the connection"}
+{"counter": 9, "local_tool_call": {"arguments_json": "{\"delta\": 9}", "invocation_id": "01M74MBPPGN90MMYNAQQXKMN3D", "msg_id": "01M74MBPPQGB5ZEN1Z7VM9KKN1", "tool_name": "counter_add"}, "local_tool_result": {"correlation_id": "01M74MBPPQGB5ZEN1Z7VM9KKN1", "invocation_id": "01M74MBPPGN90MMYNAQQXKMN3D", "ok": true, "result_json": "{\"value\": 9}", "type": "local_tool_result"}}
+{"counter": 9, "local_tool_call": {"arguments_json": "{}", "invocation_id": "01M74MBQPAPF6WYEG6DHK7MPS2", "msg_id": "01M74MBQPGSCE40SSR9XKAWAR5", "tool_name": "counter_get"}, "local_tool_result": {"correlation_id": "01M74MBQPGSCE40SSR9XKAWAR5", "invocation_id": "01M74MBQPAPF6WYEG6DHK7MPS2", "ok": true, "result_json": "{\"value\": 9}", "type": "local_tool_result"}}
+{"counter": 9, "handled": 2, "reason": "idle", "stopped": true}

@@ -1,0 +1,7 @@
+ seq |    type    |         code         | retryable | status  
+-----+------------+----------------------+-----------+---------
+   1 | RUN_STATUS |                      |           | running
+   2 | ERROR      | PROVIDER_UNAVAILABLE | true      | 
+   3 | RUN_STATUS |                      |           | failed
+(3 rows)
+

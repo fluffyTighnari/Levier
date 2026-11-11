@@ -1,0 +1,2 @@
+{"time":"2026-11-11T14:17:13.846906+08:00","level":"INFO","msg":"middleware starting","config":"config.example.yaml","database":"connected","grpc_addr":":9090","http_addr":":8080"}
+{"time":"2026-11-11T14:17:30.96092+08:00","level":"INFO","msg":"middleware stopped"}
