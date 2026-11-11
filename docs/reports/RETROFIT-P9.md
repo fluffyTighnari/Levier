@@ -6,7 +6,7 @@
 |---|---|
 | 日期 | 2026-11-11 |
 | 计划 | `docs/APP_RETROFIT_PLAN.md` P9 |
-| 状态 | 通过（P9.10 未验证） |
+| 状态 | 通过 |
 | 代码提交 | `5be9bda` |
 
 ## 1. 覆盖
@@ -22,7 +22,7 @@
 | P9.7 | Daemon 断连 | 通过 |
 | P9.8 | MW 重启 / 恢复 | 通过（修复后） |
 | P9.9 | Queue/DB 不可用 | 通过（修复后） |
-| P9.10 | 慢消费者 | 未验证（见 §8） |
+| P9.10 | 慢消费者 | 通过（修复后） |
 
 ## 2. P9.1 断开与重连
 
@@ -142,19 +142,64 @@ ErrAppNotFound → 401
 | P9.9 | 通过（修复后） | 503 而非 401 |
 | P9.10 | 未验证 | 同步写风险 |
 
-## 8. P9.10 未验证
+## 8. P9.10 慢消费者
 
-`AppHub.Publish` → `AppConn.SendRun` 是**同步 socket 写**：
+### 8.1 修复前：Control 被阻塞
 
-```go
-c.sendMu.Lock()
-defer c.sendMu.Unlock()
-return c.sendLocked(payload)
+构造：一个已订阅的 App 连接停止读取；Harness 用本地 stub 返回 12 MB 内容，
+产生一条 12 MB 的 `MESSAGE_COMPLETED` 事件。
+
+```text
+15s 后：
+run1  01M74SENN38QHZPZ6ZY1BRTJVN  running  3 events
+      （大事件已落库，Publish 卡在 socket 写）
+run2  01M74SF5R4G43CGYM0JN6VYQ7J  assigned 0 events
+      （事件协程被阻塞，完全没有处理）
+
+关闭订阅连接后：
+run1 completed 4 events
+run2 completed 4 events
 ```
 
-若订阅者停止读取，TCP 发送缓冲填满后写阻塞，会连带阻塞 Control 的事件协程。
-本轮没有构造出足够大的事件流填满内核缓冲，因此**未验证**是否阻塞、也未见指标。
-这是一个已知风险，需要专门的压力测试或改为有界队列 + 丢弃/断开策略。
+根因：`AppHub.Publish → AppConn.SendRun → wsSink.Send` 是同步 socket 写。
+
+### 8.2 修复 P9-F4：有界队列 + 独立写协程
+
+`internal/httpapi/ws_server.go`：
+
+```text
+wsSink:
+  queue   最多 64 条消息 / 4 MiB
+  writer  goroutine 负责实际 socket 写
+  Send    只入队，不阻塞调用方
+  溢出    记录 "app websocket slow consumer" 并关闭该连接
+```
+
+Control 不再等待慢客户端；慢连接被断开，事件流水位不再受影响。
+
+### 8.3 修复后验证
+
+超大事件：
+
+```text
+12 MB 事件超过 4 MiB 预算
+→ 记录 slow consumer (payload_bytes=12583176)
+→ 连接关闭
+→ run 01M74SXP9VGYWNEKZ7SPMMT5WK completed（4 条事件）
+```
+
+队列溢出（正常大小事件）：
+
+```text
+5 个已订阅的 queued Run + 一个停读连接
+触发 5 × 1 MiB 事件
+→ pending=3148086，再来 1048840 超过 4 MiB
+→ slow consumer 日志 ×1，连接关闭
+→ 5 个 Run 全部 completed
+  （其中一个因 Harness 并发容量被拒，任务重试后完成，与慢消费者无关）
+```
+
+结论：慢消费者不再阻塞 Control；代价是该连接被断开。
 
 ## 9. 代码改动
 
@@ -162,6 +207,7 @@ return c.sendLocked(payload)
 internal/runstore/store.go        ListQueuedRuns
 internal/control/control.go       ReconcileDaemon → scheduleQueuedRuns
 internal/httpapi/server.go        appFromRequest 返回 error；503 映射
+internal/httpapi/ws_server.go     wsSink 有界队列 + 写协程
 examples/counter_agent/serve.py   断线自动重连
 examples/counter_agent/ws_connect.py  重连日志包含 data.status
 ```
@@ -200,7 +246,8 @@ docs/reports/artifacts/retrofit/P9/
 
 ## 11. 剩余风险
 
-- 慢消费者未验证；同步写可能在订阅端停读时阻塞 Control。
+- 慢连接被直接断开，客户端需要重连并补拉；单条事件 >4 MiB 也会触发断开。
+- 本地工具调用与事件共用同一队列；极端积压时工具消息可能随之丢弃并判为不可达。
 - `canAccessApp` 仍把后端故障当 401/403。
 - 恢复验证是单实例、单 Run；未覆盖多 Daemon 竞争与大批量积压。
 - App 自动重连只覆盖 MW 侧断开，未覆盖 App 自身崩溃重启。

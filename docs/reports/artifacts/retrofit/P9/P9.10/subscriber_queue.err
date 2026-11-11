@@ -1,0 +1,3 @@
+usage: stalled_subscriber.py [-h] --credentials CREDENTIALS --run-id RUN_ID
+                             [--mw-url MW_URL] [--stall-seconds STALL_SECONDS]
+stalled_subscriber.py: error: the following arguments are required: --run-id

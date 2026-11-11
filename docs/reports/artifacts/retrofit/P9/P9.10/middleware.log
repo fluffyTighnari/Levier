@@ -1,0 +1,9 @@
+{"time":"2026-11-11T15:51:40.539937+08:00","level":"INFO","msg":"middleware starting","config":"config.example.yaml","database":"connected","grpc_addr":":9090","http_addr":":8080"}
+{"time":"2026-11-11T15:51:41.110226+08:00","level":"INFO","msg":"ws connected","app_id":"app_01M74SENHSEPHCFQE2202GJ4BZ","remote_addr":"127.0.0.1:50544"}
+{"time":"2026-11-11T15:51:42.325361+08:00","level":"INFO","msg":"control scheduled queued runs","daemon_id":"daemon-local-1","count":1}
+{"time":"2026-11-11T15:51:42.366483+08:00","level":"INFO","msg":"control assigned run","run_id":"01M74SENN38QHZPZ6ZY1BRTJVN","trace_id":"01M74SENN1EEHFNXEZAJQSR4CM","app_id":"app_01M74SENHSEPHCFQE2202GJ4BZ","attempt":1,"lease_epoch":1,"daemon_id":"daemon-local-1","runtime":"normal","strategy":"react"}
+{"time":"2026-11-11T15:51:57.488143+08:00","level":"INFO","msg":"control assigned run","run_id":"01M74SF5R4G43CGYM0JN6VYQ7J","trace_id":"01M74SF5R30RCTJFGVKSQX9RGT","app_id":"app_01M74SENHSEPHCFQE2202GJ4BZ","attempt":1,"lease_epoch":1,"daemon_id":"daemon-local-1","runtime":"normal","strategy":"react"}
+{"time":"2026-11-11T15:52:18.925876+08:00","level":"INFO","msg":"ws disconnected","app_id":"app_01M74SENHSEPHCFQE2202GJ4BZ","duration_ms":37816}
+{"time":"2026-11-11T15:52:18.927605+08:00","level":"INFO","msg":"control run terminal","run_id":"01M74SENN38QHZPZ6ZY1BRTJVN","trace_id":"01M74SENN1EEHFNXEZAJQSR4CM","app_id":"app_01M74SENHSEPHCFQE2202GJ4BZ","attempt":1,"status":"completed"}
+{"time":"2026-11-11T15:52:19.086126+08:00","level":"INFO","msg":"control run terminal","run_id":"01M74SF5R4G43CGYM0JN6VYQ7J","trace_id":"01M74SF5R30RCTJFGVKSQX9RGT","app_id":"app_01M74SENHSEPHCFQE2202GJ4BZ","attempt":1,"status":"completed"}
+{"time":"2026-11-11T15:53:36.406331+08:00","level":"INFO","msg":"middleware stopped"}

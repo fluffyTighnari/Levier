@@ -2,3 +2,4 @@
 {"time":"2026-11-11T14:25:19.578136+08:00","level":"WARN","msg":"control list queued runs failed","daemon_id":"daemon-local-1","err":"list queued runs: failed to connect to `user=middleware database=middleware`: 127.0.0.1:5433 (127.0.0.1): dial error: dial tcp 127.0.0.1:5433: connect: connection refused"}
 {"time":"2026-11-11T14:25:19.578322+08:00","level":"WARN","msg":"control reconcile list failed","daemon_id":"daemon-local-1","err":"list active runs: failed to connect to `user=middleware database=middleware`: 127.0.0.1:5433 (127.0.0.1): dial error: dial tcp 127.0.0.1:5433: connect: connection refused"}
 {"time":"2026-11-11T14:25:20.578147+08:00","level":"WARN","msg":"http request","request_id":"01M74MGJP1NB1311KDGR3KN09M","method":"POST","route":"POST /api/v1/runs","status":503,"duration_ms":0,"remote_addr":"127.0.0.1:51042"}
+{"time":"2026-11-11T14:26:54.944887+08:00","level":"INFO","msg":"middleware stopped"}

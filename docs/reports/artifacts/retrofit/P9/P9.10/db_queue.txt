@@ -1,0 +1,19 @@
+  status   | count 
+-----------+-------
+ completed |     5
+(1 row)
+
+ r | count 
+---+-------
+   |    20
+(1 row)
+
+           run_id           | events 
+----------------------------+--------
+ 01M74SMBCN7RZWWXZBBEY622YE |      4
+ 01M74SMBH2E9JM5XS79TJWSTX6 |      4
+ 01M74SMBNGSEP0J9XH0DDTCMZJ |      4
+ 01M74SMBSVDARSG2VG7J0NKWK7 |      4
+ 01M74SMBY8QW7H5AJW8KAFBWQB |      4
+(5 rows)
+

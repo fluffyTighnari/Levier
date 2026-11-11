@@ -1,0 +1,24 @@
+  status   | count 
+-----------+-------
+ completed |     4
+ running   |     1
+(2 rows)
+
+           run_id           | events 
+----------------------------+--------
+ 01M74SP9AAAEVSN7534X3EJBWS |      4
+ 01M74SP9ER4W53SBHRC07HFKVG |      4
+ 01M74SP9K5S5XHZ4E034VWB9ZM |      4
+ 01M74SP9QHADNQNYNXXH0SNQDK |      4
+ 01M74SP9VW3CF2X7ED4V0RN6DA |      3
+(5 rows)
+
+           run_id           |  status   | events 
+----------------------------+-----------+--------
+ 01M74SP9AAAEVSN7534X3EJBWS | completed |      4
+ 01M74SP9ER4W53SBHRC07HFKVG | completed |      4
+ 01M74SP9K5S5XHZ4E034VWB9ZM | completed |      4
+ 01M74SP9QHADNQNYNXXH0SNQDK | completed |      4
+ 01M74SP9VW3CF2X7ED4V0RN6DA | running   |      3
+(5 rows)
+

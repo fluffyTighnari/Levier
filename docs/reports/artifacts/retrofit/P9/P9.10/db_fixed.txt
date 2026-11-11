@@ -1,0 +1,12 @@
+           run_id           | status  | events 
+----------------------------+---------+--------
+ 01M74SJ7HF6WWTFC7SJ6Q64XS9 | running |      3
+(1 row)
+
+ seq |       type        |  bytes   
+-----+-------------------+----------
+   1 | RUN_STATUS        |       21
+   2 | USAGE             |       63
+   3 | MESSAGE_COMPLETED | 12583030
+(3 rows)
+

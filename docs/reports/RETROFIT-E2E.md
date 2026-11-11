@@ -187,6 +187,16 @@ retrofit-e2e: PASS
 
 日志：`docs/reports/artifacts/retrofit/P10/retrofit_e2e_after_p9.log`
 
+P9.10 的 wsSink 有界队列合入后再次执行：
+
+```text
+run_id: 01M74SY6Q8VXA5Y7367ZYTGVSR
+status: completed, tools 3/3, final 5
+retrofit-e2e: PASS
+```
+
+日志：`docs/reports/artifacts/retrofit/P10/retrofit_e2e_after_p910.log`
+
 ## 13. 证据
 
 ```text

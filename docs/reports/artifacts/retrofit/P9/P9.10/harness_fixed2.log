@@ -1,0 +1,3 @@
+{"time":"2026-11-11T07:54:06.715863+00:00","level":"INFO","logger":"middleware_harness","message":"harness starting","daemon_id":"daemon-local-1"}
+{"time":"2026-11-11T07:54:06.762272+00:00","level":"INFO","logger":"middleware_harness.runtime","message":"task assign received","run_id":"01M74SK2N3JFPPEW46X8HDZEVT","attempt":1,"lease_epoch":1,"strategy":"react","app_id":"app_01M74SENHSEPHCFQE2202GJ4BZ","trace_context":"01M74SK2N2KDA4FM976KBCT5BT","tool_count":0,"tools":[]}
+{"time":"2026-11-11T07:54:45.897206+00:00","level":"INFO","logger":"middleware_harness","message":"harness stopped"}

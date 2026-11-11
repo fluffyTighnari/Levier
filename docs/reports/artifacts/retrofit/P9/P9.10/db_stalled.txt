@@ -1,0 +1,52 @@
+           run_id           | status  | attempt 
+----------------------------+---------+---------
+ 01M74SENN38QHZPZ6ZY1BRTJVN | running |       1
+(1 row)
+
+ events | max_seq 
+--------+---------
+      3 |       3
+(1 row)
+
+ seq |       type        | payload_bytes 
+-----+-------------------+---------------
+   1 | RUN_STATUS        |            21
+   2 | USAGE             |            63
+   3 | MESSAGE_COMPLETED |      12583030
+(3 rows)
+
+           run_id           |  status  | events 
+----------------------------+----------+--------
+ 01M74SENN38QHZPZ6ZY1BRTJVN | running  |      3
+ 01M74SF5R4G43CGYM0JN6VYQ7J | assigned |      0
+(2 rows)
+
+## while stalled (second run submitted)
+           run_id           |  status  | events 
+----------------------------+----------+--------
+ 01M74SENN38QHZPZ6ZY1BRTJVN | running  |      3
+ 01M74SF5R4G43CGYM0JN6VYQ7J | assigned |      0
+(2 rows)
+
+  task_type   | status  
+--------------+---------
+ RUN_DISPATCH | DONE
+ RUN_TIMEOUT  | PENDING
+(2 rows)
+
+
+## after subscriber closed
+           run_id           |  status   | events 
+----------------------------+-----------+--------
+ 01M74SENN38QHZPZ6ZY1BRTJVN | completed |      4
+ 01M74SF5R4G43CGYM0JN6VYQ7J | completed |      4
+(2 rows)
+
+ seq |       type        | payload_bytes 
+-----+-------------------+---------------
+   1 | RUN_STATUS        |            21
+   2 | USAGE             |            63
+   3 | MESSAGE_COMPLETED |      12583030
+   4 | RUN_STATUS        |            23
+(4 rows)
+

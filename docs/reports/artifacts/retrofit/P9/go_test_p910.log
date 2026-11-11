@@ -1,0 +1,19 @@
+?   	github.com/fluffyTighnari/middleware/cmd/middleware	[no test files]
+?   	github.com/fluffyTighnari/middleware/cmd/migrate	[no test files]
+?   	github.com/fluffyTighnari/middleware/gen/middleware/runtime/v1	[no test files]
+ok  	github.com/fluffyTighnari/middleware/internal/clock	0.500s
+ok  	github.com/fluffyTighnari/middleware/internal/config	0.966s
+ok  	github.com/fluffyTighnari/middleware/internal/connection	1.628s
+ok  	github.com/fluffyTighnari/middleware/internal/control	1.837s
+ok  	github.com/fluffyTighnari/middleware/internal/db	2.211s
+ok  	github.com/fluffyTighnari/middleware/internal/errs	2.504s
+ok  	github.com/fluffyTighnari/middleware/internal/gateway	3.097s
+ok  	github.com/fluffyTighnari/middleware/internal/gateway/executor	3.454s
+ok  	github.com/fluffyTighnari/middleware/internal/httpapi	3.922s
+ok  	github.com/fluffyTighnari/middleware/internal/id	3.954s
+ok  	github.com/fluffyTighnari/middleware/internal/observe	3.633s
+ok  	github.com/fluffyTighnari/middleware/internal/protocol	3.740s
+ok  	github.com/fluffyTighnari/middleware/internal/register	3.899s
+ok  	github.com/fluffyTighnari/middleware/internal/runstore	4.633s
+ok  	github.com/fluffyTighnari/middleware/internal/testutil/fakedaemon	3.547s
+ok  	github.com/fluffyTighnari/middleware/internal/workflow	5.870s

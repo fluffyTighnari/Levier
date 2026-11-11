@@ -1,0 +1,7 @@
+step: P9.10 slow consumer
+expected: a subscriber that stops reading must not block Control; the slow connection is dropped and the event loop keeps running
+pre_fix: run 01M74SENN38QHZPZ6ZY1BRTJVN stayed running with 3 events (12 MB MESSAGE_COMPLETED persisted, publish blocked); a second run stayed assigned with 0 events for 20 s; closing the subscriber released both
+fix: wsSink now uses a bounded queue (64 messages / 4 MiB) with a writer goroutine; overflow logs "app websocket slow consumer" and closes that connection
+post_fix_oversize: 12 MB event -> connection dropped at enqueue (payload_bytes=12583176), run 01M74SXP9VGYWNEKZ7SPMMT5WK completed with 4 events
+post_fix_queue: 5 runs x 1 MiB against one stalled subscriber -> pending 3148086 B + 1048840 B exceeded 4 MiB, connection dropped, all 5 runs completed (one task retried after a harness capacity rejection)
+evidence: middleware.log, db_stalled.txt, metrics_stalled.txt, middleware_final.log, db_final.txt, subscriber_final.log, db_oversize.txt, stub_oversize.log, llm_huge_stub.py, stalled_subscriber.py
