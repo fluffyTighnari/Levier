@@ -264,6 +264,8 @@ P1 结束后：
 
 ### P6B 工具往返
 
+进度：P6.1 完成（`docs/reports/RETROFIT-P6.1.md`）；P6.2–P6.8 待做。
+
 | ID | 逻辑链 | 操作 | 断言 | 证据 |
 |---|---|---|---|---|
 | P6.1 | HAR→CTL | react Run：提示“调用 counter_get” | TaskAssign 含工具 | `assign_react.txt` |
