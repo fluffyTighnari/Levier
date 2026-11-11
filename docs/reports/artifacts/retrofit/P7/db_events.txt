@@ -1,0 +1,25 @@
+ events | min_seq | max_seq | expected | distinct_seq 
+--------+---------+---------+----------+--------------
+     16 |       1 |      16 |       16 |           16
+(1 row)
+
+ seq |       type        |    tool     
+-----+-------------------+-------------
+   1 | RUN_STATUS        | 
+   2 | USAGE             | 
+   3 | MESSAGE_COMPLETED | 
+   4 | TOOL_CALL_BEGIN   | counter_add
+   5 | TOOL_CALL_END     | counter_add
+   6 | USAGE             | 
+   7 | MESSAGE_COMPLETED | 
+   8 | TOOL_CALL_BEGIN   | counter_add
+   9 | TOOL_CALL_END     | counter_add
+  10 | USAGE             | 
+  11 | MESSAGE_COMPLETED | 
+  12 | TOOL_CALL_BEGIN   | counter_get
+  13 | TOOL_CALL_END     | counter_get
+  14 | USAGE             | 
+  15 | MESSAGE_COMPLETED | 
+  16 | RUN_STATUS        | 
+(16 rows)
+

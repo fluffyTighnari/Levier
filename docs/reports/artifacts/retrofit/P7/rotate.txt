@@ -1,0 +1,5 @@
+app_id: app_01M74CWXT44CWACYF02146JXYF
+old key GET /api/v1/apps/{app_id}: 401
+new key GET /api/v1/apps/{app_id}: 200
+tool_defs before: 3
+tool_defs after:  3

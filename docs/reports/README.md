@@ -125,6 +125,7 @@
 | `docs/reports/RETROFIT-LATENCY.md` | App 改造：P6B 链路延迟测量 |
 | `docs/reports/RETROFIT-P6C.md` | App 改造 P6C：与基线对照（P6.9–P6.11） |
 | `docs/reports/RETROFIT-P6D.md` | App 改造 P6D：负向与故障（P6.12–P6.17） |
+| `docs/reports/RETROFIT-P7.md` | App 改造 P7：持久化与观测（P7.1–P7.11） |
 | `docs/APP_ONBOARDING.md` | 任意 App 接入 Middleware 的标准流程 |
 
 **规则：**

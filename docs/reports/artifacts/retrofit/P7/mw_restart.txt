@@ -1,0 +1,4 @@
+before restart: apps=42 tool_defs=3 run_events=16/16 invocations=3
+after restart:  apps=42 tool_defs=3 run_events=16/16 invocations=3
+GET /api/v1/runs/{id} after restart: 200 status=completed
+runs row after restart: completed/1

@@ -1,0 +1,7 @@
+step: P7 (P7.1-P7.11)
+commit: daf21f8
+time_utc: 2026-11-11T04:49:01Z
+run: 01M74CYEXPRG5DM9FWGBDCDNGA
+app: app_01M74CWXT44CWACYF02146JXYF
+observed: apps hash len 64 (not plaintext); 3 local tool_defs; run normal/react/completed with trace p7-trace-1794370386; 16 events seq 1..16 contiguous; tasks DISPATCH DONE + TIMEOUT CANCELLED; 3 completed invocations; trace matches submit header, runs.trace_id and TaskAssign trace_context; metric deltas 1 completed run, 2 add + 1 get ok, 3 BEGIN/3 END, ws gauge 0; no api_key/token in evidence/logs/git; rotate old 401 new 200 with 3 tools kept; restart keeps all counts and returns completed
+evidence: db_apps.txt, db_tools.txt, db_runs.txt, db_events.txt, db_tasks.txt, db_invocations.txt, trace.txt, metrics_before2.txt, metrics_after2.txt, metrics_delta.txt, redaction.txt, rotate.txt, mw_restart.txt, serve.log, submit_run.json, middleware.log, harness.log, middleware_after_restart.log
