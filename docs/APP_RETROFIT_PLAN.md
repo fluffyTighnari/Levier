@@ -370,6 +370,8 @@ HTTP smoke: Python stdlib
 
 ## P10 回归与收口
 
+进度：P10 完成（`docs/reports/RETROFIT-E2E.md`）；`make retrofit-e2e` 通过。
+
 | ID | 内容 | 退出条件 |
 |---|---|---|
 | P10.1 | Go 单测/集成 | `MIDDLEWARE_TEST_POSTGRES=1 go test ./...` |

@@ -14,7 +14,7 @@ export
 BIN_DIR := bin
 GO_FILES := $(shell find . -name '*.go' -not -path './workflow_engine/*' -not -path './vendor/*')
 
-.PHONY: all build test lint fmt fmt-check vet run clean dev-up dev-down migrate proto proto-check proto-lint contract-check harness-test mcp-runtime-test image-harness image-mcp-runtime e2e-echo m1-e2e counter-agent counter-agent-test http-smoke
+.PHONY: all build test lint fmt fmt-check vet run clean dev-up dev-down migrate proto proto-check proto-lint contract-check harness-test mcp-runtime-test image-harness image-mcp-runtime e2e-echo m1-e2e counter-agent counter-agent-test http-smoke retrofit-e2e
 
 all: build
 
@@ -93,6 +93,9 @@ counter-agent:
 
 http-smoke:
 	$(PYTHON) examples/http_client/client.py
+
+retrofit-e2e:
+	./scripts/retrofit_e2e.sh
 
 counter-agent-test:
 	cd examples/counter_agent && python3 -m unittest discover -s . -p 'test_*.py' -v
