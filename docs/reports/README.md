@@ -119,6 +119,7 @@
 | `docs/reports/RETROFIT-P6.3f.md` | App 改造 P6.3f：终态与 requeue 竞态 |
 | `docs/reports/RETROFIT-P6.4.md` | App 改造 P6.4：App 返回 local_tool_result |
 | `docs/reports/RETROFIT-P6.5.md` | App 改造 P6.5：ToolCallResult 进入下一轮模型输入 |
+| `docs/reports/RETROFIT-P6.6.md` | App 改造 P6.6：tool_invocations 落库 |
 | `docs/APP_ONBOARDING.md` | 任意 App 接入 Middleware 的标准流程 |
 
 **规则：**
