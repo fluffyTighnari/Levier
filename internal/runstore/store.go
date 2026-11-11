@@ -349,6 +349,15 @@ func (s *Store) RequeueRun(ctx context.Context, runID string) (Run, error) {
 		    updated_at = now()
 		WHERE run_id = $1
 		  AND status IN ('assigned', 'running')
+		  AND NOT EXISTS (
+		    SELECT 1
+		    FROM run_events e
+		    WHERE e.run_id = runs.run_id
+		      AND e.attempt = runs.attempt
+		      AND e.type = 'RUN_STATUS'
+		      AND lower(coalesce(e.payload->>'status', '')) IN
+		          ('completed', 'failed', 'cancelled', 'timeout')
+		  )
 		RETURNING `+runColumns,
 		runID,
 	))

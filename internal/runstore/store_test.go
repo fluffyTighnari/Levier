@@ -645,6 +645,43 @@ func TestListActiveRunsAndRequeue(t *testing.T) {
 	}
 }
 
+func TestRequeueRunKeepsTerminalAttempt(t *testing.T) {
+	store := New(testPool(t))
+	ctx := context.Background()
+	app := createApp(t, store)
+	run, _ := store.CreateRun(ctx, Run{RunID: "run-" + id.New(), AppID: app.AppID})
+	if _, err := store.AssignRun(ctx, Assignment{
+		RunID: run.RunID, ExpectedStatus: StatusQueued,
+		ExpectedAttempt: 0, ExpectedLeaseEpoch: 0,
+		Attempt: 1, LeaseEpoch: 1, DaemonID: "daemon-1",
+	}); err != nil {
+		t.Fatalf("AssignRun() error = %v", err)
+	}
+	if _, err := store.Transition(ctx, Transition{
+		RunID: run.RunID, ExpectedStatus: StatusAssigned,
+		ToStatus: StatusRunning, ExpectedAttempt: 1, ExpectedLeaseEpoch: 1,
+	}); err != nil {
+		t.Fatalf("Transition(running) error = %v", err)
+	}
+	if _, err := store.AppendEvent(ctx, Event{
+		RunID: run.RunID, Attempt: 1, Seq: 1, Source: "daemon",
+		Type: "RUN_STATUS", LeaseEpoch: 1,
+		Payload: []byte(`{"status":"cancelled"}`),
+	}); err != nil {
+		t.Fatalf("AppendEvent() error = %v", err)
+	}
+	if _, err := store.RequeueRun(ctx, run.RunID); !errors.Is(err, ErrRunNotAssignable) {
+		t.Fatalf("RequeueRun() error = %v, want ErrRunNotAssignable", err)
+	}
+	current, err := store.GetRun(ctx, run.RunID)
+	if err != nil {
+		t.Fatalf("GetRun() error = %v", err)
+	}
+	if current.Status != StatusRunning || current.LeaseEpoch != 1 {
+		t.Fatalf("run was requeued after terminal event: %+v", current)
+	}
+}
+
 func TestRunPersistsAcrossStoreInstances(t *testing.T) {
 	pool := testPool(t)
 	store := New(pool)

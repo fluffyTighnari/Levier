@@ -693,11 +693,24 @@ func (c *Control) handleEvent(env *runtimev1.Envelope) {
 		ToStatus:           status,
 		ExpectedAttempt:    int(env.GetAttempt()),
 		ExpectedLeaseEpoch: env.GetLeaseEpoch(),
-	}); err != nil && !errors.Is(err, runstore.ErrRunNotAssignable) {
-		c.log.Warn("control transition run failed",
-			"run_id", env.GetRunId(),
-			"status", status,
-			"err", err,
+	}); err != nil {
+		if !errors.Is(err, runstore.ErrRunNotAssignable) {
+			c.log.Warn("control transition run failed",
+				"run_id", env.GetRunId(),
+				"status", status,
+				"err", err,
+			)
+			return
+		}
+		// The run was requeued or already finished while this event was in
+		// flight. Never publish a terminal state that the store rejected.
+		c.log.Info("control run terminal superseded",
+			observe.FieldRunID, run.RunID,
+			observe.FieldTraceID, run.TraceID,
+			observe.FieldAppID, run.AppID,
+			observe.FieldAttempt, env.GetAttempt(),
+			observe.FieldStatus, status,
+			"current_status", run.Status,
 		)
 		return
 	}

@@ -611,6 +611,67 @@ func TestRunTimeoutTerminal(t *testing.T) {
 	}
 }
 
+type fakePublisher struct {
+	mu       sync.Mutex
+	statuses []string
+}
+
+func (f *fakePublisher) Publish(_ string, _ string, payload []byte) {
+	var message struct {
+		Status string `json:"status"`
+	}
+	_ = json.Unmarshal(payload, &message)
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.statuses = append(f.statuses, message.Status)
+}
+
+func TestTerminalEventAfterRequeueDoesNotPublish(t *testing.T) {
+	runs := &fakeRuns{
+		run:          newRun(),
+		appendResult: runstore.AppendResult{Inserted: true},
+	}
+	runs.run.Status = "running"
+	runs.run.Attempt = 1
+	runs.run.LeaseEpoch = 1
+	runs.run.AssignedDaemonID = "d1"
+	hub := &fakeHub{}
+	publisher := &fakePublisher{}
+	ctrl := New(runs, hub, Config{Publisher: publisher})
+	ctrl.Start(context.Background())
+	defer ctrl.Close()
+
+	// A daemon-offline requeue wins the race before the terminal event lands.
+	if _, err := runs.RequeueRun(context.Background(), "run-1"); err != nil {
+		t.Fatalf("RequeueRun() error = %v", err)
+	}
+
+	data, _ := structpb.NewStruct(map[string]any{"status": "cancelled"})
+	event := &runtimev1.Event{
+		Seq: 1, Type: runtimev1.EventType_RUN_STATUS, Source: protocol.EventSourceDaemon, Data: data,
+	}
+	env, _ := protocol.NewRun("run-1", 1, 1, event)
+	ctrl.HandleEnvelope("d1", env)
+	time.Sleep(20 * time.Millisecond)
+
+	current, _ := runs.GetRun(context.Background(), "run-1")
+	if current.Status != runstore.StatusQueued {
+		t.Fatalf("superseded terminal event changed status to %q", current.Status)
+	}
+	publisher.mu.Lock()
+	published := append([]string(nil), publisher.statuses...)
+	publisher.mu.Unlock()
+	if len(published) != 0 {
+		t.Fatalf("published terminal state %v for a requeued run", published)
+	}
+	hub.mu.Lock()
+	released := hub.releaseCalls
+	hub.mu.Unlock()
+	if released != 0 {
+		t.Fatalf("released capacity %d times for a requeued run", released)
+	}
+}
+
 func TestTerminalEventReleasesCapacity(t *testing.T) {
 	runs := &fakeRuns{
 		run:          newRun(),
