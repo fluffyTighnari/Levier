@@ -37,6 +37,8 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--provider", default="anthropic")
     parser.add_argument("--model", default="claude-test")
     parser.add_argument("--max-steps", type=int, default=8)
+    parser.add_argument("--tool-ms", type=int, default=10000, help="per local tool call timeout")
+    parser.add_argument("--run-ms", type=int, default=30000, help="run timeout")
     return parser
 
 
@@ -52,7 +54,7 @@ def main(argv: list[str] | None = None) -> int:
                 "strategy": {"name": args.strategy, "params": {"max_steps": args.max_steps}},
                 "input": [{"role": "user", "content": args.prompt}],
                 "model": {"provider": args.provider, "model": args.model},
-                "timeouts": {"run_ms": 30000, "tool_ms": 10000},
+                "timeouts": {"run_ms": args.run_ms, "tool_ms": args.tool_ms},
             }
         )
         run = parse_run_response(response)
