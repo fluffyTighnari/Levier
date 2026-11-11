@@ -33,6 +33,7 @@ class McpRuntimeServer:
         self.version = version
         self.logger = logger or logging.getLogger("mcp_runtime.server")
         self._server: asyncio.AbstractServer | None = None
+        self._writers: set[asyncio.StreamWriter] = set()
         self._closed = asyncio.Event()
 
     async def start(self) -> None:
@@ -66,7 +67,14 @@ class McpRuntimeServer:
         self._closed.set()
         if self._server is not None:
             self._server.close()
-            await self._server.wait_closed()
+            # Close connected clients first: since Python 3.12 wait_closed()
+            # also waits for active connections, which would hang shutdown.
+            for writer in list(self._writers):
+                writer.close()
+            try:
+                await asyncio.wait_for(self._server.wait_closed(), timeout=2)
+            except asyncio.TimeoutError:
+                self.logger.warning("mcp runtime shutdown timed out")
             self._server = None
         await self.manager.close_all()
         try:
@@ -80,6 +88,7 @@ class McpRuntimeServer:
         writer: asyncio.StreamWriter,
     ) -> None:
         owner = uuid.uuid4().hex
+        self._writers.add(writer)
         try:
             while True:
                 line = await reader.readline()
@@ -90,6 +99,7 @@ class McpRuntimeServer:
                     writer.write(response)
                     await writer.drain()
         finally:
+            self._writers.discard(writer)
             await self.manager.close_owner(owner)
             writer.close()
             try:

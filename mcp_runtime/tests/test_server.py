@@ -121,6 +121,11 @@ class McpRuntimeServerTest(unittest.IsolatedAsyncioTestCase):
         response = json.loads(line.decode("utf-8"))
         self.assertEqual(response["error"]["code"], "PARSE_ERROR")
 
+    async def test_close_with_connected_client_completes(self) -> None:
+        await asyncio.wait_for(self.server.close(), timeout=2.0)
+        self.assertFalse(Path(self.socket_path).exists())
+        self.assertNotIn(self.writer, self.server._writers)
+
     async def test_disconnect_closes_owned_sessions(self) -> None:
         opened = await self.rpc(1, "mcp.open", {
             "server_name": "math",
