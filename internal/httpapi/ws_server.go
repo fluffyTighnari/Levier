@@ -8,6 +8,8 @@ package httpapi
 import (
 	"context"
 	"encoding/json"
+	"errors"
+	"log/slog"
 	"net/http"
 	"sync"
 	"time"
@@ -18,19 +20,116 @@ import (
 	"github.com/fluffyTighnari/middleware/internal/observe"
 )
 
+const (
+	wsSinkQueueMessages = 4096
+	wsSinkQueueBytes    = 4 << 20
+)
+
+var errWSSinkClosed = errors.New("websocket sink is closed")
+
+// wsSink decouples Control from socket writes. A subscriber that stops reading
+// fills the bounded queue and is disconnected instead of stalling the event loop.
 type wsSink struct {
-	conn *websocket.Conn
-	mu   sync.Mutex
+	conn  *websocket.Conn
+	appID string
+	log   *slog.Logger
+
+	queue   chan []byte
+	done    chan struct{}
+	once    sync.Once
+	mu      sync.Mutex
+	pending int
+}
+
+func newWSSink(conn *websocket.Conn, appID string, log *slog.Logger) *wsSink {
+	sink := &wsSink{
+		conn:  conn,
+		appID: appID,
+		log:   log,
+		queue: make(chan []byte, wsSinkQueueMessages),
+		done:  make(chan struct{}),
+	}
+	go sink.writeLoop()
+	return sink
 }
 
 func (s *wsSink) Send(payload []byte) error {
+	select {
+	case <-s.done:
+		return errWSSinkClosed
+	default:
+	}
+	s.mu.Lock()
+	if s.pending+len(payload) > wsSinkQueueBytes {
+		pending := s.pending
+		s.mu.Unlock()
+		s.warnSlowConsumer(pending, len(payload))
+		_ = s.Close()
+		return errWSSinkClosed
+	}
+	s.pending += len(payload)
+	s.mu.Unlock()
+
+	select {
+	case s.queue <- payload:
+		return nil
+	case <-s.done:
+		s.release(len(payload))
+		return errWSSinkClosed
+	default:
+		s.release(len(payload))
+		s.warnSlowConsumer(s.pendingOf(), len(payload))
+		_ = s.Close()
+		return errWSSinkClosed
+	}
+}
+
+func (s *wsSink) writeLoop() {
+	for {
+		select {
+		case <-s.done:
+			return
+		case payload := <-s.queue:
+			if err := websocket.Message.Send(s.conn, string(payload)); err != nil {
+				_ = s.Close()
+				return
+			}
+			s.release(len(payload))
+		}
+	}
+}
+
+func (s *wsSink) release(size int) {
+	s.mu.Lock()
+	s.pending -= size
+	if s.pending < 0 {
+		s.pending = 0
+	}
+	s.mu.Unlock()
+}
+
+func (s *wsSink) pendingOf() int {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	return websocket.Message.Send(s.conn, string(payload))
+	return s.pending
+}
+
+func (s *wsSink) warnSlowConsumer(pending, payload int) {
+	if s.log != nil {
+		s.log.Warn("app websocket slow consumer",
+			observe.FieldAppID, s.appID,
+			"pending_bytes", pending,
+			"payload_bytes", payload,
+		)
+	}
 }
 
 func (s *wsSink) Close() error {
-	return s.conn.Close()
+	s.once.Do(func() {
+		close(s.done)
+		_ = s.conn.Close()
+	})
+	return nil
 }
 
 func (s *Server) websocketHandler(handler func(*websocket.Conn)) http.Handler {
@@ -84,7 +183,7 @@ func (s *Server) handleWS(conn *websocket.Conn) {
 		)
 	}()
 
-	appConn := s.appHub.Register(appID, &wsSink{conn: conn})
+	appConn := s.appHub.Register(appID, newWSSink(conn, appID, s.log))
 	defer s.appHub.CloseConn(appConn)
 
 	for {
