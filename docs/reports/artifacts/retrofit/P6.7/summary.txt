@@ -1,0 +1,7 @@
+step: P6.7
+commit: 343f707
+time_utc: 2026-11-11T03:15:38Z
+expected: every local call has exactly one TOOL_CALL_BEGIN then one TOOL_CALL_END with complete fields; no orphan events
+observed: run 01M749HVT28BBMZ2F29HPH027K has 3 invocations, each begins=1 ends=1 with begin_seq < end_seq (4<5, 8<9, 12<13); 0 incomplete fields; global scan over all runs finds 0 pairing mismatches
+evidence: tool_events.txt, db_invocation.txt, tool_host.log, submit_run.json, middleware.log, harness.log
+design: gateway emits BEGIN with invocation_id/tool_name/arguments_json and END with ok/duration_ms/result_json or error_code
