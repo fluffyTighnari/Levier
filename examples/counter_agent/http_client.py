@@ -332,16 +332,19 @@ class AppClient:
         )
         return self.transport.send(request)
 
-    def create_run(self, payload: dict) -> HttpResponse:
+    def create_run(self, payload: dict, request_id: str = "") -> HttpResponse:
         """POST /api/v1/runs with the App key."""
+        headers = {
+            "Authorization": "Bearer " + self.api_key.reveal(),
+            "Content-Type": "application/json",
+            "Accept": "application/json",
+        }
+        if request_id:
+            headers["X-Request-ID"] = request_id
         request = HttpRequest(
             method="POST",
             url=self.mw_url + "/api/v1/runs",
-            headers={
-                "Authorization": "Bearer " + self.api_key.reveal(),
-                "Content-Type": "application/json",
-                "Accept": "application/json",
-            },
+            headers=headers,
             body=json.dumps(payload, separators=(",", ":")).encode("utf-8"),
         )
         return self.transport.send(request)
