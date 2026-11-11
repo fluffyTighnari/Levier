@@ -1,0 +1,25 @@
+ seq |       type        |          tool           |  ok  |                                                          result                                                           |  status   
+-----+-------------------+-------------------------+------+---------------------------------------------------------------------------------------------------------------------------+-----------
+   1 | RUN_STATUS        |                         |      |                                                                                                                           | running
+   2 | USAGE             |                         |      |                                                                                                                           | 
+   3 | MESSAGE_COMPLETED |                         |      |                                                                                                                           | 
+   4 | TOOL_CALL_BEGIN   | mcp__m3echo__echo_token |      |                                                                                                                           | 
+   5 | TOOL_CALL_END     | mcp__m3echo__echo_token | true | {"content":[{"type":"text","text":"m3-secret-value"}],"structured_content":{"result":"m3-secret-value"},"is_error":false} | 
+   6 | USAGE             |                         |      |                                                                                                                           | 
+   7 | MESSAGE_COMPLETED |                         |      |                                                                                                                           | 
+   8 | RUN_STATUS        |                         |      |                                                                                                                           | completed
+(8 rows)
+
+ mcp_invocations 
+-----------------
+               0
+(1 row)
+
+         content          
+--------------------------
+ I'll call that tool now.
+ The tool returned:      +
+                         +
+ **m3-secret-value**
+(2 rows)
+

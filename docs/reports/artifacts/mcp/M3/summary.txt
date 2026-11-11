@@ -1,0 +1,4 @@
+step: M3 end-to-end MCP via TaskAssign
+expected: catalog + app mcp_refs -> TaskAssign.mcp_bindings -> Harness opens runtime session -> model calls mcp tool -> result returns -> run completes without gateway invocation rows
+observed: catalog m3echo registered; TaskAssign mcp_binding_count=1 server=m3echo transport=stdio allowed=1; runtime session opened/closed; TOOL_CALL_BEGIN/END mcp__m3echo__echo_token ok=true result contains m3-secret-value; final message reports it; run completed; tool_invocations=0; secret absent from middleware/harness/runtime logs
+evidence: catalog.json, app.json, db_refs.txt, harness.log, runtime.log, db_run.txt, submit_run.json, middleware.log
