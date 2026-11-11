@@ -1,0 +1,6 @@
+=== RUN   TestListActiveRunsAndRequeue
+--- PASS: TestListActiveRunsAndRequeue (0.08s)
+=== RUN   TestRequeueRunKeepsTerminalAttempt
+--- PASS: TestRequeueRunKeepsTerminalAttempt (0.05s)
+PASS
+ok  	github.com/fluffyTighnari/middleware/internal/runstore	0.468s
