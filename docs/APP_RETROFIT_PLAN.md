@@ -113,6 +113,7 @@ DEEPSEEK_MODEL    ← deepseek-flash
 | P7 | 持久化与观测 | DB/日志/指标可核对 |
 | P8 | 语言无关 | Python HTTP + Node WS |
 | P8R | 结构与接入面 | 分层清晰、契约单一来源、App/Daemon 可自助接入 |
+| P8C | Agent Core 抽取 | 语言无关的循环/工具/事件主干；Python 先行，TS 按需 |
 | P9 | 负向与故障 | 指定错误码/恢复 |
 | P10 | 回归与收口 | 一键脚本可重复 |
 
@@ -448,6 +449,140 @@ P8R.7 只做：
 过度抽象        只拆文件 + 常量，不引入新接口
 checker 漂移     checker 只做客户端，不复制业务
 ```
+
+---
+
+## P8C Agent Core 抽取
+
+目标：把现有 harness 的“主干”抽出来，做成语言无关的 Agent Core；
+Python 先实现，未来 TS daemon 按同一契约再实现一次。
+
+### 背景
+
+当前 `harness` 同时承担：
+
+```text
+TaskAssign / Ack / Cancel
+Agent 循环
+工具路由（local / global / MCP）
+事件映射
+checkpoint
+```
+
+结果是每种新 runtime 都要重复实现循环、事件和工具编排。
+
+### 目标
+
+```text
+core     循环、状态、工具编排、事件、取消
+adapter  TaskAssign ↔ RunSpec、CoreEvent ↔ MW Event、ToolCall ↔ bridge/MCP
+MW       调度、租约、重试、持久化（不变）
+```
+
+### 非目标
+
+```text
+core 不接 MCP
+core 不持久化
+core 不调度
+不新增 daemon
+不引入插件系统 / DI
+第一步不改变现有行为
+```
+
+### 边界
+
+```text
+core 输入   RunSpec(messages, tools, model, max_steps, timeouts, session_id)
+core 输出   CoreEvent 流 + RunResult
+core 接口   ModelProvider / ToolProvider / abort
+adapter     transport、MW 事件、工具桥、凭据、checkpoint
+```
+
+事件词汇（先定稳定子集）：
+
+```text
+run_started
+step_started
+message_delta
+message_completed
+usage
+tool_started
+tool_finished
+run_finished(status)
+error(code, message, retryable)
+```
+
+适配层负责映射到 MW：
+
+```text
+RUN_STATUS / MESSAGE_DELTA / MESSAGE_COMPLETED
+USAGE / TOOL_CALL_BEGIN / TOOL_CALL_END / ERROR
+```
+
+### 现有代码去向
+
+| 现有 | 去向 |
+|---|---|
+| `strategies/react.py` | `agent_core` 循环 |
+| `tools/router.py` | core 只调 `ToolProvider`；路由留在 adapter |
+| `runtime/manager.py` | adapter |
+| `runtime/checkpoint.py` | adapter（core 只暴露 messages/step） |
+| `llm/*` | provider adapter |
+| `channel/*` | adapter |
+| MCP client | adapter |
+
+### 语言策略
+
+```text
+第一阶段：Python core + 现有 harness adapter
+未来：需要 TS daemon 时，再写 TS core + TS adapter
+共享：契约文档 + 语言无关 conformance fixtures
+```
+
+不在现在重写 TS；契约和 fixtures 先行。
+
+### 工作包
+
+| ID | 内容 | 产出 | 验收 |
+|---|---|---|---|
+| P8C.1 | 契约与类型 | `docs/AGENT_CORE_CONTRACT.md`、RunSpec/CoreEvent 类型 | 事件顺序与边界评审通过 |
+| P8C.2 | 抽循环 | core loop + fake provider/tool | 现有 82 测试保持通过 |
+| P8C.3 | 抽工具编排 | ToolProvider + adapter 路由 | local/global/MCP 行为不变 |
+| P8C.4 | Conformance | fixtures + golden events | Python core 全部通过 |
+| P8C.5 | TS core（按需） | TS 实现 + TS adapter | 同一 fixtures 通过 |
+| P8C.6 | 回归 | P6C/P6D/P7 parity | e2e 与指标一致 |
+
+### 评估指标
+
+```text
+core 不 import harness / middleware / mcp_runtime
+adapter ≤ 300 行/语言
+事件映射只有一个文件
+82 个 harness 测试保持通过
+P6C/P6D/P7 parity
+conformance fixtures 通过
+不出现双状态源
+```
+
+### 风险
+
+```text
+抽取改行为      纯移动优先，golden 事件对比
+过度通用        只抽循环/工具/事件，不做插件系统
+TS 漂移         语言无关 fixtures，先契约后实现
+checkpoint 双写  MW 唯一持久化，core 按 attempt 重建
+重试冲突        core 不重试；由 adapter/MW 决定
+```
+
+### 顺序
+
+```text
+P8C.1 契约 → P8C.2 抽循环 → P8C.3 工具 → P8C.4 conformance
+→ P8C.6 回归 → （需要时）P8C.5 TS
+```
+
+**当前进度**：计划完成；P8C.1 待开始。
 
 ---
 
