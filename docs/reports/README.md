@@ -138,6 +138,7 @@
 | `docs/reports/P8R.2.md` | P8R.2：契约常量与错误码单一来源 |
 | `docs/reports/P8R.3.md` | P8R.3：拆分 control/httpapi/register/runstore |
 | `docs/reports/P8R.4.md` | P8R.4：错误码与事件字段一致性 |
+| `docs/reports/P8R.5.md` | P8R.5：App 接入套件与自检 |
 | `docs/reports/RETROFIT-E2E.md` | App 改造 P10：回归与一键收口 |
 | `docs/APP_ONBOARDING.md` | 任意 App 接入 Middleware 的标准流程 |
 

@@ -494,7 +494,54 @@ ws_token      只放内存，不入库
 
 ---
 
-## 15. 相关文档
+## 15. 自检
+
+协议自检：
+
+```sh
+python3 scripts/app_check.py --credentials /path/to/app.json
+```
+
+检查：
+
+```text
+GET /healthz
+GET /apps/{id} 200；错误 key 401
+可选：POST /apps 注册工具
+POST /ws-token
+WS hello + ping/pong
+未知 invocation → LOCAL_TOOL_UNKNOWN
+非法消息 → BAD_MESSAGE
+可选：subscribe → caught_up
+非法 ws_token 被拒绝
+```
+
+真实工具自检（App 必须已经在运行）：
+
+```sh
+python3 scripts/app_check.py   --credentials /path/to/app.json   --run-tool   --tool-name counter_add   --arguments '{"delta":2}'   --expect-substring 'value'
+```
+
+退出码：
+
+```text
+0  通过
+1  失败（stderr 给出具体检查项）
+```
+
+`--json` 输出适合 CI 解析。
+
+机器可读契约：
+
+```text
+docs/api/openapi.yaml            HTTP
+contracts/app-ws.schema.json     WebSocket v1
+internal/errs/errors.go          错误码
+```
+
+---
+
+## 16. 相关文档
 
 ```text
 docs/DESIGN.md                  架构与契约
@@ -504,4 +551,5 @@ docs/reports/RETROFIT-P6.3.md   工具调用下发
 docs/reports/RETROFIT-P6.4.md   工具结果回传
 docs/reports/RETROFIT-P6C.md    与基线对照
 docs/MCP.md                     MCP 接入与运行
+contracts/README.md             机器可读契约索引
 ```

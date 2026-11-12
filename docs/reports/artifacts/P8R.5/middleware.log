@@ -1,0 +1,19 @@
+{"time":"2026-11-12T11:12:11.818088+08:00","level":"INFO","msg":"middleware starting","config":"config.example.yaml","database":"connected","grpc_addr":":9090","http_addr":":8080"}
+{"time":"2026-11-12T11:12:12.12138+08:00","level":"INFO","msg":"http request","request_id":"01M76VVMTSZ7FZ1F0AKZ0KXTKP","method":"GET","route":"GET /api/v1/apps/{app_id}","status":401,"duration_ms":0,"remote_addr":"127.0.0.1:50472"}
+{"time":"2026-11-12T11:12:12.125914+08:00","level":"INFO","msg":"ws connected","app_id":"app_01M76VVMR1ARQGRVJS63MXC9ZV","remote_addr":"127.0.0.1:50475"}
+{"time":"2026-11-12T11:12:12.126328+08:00","level":"INFO","msg":"ws disconnected","app_id":"app_01M76VVMR1ARQGRVJS63MXC9ZV","duration_ms":0}
+{"time":"2026-11-12T11:12:12.126458+08:00","level":"INFO","msg":"http request","request_id":"01M76VVMTY5BKQNH7AT6BFMQND","method":"GET","route":"/api/v1/ws","status":403,"duration_ms":0,"remote_addr":"127.0.0.1:50476"}
+{"time":"2026-11-12T11:12:22.501696+08:00","level":"INFO","msg":"ws connected","app_id":"app_01M76VVMR1ARQGRVJS63MXC9ZV","remote_addr":"127.0.0.1:50483"}
+{"time":"2026-11-12T11:12:22.573374+08:00","level":"INFO","msg":"http request","request_id":"01M76VVZ1D6G0W34HAYG67KYVC","method":"GET","route":"GET /api/v1/apps/{app_id}","status":401,"duration_ms":0,"remote_addr":"127.0.0.1:50486"}
+{"time":"2026-11-12T11:12:22.574139+08:00","level":"INFO","msg":"ws connected","app_id":"app_01M76VVMR1ARQGRVJS63MXC9ZV","remote_addr":"127.0.0.1:50488"}
+{"time":"2026-11-12T11:12:22.574588+08:00","level":"INFO","msg":"ws disconnected","app_id":"app_01M76VVMR1ARQGRVJS63MXC9ZV","duration_ms":0}
+{"time":"2026-11-12T11:12:22.574696+08:00","level":"INFO","msg":"http request","request_id":"01M76VVZ1E4H642RNHNCECQCMZ","method":"GET","route":"/api/v1/ws","status":403,"duration_ms":0,"remote_addr":"127.0.0.1:50489"}
+{"time":"2026-11-12T11:12:22.715295+08:00","level":"INFO","msg":"control assigned run","run_id":"01M76VVZ1FNS2RYF46AJ8YXYKE","trace_id":"01M76VVZ1E4H642RNHNFMESBE1","app_id":"app_01M76VVMR1ARQGRVJS63MXC9ZV","attempt":1,"lease_epoch":1,"daemon_id":"daemon-local-1","runtime":"normal","strategy":"react"}
+{"time":"2026-11-12T11:12:24.695823+08:00","level":"INFO","msg":"control run terminal","run_id":"01M76VVZ1FNS2RYF46AJ8YXYKE","trace_id":"01M76VVZ1E4H642RNHNFMESBE1","app_id":"app_01M76VVMR1ARQGRVJS63MXC9ZV","attempt":1,"status":"completed"}
+{"time":"2026-11-12T11:12:34.283144+08:00","level":"INFO","msg":"ws disconnected","app_id":"app_01M76VVMR1ARQGRVJS63MXC9ZV","duration_ms":11781}
+{"time":"2026-11-12T11:12:34.354006+08:00","level":"INFO","msg":"http request","request_id":"01M76VWAHHN0BGT6X2376DSMY8","method":"GET","route":"GET /api/v1/apps/{app_id}","status":401,"duration_ms":0,"remote_addr":"127.0.0.1:50504"}
+{"time":"2026-11-12T11:12:34.354812+08:00","level":"INFO","msg":"ws connected","app_id":"app_01M76VVMR1ARQGRVJS63MXC9ZV","remote_addr":"127.0.0.1:50506"}
+{"time":"2026-11-12T11:12:34.355254+08:00","level":"INFO","msg":"ws disconnected","app_id":"app_01M76VVMR1ARQGRVJS63MXC9ZV","duration_ms":0}
+{"time":"2026-11-12T11:12:34.355375+08:00","level":"INFO","msg":"http request","request_id":"01M76VWAHK8QQFNCZ3SQ6PFQQ7","method":"GET","route":"/api/v1/ws","status":403,"duration_ms":0,"remote_addr":"127.0.0.1:50507"}
+{"time":"2026-11-12T11:12:34.406674+08:00","level":"INFO","msg":"control assigned run","run_id":"01M76VWAHK8QQFNCZ3SWWXRJ9E","trace_id":"01M76VWAHK8QQFNCZ3SSTPTGSH","app_id":"app_01M76VVMR1ARQGRVJS63MXC9ZV","attempt":1,"lease_epoch":1,"daemon_id":"daemon-local-1","runtime":"normal","strategy":"react"}
+{"time":"2026-11-12T11:12:36.469192+08:00","level":"INFO","msg":"control run terminal","run_id":"01M76VWAHK8QQFNCZ3SWWXRJ9E","trace_id":"01M76VWAHK8QQFNCZ3SSTPTGSH","app_id":"app_01M76VVMR1ARQGRVJS63MXC9ZV","attempt":1,"status":"completed"}

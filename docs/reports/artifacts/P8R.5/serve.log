@@ -1,0 +1,2 @@
+{"app_id": "app_01M76VVMR1ARQGRVJS63MXC9ZV", "app_name": "p85-app-1794453131", "counter": 0, "registered_tools": ["counter_add", "counter_get", "counter_reset"], "serving": true}
+{"counter": 2, "local_tool_call": {"arguments_json": "{\"delta\": 2}", "invocation_id": "01M76VW0455PDKGTSAW0RAFWQ9", "msg_id": "01M76VW04F84RSKNF00MM7V8VA", "tool_name": "counter_add"}, "local_tool_result": {"correlation_id": "01M76VW04F84RSKNF00MM7V8VA", "invocation_id": "01M76VW0455PDKGTSAW0RAFWQ9", "ok": true, "result_json": "{\"value\": 2}", "type": "local_tool_result"}}

@@ -1,0 +1,147 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://middleware.local/contracts/app-ws.schema.json",
+  "title": "Middleware App WebSocket messages (v1)",
+  "description": "App<->Middleware WebSocket contract. arguments_json and result_json are strings containing JSON text.",
+  "oneOf": [
+    { "$ref": "#/$defs/hello" },
+    { "$ref": "#/$defs/subscribe" },
+    { "$ref": "#/$defs/ping" },
+    { "$ref": "#/$defs/localToolResult" },
+    { "$ref": "#/$defs/event" },
+    { "$ref": "#/$defs/localToolCall" },
+    { "$ref": "#/$defs/runCompleted" },
+    { "$ref": "#/$defs/pong" },
+    { "$ref": "#/$defs/caughtUp" },
+    { "$ref": "#/$defs/error" }
+  ],
+  "$defs": {
+    "errorBody": {
+      "type": "object",
+      "required": ["code", "message"],
+      "properties": {
+        "code": { "type": "string" },
+        "message": { "type": "string" },
+        "retryable": { "type": "boolean" },
+        "request_id": { "type": "string" }
+      },
+      "additionalProperties": true
+    },
+    "hello": {
+      "type": "object",
+      "required": ["type", "protocol"],
+      "properties": {
+        "type": { "const": "hello" },
+        "protocol": { "const": 1 },
+        "client": { "type": "string" },
+        "version": { "type": "string" }
+      },
+      "additionalProperties": false
+    },
+    "subscribe": {
+      "type": "object",
+      "required": ["type", "run_id"],
+      "properties": {
+        "type": { "const": "subscribe" },
+        "run_id": { "type": "string", "minLength": 1 },
+        "last_attempt": { "type": "integer", "minimum": 0 },
+        "last_seq": { "type": "integer", "minimum": 0 }
+      },
+      "additionalProperties": false
+    },
+    "ping": {
+      "type": "object",
+      "required": ["type"],
+      "properties": { "type": { "const": "ping" } },
+      "additionalProperties": false
+    },
+    "localToolResult": {
+      "type": "object",
+      "required": ["type", "correlation_id", "invocation_id", "ok"],
+      "properties": {
+        "type": { "const": "local_tool_result" },
+        "correlation_id": { "type": "string", "minLength": 1 },
+        "invocation_id": { "type": "string", "minLength": 1 },
+        "ok": { "type": "boolean" },
+        "result_json": { "type": "string" },
+        "error": { "$ref": "#/$defs/errorBody" }
+      },
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": { "properties": { "ok": { "const": true } }, "required": ["ok"] },
+          "then": { "required": ["result_json"], "not": { "required": ["error"] } }
+        },
+        {
+          "if": { "properties": { "ok": { "const": false } }, "required": ["ok"] },
+          "then": { "required": ["error"] }
+        }
+      ]
+    },
+    "localToolCall": {
+      "type": "object",
+      "required": ["type", "msg_id", "invocation_id", "tool_name", "arguments_json", "timeout_ms"],
+      "properties": {
+        "type": { "const": "local_tool_call" },
+        "msg_id": { "type": "string", "minLength": 1 },
+        "invocation_id": { "type": "string", "minLength": 1 },
+        "tool_name": { "type": "string", "minLength": 1 },
+        "arguments_json": { "type": "string" },
+        "timeout_ms": { "type": "integer", "minimum": 1 }
+      },
+      "additionalProperties": false
+    },
+    "event": {
+      "type": "object",
+      "required": ["type", "run_id", "attempt", "seq", "source", "event_type", "data", "ts_ms"],
+      "properties": {
+        "type": { "const": "event" },
+        "run_id": { "type": "string", "minLength": 1 },
+        "attempt": { "type": "integer", "minimum": 1 },
+        "seq": { "type": "integer", "minimum": 1 },
+        "source": { "enum": ["daemon", "mw"] },
+        "event_type": { "type": "string", "minLength": 1 },
+        "data": { "type": "object" },
+        "ts_ms": { "type": "integer", "minimum": 0 }
+      },
+      "additionalProperties": false
+    },
+    "runCompleted": {
+      "type": "object",
+      "required": ["type", "run_id", "status", "attempt"],
+      "properties": {
+        "type": { "const": "run_completed" },
+        "run_id": { "type": "string", "minLength": 1 },
+        "status": { "enum": ["completed", "failed", "cancelled", "timeout"] },
+        "attempt": { "type": "integer", "minimum": 1 }
+      },
+      "additionalProperties": false
+    },
+    "pong": {
+      "type": "object",
+      "required": ["type"],
+      "properties": { "type": { "const": "pong" } },
+      "additionalProperties": false
+    },
+    "caughtUp": {
+      "type": "object",
+      "required": ["type", "run_id", "attempt", "seq"],
+      "properties": {
+        "type": { "const": "caught_up" },
+        "run_id": { "type": "string", "minLength": 1 },
+        "attempt": { "type": "integer", "minimum": 0 },
+        "seq": { "type": "integer", "minimum": 0 }
+      },
+      "additionalProperties": false
+    },
+    "error": {
+      "type": "object",
+      "required": ["type", "error"],
+      "properties": {
+        "type": { "const": "error" },
+        "error": { "$ref": "#/$defs/errorBody" }
+      },
+      "additionalProperties": false
+    }
+  }
+}
