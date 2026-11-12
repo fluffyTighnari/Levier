@@ -503,4 +503,5 @@ docs/reports/REGISTRATION-CONTRACT.md   注册合同实测
 docs/reports/RETROFIT-P6.3.md   工具调用下发
 docs/reports/RETROFIT-P6.4.md   工具结果回传
 docs/reports/RETROFIT-P6C.md    与基线对照
+docs/MCP.md                     MCP 接入与运行
 ```
