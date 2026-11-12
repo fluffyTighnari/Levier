@@ -1,0 +1,1 @@
+{"name":"e2e-echo","transport":"stdio","config":{"command":"mcp_runtime/.venv/bin/python","args":["mcp_runtime/tests/secret_echo_server.py"],"env":{"PROBE_TOKEN":"${secret:e2e_token}"}},"allowed_tools":["echo_token"]}

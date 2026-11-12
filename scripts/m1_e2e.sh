@@ -109,7 +109,7 @@ if ! grep -q 'mw_http_requests_total' "$ARTIFACT_DIR/metrics.txt"; then
 fi
 echo "metrics: available" | tee -a "$ARTIFACT_DIR/summary.txt"
 
-PYTHONPATH=harness/src/gen:harness/src "$HARNESS_PYTHON" \
+PYTHONPATH=agent_core/src:harness/src/gen:harness/src "$HARNESS_PYTHON" \
   -m middleware_harness --config "$HARNESS_CONFIG" >"$HARNESS_LOG" 2>&1 &
 HARNESS_PID=$!
 sleep 1.5

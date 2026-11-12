@@ -95,7 +95,7 @@ harness adapter      TaskAssign ↔ RunSpec、CoreEvent ↔ MW Event、工具桥
 ```
 
 契约：`docs/AGENT_CORE_CONTRACT.md`。
-当前只完成类型与契约，循环抽取在 P8C.2。
+P8C.2 已把 ReAct 循环搬入 core；harness 只保留 TaskAssign/事件/工具适配。
 
 ## 7. 明确不做的事
 

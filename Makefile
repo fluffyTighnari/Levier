@@ -68,10 +68,10 @@ proto-lint:
 
 contract-check: proto-lint
 	$(GO) test ./internal/protocol -run TestContractGolden -v
-	PYTHONPATH=harness/src/gen:harness/src $(PYTHON) tests/contract/test_contract.py -v
+	PYTHONPATH=agent_core/src:harness/src/gen:harness/src $(PYTHON) tests/contract/test_contract.py -v
 
 harness-test:
-	PYTHONPATH=harness/src/gen:harness/src $(PYTHON) -m unittest discover -s harness/tests -v
+	PYTHONPATH=agent_core/src:harness/src/gen:harness/src $(PYTHON) -m unittest discover -s harness/tests -v
 
 mcp-runtime-test:
 	PYTHONPATH=mcp_runtime/src $(MCP_PYTHON) -m unittest discover -s mcp_runtime/tests -v

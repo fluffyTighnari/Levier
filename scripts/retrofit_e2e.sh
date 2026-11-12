@@ -96,7 +96,7 @@ done
 curl -fsS "$MW_URL/healthz" >/dev/null 2>&1 || fail "Middleware did not become healthy"
 
 echo "== start Harness =="
-PYTHONPATH="harness/src/gen:harness/src" "$HARNESS_PYTHON" -m middleware_harness \
+PYTHONPATH="agent_core/src:harness/src/gen:harness/src" "$HARNESS_PYTHON" -m middleware_harness \
   --config "$HARNESS_CONFIG" >"$OUT/harness.log" 2>&1 &
 HARNESS_PID=$!
 sleep 2

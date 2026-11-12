@@ -19,6 +19,8 @@ from agent_core.events import (
     UsageEvent,
     event_to_dict,
 )
+from agent_core.errors import ProviderFailure
+from agent_core.loop import AgentCore
 from agent_core.protocols import AbortSignal, DeltaCallback, ModelProvider, ToolProvider
 from agent_core.types import (
     LLMResponse,
@@ -34,6 +36,8 @@ from agent_core.types import (
 
 __all__ = [
     "AbortSignal",
+    "AgentCore",
+    "ProviderFailure",
     "CoreEvent",
     "DeltaCallback",
     "ErrorEvent",

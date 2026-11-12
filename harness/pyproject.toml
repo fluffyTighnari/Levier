@@ -15,7 +15,11 @@ dependencies = [
     "protobuf>=7.36.2",
     "pydantic>=2.14.3",
     "PyYAML>=6.0",
+    "middleware-agent-core",
 ]
+
+[tool.uv.sources]
+middleware-agent-core = { path = "../agent_core", editable = true }
 
 [tool.setuptools.packages.find]
 where = ["src"]

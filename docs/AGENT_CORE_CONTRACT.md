@@ -38,6 +38,8 @@ core 持有 MCP 连接或凭据
 
 | 字段 | 类型 | 说明 |
 |---|---|---|
+| `run_id` | str | 事件关联用 |
+| `start_step` | int | 恢复时从哪一步开始（默认 1） |
 | `messages` | `Message[]` | 初始输入或 checkpoint 恢复的消息 |
 | `tools` | `ToolSpec[]` | 模型可用工具 |
 | `model` | `ModelRef` | provider/model + 非秘密参数 |
@@ -183,6 +185,13 @@ provider 调用与工具调用都必须可被 abort
 
 超时由 adapter 或 core 计时均可，但语义必须一致：
 超时产生稳定错误码，不抛裸异常。
+
+adapter 可以额外提供两个钩子：
+
+```text
+on_step_end(messages, step)   每步工具完成后（checkpoint）
+on_cancel(messages, step)     task 被取消、即将退出时（保存 checkpoint）
+```
 
 ## 7. Checkpoint / 恢复
 

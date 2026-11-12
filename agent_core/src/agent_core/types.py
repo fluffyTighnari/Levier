@@ -110,7 +110,9 @@ class ToolResult:
 class RunSpec:
     """Everything one run attempt needs."""
 
-    messages: list[Message]
+    run_id: str = ""
+    start_step: int = 1
+    messages: list[Message] = field(default_factory=list)
     tools: list[ToolSpec] = field(default_factory=list)
     model: ModelRef = field(default_factory=ModelRef)
     max_steps: int = 8

@@ -63,11 +63,17 @@ wheels = [
 ]
 
 [[package]]
+name = "middleware-agent-core"
+version = "0.1.0"
+source = { editable = "../agent_core" }
+
+[[package]]
 name = "middleware-harness"
 version = "0.1.0"
 source = { editable = "." }
 dependencies = [
     { name = "grpcio" },
+    { name = "middleware-agent-core" },
     { name = "protobuf" },
     { name = "pydantic" },
     { name = "pyyaml" },
@@ -76,6 +82,7 @@ dependencies = [
 [package.metadata]
 requires-dist = [
     { name = "grpcio", specifier = ">=1.75.0" },
+    { name = "middleware-agent-core", editable = "../agent_core" },
     { name = "protobuf", specifier = ">=7.36.2" },
     { name = "pydantic", specifier = ">=2.14.3" },
     { name = "pyyaml", specifier = ">=6.0" },
