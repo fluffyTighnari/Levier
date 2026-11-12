@@ -1,0 +1,49 @@
+cd examples/counter_agent && python3 -m unittest discover -s . -p 'test_*.py' -v
+test_p3_3_get_app_rejects_bad_key (test_app_auth.AppAuthTest) ... ok
+test_p3_3_get_app_request_and_response (test_app_auth.AppAuthTest) ... ok
+test_p3_3_rotate_key_request (test_app_auth.AppAuthTest) ... ok
+test_p3_4_update_tools_request (test_app_auth.AppAuthTest) ... ok
+test_p4_1_create_run_request (test_app_auth.AppAuthTest) ... ok
+test_p5_1_ws_token_request (test_app_auth.AppAuthTest) ... ok
+test_p2_3_duplicate_app_has_no_key (test_app_response.AppResponseTest) ... ok
+test_p2_3_error_envelope (test_app_response.AppResponseTest) ... ok
+test_p2_3_invalid_json_fails (test_app_response.AppResponseTest) ... ok
+test_p2_3_missing_app_id_fails (test_app_response.AppResponseTest) ... ok
+test_p2_3_parses_created_app (test_app_response.AppResponseTest) ... ok
+test_p2_1_defaults (test_config.ConfigTest) ... ok
+test_p2_1_overrides_and_trailing_slash (test_config.ConfigTest) ... ok
+test_p2_1_rejects_bad_url (test_config.ConfigTest) ... ok
+test_p2_1_requires_admin_token (test_config.ConfigTest) ... ok
+test_p2_1_secret_not_printed (test_config.ConfigTest) ... ok
+test_p3_3_rejects_group_readable_file (test_credentials.CredentialsTest) ... ok
+test_p3_3_rejects_missing_fields (test_credentials.CredentialsTest) ... ok
+test_p3_3_round_trip_and_mode (test_credentials.CredentialsTest) ... ok
+test_p1_2_dispatcher_counter_add (test_dispatch.DispatcherTest) ... ok
+test_p1_3_dispatcher_counter_get (test_dispatch.DispatcherTest) ... ok
+test_p1_4_dispatcher_counter_reset (test_dispatch.DispatcherTest) ... ok
+test_p1_5_unknown_tool (test_dispatch.DispatcherTest) ... ok
+test_p1_6_invalid_arguments (test_dispatch.DispatcherTest) ... ok
+test_p2_2_builds_admin_app_request (test_http_client.HttpRequestTest) ... ok
+test_p1_8_execute_tool_delegates_to_dispatcher (test_main.MainWiringTest) ... ok
+test_p1_8_main_tools_match_registration (test_main.MainWiringTest) ... ok
+test_p1_7_manifest_dual_shape (test_manifests.ManifestTest) ... ok
+test_p1_7_manifest_is_isolated (test_manifests.ManifestTest) ... ok
+test_ignores_call_without_correlation_ids (test_serve_runtime.ServeCallsTest) ... ok
+test_p6_4_serves_until_idle (test_serve_runtime.ServeCallsTest) ... ok
+test_run_completed_stops_serving (test_serve_runtime.ServeCallsTest) ... ok
+test_stops_at_receive_count (test_serve_runtime.ServeCallsTest) ... ok
+test_p1_1_counter_add_get_reset (test_tools.CounterTest) ... ok
+test_p1_1_counter_rejects_non_integer (test_tools.CounterTest) ... ok
+test_p1_1_tool_definitions_match_registration_shape (test_tools.CounterTest) ... ok
+test_p5_2_accept_key (test_ws_client.WebSocketTest) ... ok
+test_p5_2_builds_url (test_ws_client.WebSocketTest) ... ok
+test_p6_4_add_returns_correlated_result (test_ws_tool_host.LocalToolResultTest) ... ok
+test_p6_4_error_is_structured (test_ws_tool_host.LocalToolResultTest) ... ok
+test_p6_4_get_and_reset (test_ws_tool_host.LocalToolResultTest) ... ok
+test_p6_4_state_persists_across_calls (test_ws_tool_host.LocalToolResultTest) ... ok
+test_p6_4_unknown_tool (test_ws_tool_host.LocalToolResultTest) ... ok
+
+----------------------------------------------------------------------
+Ran 43 tests in 0.004s
+
+OK

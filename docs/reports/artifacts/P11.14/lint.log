@@ -1,0 +1,10 @@
+go vet ./...
+python3 scripts/check_secrets.py
+secret scan: FAIL
+  docs/MVP.md:231: deepseek key
+  docs/reports/P11.12.md:39: postgres password
+  docs/reports/P11.12.md:40: deepseek key
+  scripts/check_secrets.py:28: deepseek key
+  scripts/check_secrets.py:50: deepseek key
+Remove the secret or add a narrow allowlist entry with review.
+make: *** [secrets-check] Error 1

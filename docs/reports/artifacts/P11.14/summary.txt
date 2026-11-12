@@ -1,0 +1,18 @@
+step: P11.14 final MVP regression
+baseline: 2780fef
+build: pass
+lint: pass (fmt/vet/secret scan)
+go_test: pass (with PostgreSQL)
+go_race: pass
+agent_core: 18 tests pass
+harness: 85 tests pass
+mcp_runtime: 27 tests pass
+counter_agent: pass
+fault_matrix: 5 scenarios pass
+retrofit_e2e: PASS
+mcp_e2e: PASS
+daemon_check: PASS
+deps: 0 violations
+size: 0 files over 450 lines
+clean_checkout: pass
+verdict: PASS with documented residual risks

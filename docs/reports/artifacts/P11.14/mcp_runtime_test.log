@@ -1,0 +1,33 @@
+PYTHONPATH=mcp_runtime/src mcp_runtime/.venv/bin/python -m unittest discover -s mcp_runtime/tests -v
+test_missing_command_or_url (test_sdk_connector.SdkConnectorTest.test_missing_command_or_url) ... ok
+test_sse_transport (test_sdk_connector.SdkConnectorTest.test_sse_transport) ... ok
+test_stdio_transport (test_sdk_connector.SdkConnectorTest.test_stdio_transport) ... ok
+test_streamable_http_transport (test_sdk_connector.SdkConnectorTest.test_streamable_http_transport) ... ok
+test_resolves_command_args_env_url_headers (test_secrets.ResolveBindingTest.test_resolves_command_args_env_url_headers) ... ok
+test_chain_falls_back (test_secrets.ResolveStringTest.test_chain_falls_back) ... ok
+test_env_resolver_reads_prefixed_variable (test_secrets.ResolveStringTest.test_env_resolver_reads_prefixed_variable) ... ok
+test_file_resolver_load (test_secrets.ResolveStringTest.test_file_resolver_load) ... ok
+test_missing_secret_raises (test_secrets.ResolveStringTest.test_missing_secret_raises) ... ok
+test_plain_string_untouched (test_secrets.ResolveStringTest.test_plain_string_untouched) ... ok
+test_replaces_all_placeholders (test_secrets.ResolveStringTest.test_replaces_all_placeholders) ... ok
+test_close_with_connected_client_completes (test_server.McpRuntimeServerTest.test_close_with_connected_client_completes) ... ok
+test_disconnect_closes_owned_sessions (test_server.McpRuntimeServerTest.test_disconnect_closes_owned_sessions) ... ok
+test_health_open_call_close (test_server.McpRuntimeServerTest.test_health_open_call_close) ... ok
+test_invalid_json (test_server.McpRuntimeServerTest.test_invalid_json) ... ok
+test_unknown_method (test_server.McpRuntimeServerTest.test_unknown_method) ... ok
+test_call_maps_namespaced_tool_and_returns_text (test_sessions.SessionManagerTest.test_call_maps_namespaced_tool_and_returns_text) ... ok
+test_call_result_error_is_structured (test_sessions.SessionManagerTest.test_call_result_error_is_structured) ... ok
+test_call_timeout (test_sessions.SessionManagerTest.test_call_timeout) ... ok
+test_call_unknown_tool_is_denied (test_sessions.SessionManagerTest.test_call_unknown_tool_is_denied) ... ok
+test_close_and_close_owner (test_sessions.SessionManagerTest.test_close_and_close_owner) ... ok
+test_invalid_binding_is_rejected (test_sessions.SessionManagerTest.test_invalid_binding_is_rejected) ... ok
+test_open_empty_allowlist_includes_all_tools (test_sessions.SessionManagerTest.test_open_empty_allowlist_includes_all_tools) ... ok
+test_open_filters_allowed_tools_and_namespaces (test_sessions.SessionManagerTest.test_open_filters_allowed_tools_and_namespaces) ... ok
+test_open_missing_secret_fails_before_connect (test_sessions.SessionManagerTest.test_open_missing_secret_fails_before_connect) ... ok
+test_open_resolves_secret_placeholders (test_sessions.SessionManagerTest.test_open_resolves_secret_placeholders) ... ok
+test_open_and_call_stdio_server (test_stdio.StdioIntegrationTest.test_open_and_call_stdio_server) ... ok
+
+----------------------------------------------------------------------
+Ran 27 tests in 0.556s
+
+OK

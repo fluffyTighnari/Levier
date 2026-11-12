@@ -233,18 +233,31 @@ make secrets-check
 
 共享机器上仍建议使用独立的 App 名和数据库。
 
-## 8. 下一步硬化
+## 8. 已完成与剩余风险
 
-已登记但尚未完成的可用性修复：
+已完成的可用性修复：
 
 ```text
+R17 Hello 对账收敛
+R20 控制面终态事件 + timeout 清理
+R13 关键事件保护
+R14 Gateway panic 兜底
+R12 有界 replay / close-send
+R21 Harness 退避与出站背压
 R19b CreateRun + Enqueue 同事务
-R2   /readyz
-R8   自动密钥扫描
-R22  成功 HTTP 请求访问日志
+R2  /readyz
+R8  密钥扫描
+R22 成功请求访问日志
 ```
 
-R17/R20/R13/R14/R12/R21 已完成。
+仍未覆盖：
 
-这些不影响本文档的 demo 路径，但会影响故障场景下的最终收敛。
-逐项状态见 `docs/reports/AVAILABILITY-E3.md`。
+```text
+Docker Compose 真实构建/启动
+PostgreSQL 整体停机演练
+40s 长工具真实 E2E
+多 Harness / 多 MW / HA
+sandbox / longterm
+```
+
+最终回归见 `docs/reports/P11.14.md`。

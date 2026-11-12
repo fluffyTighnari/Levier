@@ -582,7 +582,7 @@ P8C.1 契约 → P8C.2 抽循环 → P8C.3 工具 → P8C.4 conformance
 → P8C.6 回归 → （需要时）P8C.5 TS
 ```
 
-**当前进度**：P8C 完成；P11.1 完成（`docs/reports/P11.1.md`）；P11.3 完成（`docs/reports/P11.3.md`）；P11.4 完成（`docs/reports/P11.4.md`）；P11.5 完成（`docs/reports/P11.5.md`）；P11.6 完成（`docs/reports/P11.6.md`）；P11.7 完成（`docs/reports/P11.7.md`）；P11.8 完成（`docs/reports/P11.8.md`）；P11.9 完成（`docs/reports/P11.9.md`）；P11.10 完成（`docs/reports/P11.10.md`）；P11.11 完成（`docs/reports/P11.11.md`）；P11.12 完成（`docs/reports/P11.12.md`）；P11.13 完成（`docs/reports/P11.13.md`）；下一步最终回归。
+**当前进度**：P8C 完成；P11.1 完成（`docs/reports/P11.1.md`）；P11.3 完成（`docs/reports/P11.3.md`）；P11.4 完成（`docs/reports/P11.4.md`）；P11.5 完成（`docs/reports/P11.5.md`）；P11.6 完成（`docs/reports/P11.6.md`）；P11.7 完成（`docs/reports/P11.7.md`）；P11.8 完成（`docs/reports/P11.8.md`）；P11.9 完成（`docs/reports/P11.9.md`）；P11.10 完成（`docs/reports/P11.10.md`）；P11.11 完成（`docs/reports/P11.11.md`）；P11.12 完成（`docs/reports/P11.12.md`）；P11.13 完成（`docs/reports/P11.13.md`）；P11.14 完成（`docs/reports/P11.14.md`）；P11 主干收口。
 
 ---
 
@@ -928,5 +928,9 @@ evidence: local_tool_result.json, tool_result.log
 | P11.6 | R14 Gateway panic | 工具 panic 兜底、single-flight 释放、错误码与超时上限 |
 | P11.7 | R12 replay/close | replay 有界、close/send 串行化 |
 | P11.8 | R21 Harness 韧性 | backoff 成功重置、出站满不阻塞心跳/Ack |
-| P11.9 | R19b + R2/R8/R22 | 创建 Run 与入队同事务、readyz、密钥扫描、访问日志 |
-| P11.10 | 故障矩阵与收口 | App 断线、Harness kill -9、MW 重启、DB 暂停、长工具、取消、超时 |
+| P11.9 | 故障矩阵 | App 断线、Harness kill -9、MW 重启、取消、超时 |
+| P11.10 | R19b | 创建 Run 与入队同事务 |
+| P11.11 | R2 | `/readyz` |
+| P11.12 | R8 | 密钥扫描与配置占位 |
+| P11.13 | R22 | 成功请求访问日志 |
+| P11.14 | 最终回归 | clean checkout + 全量测试 + E2E |
