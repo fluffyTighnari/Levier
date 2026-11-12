@@ -116,6 +116,17 @@ func (f *fakeRuns) AppendEvent(_ context.Context, event runstore.Event) (runstor
 	f.events = append(f.events, event)
 	return f.appendResult, nil
 }
+func (f *fakeRuns) AppendMWEvent(_ context.Context, event runstore.Event) (runstore.Event, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	event.Attempt = f.run.Attempt
+	event.LeaseEpoch = f.run.LeaseEpoch
+	event.Source = "mw"
+	event.Seq = runstore.MWSeqBase + int64(len(f.events)+1)
+	event.TSMs = time.Now().UnixMilli()
+	f.events = append(f.events, event)
+	return event, nil
+}
 
 type fakeHub struct {
 	mu           sync.Mutex
@@ -667,6 +678,12 @@ func TestHandleDaemonOfflineRequeues(t *testing.T) {
 	if tasks.enqueueCalls != 1 {
 		t.Fatalf("enqueue calls = %d", tasks.enqueueCalls)
 	}
+	if len(runs.events) != 1 || runs.events[0].Source != "mw" {
+		t.Fatalf("mw events = %+v", runs.events)
+	}
+	if !strings.Contains(string(runs.events[0].Payload), `"status":"queued"`) {
+		t.Fatalf("mw payload = %s", runs.events[0].Payload)
+	}
 }
 
 func TestCancelRunSendsCancelAndFailsTools(t *testing.T) {
@@ -698,6 +715,39 @@ func TestCancelRunSendsCancelAndFailsTools(t *testing.T) {
 	}
 	if hub.releaseCalls != 1 {
 		t.Fatalf("release calls = %d", hub.releaseCalls)
+	}
+	if len(runs.events) != 1 {
+		t.Fatalf("mw events = %+v", runs.events)
+	}
+	event := runs.events[0]
+	if event.Source != "mw" || event.Type != "RUN_STATUS" || event.Seq < runstore.MWSeqBase {
+		t.Fatalf("mw event = %+v", event)
+	}
+	if !strings.Contains(string(event.Payload), `"status":"cancelled"`) {
+		t.Fatalf("mw payload = %s", event.Payload)
+	}
+}
+
+func TestCancelQueuedRunWritesAttemptZeroEvent(t *testing.T) {
+	runs := &fakeRuns{run: newRun()}
+	runs.run.Status = "queued"
+	runs.run.Attempt = 0
+	runs.run.LeaseEpoch = 0
+	hub := &fakeHub{}
+	tasks := &fakeTaskCanceller{}
+	ctrl := New(runs, hub, Config{Tasks: tasks})
+	cancelled, err := ctrl.CancelRun(context.Background(), "run-1", "user")
+	if err != nil {
+		t.Fatalf("CancelRun() error = %v", err)
+	}
+	if cancelled.Status != runstore.StatusCancelled {
+		t.Fatalf("status = %q", cancelled.Status)
+	}
+	if len(runs.events) != 1 || runs.events[0].Attempt != 0 || runs.events[0].Source != "mw" {
+		t.Fatalf("mw events = %+v", runs.events)
+	}
+	if tasks.calls != 1 {
+		t.Fatalf("cancel tasks calls = %d", tasks.calls)
 	}
 }
 
@@ -739,7 +789,8 @@ func TestRunTimeoutTerminal(t *testing.T) {
 	runs.run.AssignedDaemonID = "d1"
 	hub := &fakeHub{}
 	localTools := &fakeLocalTools{}
-	ctrl := New(runs, hub, Config{LocalTools: localTools})
+	tasks := &fakeTaskCanceller{}
+	ctrl := New(runs, hub, Config{LocalTools: localTools, Tasks: tasks})
 	task := testTask()
 	task.Type = workflow.TaskTimeout
 
@@ -753,8 +804,17 @@ func TestRunTimeoutTerminal(t *testing.T) {
 	if len(hub.sent) != 1 || hub.sent[0].GetCancel() == nil {
 		t.Fatal("timeout did not send cancel")
 	}
+	if tasks.calls != 1 {
+		t.Fatalf("cancel tasks calls = %d, want 1", tasks.calls)
+	}
 	if localTools.code != "RUN_TIMEOUT" {
 		t.Fatalf("local tool code = %q", localTools.code)
+	}
+	if len(runs.events) != 1 || runs.events[0].Source != "mw" {
+		t.Fatalf("mw events = %+v", runs.events)
+	}
+	if !strings.Contains(string(runs.events[0].Payload), `"status":"timeout"`) {
+		t.Fatalf("mw payload = %s", runs.events[0].Payload)
 	}
 }
 

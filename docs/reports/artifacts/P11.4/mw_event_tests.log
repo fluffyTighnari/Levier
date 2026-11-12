@@ -1,0 +1,11 @@
+=== RUN   TestCancelQueuedRunWritesMWEvent
+2026/11/12 14:04:32 INFO control run cancelled run_id=run-01M775Q6FV7G261DH04EZ0JJQY trace_id=run-01M775Q6FV7G261DH04EZ0JJQY app_id=app-01M775Q6FT0TG6DBG8D7AQSW5F attempt=0 lease_epoch=0 reason=user
+--- PASS: TestCancelQueuedRunWritesMWEvent (0.06s)
+=== RUN   TestHandleDaemonOfflineRequeues
+2026/11/12 14:04:32 INFO control run requeued run_id=run-1 trace_id=trace-1 app_id=app-1 attempt=1 lease_epoch=1 reason="daemon lost"
+--- PASS: TestHandleDaemonOfflineRequeues (0.00s)
+=== RUN   TestRunTimeoutTerminal
+2026/11/12 14:04:32 INFO control run timed out run_id=run-1 trace_id=trace-1 app_id=app-1 attempt=1 lease_epoch=1
+--- PASS: TestRunTimeoutTerminal (0.00s)
+PASS
+ok  	github.com/fluffyTighnari/middleware/internal/control	0.505s

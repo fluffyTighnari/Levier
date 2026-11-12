@@ -158,3 +158,59 @@ func TestDispatchEchoRunEndToEnd(t *testing.T) {
 	current, _ := runs.GetRun(ctx, run.RunID)
 	t.Fatalf("run status = %q, want completed", current.Status)
 }
+
+func TestCancelQueuedRunWritesMWEvent(t *testing.T) {
+	pool := integrationPool(t)
+	ctx := context.Background()
+	runs := runstore.New(pool)
+	app, err := runs.CreateApp(ctx, runstore.App{
+		AppID:      "app-" + id.New(),
+		Name:       "app-" + id.New(),
+		APIKeyHash: "hash",
+	})
+	if err != nil {
+		t.Fatalf("CreateApp() error = %v", err)
+	}
+	run, err := runs.CreateRun(ctx, runstore.Run{
+		RunID:    "run-" + id.New(),
+		AppID:    app.AppID,
+		Runtime:  "normal",
+		Strategy: "echo",
+		Input:    json.RawMessage(`[{"role":"user","content":"hello"}]`),
+		Model:    json.RawMessage(`{"provider":"anthropic","model":"claude-test"}`),
+	})
+	if err != nil {
+		t.Fatalf("CreateRun() error = %v", err)
+	}
+
+	ctrl := New(runs, &fakeHub{}, Config{})
+	cancelled, err := ctrl.CancelRun(ctx, run.RunID, "user")
+	if err != nil {
+		t.Fatalf("CancelRun() error = %v", err)
+	}
+	if cancelled.Status != runstore.StatusCancelled {
+		t.Fatalf("status = %q", cancelled.Status)
+	}
+
+	events, err := runs.ListEvents(ctx, run.RunID, 0, 0, 10)
+	if err != nil {
+		t.Fatalf("ListEvents() error = %v", err)
+	}
+	if len(events) != 1 {
+		t.Fatalf("events = %+v", events)
+	}
+	event := events[0]
+	if event.Source != "mw" || event.Type != "RUN_STATUS" || event.Seq < runstore.MWSeqBase {
+		t.Fatalf("event = %+v", event)
+	}
+	if event.Attempt != 0 {
+		t.Fatalf("attempt = %d, want 0", event.Attempt)
+	}
+	var data map[string]string
+	if err := json.Unmarshal(event.Payload, &data); err != nil {
+		t.Fatalf("decode payload: %v", err)
+	}
+	if data["status"] != "cancelled" || data["reason"] != "user" {
+		t.Fatalf("payload = %s", event.Payload)
+	}
+}

@@ -69,6 +69,7 @@ type RunStore interface {
 	AssignRun(ctx context.Context, assignment runstore.Assignment) (runstore.Run, error)
 	Transition(ctx context.Context, transition runstore.Transition) (runstore.Run, error)
 	AppendEvent(ctx context.Context, event runstore.Event) (runstore.AppendResult, error)
+	AppendMWEvent(ctx context.Context, event runstore.Event) (runstore.Event, error)
 	ListActiveRuns(ctx context.Context) ([]runstore.Run, error)
 	ListActiveRunsForDaemon(ctx context.Context, daemonID string) ([]runstore.Run, error)
 	RequeueRun(ctx context.Context, runID string) (runstore.Run, error)

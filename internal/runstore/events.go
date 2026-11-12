@@ -74,7 +74,7 @@ func (s *Store) AppendEvent(ctx context.Context, event Event) (AppendResult, err
 		return AppendResult{}, fmt.Errorf("append event: insert: %w", err)
 	}
 	result.Inserted = tag.RowsAffected() > 0
-	if result.Inserted &&
+	if result.Inserted && normalized.Source == "daemon" &&
 		(normalized.Attempt > lastAttempt ||
 			(normalized.Attempt == lastAttempt && normalized.Seq > lastSeq)) {
 		if _, err := tx.Exec(ctx, `

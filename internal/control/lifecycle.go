@@ -14,6 +14,7 @@ import (
 
 	runtimev1 "github.com/fluffyTighnari/middleware/gen/middleware/runtime/v1"
 	"github.com/fluffyTighnari/middleware/internal/connection"
+	"github.com/fluffyTighnari/middleware/internal/observe"
 	"github.com/fluffyTighnari/middleware/internal/protocol"
 	"github.com/fluffyTighnari/middleware/internal/runstore"
 	"github.com/fluffyTighnari/middleware/internal/workflow"
@@ -217,6 +218,7 @@ func (c *Control) requeueRun(ctx context.Context, run runstore.Run, reason strin
 		}
 		return
 	}
+	c.appendMWStatus(ctx, requeued, runstore.StatusQueued, reason)
 	c.hub.Release(run.AssignedDaemonID)
 	c.cancelLocalTools(run.AppID, run.RunID, string(errs.CodeDaemonLost), reason)
 	if c.cfg.Tasks != nil {
@@ -226,6 +228,14 @@ func (c *Control) requeueRun(ctx context.Context, run runstore.Run, reason strin
 			c.log.Warn("control enqueue retry failed", "run_id", run.RunID, "err", err)
 		}
 	}
+	c.log.Info("control run requeued",
+		observe.FieldRunID, run.RunID,
+		observe.FieldTraceID, run.TraceID,
+		observe.FieldAppID, run.AppID,
+		observe.FieldAttempt, run.Attempt,
+		"lease_epoch", run.LeaseEpoch,
+		"reason", reason,
+	)
 }
 
 // CancelRun cancels one non-terminal run and notifies its daemon.
@@ -240,7 +250,6 @@ func (c *Control) CancelRun(ctx context.Context, runID, reason string) (runstore
 	if runstore.TerminalStatus(run.Status) {
 		return run, nil
 	}
-	c.sendCancel(ctx, run, reason)
 	cancelled, err := c.runs.Transition(ctx, runstore.Transition{
 		RunID:              run.RunID,
 		ExpectedStatus:     run.Status,
@@ -255,10 +264,20 @@ func (c *Control) CancelRun(ctx context.Context, runID, reason string) (runstore
 		}
 		return runstore.Run{}, fmt.Errorf("cancel run: %w", err)
 	}
+	c.sendCancel(ctx, cancelled, reason)
+	c.appendMWStatus(ctx, cancelled, runstore.StatusCancelled, reason)
 	c.hub.Release(run.AssignedDaemonID)
 	c.cancelTasks(ctx, runID, reason)
 	c.cancelLocalTools(run.AppID, runID, string(errs.CodeRunCancelled), reason)
 	c.publishCompleted(run.AppID, runID, runstore.StatusCancelled, run.Attempt)
+	c.log.Info("control run cancelled",
+		observe.FieldRunID, run.RunID,
+		observe.FieldTraceID, run.TraceID,
+		observe.FieldAppID, run.AppID,
+		observe.FieldAttempt, run.Attempt,
+		"lease_epoch", run.LeaseEpoch,
+		"reason", reason,
+	)
 	return cancelled, nil
 }
 
@@ -273,7 +292,6 @@ func (c *Control) handleTimeout(ctx context.Context, runID string) error {
 	if runstore.TerminalStatus(run.Status) {
 		return nil
 	}
-	c.sendCancel(ctx, run, "timeout")
 	timedOut, err := c.runs.Transition(ctx, runstore.Transition{
 		RunID:              run.RunID,
 		ExpectedStatus:     run.Status,
@@ -287,9 +305,19 @@ func (c *Control) handleTimeout(ctx context.Context, runID string) error {
 		}
 		return fmt.Errorf("timeout run: %w", err)
 	}
+	c.sendCancel(ctx, timedOut, "timeout")
+	c.appendMWStatus(ctx, timedOut, runstore.StatusTimeout, "timeout")
 	c.hub.Release(run.AssignedDaemonID)
+	c.cancelTasks(ctx, runID, "timeout")
 	c.cancelLocalTools(run.AppID, runID, string(errs.CodeRunTimeout), "run timed out")
 	c.publishCompleted(run.AppID, runID, runstore.StatusTimeout, timedOut.Attempt)
+	c.log.Info("control run timed out",
+		observe.FieldRunID, run.RunID,
+		observe.FieldTraceID, run.TraceID,
+		observe.FieldAppID, run.AppID,
+		observe.FieldAttempt, run.Attempt,
+		"lease_epoch", run.LeaseEpoch,
+	)
 	return nil
 }
 
@@ -318,6 +346,53 @@ func (c *Control) cancelTasks(ctx context.Context, runID, reason string) {
 func (c *Control) cancelLocalTools(appID, runID, code, message string) {
 	if c.cfg.LocalTools != nil && appID != "" {
 		c.cfg.LocalTools.CancelLocalTools(appID, runID, code, message)
+	}
+}
+
+func (c *Control) appendMWStatus(
+	ctx context.Context,
+	run runstore.Run,
+	status, reason string,
+) {
+	data := map[string]any{"status": status}
+	if reason != "" {
+		data["reason"] = reason
+	}
+	payload, err := json.Marshal(data)
+	if err != nil {
+		c.log.Warn("control encode mw event failed", "run_id", run.RunID, "err", err)
+		return
+	}
+	event, err := c.runs.AppendMWEvent(ctx, runstore.Event{
+		RunID:   run.RunID,
+		Type:    "RUN_STATUS",
+		Payload: payload,
+	})
+	if err != nil {
+		c.log.Warn("control append mw event failed",
+			observe.FieldRunID, run.RunID,
+			observe.FieldTraceID, run.TraceID,
+			"status", status,
+			"reason", reason,
+			"err", err,
+		)
+		return
+	}
+	if c.cfg.Publisher == nil || run.AppID == "" {
+		return
+	}
+	message, err := json.Marshal(map[string]any{
+		"type":       "event",
+		"run_id":     run.RunID,
+		"attempt":    event.Attempt,
+		"seq":        event.Seq,
+		"source":     event.Source,
+		"event_type": event.Type,
+		"data":       data,
+		"ts_ms":      event.TSMs,
+	})
+	if err == nil {
+		c.cfg.Publisher.Publish(run.AppID, run.RunID, message)
 	}
 }
 

@@ -819,3 +819,64 @@ func TestGetSession(t *testing.T) {
 		t.Fatalf("missing session error = %v", err)
 	}
 }
+
+func TestAppendMWEventUsesReservedSeq(t *testing.T) {
+	store := New(testPool(t))
+	ctx := context.Background()
+	app := createApp(t, store)
+	run, err := store.CreateRun(ctx, Run{
+		RunID:    "run-" + id.New(),
+		AppID:    app.AppID,
+		Runtime:  "normal",
+		Strategy: "echo",
+		Params:   json.RawMessage(`{}`),
+		Model:    json.RawMessage(`{"provider":"anthropic","model":"claude-test"}`),
+		TraceID:  "trace-mw",
+	})
+	if err != nil {
+		t.Fatalf("CreateRun() error = %v", err)
+	}
+
+	first, err := store.AppendMWEvent(ctx, Event{
+		RunID:   run.RunID,
+		Type:    "RUN_STATUS",
+		Payload: json.RawMessage(`{"status":"cancelled"}`),
+	})
+	if err != nil {
+		t.Fatalf("AppendMWEvent() error = %v", err)
+	}
+	if first.Source != "mw" || first.Seq < MWSeqBase {
+		t.Fatalf("event source/seq = %s/%d", first.Source, first.Seq)
+	}
+	if first.Attempt != 0 {
+		t.Fatalf("attempt = %d, want 0 for a queued run", first.Attempt)
+	}
+
+	second, err := store.AppendMWEvent(ctx, Event{
+		RunID:   run.RunID,
+		Type:    "RUN_STATUS",
+		Payload: json.RawMessage(`{"status":"timeout"}`),
+	})
+	if err != nil {
+		t.Fatalf("second AppendMWEvent() error = %v", err)
+	}
+	if second.Seq <= first.Seq {
+		t.Fatalf("seq did not advance: %d then %d", first.Seq, second.Seq)
+	}
+
+	got, err := store.GetRun(ctx, run.RunID)
+	if err != nil {
+		t.Fatalf("GetRun() error = %v", err)
+	}
+	if got.LastEventSeq != 0 {
+		t.Fatalf("MW event advanced daemon watermark to %d", got.LastEventSeq)
+	}
+
+	events, err := store.ListEvents(ctx, run.RunID, 0, 0, 10)
+	if err != nil {
+		t.Fatalf("ListEvents() error = %v", err)
+	}
+	if len(events) != 2 || events[0].Source != "mw" || events[1].Source != "mw" {
+		t.Fatalf("events = %+v", events)
+	}
+}
