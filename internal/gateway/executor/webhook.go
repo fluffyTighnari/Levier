@@ -11,6 +11,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/fluffyTighnari/middleware/internal/errs"
 	"io"
 	"net/http"
 	"strconv"
@@ -81,11 +82,11 @@ func ParseWebhookConfig(raw string) (WebhookConfig, error) {
 func (w *Webhook) Execute(ctx context.Context, call gateway.GlobalCall) (gateway.GlobalResult, error) {
 	cfg, err := ParseWebhookConfig(call.ToolConfigJSON)
 	if err != nil {
-		return failure("TOOL_EXEC_ERROR", err.Error(), false), nil
+		return failure(string(errs.CodeToolExecError), err.Error(), false), nil
 	}
 	args, err := parseArguments(call.ArgumentsJSON)
 	if err != nil {
-		return failure("TOOL_EXEC_ERROR", err.Error(), false), nil
+		return failure(string(errs.CodeToolExecError), err.Error(), false), nil
 	}
 	payload := cfg.Payload
 	if payload == "" {

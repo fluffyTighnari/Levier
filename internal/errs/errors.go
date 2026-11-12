@@ -13,25 +13,48 @@ import (
 type Code string
 
 const (
-	CodeNoDaemonAvailable   Code = "NO_DAEMON_AVAILABLE"
-	CodeQueueOverflow       Code = "QUEUE_OVERFLOW"
-	CodeQueueUnavailable    Code = "QUEUE_UNAVAILABLE"
-	CodeToolNotFound        Code = "TOOL_NOT_FOUND"
-	CodeToolTimeout         Code = "TOOL_TIMEOUT"
-	CodeToolDenied          Code = "TOOL_DENIED"
-	CodeToolExecError       Code = "TOOL_EXEC_ERROR"
-	CodeAppUnreachable      Code = "APP_UNREACHABLE"
-	CodeRunTimeout          Code = "RUN_TIMEOUT"
-	CodeRunCancelled        Code = "RUN_CANCELLED"
-	CodeDaemonLost          Code = "DAEMON_LOST"
-	CodeMaxAttemptsExceeded Code = "MAX_ATTEMPTS_EXCEEDED"
-	CodeBadEnvelope         Code = "BAD_ENVELOPE"
-	CodeSeqGap              Code = "SEQ_GAP"
-	CodeAuthFailed          Code = "AUTH_FAILED"
-	CodeTokenExpired        Code = "TOKEN_EXPIRED"
-	CodeWorkflowTaskDead    Code = "WORKFLOW_TASK_DEAD"
-	CodeWorkflowLeaseLost   Code = "WORKFLOW_LEASE_LOST"
-	CodeInternal            Code = "INTERNAL"
+	CodeNoDaemonAvailable            Code = "NO_DAEMON_AVAILABLE"
+	CodeQueueOverflow                Code = "QUEUE_OVERFLOW"
+	CodeQueueUnavailable             Code = "QUEUE_UNAVAILABLE"
+	CodeToolNotFound                 Code = "TOOL_NOT_FOUND"
+	CodeToolTimeout                  Code = "TOOL_TIMEOUT"
+	CodeToolDenied                   Code = "TOOL_DENIED"
+	CodeToolExecError                Code = "TOOL_EXEC_ERROR"
+	CodeAppUnreachable               Code = "APP_UNREACHABLE"
+	CodeRunTimeout                   Code = "RUN_TIMEOUT"
+	CodeRunCancelled                 Code = "RUN_CANCELLED"
+	CodeDaemonLost                   Code = "DAEMON_LOST"
+	CodeMaxAttemptsExceeded          Code = "MAX_ATTEMPTS_EXCEEDED"
+	CodeBadEnvelope                  Code = "BAD_ENVELOPE"
+	CodeSeqGap                       Code = "SEQ_GAP"
+	CodeAuthFailed                   Code = "AUTH_FAILED"
+	CodeTokenExpired                 Code = "TOKEN_EXPIRED"
+	CodeWorkflowTaskDead             Code = "WORKFLOW_TASK_DEAD"
+	CodeWorkflowLeaseLost            Code = "WORKFLOW_LEASE_LOST"
+	CodeInternal                     Code = "INTERNAL"
+	CodeBadRequest                   Code = "BAD_REQUEST"
+	CodeUnauthorized                 Code = "UNAUTHORIZED"
+	CodeForbidden                    Code = "FORBIDDEN"
+	CodeNotImplemented               Code = "NOT_IMPLEMENTED"
+	CodeDependencyUnavailable        Code = "DEPENDENCY_UNAVAILABLE"
+	CodeAppNotFound                  Code = "APP_NOT_FOUND"
+	CodeAppNameConflict              Code = "APP_NAME_CONFLICT"
+	CodeRunNotFound                  Code = "RUN_NOT_FOUND"
+	CodeSessionNotFound              Code = "SESSION_NOT_FOUND"
+	CodeIdempotencyConflict          Code = "IDEMPOTENCY_CONFLICT"
+	CodeBadTool                      Code = "BAD_TOOL"
+	CodeBadMCP                       Code = "BAD_MCP"
+	CodeBadMCPRef                    Code = "BAD_MCP_REF"
+	CodeMCPNotFound                  Code = "MCP_NOT_FOUND"
+	CodeMCPInUse                     Code = "MCP_IN_USE"
+	CodeBadMessage                   Code = "BAD_MESSAGE"
+	CodeReplayFailed                 Code = "REPLAY_FAILED"
+	CodeResponseTooLarge             Code = "RESPONSE_TOO_LARGE"
+	CodeToolNotAvailable             Code = "TOOL_NOT_AVAILABLE"
+	CodeToolBusy                     Code = "TOOL_BUSY"
+	CodeLocalToolUnknown             Code = "LOCAL_TOOL_UNKNOWN"
+	CodeLocalToolForbidden           Code = "LOCAL_TOOL_FORBIDDEN"
+	CodeLocalToolCorrelationMismatch Code = "LOCAL_TOOL_CORRELATION_MISMATCH"
 )
 
 // Error is the canonical middleware error.
@@ -109,45 +132,91 @@ func HTTPStatusOf(err error) int {
 }
 
 var retryableByCode = map[Code]bool{
-	CodeNoDaemonAvailable:   true,
-	CodeQueueOverflow:       false,
-	CodeQueueUnavailable:    true,
-	CodeToolNotFound:        false,
-	CodeToolTimeout:         true,
-	CodeToolDenied:          false,
-	CodeToolExecError:       false,
-	CodeAppUnreachable:      true,
-	CodeRunTimeout:          false,
-	CodeRunCancelled:        false,
-	CodeDaemonLost:          false,
-	CodeMaxAttemptsExceeded: false,
-	CodeBadEnvelope:         false,
-	CodeSeqGap:              false,
-	CodeAuthFailed:          false,
-	CodeTokenExpired:        false,
-	CodeWorkflowTaskDead:    false,
-	CodeWorkflowLeaseLost:   true,
-	CodeInternal:            false,
+	CodeNoDaemonAvailable:            true,
+	CodeQueueOverflow:                false,
+	CodeQueueUnavailable:             true,
+	CodeToolNotFound:                 false,
+	CodeToolTimeout:                  true,
+	CodeToolDenied:                   false,
+	CodeToolExecError:                false,
+	CodeAppUnreachable:               true,
+	CodeRunTimeout:                   false,
+	CodeRunCancelled:                 false,
+	CodeDaemonLost:                   false,
+	CodeMaxAttemptsExceeded:          false,
+	CodeBadEnvelope:                  false,
+	CodeSeqGap:                       false,
+	CodeAuthFailed:                   false,
+	CodeTokenExpired:                 false,
+	CodeWorkflowTaskDead:             false,
+	CodeWorkflowLeaseLost:            true,
+	CodeInternal:                     false,
+	CodeBadRequest:                   false,
+	CodeUnauthorized:                 false,
+	CodeForbidden:                    false,
+	CodeNotImplemented:               false,
+	CodeDependencyUnavailable:        true,
+	CodeAppNotFound:                  false,
+	CodeAppNameConflict:              false,
+	CodeRunNotFound:                  false,
+	CodeSessionNotFound:              false,
+	CodeIdempotencyConflict:          false,
+	CodeBadTool:                      false,
+	CodeBadMCP:                       false,
+	CodeBadMCPRef:                    false,
+	CodeMCPNotFound:                  false,
+	CodeMCPInUse:                     false,
+	CodeBadMessage:                   false,
+	CodeReplayFailed:                 false,
+	CodeResponseTooLarge:             false,
+	CodeToolNotAvailable:             false,
+	CodeToolBusy:                     true,
+	CodeLocalToolUnknown:             false,
+	CodeLocalToolForbidden:           false,
+	CodeLocalToolCorrelationMismatch: false,
 }
 
 var httpStatusByCode = map[Code]int{
-	CodeNoDaemonAvailable:   503,
-	CodeQueueOverflow:       429,
-	CodeQueueUnavailable:    503,
-	CodeToolNotFound:        404,
-	CodeToolTimeout:         504,
-	CodeToolDenied:          403,
-	CodeToolExecError:       502,
-	CodeAppUnreachable:      503,
-	CodeRunTimeout:          504,
-	CodeRunCancelled:        409,
-	CodeDaemonLost:          503,
-	CodeMaxAttemptsExceeded: 500,
-	CodeBadEnvelope:         400,
-	CodeSeqGap:              500,
-	CodeAuthFailed:          401,
-	CodeTokenExpired:        401,
-	CodeWorkflowTaskDead:    500,
-	CodeWorkflowLeaseLost:   409,
-	CodeInternal:            500,
+	CodeNoDaemonAvailable:            503,
+	CodeQueueOverflow:                429,
+	CodeQueueUnavailable:             503,
+	CodeToolNotFound:                 404,
+	CodeToolTimeout:                  504,
+	CodeToolDenied:                   403,
+	CodeToolExecError:                502,
+	CodeAppUnreachable:               503,
+	CodeRunTimeout:                   504,
+	CodeRunCancelled:                 409,
+	CodeDaemonLost:                   503,
+	CodeMaxAttemptsExceeded:          500,
+	CodeBadEnvelope:                  400,
+	CodeSeqGap:                       500,
+	CodeAuthFailed:                   401,
+	CodeTokenExpired:                 401,
+	CodeWorkflowTaskDead:             500,
+	CodeWorkflowLeaseLost:            409,
+	CodeInternal:                     500,
+	CodeBadRequest:                   400,
+	CodeUnauthorized:                 401,
+	CodeForbidden:                    403,
+	CodeNotImplemented:               501,
+	CodeDependencyUnavailable:        503,
+	CodeAppNotFound:                  404,
+	CodeAppNameConflict:              409,
+	CodeRunNotFound:                  404,
+	CodeSessionNotFound:              404,
+	CodeIdempotencyConflict:          409,
+	CodeBadTool:                      400,
+	CodeBadMCP:                       400,
+	CodeBadMCPRef:                    400,
+	CodeMCPNotFound:                  404,
+	CodeMCPInUse:                     409,
+	CodeBadMessage:                   400,
+	CodeReplayFailed:                 500,
+	CodeResponseTooLarge:             413,
+	CodeToolNotAvailable:             503,
+	CodeToolBusy:                     409,
+	CodeLocalToolUnknown:             404,
+	CodeLocalToolForbidden:           403,
+	CodeLocalToolCorrelationMismatch: 409,
 }

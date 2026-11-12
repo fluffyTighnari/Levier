@@ -8,6 +8,7 @@ package httpapi
 import (
 	"context"
 	"encoding/json"
+	"github.com/fluffyTighnari/middleware/internal/contract"
 	"net/http/httptest"
 	"strings"
 	"testing"
@@ -43,7 +44,7 @@ func TestWebSocketSubscribeAndPublish(t *testing.T) {
 	}
 	defer conn.Close()
 
-	subscribe, _ := json.Marshal(SubscribeMessage{Type: WSMessageSubscribe, RunID: "run-1"})
+	subscribe, _ := json.Marshal(SubscribeMessage{Type: contract.WSMessageSubscribe, RunID: "run-1"})
 	if err := websocket.Message.Send(conn, string(subscribe)); err != nil {
 		t.Fatalf("Send(subscribe) error = %v", err)
 	}
@@ -52,7 +53,7 @@ func TestWebSocketSubscribeAndPublish(t *testing.T) {
 		t.Fatalf("Receive(caught_up) error = %v", err)
 	}
 	var caughtUp CaughtUpMessage
-	if err := json.Unmarshal([]byte(raw), &caughtUp); err != nil || caughtUp.Type != WSMessageCaughtUp {
+	if err := json.Unmarshal([]byte(raw), &caughtUp); err != nil || caughtUp.Type != contract.WSMessageCaughtUp {
 		t.Fatalf("caught_up = %s, %v", raw, err)
 	}
 
@@ -104,11 +105,11 @@ func TestWebSocketRoutesLocalToolResult(t *testing.T) {
 		t.Fatalf("Receive(local_tool_call) error = %v", err)
 	}
 	var call LocalToolCallMessage
-	if err := json.Unmarshal([]byte(raw), &call); err != nil || call.Type != WSMessageLocalToolCall {
+	if err := json.Unmarshal([]byte(raw), &call); err != nil || call.Type != contract.WSMessageLocalToolCall {
 		t.Fatalf("local tool call = %s, %v", raw, err)
 	}
 	result, _ := json.Marshal(LocalToolResultMessage{
-		Type:          WSMessageLocalToolResult,
+		Type:          contract.WSMessageLocalToolResult,
 		CorrelationID: call.MsgID,
 		InvocationID:  "inv-1",
 		OK:            true,
@@ -171,7 +172,7 @@ func TestWebSocketRejectsForeignRunSubscription(t *testing.T) {
 		t.Fatalf("Dial() error = %v", err)
 	}
 	defer conn.Close()
-	subscribe, _ := json.Marshal(SubscribeMessage{Type: WSMessageSubscribe, RunID: "run-1"})
+	subscribe, _ := json.Marshal(SubscribeMessage{Type: contract.WSMessageSubscribe, RunID: "run-1"})
 	_ = websocket.Message.Send(conn, string(subscribe))
 	var raw string
 	_ = websocket.Message.Receive(conn, &raw)
@@ -241,12 +242,12 @@ func TestWebSocketLocalToolValidationAndIdempotency(t *testing.T) {
 	}()
 
 	var call LocalToolCallMessage
-	if err := json.Unmarshal([]byte(receive(first)), &call); err != nil || call.Type != WSMessageLocalToolCall {
+	if err := json.Unmarshal([]byte(receive(first)), &call); err != nil || call.Type != contract.WSMessageLocalToolCall {
 		t.Fatalf("local tool call = %+v, %v", call, err)
 	}
 
 	send(first, LocalToolResultMessage{
-		Type: WSMessageLocalToolResult, CorrelationID: call.MsgID,
+		Type: contract.WSMessageLocalToolResult, CorrelationID: call.MsgID,
 		InvocationID: "missing", OK: true,
 	})
 	if got := receive(first); !strings.Contains(got, "LOCAL_TOOL_UNKNOWN") {
@@ -254,7 +255,7 @@ func TestWebSocketLocalToolValidationAndIdempotency(t *testing.T) {
 	}
 
 	send(first, LocalToolResultMessage{
-		Type: WSMessageLocalToolResult, CorrelationID: "wrong",
+		Type: contract.WSMessageLocalToolResult, CorrelationID: "wrong",
 		InvocationID: "inv-1", OK: true,
 	})
 	if got := receive(first); !strings.Contains(got, "LOCAL_TOOL_CORRELATION_MISMATCH") {
@@ -262,7 +263,7 @@ func TestWebSocketLocalToolValidationAndIdempotency(t *testing.T) {
 	}
 
 	send(second, LocalToolResultMessage{
-		Type: WSMessageLocalToolResult, CorrelationID: call.MsgID,
+		Type: contract.WSMessageLocalToolResult, CorrelationID: call.MsgID,
 		InvocationID: "inv-1", OK: true,
 	})
 	if got := receive(second); !strings.Contains(got, "LOCAL_TOOL_FORBIDDEN") {
@@ -270,7 +271,7 @@ func TestWebSocketLocalToolValidationAndIdempotency(t *testing.T) {
 	}
 
 	send(first, LocalToolResultMessage{
-		Type: WSMessageLocalToolResult, CorrelationID: call.MsgID,
+		Type: contract.WSMessageLocalToolResult, CorrelationID: call.MsgID,
 		InvocationID: "inv-1", OK: true, ResultJSON: "3",
 	})
 	if err := <-errCh; err != nil {
@@ -281,10 +282,10 @@ func TestWebSocketLocalToolValidationAndIdempotency(t *testing.T) {
 	}
 
 	send(first, LocalToolResultMessage{
-		Type: WSMessageLocalToolResult, CorrelationID: call.MsgID,
+		Type: contract.WSMessageLocalToolResult, CorrelationID: call.MsgID,
 		InvocationID: "inv-1", OK: true, ResultJSON: "3",
 	})
-	send(first, PingMessage{Type: WSMessagePing})
+	send(first, PingMessage{Type: contract.WSMessagePing})
 	if got := receive(first); !strings.Contains(got, `"type":"pong"`) {
 		t.Fatalf("duplicate result produced an error: %s", got)
 	}
@@ -311,7 +312,7 @@ func TestWebSocketRunCompleted(t *testing.T) {
 	}
 	defer conn.Close()
 
-	subscribe, _ := json.Marshal(SubscribeMessage{Type: WSMessageSubscribe, RunID: "run-1"})
+	subscribe, _ := json.Marshal(SubscribeMessage{Type: contract.WSMessageSubscribe, RunID: "run-1"})
 	if err := websocket.Message.Send(conn, string(subscribe)); err != nil {
 		t.Fatalf("Send(subscribe) error = %v", err)
 	}

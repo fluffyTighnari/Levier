@@ -111,11 +111,22 @@ func (f *fakeCanceller) CancelRun(_ context.Context, _ string, reason string) (r
 type fakeQueue struct {
 	tasks []workflow.Task
 	err   error
+	calls int
+	errOn int
 }
 
 func (f *fakeQueue) Enqueue(_ context.Context, task workflow.Task) (workflow.Task, error) {
+	f.calls++
 	if f.err != nil {
 		return workflow.Task{}, f.err
+	}
+	if f.errOn > 0 && f.calls == f.errOn {
+		return workflow.Task{}, errors.New("queue unavailable")
+	}
+	for _, existing := range f.tasks {
+		if existing.RunID == task.RunID && existing.Type == task.Type {
+			return existing, nil
+		}
 	}
 	f.tasks = append(f.tasks, task)
 	return task, nil
@@ -325,7 +336,7 @@ func TestCancelRun(t *testing.T) {
 	}
 }
 
-func TestQueueFailureReturns500(t *testing.T) {
+func TestQueueFailureReturns503(t *testing.T) {
 	store := newFakeStore()
 	queue := &fakeQueue{err: errors.New("queue down")}
 	server := NewServer(store, queue, Config{BearerToken: "token-1", AllowLegacyBearer: true})
@@ -333,8 +344,99 @@ func TestQueueFailureReturns500(t *testing.T) {
 	defer httpServer.Close()
 
 	resp := request(t, http.MethodPost, httpServer.URL+"/api/v1/runs", "token-1", []byte(validBody))
-	if resp.StatusCode != http.StatusInternalServerError {
+	if resp.StatusCode != http.StatusServiceUnavailable {
 		t.Fatalf("status = %d", resp.StatusCode)
 	}
+	var body ErrorResponse
+	if err := json.NewDecoder(resp.Body).Decode(&body); err != nil {
+		t.Fatalf("decode error: %v", err)
+	}
 	resp.Body.Close()
+	if body.Error.Code != "QUEUE_UNAVAILABLE" {
+		t.Fatalf("error code = %q", body.Error.Code)
+	}
+}
+
+func postRunWithKey(t *testing.T, url, key string) *http.Response {
+	t.Helper()
+	req, err := http.NewRequest(http.MethodPost, url+"/api/v1/runs", bytes.NewReader([]byte(validBody)))
+	if err != nil {
+		t.Fatalf("NewRequest() error = %v", err)
+	}
+	req.Header.Set("Authorization", "Bearer token-1")
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Idempotency-Key", key)
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatalf("Do() error = %v", err)
+	}
+	return resp
+}
+
+func TestQueueFailureThenIdempotentRetryRepairsTasks(t *testing.T) {
+	store := newFakeStore()
+	queue := &fakeQueue{err: errors.New("queue down")}
+	server := NewServer(store, queue, Config{BearerToken: "token-1", AllowLegacyBearer: true})
+	httpServer := httptest.NewServer(server.Handler())
+	defer httpServer.Close()
+
+	first := postRunWithKey(t, httpServer.URL, "retry-key")
+	if first.StatusCode != http.StatusServiceUnavailable {
+		t.Fatalf("first status = %d", first.StatusCode)
+	}
+	first.Body.Close()
+	if len(store.runs) != 1 || len(queue.tasks) != 0 {
+		t.Fatalf("after failure: runs=%d tasks=%d", len(store.runs), len(queue.tasks))
+	}
+
+	queue.err = nil
+	second := postRunWithKey(t, httpServer.URL, "retry-key")
+	if second.StatusCode != http.StatusAccepted {
+		t.Fatalf("retry status = %d", second.StatusCode)
+	}
+	var created CreateRunResponse
+	_ = json.NewDecoder(second.Body).Decode(&created)
+	second.Body.Close()
+
+	if len(store.runs) != 1 {
+		t.Fatalf("runs = %d, want 1", len(store.runs))
+	}
+	if len(queue.tasks) != 2 {
+		t.Fatalf("tasks = %d, want 2 after retry", len(queue.tasks))
+	}
+	for _, task := range queue.tasks {
+		if task.RunID != created.RunID {
+			t.Fatalf("task run = %q, want %q", task.RunID, created.RunID)
+		}
+	}
+}
+
+func TestQueueTimeoutFailureThenRetryAddsMissingTask(t *testing.T) {
+	store := newFakeStore()
+	queue := &fakeQueue{errOn: 2}
+	server := NewServer(store, queue, Config{BearerToken: "token-1", AllowLegacyBearer: true})
+	httpServer := httptest.NewServer(server.Handler())
+	defer httpServer.Close()
+
+	first := postRunWithKey(t, httpServer.URL, "partial-key")
+	if first.StatusCode != http.StatusServiceUnavailable {
+		t.Fatalf("first status = %d", first.StatusCode)
+	}
+	first.Body.Close()
+	if len(queue.tasks) != 1 || queue.tasks[0].Type != workflow.TaskDispatch {
+		t.Fatalf("after partial failure tasks = %+v", queue.tasks)
+	}
+
+	queue.errOn = 0
+	second := postRunWithKey(t, httpServer.URL, "partial-key")
+	if second.StatusCode != http.StatusAccepted {
+		t.Fatalf("retry status = %d", second.StatusCode)
+	}
+	second.Body.Close()
+	if len(queue.tasks) != 2 {
+		t.Fatalf("tasks = %+v, want dispatch+timeout", queue.tasks)
+	}
+	if queue.tasks[0].Type != workflow.TaskDispatch || queue.tasks[1].Type != workflow.TaskTimeout {
+		t.Fatalf("task types = %v/%v", queue.tasks[0].Type, queue.tasks[1].Type)
+	}
 }

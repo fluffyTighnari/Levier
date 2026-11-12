@@ -10,6 +10,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/fluffyTighnari/middleware/internal/errs"
 	"log/slog"
 	"strings"
 	"sync"
@@ -43,11 +44,13 @@ type Config struct {
 	RetryDelay           time.Duration
 	MaxPlacementAttempts int
 	EventBuffer          int
+	ToolConcurrency      int
 	Publisher            EventPublisher
 	Scheduler            Scheduler
 	Tools                ToolInvoker
 	Tasks                TaskStore
 	LocalTools           LocalToolCanceller
+	DaemonAvailable      func(daemonID string) bool
 	Logger               *slog.Logger
 	Metrics              *observe.Registry
 }
@@ -75,6 +78,7 @@ type RunStore interface {
 	AssignRun(ctx context.Context, assignment runstore.Assignment) (runstore.Run, error)
 	Transition(ctx context.Context, transition runstore.Transition) (runstore.Run, error)
 	AppendEvent(ctx context.Context, event runstore.Event) (runstore.AppendResult, error)
+	ListActiveRuns(ctx context.Context) ([]runstore.Run, error)
 	ListActiveRunsForDaemon(ctx context.Context, daemonID string) ([]runstore.Run, error)
 	RequeueRun(ctx context.Context, runID string) (runstore.Run, error)
 }
@@ -105,6 +109,11 @@ type Control struct {
 	pending   map[string]chan *runtimev1.TaskAck
 	events    chan *runtimev1.Envelope
 
+	toolMu     sync.Mutex
+	toolClosed bool
+	toolSlots  chan struct{}
+	toolWG     sync.WaitGroup
+
 	ctx    context.Context
 	cancel context.CancelFunc
 	wg     sync.WaitGroup
@@ -128,17 +137,21 @@ func New(runs RunStore, hub DaemonHub, cfg Config, assemblers ...MaterialAssembl
 	if cfg.EventBuffer <= 0 {
 		cfg.EventBuffer = 256
 	}
+	if cfg.ToolConcurrency <= 0 {
+		cfg.ToolConcurrency = 64
+	}
 	if cfg.Logger == nil {
 		cfg.Logger = slog.Default()
 	}
 	control := &Control{
-		runs:    runs,
-		hub:     hub,
-		cfg:     cfg,
-		log:     cfg.Logger,
-		metrics: cfg.Metrics,
-		pending: make(map[string]chan *runtimev1.TaskAck),
-		events:  make(chan *runtimev1.Envelope, cfg.EventBuffer),
+		runs:      runs,
+		hub:       hub,
+		cfg:       cfg,
+		log:       cfg.Logger,
+		metrics:   cfg.Metrics,
+		pending:   make(map[string]chan *runtimev1.TaskAck),
+		events:    make(chan *runtimev1.Envelope, cfg.EventBuffer),
+		toolSlots: make(chan struct{}, cfg.ToolConcurrency),
 	}
 	if len(assemblers) > 0 {
 		control.materials = assemblers[0]
@@ -153,11 +166,15 @@ func (c *Control) Start(ctx context.Context) {
 	go c.eventLoop()
 }
 
-// Close stops the event consumer.
+// Close stops the event consumer and waits for in-flight tool calls.
 func (c *Control) Close() {
 	if c.cancel != nil {
 		c.cancel()
 	}
+	c.toolMu.Lock()
+	c.toolClosed = true
+	c.toolMu.Unlock()
+	c.toolWG.Wait()
 	c.wg.Wait()
 }
 
@@ -167,6 +184,9 @@ func (c *Control) HandleToolCall(daemonID string, env *runtimev1.Envelope) error
 		return nil
 	}
 	ctx := context.Background()
+	if c.ctx != nil {
+		ctx = c.ctx
+	}
 	run, err := c.runs.GetRun(ctx, env.GetRunId())
 	if err != nil {
 		return fmt.Errorf("get run for tool call: %w", err)
@@ -180,6 +200,73 @@ func (c *Control) HandleToolCall(daemonID string, env *runtimev1.Envelope) error
 		return fmt.Errorf("send tool call result: %w", err)
 	}
 	return nil
+}
+
+// DispatchToolCall runs a tool call without blocking the daemon read loop.
+//
+// The read loop must keep processing heartbeats and events; a slow local tool
+// would otherwise make a healthy daemon look offline after 30s.
+func (c *Control) DispatchToolCall(daemonID string, env *runtimev1.Envelope) {
+	if c == nil || env == nil || env.GetToolCallRequest() == nil {
+		return
+	}
+	select {
+	case c.toolSlots <- struct{}{}:
+	default:
+		c.rejectToolCall(daemonID, env, string(errs.CodeToolBusy), "too many concurrent tool calls", true)
+		return
+	}
+
+	c.toolMu.Lock()
+	if c.toolClosed {
+		c.toolMu.Unlock()
+		<-c.toolSlots
+		return
+	}
+	c.toolWG.Add(1)
+	c.toolMu.Unlock()
+
+	go func() {
+		defer c.toolWG.Done()
+		defer func() { <-c.toolSlots }()
+		if err := c.HandleToolCall(daemonID, env); err != nil {
+			c.log.Warn("control tool call failed",
+				observe.FieldDaemonID, daemonID,
+				observe.FieldRunID, env.GetRunId(),
+				observe.FieldInvocationID, env.GetToolCallRequest().GetInvocationId(),
+				"err", err,
+			)
+		}
+	}()
+}
+
+func (c *Control) rejectToolCall(daemonID string, env *runtimev1.Envelope, code, message string, retryable bool) {
+	request := env.GetToolCallRequest()
+	result := &runtimev1.ToolCallResult{
+		InvocationId: request.GetInvocationId(),
+		Ok:           false,
+		Error: &runtimev1.ErrorInfo{
+			Code:      code,
+			Message:   message,
+			Retryable: retryable,
+		},
+	}
+	response, err := protocol.NewResponse(env, result)
+	if err != nil {
+		c.log.Warn("control build busy tool response failed",
+			observe.FieldDaemonID, daemonID,
+			observe.FieldRunID, env.GetRunId(),
+			"err", err,
+		)
+		return
+	}
+	if err := c.hub.Send(daemonID, response); err != nil {
+		c.log.Warn("control send busy tool response failed",
+			observe.FieldDaemonID, daemonID,
+			observe.FieldRunID, env.GetRunId(),
+			"err", err,
+		)
+	}
 }
 
 // HandleEnvelope routes TaskAck and Event messages from DaemonHub.
@@ -387,6 +474,79 @@ func (c *Control) HandleDaemonOffline(daemonID string) {
 	}
 }
 
+// RecoverQueued runs at startup to re-arm queued runs that have no active task.
+func (c *Control) RecoverQueued(ctx context.Context) error {
+	if c.cfg.Tasks == nil {
+		return nil
+	}
+	runs, err := c.runs.ListActiveRuns(ctx)
+	if err != nil {
+		return fmt.Errorf("list active runs: %w", err)
+	}
+	repaired := 0
+	for _, run := range runs {
+		if run.Status != runstore.StatusQueued {
+			continue
+		}
+		if err := c.ensureRunTasks(ctx, run); err != nil {
+			c.log.Warn("control recover queued run failed", "run_id", run.RunID, "err", err)
+			continue
+		}
+		repaired++
+	}
+	if repaired > 0 {
+		c.log.Info("control recovered queued runs", "count", repaired)
+	}
+	return nil
+}
+
+// RecoverActive runs after the daemon reconnect grace period and requeues
+// assigned/running runs whose daemon is not connected.
+func (c *Control) RecoverActive(ctx context.Context) error {
+	runs, err := c.runs.ListActiveRuns(ctx)
+	if err != nil {
+		return fmt.Errorf("list active runs: %w", err)
+	}
+	recovered := 0
+	for _, run := range runs {
+		if run.Status != runstore.StatusAssigned && run.Status != runstore.StatusRunning {
+			continue
+		}
+		if c.cfg.DaemonAvailable != nil && c.cfg.DaemonAvailable(run.AssignedDaemonID) {
+			continue
+		}
+		c.requeueRun(ctx, run, "startup recovery")
+		recovered++
+	}
+	if recovered > 0 {
+		c.log.Info("control recovered active runs", "count", recovered)
+	}
+	return nil
+}
+
+func (c *Control) ensureRunTasks(ctx context.Context, run runstore.Run) error {
+	if c.cfg.Tasks == nil {
+		return nil
+	}
+	if _, err := c.cfg.Tasks.Enqueue(ctx, workflow.NewTask(run.RunID, workflow.TaskDispatch, time.Now(), 0)); err != nil {
+		return err
+	}
+	timeoutAt := run.CreatedAt
+	if timeoutAt.IsZero() {
+		timeoutAt = time.Now()
+	}
+	runTimeout := time.Duration(run.RunTimeoutMS) * time.Millisecond
+	if runTimeout <= 0 {
+		runTimeout = 30 * time.Minute
+	}
+	timeoutAt = timeoutAt.Add(runTimeout)
+	if timeoutAt.Before(time.Now()) {
+		timeoutAt = time.Now()
+	}
+	_, err := c.cfg.Tasks.Enqueue(ctx, workflow.NewTask(run.RunID, workflow.TaskTimeout, timeoutAt, 0))
+	return err
+}
+
 // ReconcileDaemon compares Hello.running_runs with persisted run state.
 func (c *Control) ReconcileDaemon(info connection.DaemonInfo) {
 	ctx := context.Background()
@@ -479,7 +639,7 @@ func (c *Control) requeueRun(ctx context.Context, run runstore.Run, reason strin
 		return
 	}
 	c.hub.Release(run.AssignedDaemonID)
-	c.cancelLocalTools(run.AppID, run.RunID, "DAEMON_LOST", reason)
+	c.cancelLocalTools(run.AppID, run.RunID, string(errs.CodeDaemonLost), reason)
 	if c.cfg.Tasks != nil {
 		if _, err := c.cfg.Tasks.Enqueue(ctx, workflow.NewTask(
 			requeued.RunID, workflow.TaskRetry, time.Now(), 0,
@@ -518,7 +678,7 @@ func (c *Control) CancelRun(ctx context.Context, runID, reason string) (runstore
 	}
 	c.hub.Release(run.AssignedDaemonID)
 	c.cancelTasks(ctx, runID, reason)
-	c.cancelLocalTools(run.AppID, runID, "RUN_CANCELLED", reason)
+	c.cancelLocalTools(run.AppID, runID, string(errs.CodeRunCancelled), reason)
 	c.publishCompleted(run.AppID, runID, runstore.StatusCancelled, run.Attempt)
 	return cancelled, nil
 }
@@ -549,7 +709,7 @@ func (c *Control) handleTimeout(ctx context.Context, runID string) error {
 		return fmt.Errorf("timeout run: %w", err)
 	}
 	c.hub.Release(run.AssignedDaemonID)
-	c.cancelLocalTools(run.AppID, runID, "RUN_TIMEOUT", "run timed out")
+	c.cancelLocalTools(run.AppID, runID, string(errs.CodeRunTimeout), "run timed out")
 	c.publishCompleted(run.AppID, runID, runstore.StatusTimeout, timedOut.Attempt)
 	return nil
 }
@@ -765,7 +925,7 @@ func (c *Control) handleEvent(env *runtimev1.Envelope) {
 		}
 		c.hub.Release(run.AssignedDaemonID)
 		if status == runstore.StatusCancelled {
-			c.cancelLocalTools(run.AppID, env.GetRunId(), "RUN_CANCELLED", "run cancelled")
+			c.cancelLocalTools(run.AppID, env.GetRunId(), string(errs.CodeRunCancelled), "run cancelled")
 		}
 		c.cancelTasks(ctx, env.GetRunId(), "run terminal")
 		c.publishCompleted(run.AppID, env.GetRunId(), status, int(env.GetAttempt()))

@@ -14,6 +14,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/fluffyTighnari/middleware/internal/errs"
 	"io"
 	"log/slog"
 	"net/http"
@@ -205,30 +206,30 @@ func (s *Server) appFromRequest(r *http.Request) (runstore.App, error) {
 // writeAppAuthError separates bad credentials from a broken auth backend.
 func writeAppAuthError(w http.ResponseWriter, err error) {
 	if errors.Is(err, runstore.ErrAppNotFound) {
-		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "missing or invalid bearer token", false)
+		writeError(w, http.StatusUnauthorized, string(errs.CodeUnauthorized), "missing or invalid bearer token", false)
 		return
 	}
-	writeError(w, http.StatusServiceUnavailable, "DEPENDENCY_UNAVAILABLE", "app authentication backend unavailable", true)
+	writeError(w, http.StatusServiceUnavailable, string(errs.CodeDependencyUnavailable), "app authentication backend unavailable", true)
 }
 
 func (s *Server) resolveRequestApp(w http.ResponseWriter, r *http.Request, appID string) (string, bool) {
 	if s.authDisabled() {
 		if appID == "" {
-			writeError(w, http.StatusBadRequest, "BAD_REQUEST", "app_id is required", false)
+			writeError(w, http.StatusBadRequest, string(errs.CodeBadRequest), "app_id is required", false)
 			return "", false
 		}
 		return appID, true
 	}
 	if s.isAdmin(r) {
 		if appID == "" {
-			writeError(w, http.StatusBadRequest, "BAD_REQUEST", "app_id is required", false)
+			writeError(w, http.StatusBadRequest, string(errs.CodeBadRequest), "app_id is required", false)
 			return "", false
 		}
 		return appID, true
 	}
 	if app, err := s.appFromRequest(r); err == nil {
 		if appID != "" && appID != app.AppID {
-			writeError(w, http.StatusForbidden, "FORBIDDEN", "app_id does not match the authenticated app", false)
+			writeError(w, http.StatusForbidden, string(errs.CodeForbidden), "app_id does not match the authenticated app", false)
 			return "", false
 		}
 		return app.AppID, true
@@ -238,7 +239,7 @@ func (s *Server) resolveRequestApp(w http.ResponseWriter, r *http.Request, appID
 	}
 	if s.legacyAllowed(r) {
 		if appID == "" {
-			writeError(w, http.StatusBadRequest, "BAD_REQUEST", "app_id is required", false)
+			writeError(w, http.StatusBadRequest, string(errs.CodeBadRequest), "app_id is required", false)
 			return "", false
 		}
 		return appID, true
@@ -262,7 +263,7 @@ func (s *Server) handleIssueWSToken(w http.ResponseWriter, r *http.Request) {
 	}
 	token := s.wsTokens.Issue(appID)
 	if token == "" {
-		writeError(w, http.StatusInternalServerError, "INTERNAL", "issue ws token failed", true)
+		writeError(w, http.StatusInternalServerError, string(errs.CodeInternal), "issue ws token failed", true)
 		return
 	}
 	writeJSON(w, http.StatusOK, WSTokenResponse{
@@ -287,23 +288,23 @@ func (s *Server) handleCreateRun(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err := request.Validate(); err != nil {
-		writeError(w, http.StatusBadRequest, "BAD_REQUEST", err.Error(), false)
+		writeError(w, http.StatusBadRequest, string(errs.CodeBadRequest), err.Error(), false)
 		return
 	}
 
 	params, err := json.Marshal(emptyMap(request.Strategy.Params))
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "BAD_REQUEST", "invalid strategy params", false)
+		writeError(w, http.StatusBadRequest, string(errs.CodeBadRequest), "invalid strategy params", false)
 		return
 	}
 	input, err := json.Marshal(request.Input)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "BAD_REQUEST", "invalid input", false)
+		writeError(w, http.StatusBadRequest, string(errs.CodeBadRequest), "invalid input", false)
 		return
 	}
 	model, err := json.Marshal(request.Model)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "BAD_REQUEST", "invalid model", false)
+		writeError(w, http.StatusBadRequest, string(errs.CodeBadRequest), "invalid model", false)
 		return
 	}
 
@@ -333,30 +334,37 @@ func (s *Server) handleCreateRun(w http.ResponseWriter, r *http.Request) {
 		TraceID:        traceIDFromRequest(r),
 	})
 	if errors.Is(err, runstore.ErrIdempotencyConflict) {
-		writeError(w, http.StatusConflict, "IDEMPOTENCY_CONFLICT", "idempotency key was reused with a different request", false)
+		writeError(w, http.StatusConflict, string(errs.CodeIdempotencyConflict), "idempotency key was reused with a different request", false)
 		return
 	}
 	if errors.Is(err, runstore.ErrInvalidRun) {
-		writeError(w, http.StatusBadRequest, "BAD_REQUEST", err.Error(), false)
+		writeError(w, http.StatusBadRequest, string(errs.CodeBadRequest), err.Error(), false)
 		return
 	}
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "INTERNAL", "create run failed", true)
+		writeError(w, http.StatusInternalServerError, string(errs.CodeInternal), "create run failed", true)
 		return
 	}
 
-	if run.RunID == runID {
+	if run.Status == runstore.StatusQueued {
 		if s.queue == nil {
-			writeError(w, http.StatusInternalServerError, "INTERNAL", "dispatch queue is not configured", true)
+			writeError(w, http.StatusServiceUnavailable, string(errs.CodeQueueUnavailable), "dispatch queue is not configured", true)
 			return
 		}
 		if _, err := s.queue.Enqueue(r.Context(), workflow.NewTask(run.RunID, workflow.TaskDispatch, time.Now(), 0)); err != nil {
-			writeError(w, http.StatusInternalServerError, "INTERNAL", "enqueue run task failed", true)
+			writeError(w, http.StatusServiceUnavailable, string(errs.CodeQueueUnavailable), "enqueue run task failed", true)
 			return
 		}
-		timeoutAt := time.Now().Add(time.Duration(runTimeout) * time.Millisecond)
+		timeoutAt := run.CreatedAt
+		if timeoutAt.IsZero() {
+			timeoutAt = time.Now()
+		}
+		timeoutAt = timeoutAt.Add(time.Duration(runTimeout) * time.Millisecond)
+		if timeoutAt.Before(time.Now()) {
+			timeoutAt = time.Now()
+		}
 		if _, err := s.queue.Enqueue(r.Context(), workflow.NewTask(run.RunID, workflow.TaskTimeout, timeoutAt, 0)); err != nil {
-			writeError(w, http.StatusInternalServerError, "INTERNAL", "enqueue run timeout task failed", true)
+			writeError(w, http.StatusServiceUnavailable, string(errs.CodeQueueUnavailable), "enqueue run timeout task failed", true)
 			return
 		}
 	}
@@ -372,15 +380,15 @@ func (s *Server) handleCreateRun(w http.ResponseWriter, r *http.Request) {
 func (s *Server) handleGetRun(w http.ResponseWriter, r *http.Request) {
 	run, err := s.runs.GetRun(r.Context(), r.PathValue("run_id"))
 	if errors.Is(err, runstore.ErrRunNotFound) {
-		writeError(w, http.StatusNotFound, "RUN_NOT_FOUND", "run not found", false)
+		writeError(w, http.StatusNotFound, string(errs.CodeRunNotFound), "run not found", false)
 		return
 	}
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "INTERNAL", "get run failed", true)
+		writeError(w, http.StatusInternalServerError, string(errs.CodeInternal), "get run failed", true)
 		return
 	}
 	if !s.canAccessApp(r, run.AppID) {
-		writeError(w, http.StatusNotFound, "RUN_NOT_FOUND", "run not found", false)
+		writeError(w, http.StatusNotFound, string(errs.CodeRunNotFound), "run not found", false)
 		return
 	}
 	strategyParams := map[string]any{}
@@ -405,34 +413,34 @@ func (s *Server) handleListEvents(w http.ResponseWriter, r *http.Request) {
 	runID := r.PathValue("run_id")
 	afterAttempt, err := queryInt32(r.URL.Query().Get("after_attempt"))
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "BAD_REQUEST", "after_attempt must be a non-negative integer", false)
+		writeError(w, http.StatusBadRequest, string(errs.CodeBadRequest), "after_attempt must be a non-negative integer", false)
 		return
 	}
 	afterSeq, err := queryInt64(r.URL.Query().Get("after_seq"))
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "BAD_REQUEST", "after_seq must be a non-negative integer", false)
+		writeError(w, http.StatusBadRequest, string(errs.CodeBadRequest), "after_seq must be a non-negative integer", false)
 		return
 	}
 	limit, err := queryLimit(r.URL.Query().Get("limit"))
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "BAD_REQUEST", "limit must be between 1 and 1000", false)
+		writeError(w, http.StatusBadRequest, string(errs.CodeBadRequest), "limit must be between 1 and 1000", false)
 		return
 	}
 	run, err := s.runs.GetRun(r.Context(), runID)
 	if errors.Is(err, runstore.ErrRunNotFound) {
-		writeError(w, http.StatusNotFound, "RUN_NOT_FOUND", "run not found", false)
+		writeError(w, http.StatusNotFound, string(errs.CodeRunNotFound), "run not found", false)
 		return
 	} else if err != nil {
-		writeError(w, http.StatusInternalServerError, "INTERNAL", "get run failed", true)
+		writeError(w, http.StatusInternalServerError, string(errs.CodeInternal), "get run failed", true)
 		return
 	}
 	if !s.canAccessApp(r, run.AppID) {
-		writeError(w, http.StatusNotFound, "RUN_NOT_FOUND", "run not found", false)
+		writeError(w, http.StatusNotFound, string(errs.CodeRunNotFound), "run not found", false)
 		return
 	}
 	events, err := s.runs.ListEvents(r.Context(), runID, afterAttempt, afterSeq, limit)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "INTERNAL", "list events failed", true)
+		writeError(w, http.StatusInternalServerError, string(errs.CodeInternal), "list events failed", true)
 		return
 	}
 	writeJSON(w, http.StatusOK, eventListResponse(events, limit))
@@ -440,20 +448,20 @@ func (s *Server) handleListEvents(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) handleGetSession(w http.ResponseWriter, r *http.Request) {
 	if s.sessions == nil {
-		writeError(w, http.StatusNotImplemented, "NOT_IMPLEMENTED", "session store is not configured", false)
+		writeError(w, http.StatusNotImplemented, string(errs.CodeNotImplemented), "session store is not configured", false)
 		return
 	}
 	session, err := s.sessions.GetSession(r.Context(), r.PathValue("session_id"))
 	if errors.Is(err, runstore.ErrSessionNotFound) {
-		writeError(w, http.StatusNotFound, "SESSION_NOT_FOUND", "session not found", false)
+		writeError(w, http.StatusNotFound, string(errs.CodeSessionNotFound), "session not found", false)
 		return
 	}
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "INTERNAL", "get session failed", true)
+		writeError(w, http.StatusInternalServerError, string(errs.CodeInternal), "get session failed", true)
 		return
 	}
 	if !s.canAccessApp(r, session.AppID) {
-		writeError(w, http.StatusNotFound, "SESSION_NOT_FOUND", "session not found", false)
+		writeError(w, http.StatusNotFound, string(errs.CodeSessionNotFound), "session not found", false)
 		return
 	}
 	writeJSON(w, http.StatusOK, sessionView(session))
@@ -461,41 +469,41 @@ func (s *Server) handleGetSession(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) handleListSessionEvents(w http.ResponseWriter, r *http.Request) {
 	if s.sessions == nil {
-		writeError(w, http.StatusNotImplemented, "NOT_IMPLEMENTED", "session store is not configured", false)
+		writeError(w, http.StatusNotImplemented, string(errs.CodeNotImplemented), "session store is not configured", false)
 		return
 	}
 	afterAttempt, err := queryInt32(r.URL.Query().Get("after_attempt"))
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "BAD_REQUEST", "after_attempt must be a non-negative integer", false)
+		writeError(w, http.StatusBadRequest, string(errs.CodeBadRequest), "after_attempt must be a non-negative integer", false)
 		return
 	}
 	afterSeq, err := queryInt64(r.URL.Query().Get("after_seq"))
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "BAD_REQUEST", "after_seq must be a non-negative integer", false)
+		writeError(w, http.StatusBadRequest, string(errs.CodeBadRequest), "after_seq must be a non-negative integer", false)
 		return
 	}
 	limit, err := queryLimit(r.URL.Query().Get("limit"))
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "BAD_REQUEST", "limit must be between 1 and 1000", false)
+		writeError(w, http.StatusBadRequest, string(errs.CodeBadRequest), "limit must be between 1 and 1000", false)
 		return
 	}
 	sessionID := r.PathValue("session_id")
 	session, err := s.sessions.GetSession(r.Context(), sessionID)
 	if errors.Is(err, runstore.ErrSessionNotFound) {
-		writeError(w, http.StatusNotFound, "SESSION_NOT_FOUND", "session not found", false)
+		writeError(w, http.StatusNotFound, string(errs.CodeSessionNotFound), "session not found", false)
 		return
 	}
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "INTERNAL", "get session failed", true)
+		writeError(w, http.StatusInternalServerError, string(errs.CodeInternal), "get session failed", true)
 		return
 	}
 	if !s.canAccessApp(r, session.AppID) {
-		writeError(w, http.StatusNotFound, "SESSION_NOT_FOUND", "session not found", false)
+		writeError(w, http.StatusNotFound, string(errs.CodeSessionNotFound), "session not found", false)
 		return
 	}
 	events, err := s.sessions.ListSessionEvents(r.Context(), sessionID, afterAttempt, afterSeq, limit)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "INTERNAL", "list session events failed", true)
+		writeError(w, http.StatusInternalServerError, string(errs.CodeInternal), "list session events failed", true)
 		return
 	}
 	writeJSON(w, http.StatusOK, eventListResponse(events, limit))
@@ -543,19 +551,19 @@ func sessionView(session runstore.Session) SessionView {
 func (s *Server) handleCancelRun(w http.ResponseWriter, r *http.Request) {
 	run, err := s.runs.GetRun(r.Context(), r.PathValue("run_id"))
 	if errors.Is(err, runstore.ErrRunNotFound) {
-		writeError(w, http.StatusNotFound, "RUN_NOT_FOUND", "run not found", false)
+		writeError(w, http.StatusNotFound, string(errs.CodeRunNotFound), "run not found", false)
 		return
 	}
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "INTERNAL", "get run failed", true)
+		writeError(w, http.StatusInternalServerError, string(errs.CodeInternal), "get run failed", true)
 		return
 	}
 	if !s.canAccessApp(r, run.AppID) {
-		writeError(w, http.StatusNotFound, "RUN_NOT_FOUND", "run not found", false)
+		writeError(w, http.StatusNotFound, string(errs.CodeRunNotFound), "run not found", false)
 		return
 	}
 	if s.canceller == nil {
-		writeError(w, http.StatusNotImplemented, "NOT_IMPLEMENTED", "cancellation is not configured", false)
+		writeError(w, http.StatusNotImplemented, string(errs.CodeNotImplemented), "cancellation is not configured", false)
 		return
 	}
 	reason := "user"
@@ -568,11 +576,11 @@ func (s *Server) handleCancelRun(w http.ResponseWriter, r *http.Request) {
 	}
 	cancelled, err := s.canceller.CancelRun(r.Context(), run.RunID, reason)
 	if errors.Is(err, runstore.ErrRunNotFound) {
-		writeError(w, http.StatusNotFound, "RUN_NOT_FOUND", "run not found", false)
+		writeError(w, http.StatusNotFound, string(errs.CodeRunNotFound), "run not found", false)
 		return
 	}
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "INTERNAL", "cancel run failed", true)
+		writeError(w, http.StatusInternalServerError, string(errs.CodeInternal), "cancel run failed", true)
 		return
 	}
 	writeJSON(w, http.StatusOK, CancelRunResponse{
@@ -583,11 +591,11 @@ func (s *Server) handleCancelRun(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) handleAdminCreateApp(w http.ResponseWriter, r *http.Request) {
 	if !s.isAdmin(r) {
-		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "admin token is required", false)
+		writeError(w, http.StatusUnauthorized, string(errs.CodeUnauthorized), "admin token is required", false)
 		return
 	}
 	if s.apps == nil {
-		writeError(w, http.StatusNotImplemented, "NOT_IMPLEMENTED", "app registry is not configured", false)
+		writeError(w, http.StatusNotImplemented, string(errs.CodeNotImplemented), "app registry is not configured", false)
 		return
 	}
 	var request AppUpsertRequest
@@ -595,12 +603,12 @@ func (s *Server) handleAdminCreateApp(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err := request.Validate(); err != nil {
-		writeError(w, http.StatusBadRequest, "BAD_REQUEST", err.Error(), false)
+		writeError(w, http.StatusBadRequest, string(errs.CodeBadRequest), err.Error(), false)
 		return
 	}
 	app, key, created, err := s.apps.RegisterApp(r.Context(), request.Name, request.Multiagent)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "INTERNAL", "create app failed", true)
+		writeError(w, http.StatusInternalServerError, string(errs.CodeInternal), "create app failed", true)
 		return
 	}
 	if created && !s.applyAppCatalog(w, r, app.AppID, request) {
@@ -633,13 +641,13 @@ func (s *Server) applyAppCatalog(w http.ResponseWriter, r *http.Request, appID s
 			})
 		}
 		if _, err := catalog.ReplaceLocalTools(r.Context(), appID, tools); err != nil {
-			writeError(w, http.StatusBadRequest, "BAD_TOOL", err.Error(), false)
+			writeError(w, http.StatusBadRequest, string(errs.CodeBadTool), err.Error(), false)
 			return false
 		}
 	}
 	if request.MCPRefs != nil {
 		if err := catalog.SetAppMCPRefs(r.Context(), appID, request.MCPRefs); err != nil {
-			writeError(w, http.StatusBadRequest, "BAD_MCP_REF", err.Error(), false)
+			writeError(w, http.StatusBadRequest, string(errs.CodeBadMCPRef), err.Error(), false)
 			return false
 		}
 	}
@@ -657,16 +665,16 @@ func (s *Server) handleUpdateApp(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err := request.Validate(); err != nil {
-		writeError(w, http.StatusBadRequest, "BAD_REQUEST", err.Error(), false)
+		writeError(w, http.StatusBadRequest, string(errs.CodeBadRequest), err.Error(), false)
 		return
 	}
 	updated, err := s.apps.UpdateApp(r.Context(), app.AppID, request.Name, request.Multiagent)
 	if errors.Is(err, runstore.ErrAppNotFound) {
-		writeError(w, http.StatusNotFound, "APP_NOT_FOUND", "app not found", false)
+		writeError(w, http.StatusNotFound, string(errs.CodeAppNotFound), "app not found", false)
 		return
 	}
 	if err != nil {
-		writeError(w, http.StatusConflict, "APP_NAME_CONFLICT", "app name is already in use", false)
+		writeError(w, http.StatusConflict, string(errs.CodeAppNameConflict), "app name is already in use", false)
 		return
 	}
 	if !s.applyAppCatalog(w, r, app.AppID, request) {
@@ -684,21 +692,21 @@ func (s *Server) handleGetApp(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		if app.AppID != appID {
-			writeError(w, http.StatusNotFound, "APP_NOT_FOUND", "app not found", false)
+			writeError(w, http.StatusNotFound, string(errs.CodeAppNotFound), "app not found", false)
 			return
 		}
 	}
 	if s.apps == nil {
-		writeError(w, http.StatusNotImplemented, "NOT_IMPLEMENTED", "app registry is not configured", false)
+		writeError(w, http.StatusNotImplemented, string(errs.CodeNotImplemented), "app registry is not configured", false)
 		return
 	}
 	app, err := s.apps.GetApp(r.Context(), appID)
 	if errors.Is(err, runstore.ErrAppNotFound) {
-		writeError(w, http.StatusNotFound, "APP_NOT_FOUND", "app not found", false)
+		writeError(w, http.StatusNotFound, string(errs.CodeAppNotFound), "app not found", false)
 		return
 	}
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "INTERNAL", "get app failed", true)
+		writeError(w, http.StatusInternalServerError, string(errs.CodeInternal), "get app failed", true)
 		return
 	}
 	writeJSON(w, http.StatusOK, appView(app))
@@ -706,20 +714,20 @@ func (s *Server) handleGetApp(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) handleAdminRotateKey(w http.ResponseWriter, r *http.Request) {
 	if !s.isAdmin(r) {
-		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "admin token is required", false)
+		writeError(w, http.StatusUnauthorized, string(errs.CodeUnauthorized), "admin token is required", false)
 		return
 	}
 	if s.apps == nil {
-		writeError(w, http.StatusNotImplemented, "NOT_IMPLEMENTED", "app registry is not configured", false)
+		writeError(w, http.StatusNotImplemented, string(errs.CodeNotImplemented), "app registry is not configured", false)
 		return
 	}
 	key, err := s.apps.RotateAPIKey(r.Context(), r.PathValue("app_id"))
 	if errors.Is(err, runstore.ErrAppNotFound) {
-		writeError(w, http.StatusNotFound, "APP_NOT_FOUND", "app not found", false)
+		writeError(w, http.StatusNotFound, string(errs.CodeAppNotFound), "app not found", false)
 		return
 	}
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "INTERNAL", "rotate app key failed", true)
+		writeError(w, http.StatusInternalServerError, string(errs.CodeInternal), "rotate app key failed", true)
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]string{"api_key": key})
@@ -739,30 +747,30 @@ func appView(app runstore.App) AppView {
 func (s *Server) readJSONBody(w http.ResponseWriter, r *http.Request, target any, required bool) ([]byte, bool) {
 	if r.Body == nil {
 		if required {
-			writeError(w, http.StatusBadRequest, "BAD_REQUEST", "request body is required", false)
+			writeError(w, http.StatusBadRequest, string(errs.CodeBadRequest), "request body is required", false)
 			return nil, false
 		}
 		return nil, true
 	}
 	body, err := io.ReadAll(http.MaxBytesReader(w, r.Body, s.cfg.MaxBodyBytes))
 	if err != nil {
-		writeError(w, http.StatusRequestEntityTooLarge, "BAD_REQUEST", "request body is too large", false)
+		writeError(w, http.StatusRequestEntityTooLarge, string(errs.CodeBadRequest), "request body is too large", false)
 		return nil, false
 	}
 	if len(bytes.TrimSpace(body)) == 0 {
 		if required {
-			writeError(w, http.StatusBadRequest, "BAD_REQUEST", "request body is required", false)
+			writeError(w, http.StatusBadRequest, string(errs.CodeBadRequest), "request body is required", false)
 			return nil, false
 		}
 		return body, true
 	}
 	decoder := json.NewDecoder(bytes.NewReader(body))
 	if err := decoder.Decode(target); err != nil {
-		writeError(w, http.StatusBadRequest, "BAD_REQUEST", "invalid JSON body", false)
+		writeError(w, http.StatusBadRequest, string(errs.CodeBadRequest), "invalid JSON body", false)
 		return nil, false
 	}
 	if err := decoder.Decode(&struct{}{}); !errors.Is(err, io.EOF) {
-		writeError(w, http.StatusBadRequest, "BAD_REQUEST", "invalid JSON body", false)
+		writeError(w, http.StatusBadRequest, string(errs.CodeBadRequest), "invalid JSON body", false)
 		return nil, false
 	}
 	return body, true

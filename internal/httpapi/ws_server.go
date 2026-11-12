@@ -9,6 +9,8 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"github.com/fluffyTighnari/middleware/internal/contract"
+	"github.com/fluffyTighnari/middleware/internal/errs"
 	"log/slog"
 	"net/http"
 	"sync"
@@ -194,8 +196,8 @@ func (s *Server) handleWS(conn *websocket.Conn) {
 		message, err := ParseClientMessage([]byte(raw))
 		if err != nil {
 			_ = s.sendWS(appConn, ErrorMessage{
-				Type:  WSMessageError,
-				Error: ErrorBody{Code: "BAD_MESSAGE", Message: err.Error()},
+				Type:  contract.WSMessageError,
+				Error: ErrorBody{Code: string(errs.CodeBadMessage), Message: err.Error()},
 			})
 			continue
 		}
@@ -203,13 +205,13 @@ func (s *Server) handleWS(conn *websocket.Conn) {
 		case *HelloMessage:
 			continue
 		case *PingMessage:
-			_ = s.sendWS(appConn, PongMessage{Type: WSMessagePong})
+			_ = s.sendWS(appConn, PongMessage{Type: contract.WSMessagePong})
 		case *SubscribeMessage:
 			run, err := s.runs.GetRun(context.Background(), typed.RunID)
 			if err != nil || run.AppID != appID {
 				_ = s.sendWS(appConn, ErrorMessage{
-					Type:  WSMessageError,
-					Error: ErrorBody{Code: "RUN_NOT_FOUND", Message: "run not found"},
+					Type:  contract.WSMessageError,
+					Error: ErrorBody{Code: string(errs.CodeRunNotFound), Message: "run not found"},
 				})
 				continue
 			}
@@ -219,13 +221,13 @@ func (s *Server) handleWS(conn *websocket.Conn) {
 			_ = appConn.EndReplay(typed.RunID, attempt, seq)
 			if err != nil {
 				_ = s.sendWS(appConn, ErrorMessage{
-					Type:  WSMessageError,
-					Error: ErrorBody{Code: "REPLAY_FAILED", Message: err.Error()},
+					Type:  contract.WSMessageError,
+					Error: ErrorBody{Code: string(errs.CodeReplayFailed), Message: err.Error()},
 				})
 				continue
 			}
 			_ = s.sendWS(appConn, CaughtUpMessage{
-				Type: WSMessageCaughtUp, RunID: typed.RunID,
+				Type: contract.WSMessageCaughtUp, RunID: typed.RunID,
 				Attempt: attempt, Seq: seq,
 			})
 		case *LocalToolResultMessage:
@@ -245,18 +247,18 @@ func (s *Server) handleWS(conn *websocket.Conn) {
 			switch s.appHub.ResolveLocalToolChecked(appID, result) {
 			case connection.LocalToolUnknown:
 				_ = s.sendWS(appConn, ErrorMessage{
-					Type:  WSMessageError,
-					Error: ErrorBody{Code: "LOCAL_TOOL_UNKNOWN", Message: "local tool invocation is not pending"},
+					Type:  contract.WSMessageError,
+					Error: ErrorBody{Code: string(errs.CodeLocalToolUnknown), Message: "local tool invocation is not pending"},
 				})
 			case connection.LocalToolForbidden:
 				_ = s.sendWS(appConn, ErrorMessage{
-					Type:  WSMessageError,
-					Error: ErrorBody{Code: "LOCAL_TOOL_FORBIDDEN", Message: "local tool invocation belongs to another app"},
+					Type:  contract.WSMessageError,
+					Error: ErrorBody{Code: string(errs.CodeLocalToolForbidden), Message: "local tool invocation belongs to another app"},
 				})
 			case connection.LocalToolCorrelationMismatch:
 				_ = s.sendWS(appConn, ErrorMessage{
-					Type:  WSMessageError,
-					Error: ErrorBody{Code: "LOCAL_TOOL_CORRELATION_MISMATCH", Message: "correlation_id does not match the local tool call"},
+					Type:  contract.WSMessageError,
+					Error: ErrorBody{Code: string(errs.CodeLocalToolCorrelationMismatch), Message: "correlation_id does not match the local tool call"},
 				})
 			}
 		}
@@ -274,7 +276,7 @@ func (s *Server) replayWS(appConn *connection.AppConn, msg *SubscribeMessage) (i
 		}
 		for _, event := range events {
 			view := EventMessage{
-				Type:      WSMessageEvent,
+				Type:      contract.WSMessageEvent,
 				RunID:     event.RunID,
 				Attempt:   int32(event.Attempt),
 				Seq:       event.Seq,

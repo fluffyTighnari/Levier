@@ -10,6 +10,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"github.com/fluffyTighnari/middleware/internal/errs"
 	"net/http"
 	"strings"
 
@@ -77,12 +78,12 @@ func validateMCPServerRequest(request MCPServerUpsertRequest) error {
 
 func (s *Server) handleAdminUpsertMCP(w http.ResponseWriter, r *http.Request) {
 	if !s.isAdmin(r) {
-		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "admin token is required", false)
+		writeError(w, http.StatusUnauthorized, string(errs.CodeUnauthorized), "admin token is required", false)
 		return
 	}
 	registry, ok := s.mcpRegistry()
 	if !ok {
-		writeError(w, http.StatusNotImplemented, "NOT_IMPLEMENTED", "MCP registry is not configured", false)
+		writeError(w, http.StatusNotImplemented, string(errs.CodeNotImplemented), "MCP registry is not configured", false)
 		return
 	}
 	var request MCPServerUpsertRequest
@@ -90,14 +91,14 @@ func (s *Server) handleAdminUpsertMCP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err := validateMCPServerRequest(request); err != nil {
-		writeError(w, http.StatusBadRequest, "BAD_REQUEST", err.Error(), false)
+		writeError(w, http.StatusBadRequest, string(errs.CodeBadRequest), err.Error(), false)
 		return
 	}
 	var allowedJSON string
 	if len(request.AllowedTools) > 0 {
 		encoded, err := json.Marshal(request.AllowedTools)
 		if err != nil {
-			writeError(w, http.StatusBadRequest, "BAD_REQUEST", "allowed_tools is invalid", false)
+			writeError(w, http.StatusBadRequest, string(errs.CodeBadRequest), "allowed_tools is invalid", false)
 			return
 		}
 		allowedJSON = string(encoded)
@@ -108,12 +109,12 @@ func (s *Server) handleAdminUpsertMCP(w http.ResponseWriter, r *http.Request) {
 		ConfigJSON:       string(request.Config),
 		AllowedToolsJSON: allowedJSON,
 	}); err != nil {
-		writeError(w, http.StatusBadRequest, "BAD_MCP", err.Error(), false)
+		writeError(w, http.StatusBadRequest, string(errs.CodeBadMCP), err.Error(), false)
 		return
 	}
 	servers, err := registry.ListMCPServers(r.Context())
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "INTERNAL", "list MCP servers failed", true)
+		writeError(w, http.StatusInternalServerError, string(errs.CodeInternal), "list MCP servers failed", true)
 		return
 	}
 	for _, server := range servers {
@@ -131,17 +132,17 @@ func (s *Server) handleAdminUpsertMCP(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) handleAdminListMCP(w http.ResponseWriter, r *http.Request) {
 	if !s.isAdmin(r) {
-		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "admin token is required", false)
+		writeError(w, http.StatusUnauthorized, string(errs.CodeUnauthorized), "admin token is required", false)
 		return
 	}
 	registry, ok := s.mcpRegistry()
 	if !ok {
-		writeError(w, http.StatusNotImplemented, "NOT_IMPLEMENTED", "MCP registry is not configured", false)
+		writeError(w, http.StatusNotImplemented, string(errs.CodeNotImplemented), "MCP registry is not configured", false)
 		return
 	}
 	servers, err := registry.ListMCPServers(r.Context())
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "INTERNAL", "list MCP servers failed", true)
+		writeError(w, http.StatusInternalServerError, string(errs.CodeInternal), "list MCP servers failed", true)
 		return
 	}
 	response := MCPListResponse{Servers: make([]MCPServerView, 0, len(servers))}
@@ -153,12 +154,12 @@ func (s *Server) handleAdminListMCP(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) handleAdminDeleteMCP(w http.ResponseWriter, r *http.Request) {
 	if !s.isAdmin(r) {
-		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "admin token is required", false)
+		writeError(w, http.StatusUnauthorized, string(errs.CodeUnauthorized), "admin token is required", false)
 		return
 	}
 	registry, ok := s.mcpRegistry()
 	if !ok {
-		writeError(w, http.StatusNotImplemented, "NOT_IMPLEMENTED", "MCP registry is not configured", false)
+		writeError(w, http.StatusNotImplemented, string(errs.CodeNotImplemented), "MCP registry is not configured", false)
 		return
 	}
 	force := strings.EqualFold(r.URL.Query().Get("force"), "true")
@@ -167,11 +168,11 @@ func (s *Server) handleAdminDeleteMCP(w http.ResponseWriter, r *http.Request) {
 	case err == nil:
 		writeJSON(w, http.StatusOK, map[string]any{"deleted": r.PathValue("name")})
 	case errors.Is(err, register.ErrMCPServerNotFound):
-		writeError(w, http.StatusNotFound, "MCP_NOT_FOUND", "MCP server not found", false)
+		writeError(w, http.StatusNotFound, string(errs.CodeMCPNotFound), "MCP server not found", false)
 	case errors.Is(err, register.ErrMCPServerInUse):
-		writeError(w, http.StatusConflict, "MCP_IN_USE", "MCP server is referenced by an app", false)
+		writeError(w, http.StatusConflict, string(errs.CodeMCPInUse), "MCP server is referenced by an app", false)
 	default:
-		writeError(w, http.StatusInternalServerError, "INTERNAL", "delete MCP server failed", true)
+		writeError(w, http.StatusInternalServerError, string(errs.CodeInternal), "delete MCP server failed", true)
 	}
 }
 

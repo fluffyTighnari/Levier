@@ -10,6 +10,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/fluffyTighnari/middleware/internal/errs"
 	"sync"
 	"time"
 
@@ -305,7 +306,7 @@ func (h *AppHub) CloseConn(conn *AppConn) {
 	h.mu.Unlock()
 	conn.close()
 	if remaining == 0 {
-		h.failPending(conn.appID, "APP_UNREACHABLE", "app connection closed")
+		h.failPending(conn.appID, string(errs.CodeAppUnreachable), "app connection closed")
 	}
 }
 
@@ -396,7 +397,7 @@ func (h *AppHub) CallLocalTool(ctx context.Context, appID string, request LocalT
 	defer timer.Stop()
 	select {
 	case result := <-pending.result:
-		if result.Error != nil && result.Error.Code == "APP_UNREACHABLE" {
+		if result.Error != nil && result.Error.Code == string(errs.CodeAppUnreachable) {
 			return result, ErrAppUnreachable
 		}
 		return result, nil
@@ -544,7 +545,7 @@ func (h *AppHub) Close() {
 		conn.close()
 	}
 	for appID := range pendingApps {
-		h.failPending(appID, "APP_UNREACHABLE", "app hub closed")
+		h.failPending(appID, string(errs.CodeAppUnreachable), "app hub closed")
 	}
 }
 

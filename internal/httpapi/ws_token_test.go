@@ -8,6 +8,7 @@ package httpapi
 import (
 	"context"
 	"encoding/json"
+	"github.com/fluffyTighnari/middleware/internal/contract"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -161,7 +162,7 @@ func TestWebSocketReplayPaginatesAndResumes(t *testing.T) {
 	_ = conn.SetReadDeadline(time.Now().Add(10 * time.Second))
 
 	subscribe, _ := json.Marshal(SubscribeMessage{
-		Type: WSMessageSubscribe, RunID: "run-1", LastAttempt: 1, LastSeq: 500,
+		Type: contract.WSMessageSubscribe, RunID: "run-1", LastAttempt: 1, LastSeq: 500,
 	})
 	if err := websocket.Message.Send(conn, string(subscribe)); err != nil {
 		t.Fatalf("Send(subscribe) error = %v", err)
@@ -180,13 +181,13 @@ func TestWebSocketReplayPaginatesAndResumes(t *testing.T) {
 		if err := json.Unmarshal([]byte(raw), &probe); err != nil {
 			t.Fatalf("decode message: %v", err)
 		}
-		if probe.Type == WSMessageCaughtUp {
+		if probe.Type == contract.WSMessageCaughtUp {
 			if err := json.Unmarshal([]byte(raw), &caughtUp); err != nil {
 				t.Fatalf("decode caught_up: %v", err)
 			}
 			break
 		}
-		if probe.Type != WSMessageEvent {
+		if probe.Type != contract.WSMessageEvent {
 			t.Fatalf("unexpected message: %s", raw)
 		}
 		var event EventMessage
@@ -255,7 +256,7 @@ func TestWebSocketReplayLimitAndCursor(t *testing.T) {
 	defer conn.Close()
 	_ = conn.SetReadDeadline(time.Now().Add(10 * time.Second))
 
-	subscribe, _ := json.Marshal(SubscribeMessage{Type: WSMessageSubscribe, RunID: "run-1"})
+	subscribe, _ := json.Marshal(SubscribeMessage{Type: contract.WSMessageSubscribe, RunID: "run-1"})
 	if err := websocket.Message.Send(conn, string(subscribe)); err != nil {
 		t.Fatalf("Send() error = %v", err)
 	}

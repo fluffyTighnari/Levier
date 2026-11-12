@@ -135,6 +135,7 @@
 | `docs/reports/MCP-M6.md` | MCP M6：一键回归与收口 |
 | `docs/reports/MCP-M7.md` | MCP M7：真实 SSE / streamable_http |
 | `docs/reports/P8R.1.md` | P8R.1：依赖与规模基线护栏 |
+| `docs/reports/P8R.2.md` | P8R.2：契约常量与错误码单一来源 |
 | `docs/reports/RETROFIT-E2E.md` | App 改造 P10：回归与一键收口 |
 | `docs/APP_ONBOARDING.md` | 任意 App 接入 Middleware 的标准流程 |
 

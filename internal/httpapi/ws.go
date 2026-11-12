@@ -8,34 +8,7 @@ package httpapi
 import (
 	"encoding/json"
 	"fmt"
-)
-
-const (
-	// WSProtocolVersion is the v1 WebSocket protocol version.
-	WSProtocolVersion = 1
-)
-
-const (
-	// WSMessageHello is the optional client handshake.
-	WSMessageHello = "hello"
-	// WSMessageSubscribe subscribes to a run.
-	WSMessageSubscribe = "subscribe"
-	// WSMessageLocalToolResult returns a local tool result.
-	WSMessageLocalToolResult = "local_tool_result"
-	// WSMessagePing is a client keepalive.
-	WSMessagePing = "ping"
-	// WSMessageEvent is a server run event.
-	WSMessageEvent = "event"
-	// WSMessageLocalToolCall asks the App to execute a local tool.
-	WSMessageLocalToolCall = "local_tool_call"
-	// WSMessageRunCompleted announces a terminal run.
-	WSMessageRunCompleted = "run_completed"
-	// WSMessagePong is a server keepalive.
-	WSMessagePong = "pong"
-	// WSMessageCaughtUp marks replay completion.
-	WSMessageCaughtUp = "caught_up"
-	// WSMessageError is a server error.
-	WSMessageError = "error"
+	"github.com/fluffyTighnari/middleware/internal/contract"
 )
 
 // ClientMessage is any App→middleware WebSocket message.
@@ -157,7 +130,7 @@ func ParseClientMessage(data []byte) (ClientMessage, error) {
 	}
 
 	switch probe.Type {
-	case WSMessageHello:
+	case contract.WSMessageHello:
 		var msg HelloMessage
 		if err := json.Unmarshal(data, &msg); err != nil {
 			return nil, fmt.Errorf("decode hello: %w", err)
@@ -166,7 +139,7 @@ func ParseClientMessage(data []byte) (ClientMessage, error) {
 			return nil, err
 		}
 		return &msg, nil
-	case WSMessageSubscribe:
+	case contract.WSMessageSubscribe:
 		var msg SubscribeMessage
 		if err := json.Unmarshal(data, &msg); err != nil {
 			return nil, fmt.Errorf("decode subscribe: %w", err)
@@ -175,7 +148,7 @@ func ParseClientMessage(data []byte) (ClientMessage, error) {
 			return nil, err
 		}
 		return &msg, nil
-	case WSMessageLocalToolResult:
+	case contract.WSMessageLocalToolResult:
 		var msg LocalToolResultMessage
 		if err := json.Unmarshal(data, &msg); err != nil {
 			return nil, fmt.Errorf("decode local_tool_result: %w", err)
@@ -184,7 +157,7 @@ func ParseClientMessage(data []byte) (ClientMessage, error) {
 			return nil, err
 		}
 		return &msg, nil
-	case WSMessagePing:
+	case contract.WSMessagePing:
 		var msg PingMessage
 		if err := json.Unmarshal(data, &msg); err != nil {
 			return nil, fmt.Errorf("decode ping: %w", err)
@@ -197,10 +170,10 @@ func ParseClientMessage(data []byte) (ClientMessage, error) {
 
 // Validate checks the optional v1 handshake.
 func (m HelloMessage) Validate() error {
-	if m.Type != WSMessageHello {
-		return fmt.Errorf("hello.type must be %q", WSMessageHello)
+	if m.Type != contract.WSMessageHello {
+		return fmt.Errorf("hello.type must be %q", contract.WSMessageHello)
 	}
-	if m.Protocol != WSProtocolVersion {
+	if m.Protocol != contract.WSProtocolVersion {
 		return fmt.Errorf("unsupported ws protocol %d", m.Protocol)
 	}
 	return nil
@@ -208,8 +181,8 @@ func (m HelloMessage) Validate() error {
 
 // Validate checks a subscribe message.
 func (m SubscribeMessage) Validate() error {
-	if m.Type != WSMessageSubscribe {
-		return fmt.Errorf("subscribe.type must be %q", WSMessageSubscribe)
+	if m.Type != contract.WSMessageSubscribe {
+		return fmt.Errorf("subscribe.type must be %q", contract.WSMessageSubscribe)
 	}
 	if m.RunID == "" {
 		return fmt.Errorf("subscribe.run_id is required")
@@ -222,8 +195,8 @@ func (m SubscribeMessage) Validate() error {
 
 // Validate checks a local tool result.
 func (m LocalToolResultMessage) Validate() error {
-	if m.Type != WSMessageLocalToolResult {
-		return fmt.Errorf("local_tool_result.type must be %q", WSMessageLocalToolResult)
+	if m.Type != contract.WSMessageLocalToolResult {
+		return fmt.Errorf("local_tool_result.type must be %q", contract.WSMessageLocalToolResult)
 	}
 	if m.CorrelationID == "" {
 		return fmt.Errorf("local_tool_result.correlation_id is required")

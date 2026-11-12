@@ -11,6 +11,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/fluffyTighnari/middleware/internal/errs"
 	"io"
 	"net/http"
 	"net/url"
@@ -117,11 +118,11 @@ func ParseHTTPConfig(raw string) (HTTPConfig, error) {
 func (h *HTTP) Execute(ctx context.Context, call gateway.GlobalCall) (gateway.GlobalResult, error) {
 	cfg, err := ParseHTTPConfig(call.ToolConfigJSON)
 	if err != nil {
-		return failure("TOOL_EXEC_ERROR", err.Error(), false), nil
+		return failure(string(errs.CodeToolExecError), err.Error(), false), nil
 	}
 	args, err := parseArguments(call.ArgumentsJSON)
 	if err != nil {
-		return failure("TOOL_EXEC_ERROR", err.Error(), false), nil
+		return failure(string(errs.CodeToolExecError), err.Error(), false), nil
 	}
 	spec := requestSpec{
 		Method:           cfg.Method,
@@ -155,7 +156,7 @@ func executeRequest(
 			if ctx.Err() != nil {
 				return gateway.GlobalResult{}, ctx.Err()
 			}
-			last = failure("TOOL_EXEC_ERROR", err.Error(), true)
+			last = failure(string(errs.CodeToolExecError), err.Error(), true)
 			if attempt == attempts-1 {
 				return last, nil
 			}
@@ -178,14 +179,14 @@ func doRequest(
 ) (gateway.GlobalResult, bool, error) {
 	renderedURL, err := renderTemplate("url", spec.URL, data)
 	if err != nil {
-		return failure("TOOL_EXEC_ERROR", err.Error(), false), false, nil
+		return failure(string(errs.CodeToolExecError), err.Error(), false), false, nil
 	}
 	if err := validateHTTPURL(renderedURL); err != nil {
-		return failure("TOOL_EXEC_ERROR", err.Error(), false), false, nil
+		return failure(string(errs.CodeToolExecError), err.Error(), false), false, nil
 	}
 	body, err := renderTemplate("body", spec.Body, data)
 	if err != nil {
-		return failure("TOOL_EXEC_ERROR", err.Error(), false), false, nil
+		return failure(string(errs.CodeToolExecError), err.Error(), false), false, nil
 	}
 	var reader io.Reader
 	if body != "" {
@@ -193,12 +194,12 @@ func doRequest(
 	}
 	request, err := http.NewRequestWithContext(ctx, spec.Method, renderedURL, reader)
 	if err != nil {
-		return failure("TOOL_EXEC_ERROR", "build request: "+err.Error(), false), false, nil
+		return failure(string(errs.CodeToolExecError), "build request: "+err.Error(), false), false, nil
 	}
 	for name, value := range spec.Headers {
 		rendered, err := renderTemplate("header "+name, value, data)
 		if err != nil {
-			return failure("TOOL_EXEC_ERROR", err.Error(), false), false, nil
+			return failure(string(errs.CodeToolExecError), err.Error(), false), false, nil
 		}
 		if rendered == "" {
 			continue
@@ -221,7 +222,7 @@ func doRequest(
 	if response.StatusCode >= 200 && response.StatusCode < 300 {
 		payload, err := readLimited(response.Body, spec.MaxResponseBytes)
 		if errors.Is(err, errResponseTooLarge) {
-			return failure("RESPONSE_TOO_LARGE",
+			return failure(string(errs.CodeResponseTooLarge),
 				fmt.Sprintf("response exceeds %d bytes", spec.MaxResponseBytes), false), false, nil
 		}
 		if err != nil {
@@ -229,7 +230,7 @@ func doRequest(
 		}
 		encoded, err := encode(response.StatusCode, payload)
 		if err != nil {
-			return failure("TOOL_EXEC_ERROR", err.Error(), false), false, nil
+			return failure(string(errs.CodeToolExecError), err.Error(), false), false, nil
 		}
 		return gateway.GlobalResult{OK: true, ResultJSON: encoded}, false, nil
 	}

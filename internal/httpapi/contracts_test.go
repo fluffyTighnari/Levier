@@ -7,6 +7,7 @@ package httpapi
 
 import (
 	"encoding/json"
+	"github.com/fluffyTighnari/middleware/internal/contract"
 	"strings"
 	"testing"
 )
@@ -76,7 +77,7 @@ func TestRunEventViewGolden(t *testing.T) {
 
 func TestEventMessageGolden(t *testing.T) {
 	msg := EventMessage{
-		Type:      WSMessageEvent,
+		Type:      contract.WSMessageEvent,
 		RunID:     "run-1",
 		Attempt:   1,
 		Seq:       2,

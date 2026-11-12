@@ -10,6 +10,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/fluffyTighnari/middleware/internal/errs"
 	"log/slog"
 	"strings"
 	"time"
@@ -137,10 +138,10 @@ func (i *Invoker) Invoke(
 	request *runtimev1.ToolCallRequest,
 ) *runtimev1.ToolCallResult {
 	if request == nil || request.GetInvocationId() == "" || request.GetToolName() == "" {
-		return toolError("", "BAD_REQUEST", "invocation_id and tool_name are required", false)
+		return toolError("", string(errs.CodeBadRequest), "invocation_id and tool_name are required", false)
 	}
 	if i == nil || i.resolver == nil {
-		return toolError(request.GetInvocationId(), "TOOL_NOT_FOUND", "tool registry is not configured", false)
+		return toolError(request.GetInvocationId(), string(errs.CodeToolNotFound), "tool registry is not configured", false)
 	}
 	invocationID := request.GetInvocationId()
 
@@ -151,7 +152,7 @@ func (i *Invoker) Invoke(
 	if !owner {
 		result, err := i.state.wait(ctx, pending)
 		if err != nil {
-			return toolError(invocationID, "TOOL_TIMEOUT", "cancelled while waiting for invocation", true)
+			return toolError(invocationID, string(errs.CodeToolTimeout), "cancelled while waiting for invocation", true)
 		}
 		return result
 	}
@@ -170,14 +171,14 @@ func (i *Invoker) execute(
 	if i.store != nil {
 		owner, stored, err := i.store.Begin(ctx, invocationID, runID, request.GetToolName())
 		if err != nil {
-			return toolError(invocationID, "TOOL_EXEC_ERROR", err.Error(), false)
+			return toolError(invocationID, string(errs.CodeToolExecError), err.Error(), false)
 		}
 		if !owner {
 			if stored != nil && stored.Result != nil {
 				i.state.put(invocationID, stored.Result)
 				return stored.Result
 			}
-			return toolError(invocationID, "TOOL_EXEC_ERROR", "invocation is already in flight", true)
+			return toolError(invocationID, string(errs.CodeToolExecError), "invocation is already in flight", true)
 		}
 	}
 
@@ -206,19 +207,19 @@ func (i *Invoker) invokeOnce(
 ) *runtimev1.ToolCallResult {
 	tool, resolution, err := i.resolver.ResolveToolDecision(ctx, appID, request.GetToolName())
 	if err != nil {
-		return toolError(request.GetInvocationId(), "TOOL_EXEC_ERROR", err.Error(), false)
+		return toolError(request.GetInvocationId(), string(errs.CodeToolExecError), err.Error(), false)
 	}
 	switch resolution {
 	case register.ResolutionDenied:
-		return toolError(request.GetInvocationId(), "TOOL_DENIED", "tool is not allowed for this app", false)
+		return toolError(request.GetInvocationId(), string(errs.CodeToolDenied), "tool is not allowed for this app", false)
 	case register.ResolutionNotFound:
-		return toolError(request.GetInvocationId(), "TOOL_NOT_FOUND", "tool not found", false)
+		return toolError(request.GetInvocationId(), string(errs.CodeToolNotFound), "tool not found", false)
 	case register.ResolutionFound:
 	default:
-		return toolError(request.GetInvocationId(), "TOOL_NOT_FOUND", "tool not found", false)
+		return toolError(request.GetInvocationId(), string(errs.CodeToolNotFound), "tool not found", false)
 	}
 	if strings.HasPrefix(tool.Name, "mcp__") {
-		return toolError(request.GetInvocationId(), "TOOL_NOT_FOUND", "MCP tools are routed by the MCP runtime", false)
+		return toolError(request.GetInvocationId(), string(errs.CodeToolNotFound), "MCP tools are routed by the MCP runtime", false)
 	}
 
 	timeout := time.Duration(request.GetTimeoutMs()) * time.Millisecond
@@ -237,7 +238,7 @@ func (i *Invoker) invokeOnce(
 	case "global":
 		result = i.invokeGlobal(ctx, runID, appID, request, tool, timeout)
 	default:
-		result = toolError(request.GetInvocationId(), "TOOL_EXEC_ERROR", fmt.Sprintf("unsupported tool scope %q", tool.Scope), false)
+		result = toolError(request.GetInvocationId(), string(errs.CodeToolExecError), fmt.Sprintf("unsupported tool scope %q", tool.Scope), false)
 	}
 	if i.metrics != nil {
 		status := "ok"
@@ -260,7 +261,7 @@ func (i *Invoker) invokeLocal(
 	timeout time.Duration,
 ) *runtimev1.ToolCallResult {
 	if i.local == nil {
-		return toolError(request.GetInvocationId(), "TOOL_NOT_AVAILABLE", "AppHub is not configured", false)
+		return toolError(request.GetInvocationId(), string(errs.CodeToolNotAvailable), "AppHub is not configured", false)
 	}
 	result, err := i.local.CallLocalTool(ctx, appID, connection.LocalToolRequest{
 		InvocationID:  request.GetInvocationId(),
@@ -272,11 +273,11 @@ func (i *Invoker) invokeLocal(
 	if err != nil {
 		switch {
 		case errors.Is(err, connection.ErrAppUnreachable):
-			return toolError(request.GetInvocationId(), "APP_UNREACHABLE", err.Error(), true)
+			return toolError(request.GetInvocationId(), string(errs.CodeAppUnreachable), err.Error(), true)
 		case errors.Is(err, connection.ErrLocalToolTimeout), errors.Is(err, context.DeadlineExceeded):
-			return toolError(request.GetInvocationId(), "TOOL_TIMEOUT", "local tool timed out", true)
+			return toolError(request.GetInvocationId(), string(errs.CodeToolTimeout), "local tool timed out", true)
 		default:
-			return toolError(request.GetInvocationId(), "TOOL_EXEC_ERROR", err.Error(), false)
+			return toolError(request.GetInvocationId(), string(errs.CodeToolExecError), err.Error(), false)
 		}
 	}
 	if result.OK {
@@ -286,7 +287,7 @@ func (i *Invoker) invokeLocal(
 			ResultJson:   result.ResultJSON,
 		}
 	}
-	code := "TOOL_EXEC_ERROR"
+	code := string(errs.CodeToolExecError)
 	message := "local tool failed"
 	retryable := false
 	if result.Error != nil {
@@ -307,11 +308,11 @@ func (i *Invoker) invokeGlobal(
 	timeout time.Duration,
 ) *runtimev1.ToolCallResult {
 	if i.globals == nil {
-		return toolError(request.GetInvocationId(), "TOOL_NOT_FOUND", "global executor registry is not configured", false)
+		return toolError(request.GetInvocationId(), string(errs.CodeToolNotFound), "global executor registry is not configured", false)
 	}
 	executor, ok := i.globals.Resolve(tool.ExecutorRef)
 	if !ok {
-		return toolError(request.GetInvocationId(), "TOOL_NOT_FOUND", fmt.Sprintf("executor %q is not registered", tool.ExecutorRef), false)
+		return toolError(request.GetInvocationId(), string(errs.CodeToolNotFound), fmt.Sprintf("executor %q is not registered", tool.ExecutorRef), false)
 	}
 	callCtx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
@@ -327,9 +328,9 @@ func (i *Invoker) invokeGlobal(
 	})
 	if err != nil {
 		if errors.Is(err, context.DeadlineExceeded) || errors.Is(callCtx.Err(), context.DeadlineExceeded) {
-			return toolError(request.GetInvocationId(), "TOOL_TIMEOUT", "global tool timed out", true)
+			return toolError(request.GetInvocationId(), string(errs.CodeToolTimeout), "global tool timed out", true)
 		}
-		return toolError(request.GetInvocationId(), "TOOL_EXEC_ERROR", err.Error(), false)
+		return toolError(request.GetInvocationId(), string(errs.CodeToolExecError), err.Error(), false)
 	}
 	if result.OK {
 		return &runtimev1.ToolCallResult{
@@ -340,7 +341,7 @@ func (i *Invoker) invokeGlobal(
 	}
 	code := result.Code
 	if code == "" {
-		code = "TOOL_EXEC_ERROR"
+		code = string(errs.CodeToolExecError)
 	}
 	message := result.Message
 	if message == "" {

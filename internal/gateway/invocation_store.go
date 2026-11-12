@@ -10,6 +10,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/fluffyTighnari/middleware/internal/errs"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -145,7 +146,7 @@ func (s *PostgresInvocationStore) Get(ctx context.Context, invocationID string) 
 		}
 	} else {
 		result.Ok = false
-		result.Error = &runtimev1.ErrorInfo{Code: "TOOL_EXEC_ERROR", Message: "stored invocation failed"}
+		result.Error = &runtimev1.ErrorInfo{Code: string(errs.CodeToolExecError), Message: "stored invocation failed"}
 		if errorJSON != nil {
 			var info struct {
 				Code      string `json:"code"`

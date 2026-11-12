@@ -80,6 +80,15 @@ func (f *fakeRuns) ListActiveRunsForDaemon(context.Context, string) ([]runstore.
 	return []runstore.Run{f.run}, nil
 }
 
+func (f *fakeRuns) ListActiveRuns(context.Context) ([]runstore.Run, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	if f.active != nil {
+		return append([]runstore.Run(nil), f.active...), nil
+	}
+	return []runstore.Run{f.run}, nil
+}
+
 func (f *fakeRuns) ListQueuedRuns(context.Context) ([]runstore.Run, error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
@@ -960,4 +969,158 @@ func TestControlRecordsMetrics(t *testing.T) {
 			t.Fatalf("metrics do not contain %q:\n%s", want, output)
 		}
 	}
+}
+
+func TestRecoverQueuedRunsEnqueuesMissingTasks(t *testing.T) {
+	runs := &fakeRuns{run: newRun()}
+	runs.run.Status = runstore.StatusQueued
+	tasks := &fakeTaskCanceller{}
+	ctrl := New(runs, &fakeHub{}, Config{Tasks: tasks})
+
+	if err := ctrl.RecoverQueued(context.Background()); err != nil {
+		t.Fatalf("RecoverQueued() error = %v", err)
+	}
+	if tasks.enqueueCalls != 2 {
+		t.Fatalf("enqueue calls = %d, want dispatch+timeout", tasks.enqueueCalls)
+	}
+}
+
+func TestRecoverActiveRunsRequeuesDisconnectedDaemon(t *testing.T) {
+	runs := &fakeRuns{run: newRun()}
+	runs.run.Status = runstore.StatusAssigned
+	runs.run.Attempt = 1
+	runs.run.LeaseEpoch = 1
+	runs.run.AssignedDaemonID = "d1"
+	tasks := &fakeTaskCanceller{}
+	hub := &fakeHub{}
+	ctrl := New(runs, hub, Config{
+		Tasks:           tasks,
+		DaemonAvailable: func(string) bool { return false },
+	})
+
+	if err := ctrl.RecoverActive(context.Background()); err != nil {
+		t.Fatalf("RecoverActive() error = %v", err)
+	}
+	current, _ := runs.GetRun(context.Background(), "run-1")
+	if current.Status != runstore.StatusQueued {
+		t.Fatalf("status = %q, want queued", current.Status)
+	}
+	if tasks.enqueueCalls != 1 || hub.releaseCalls != 1 {
+		t.Fatalf("enqueue=%d release=%d", tasks.enqueueCalls, hub.releaseCalls)
+	}
+}
+
+func TestRecoverActiveRunsLeavesConnectedDaemon(t *testing.T) {
+	runs := &fakeRuns{run: newRun()}
+	runs.run.Status = runstore.StatusRunning
+	runs.run.Attempt = 1
+	runs.run.LeaseEpoch = 1
+	runs.run.AssignedDaemonID = "d1"
+	tasks := &fakeTaskCanceller{}
+	ctrl := New(runs, &fakeHub{}, Config{
+		Tasks:           tasks,
+		DaemonAvailable: func(string) bool { return true },
+	})
+
+	if err := ctrl.RecoverActive(context.Background()); err != nil {
+		t.Fatalf("RecoverActive() error = %v", err)
+	}
+	current, _ := runs.GetRun(context.Background(), "run-1")
+	if current.Status != runstore.StatusRunning || tasks.enqueueCalls != 0 {
+		t.Fatalf("status=%s enqueue=%d", current.Status, tasks.enqueueCalls)
+	}
+}
+
+type blockingInvoker struct {
+	started chan struct{}
+	release chan struct{}
+	once    sync.Once
+}
+
+func (b *blockingInvoker) Invoke(_ context.Context, _ string, _ string, request *runtimev1.ToolCallRequest) *runtimev1.ToolCallResult {
+	b.once.Do(func() { close(b.started) })
+	<-b.release
+	return &runtimev1.ToolCallResult{
+		InvocationId: request.GetInvocationId(),
+		Ok:           true,
+		ResultJson:   `{"ok":true}`,
+	}
+}
+
+func TestDispatchToolCallDoesNotBlockAndRejectsWhenFull(t *testing.T) {
+	runs := &fakeRuns{run: newRun()}
+	hub := &fakeHub{}
+	invoker := &blockingInvoker{started: make(chan struct{}), release: make(chan struct{})}
+	ctrl := New(runs, hub, Config{Tools: invoker, ToolConcurrency: 1})
+	ctrl.Start(context.Background())
+	defer ctrl.Close()
+
+	env := func() *runtimev1.Envelope {
+		request := &runtimev1.ToolCallRequest{
+			InvocationId: id.New(), ToolName: "search", ArgumentsJson: "{}", TimeoutMs: 1000,
+		}
+		envelope, err := protocol.NewRun("run-1", 1, 1, request)
+		if err != nil {
+			t.Fatalf("NewRun() error = %v", err)
+		}
+		return envelope
+	}
+
+	first := env()
+	dispatched := make(chan struct{})
+	go func() {
+		ctrl.DispatchToolCall("d1", first)
+		close(dispatched)
+	}()
+	select {
+	case <-dispatched:
+	case <-time.After(time.Second):
+		t.Fatal("DispatchToolCall blocked while starting a tool")
+	}
+	select {
+	case <-invoker.started:
+	case <-time.After(time.Second):
+		t.Fatal("first tool did not start")
+	}
+
+	second := env()
+	secondDone := make(chan struct{})
+	go func() {
+		ctrl.DispatchToolCall("d1", second)
+		close(secondDone)
+	}()
+	select {
+	case <-secondDone:
+	case <-time.After(time.Second):
+		t.Fatal("rejected DispatchToolCall blocked")
+	}
+	deadline := time.Now().Add(time.Second)
+	for time.Now().Before(deadline) {
+		hub.mu.Lock()
+		sent := len(hub.sent)
+		hub.mu.Unlock()
+		if sent == 1 {
+			break
+		}
+		time.Sleep(5 * time.Millisecond)
+	}
+	hub.mu.Lock()
+	busy := hub.sent[0].GetToolCallResult()
+	hub.mu.Unlock()
+	if busy == nil || busy.GetError().GetCode() != "TOOL_BUSY" {
+		t.Fatalf("second call was not rejected with TOOL_BUSY: %+v", busy)
+	}
+
+	close(invoker.release)
+	deadline = time.Now().Add(time.Second)
+	for time.Now().Before(deadline) {
+		hub.mu.Lock()
+		sent := len(hub.sent)
+		hub.mu.Unlock()
+		if sent == 2 {
+			return
+		}
+		time.Sleep(5 * time.Millisecond)
+	}
+	t.Fatal("first tool result was not sent")
 }
