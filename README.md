@@ -99,7 +99,14 @@ final_message: The final counter value is **5**...
 mvp-demo: PASS
 ```
 
+故障矩阵：
+
+```sh
+make fault-matrix
+```
+
 日志与凭据临时目录在 `data/mvp-demo/`（已 gitignore，凭据在退出时删除）。
+故障矩阵输出在 `data/fault-matrix/`。
 
 ## 4. 测试
 

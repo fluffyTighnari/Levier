@@ -119,7 +119,25 @@ Run completed
 MESSAGE_COMPLETED 内容为 hello mvp
 ```
 
-### 4.2 react：真实模型 + 本地工具
+### 4.2 故障矩阵
+
+```sh
+make fault-matrix
+```
+
+覆盖：
+
+```text
+Harness kill -9 中途 → requeue → attempt 2 完成
+MW 重启中途 → Harness 重连 → Run 完成
+App 断线 → 工具调用失败 → App 重启后新 Run 完成
+取消 → cancelled + source=mw 事件 + 无 active task
+超时 → timeout + source=mw 事件 + 无 active task
+```
+
+输出在 `data/fault-matrix/<时间>/`。
+
+### 4.3 react：真实模型 + 本地工具
 
 ```sh
 make mvp-demo-react
@@ -210,14 +228,13 @@ demo 退出时删除凭据文件
 已登记但尚未完成的可用性修复：
 
 ```text
-R17 Hello 对账收敛
-R20 控制面终态事件 + timeout 清理
-R13 关键事件不被事件缓冲静默丢弃
-R14 Gateway panic 兜底
-R12 有界 replay / close-send 串行化
-R21 Harness backoff 重置与出站背压
 R19b CreateRun + Enqueue 同事务
+R2   /readyz
+R8   自动密钥扫描
+R22  成功 HTTP 请求访问日志
 ```
+
+R17/R20/R13/R14/R12/R21 已完成。
 
 这些不影响本文档的 demo 路径，但会影响故障场景下的最终收敛。
 逐项状态见 `docs/reports/AVAILABILITY-E3.md`。
