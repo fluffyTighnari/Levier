@@ -1,0 +1,15 @@
+2 | USAGE | {"input_tokens": 411, "total_tokens": 463, "output_tokens": 52, "cache_read_tokens": 256, "cache_write_tokens": 0}
+3 | MESSAGE_COMPLETED | {"role": "assistant", "step": 1, "model": "deepseek-flash", "content": "I'll add 2, then 3, then read the counter.", "message_id": "01M776Q667B0Z5B1DMWSAR8A17", "tool_calls": [{"call_id": "call_00_ET_D7MViBDKIr8DPqbeCwGy9591", "tool_name": "counter_add", "arguments_json": "{\"delta\": 2}"}]}
+4 | TOOL_CALL_BEGIN | {"tool_name": "counter_add", "invocation_id": "01M776Q7FP9HATBBRHKNDW14ZJ", "arguments_json": "{\"delta\": 2}"}
+5 | TOOL_CALL_END | {"ok": true, "tool_name": "counter_add", "duration_ms": 24, "result_json": "{\"value\": 2}", "invocation_id": "01M776Q7FP9HATBBRHKNDW14ZJ"}
+6 | USAGE | {"input_tokens": 480, "total_tokens": 523, "output_tokens": 43, "cache_read_tokens": 256, "cache_write_tokens": 0}
+7 | MESSAGE_COMPLETED | {"role": "assistant", "step": 2, "model": "deepseek-flash", "content": "", "message_id": "01M776Q7GF8MXDEQ851C9QRH05", "tool_calls": [{"call_id": "call_00_xWwSiSgyX5KEgTfz44X60359", "tool_name": "counter_add", "arguments_json": "{\"delta\": 3}"}]}
+8 | TOOL_CALL_BEGIN | {"tool_name": "counter_add", "invocation_id": "01M776Q8Q13ESV9EJV7Y93R443", "arguments_json": "{\"delta\": 3}"}
+9 | TOOL_CALL_END | {"ok": true, "tool_name": "counter_add", "duration_ms": 11, "result_json": "{\"value\": 5}", "invocation_id": "01M776Q8Q13ESV9EJV7Y93R443"}
+10 | USAGE | {"input_tokens": 540, "total_tokens": 562, "output_tokens": 22, "cache_read_tokens": 384, "cache_write_tokens": 0}
+11 | MESSAGE_COMPLETED | {"role": "assistant", "step": 3, "model": "deepseek-flash", "content": "", "message_id": "01M776Q8QDP3RJ3HM0YG7JE09Q", "tool_calls": [{"call_id": "call_00_ET_jOqHr1db6xTEzgLoAafa2003", "tool_name": "counter_get", "arguments_json": "{}"}]}
+12 | TOOL_CALL_BEGIN | {"tool_name": "counter_get", "invocation_id": "01M776QA96C5KJWY8C5QC9YV4T", "arguments_json": "{}"}
+13 | TOOL_CALL_END | {"ok": true, "tool_name": "counter_get", "duration_ms": 6, "result_json": "{\"value\": 5}", "invocation_id": "01M776QA96C5KJWY8C5QC9YV4T"}
+14 | USAGE | {"input_tokens": 579, "total_tokens": 588, "output_tokens": 9, "cache_read_tokens": 384, "cache_write_tokens": 0}
+15 | MESSAGE_COMPLETED | {"role": "assistant", "step": 4, "model": "deepseek-flash", "content": "The final counter value is **5**.", "message_id": "01M776QA9CM69BQ7E7KQY1S8QY"}
+16 | RUN_STATUS | {"status": "completed"}

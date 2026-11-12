@@ -264,7 +264,7 @@ class ChannelBackpressureTest(unittest.IsolatedAsyncioTestCase):
         )
         self.client._control.put_nowait(heartbeat)
         self.client._outbound.put_nowait(event)
-        got = await self.client._next_envelope()
+        got = self.client._take_next()
         self.assertEqual(got.WhichOneof("payload"), "heartbeat")
 
 

@@ -66,6 +66,7 @@ class ChannelClient:
 
         self._control: asyncio.Queue[runtime_pb2.Envelope] = asyncio.Queue(maxsize=64)
         self._outbound: asyncio.Queue[runtime_pb2.Envelope] = asyncio.Queue(maxsize=256)
+        self._wakeup = asyncio.Event()
         self._connected = asyncio.Event()
         self._stopped = asyncio.Event()
         self._runner: asyncio.Task[None] | None = None
@@ -98,8 +99,9 @@ class ChannelClient:
             raise RuntimeError("channel client is stopped")
         if _is_control_envelope(envelope):
             await self._control.put(envelope)
-            return
-        await self._outbound.put(envelope)
+        else:
+            await self._outbound.put(envelope)
+        self._wakeup.set()
 
     async def send_response(self, request: runtime_pb2.Envelope, payload: Any, field: str) -> None:
         """Queue a response correlated to request.msg_id."""
@@ -233,10 +235,16 @@ class ChannelClient:
 
     async def _writer(self, call: Any) -> None:
         while True:
-            envelope = await self._next_envelope()
+            envelope = self._take_next()
+            if envelope is None:
+                self._wakeup.clear()
+                envelope = self._take_next()
+            if envelope is None:
+                await self._wakeup.wait()
+                continue
             await call.write(envelope)
 
-    async def _next_envelope(self) -> runtime_pb2.Envelope:
+    def _take_next(self) -> runtime_pb2.Envelope | None:
         try:
             return self._control.get_nowait()
         except asyncio.QueueEmpty:
@@ -244,26 +252,7 @@ class ChannelClient:
         try:
             return self._outbound.get_nowait()
         except asyncio.QueueEmpty:
-            pass
-
-        control_get = asyncio.create_task(self._control.get())
-        event_get = asyncio.create_task(self._outbound.get())
-        try:
-            done, pending = await asyncio.wait(
-                {control_get, event_get},
-                return_when=asyncio.FIRST_COMPLETED,
-            )
-        except asyncio.CancelledError:
-            control_get.cancel()
-            event_get.cancel()
-            await asyncio.gather(control_get, event_get, return_exceptions=True)
-            raise
-        for task in pending:
-            task.cancel()
-        await asyncio.gather(*pending, return_exceptions=True)
-        for task in done:
-            return task.result()
-        raise RuntimeError("outbound wait completed without a task")
+            return None
 
     def _drain_control(self) -> None:
         while True:
