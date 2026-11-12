@@ -87,7 +87,17 @@ MCP      Harness → mcp_runtime（本地 JSON-RPC）→ MCP server
 | 新 MCP transport | `mcp_runtime/sessions.py` + 测试 |
 | 新存储查询 | 对应 `runstore/*.go` |
 
-## 6. 明确不做的事
+## 6. Agent Core（P8C）
+
+```text
+agent_core/          循环、工具编排、CoreEvent、取消（无 MW 依赖）
+harness adapter      TaskAssign ↔ RunSpec、CoreEvent ↔ MW Event、工具桥
+```
+
+契约：`docs/AGENT_CORE_CONTRACT.md`。
+当前只完成类型与契约，循环抽取在 P8C.2。
+
+## 7. 明确不做的事
 
 ```text
 不引入 DI / 六边形 / 通用领域层
@@ -97,7 +107,7 @@ MCP      Harness → mcp_runtime（本地 JSON-RPC）→ MCP server
 不新增第二套事件/错误模型
 ```
 
-## 7. 长函数评审结果
+## 8. 长函数评审结果
 
 保留，不拆：
 
