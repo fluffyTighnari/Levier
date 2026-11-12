@@ -112,6 +112,7 @@ DEEPSEEK_MODEL    ← deepseek-flash
 | P6 | local tool 闭环 | counter 结果与基线一致 |
 | P7 | 持久化与观测 | DB/日志/指标可核对 |
 | P8 | 语言无关 | Python HTTP + Node WS |
+| P8R | 结构与接入面 | 分层清晰、契约单一来源、App/Daemon 可自助接入 |
 | P9 | 负向与故障 | 指定错误码/恢复 |
 | P10 | 回归与收口 | 一键脚本可重复 |
 
@@ -345,6 +346,102 @@ Harness: Python
 App baseline: Python stdlib
 App retrofit: Node stdlib
 HTTP smoke: Python stdlib
+```
+
+---
+
+## P8R 结构与接入面（位于 P8 与 P9 之间）
+
+不新增 daemon、不改协议字段，只做结构与接入面。
+
+### 目标
+
+```text
+1. 每个包一个职责，依赖方向单一
+2. 大文件按既有职责拆分，不引入新框架
+3. 错误码 / 事件名 / WS 消息类型有单一来源
+4. 外部 App 与 Daemon 能按文档 + 检查器自助接入
+5. 现有测试、retrofit-e2e、mcp-e2e 行为不变
+```
+
+### 非目标
+
+```text
+不引入 DDD / 六边形 / DI 容器
+不新增抽象接口层
+不改 HTTP 路径、WS 字段、proto 字段
+不新增 daemon 实现
+不重写调度算法
+```
+
+### 目标分层
+
+```text
+contract        错误码、事件名、WS 消息类型、版本号（不依赖 internal）
+runstore        持久化：runs / events / sessions / apps
+register        目录与 ACL：apps / tools / mcp / materials
+workflow        持久任务队列
+control         运行编排：调度、租约、事件投影、生命周期
+gateway         工具路由与幂等：local / global
+connection      daemon/app 在线状态与收发接口
+httpapi         HTTP + WebSocket 适配
+observe         指标与日志字段
+```
+
+依赖规则（`scripts/check_deps.sh` 强制执行）：
+
+```text
+httpapi   → register / runstore / connection / workflow
+control   → register / runstore / workflow / connection / protocol
+gateway   → register / connection
+register  → runstore
+runstore  → 无 internal 依赖
+contract  → 无 internal 依赖
+```
+
+### 工作包
+
+进度：P8R.1 完成（`docs/reports/P8R.1.md`）；P8R.2–P8R.8 待做。
+
+| ID | 内容 | 产出 | 验收 |
+|---|---|---|---|
+| P8R.1 | 基线与护栏 | `check_deps.sh`、`size_report.sh`、基线报告 | 规则可执行；规模可重复 |
+| P8R.2 | 契约单一来源 | `internal/contract`：错误码、事件名、WS 消息类型 | 字面量替换；常量值有测试 |
+| P8R.3 | 拆分大文件 | control/httpapi/register/runstore 按职责拆分 | 纯移动；测试原样通过 |
+| P8R.4 | 错误与事件一致性 | 统一映射与字段定义 | contract 外错误码字面量 = 0 |
+| P8R.5 | App 接入套件 | JSON schema + `app_check` | 非 Python 客户端按文档通过 |
+| P8R.6 | Daemon 接入套件 | `DAEMON_CONTRACT.md` + `mw-daemon-check` | 新 daemon 不改 MW 代码 |
+| P8R.7 | 清理与架构文档 | `ARCHITECTURE.md`、删除重复 helper | 文档一页可读 |
+| P8R.8 | 回归与评估 | 全量测试 + 两个 e2e | 全部通过 |
+
+### 评估指标
+
+```text
+最大非生成文件      < 450 行
+最长函数            < 80 行
+依赖违规            0
+contract 外错误码   0
+现有测试            全绿
+App 自检            文档 + checker 通过
+Daemon 自检         文档 + checker 通过
+新增 daemon 改 MW   0 处
+```
+
+### 顺序
+
+```text
+P8R.1 护栏 → P8R.2 契约 → P8R.3 拆分 → P8R.4 一致性
+→ P8R.5 App 套件 → P8R.6 Daemon 套件 → P8R.7 清理 → P8R.8 回归
+```
+
+### 风险
+
+```text
+拆分改行为      只移动不改签名，每步跑全量测试
+循环依赖        check_deps.sh 每次提交执行
+契约漂移        常量值测试固定
+过度抽象        只拆文件 + 常量，不引入新接口
+checker 漂移     checker 只做客户端，不复制业务
 ```
 
 ---
