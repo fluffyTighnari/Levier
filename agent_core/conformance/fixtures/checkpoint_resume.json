@@ -1,0 +1,72 @@
+{
+  "name": "checkpoint_resume",
+  "run_id": "run-resume",
+  "start_step": 2,
+  "messages": [
+    {
+      "role": "user",
+      "content": "add 1"
+    },
+    {
+      "role": "assistant",
+      "content": "",
+      "tool_calls": [
+        {
+          "call_id": "call-1",
+          "name": "add",
+          "arguments_json": "{}"
+        }
+      ]
+    },
+    {
+      "role": "tool",
+      "content": "1",
+      "name": "add",
+      "tool_call_id": "call-1"
+    }
+  ],
+  "tools": [
+    {
+      "name": "add",
+      "description": "",
+      "input_schema_json": "{}"
+    }
+  ],
+  "model": {
+    "provider": "fake",
+    "model": "fake-model"
+  },
+  "max_steps": 4,
+  "provider_script": [
+    {
+      "content": "final"
+    }
+  ],
+  "tool_script": [],
+  "expected": {
+    "status": "completed",
+    "steps": 2,
+    "provider_calls": 1,
+    "tool_calls": 0,
+    "events": [
+      {
+        "type": "run_started",
+        "run_id": "run-resume"
+      },
+      {
+        "type": "step_started",
+        "step": 2
+      },
+      {
+        "type": "message_completed",
+        "step": 2,
+        "content": "final"
+      },
+      {
+        "type": "run_finished",
+        "status": "completed",
+        "steps": 2
+      }
+    ]
+  }
+}

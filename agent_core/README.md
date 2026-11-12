@@ -8,6 +8,11 @@ Loop, tool orchestration, events, and cancellation shared by daemons.
 - No Middleware / Harness / MCP / protobuf imports.
 - Adapters own transport, MW event mapping, tool bridges, and persistence.
 
+## Conformance
+
+`conformance/fixtures/*.json` 是语言无关的 core 行为用例。
+Python core 和未来的 TS core 必须跑通同一组 fixture。
+
 ## Test
 
 ```sh

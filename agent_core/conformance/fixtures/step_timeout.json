@@ -1,0 +1,48 @@
+{
+  "name": "step_timeout",
+  "run_id": "run-step-timeout",
+  "messages": [
+    {
+      "role": "user",
+      "content": "slow model"
+    }
+  ],
+  "tools": [],
+  "model": {
+    "provider": "fake",
+    "model": "fake-model"
+  },
+  "max_steps": 2,
+  "step_timeout_ms": 20,
+  "provider_script": [
+    {
+      "sleep_ms": 200
+    }
+  ],
+  "tool_script": [],
+  "expected": {
+    "status": "failed",
+    "steps": 1,
+    "provider_calls": 1,
+    "tool_calls": 0,
+    "events": [
+      {
+        "type": "run_started",
+        "run_id": "run-step-timeout"
+      },
+      {
+        "type": "step_started",
+        "step": 1
+      },
+      {
+        "type": "error",
+        "code": "STEP_TIMEOUT"
+      },
+      {
+        "type": "run_finished",
+        "status": "failed",
+        "steps": 1
+      }
+    ]
+  }
+}

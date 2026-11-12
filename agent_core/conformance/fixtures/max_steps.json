@@ -1,0 +1,111 @@
+{
+  "name": "max_steps",
+  "run_id": "run-max-steps",
+  "messages": [
+    {
+      "role": "user",
+      "content": "loop"
+    }
+  ],
+  "tools": [
+    {
+      "name": "loop",
+      "description": "",
+      "input_schema_json": "{}"
+    }
+  ],
+  "model": {
+    "provider": "fake",
+    "model": "fake-model"
+  },
+  "max_steps": 2,
+  "provider_script": [
+    {
+      "tool_calls": [
+        {
+          "call_id": "call-1",
+          "name": "loop",
+          "arguments_json": "{}"
+        }
+      ]
+    },
+    {
+      "tool_calls": [
+        {
+          "call_id": "call-2",
+          "name": "loop",
+          "arguments_json": "{}"
+        }
+      ]
+    }
+  ],
+  "tool_script": [
+    {
+      "ok": true,
+      "result_json": "ok"
+    },
+    {
+      "ok": true,
+      "result_json": "ok"
+    }
+  ],
+  "expected": {
+    "status": "failed",
+    "steps": 2,
+    "provider_calls": 2,
+    "tool_calls": 2,
+    "events": [
+      {
+        "type": "run_started",
+        "run_id": "run-max-steps"
+      },
+      {
+        "type": "step_started",
+        "step": 1
+      },
+      {
+        "type": "message_completed",
+        "step": 1
+      },
+      {
+        "type": "tool_started",
+        "step": 1,
+        "tool_name": "loop"
+      },
+      {
+        "type": "tool_finished",
+        "step": 1,
+        "tool_name": "loop",
+        "ok": true
+      },
+      {
+        "type": "step_started",
+        "step": 2
+      },
+      {
+        "type": "message_completed",
+        "step": 2
+      },
+      {
+        "type": "tool_started",
+        "step": 2,
+        "tool_name": "loop"
+      },
+      {
+        "type": "tool_finished",
+        "step": 2,
+        "tool_name": "loop",
+        "ok": true
+      },
+      {
+        "type": "error",
+        "code": "MAX_STEPS"
+      },
+      {
+        "type": "run_finished",
+        "status": "failed",
+        "steps": 2
+      }
+    ]
+  }
+}

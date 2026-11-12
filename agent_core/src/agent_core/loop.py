@@ -69,6 +69,7 @@ class AgentCore:
         messages = list(spec.messages)
         total = Usage()
         step = spec.start_step - 1
+        last_step = spec.start_step - 1
         status = "failed"
         error_code = ""
         error_message = ""
@@ -81,6 +82,7 @@ class AgentCore:
                     status = "cancelled"
                     break
                 await emit(StepStarted(run_id=spec.run_id, step=step))
+                last_step = step
 
                 message_id = self.new_id()
                 streamed = False
@@ -219,18 +221,18 @@ class AgentCore:
             status = "cancelled"
             if on_cancel is not None:
                 try:
-                    await on_cancel(messages, max(step, 0))
+                    await on_cancel(messages, last_step)
                 except Exception:  # noqa: BLE001 - never mask cancellation
                     pass
             raise
         finally:
             if not task_cancelled:
-                await emit(RunFinished(run_id=spec.run_id, status=status, steps=max(step, 0)))
+                await emit(RunFinished(run_id=spec.run_id, status=status, steps=last_step))
 
         return RunResult(
             status=status,
             messages=messages,
-            steps=max(step, 0),
+            steps=last_step,
             usage=total,
             error_code=error_code,
             error_message=error_message,

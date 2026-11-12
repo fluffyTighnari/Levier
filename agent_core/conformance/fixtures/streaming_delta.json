@@ -1,0 +1,62 @@
+{
+  "name": "streaming_delta",
+  "run_id": "run-stream",
+  "messages": [
+    {
+      "role": "user",
+      "content": "stream"
+    }
+  ],
+  "tools": [],
+  "model": {
+    "provider": "fake",
+    "model": "fake-model"
+  },
+  "max_steps": 2,
+  "provider_script": [
+    {
+      "deltas": [
+        "Hel",
+        "lo"
+      ],
+      "content": "Hello"
+    }
+  ],
+  "tool_script": [],
+  "expected": {
+    "status": "completed",
+    "steps": 1,
+    "provider_calls": 1,
+    "tool_calls": 0,
+    "events": [
+      {
+        "type": "run_started",
+        "run_id": "run-stream"
+      },
+      {
+        "type": "step_started",
+        "step": 1
+      },
+      {
+        "type": "message_delta",
+        "step": 1,
+        "delta": "Hel"
+      },
+      {
+        "type": "message_delta",
+        "step": 1,
+        "delta": "lo"
+      },
+      {
+        "type": "message_completed",
+        "step": 1,
+        "content": "Hello"
+      },
+      {
+        "type": "run_finished",
+        "status": "completed",
+        "steps": 1
+      }
+    ]
+  }
+}

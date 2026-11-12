@@ -1,0 +1,97 @@
+{
+  "name": "tool_timeout",
+  "run_id": "run-tool-timeout",
+  "messages": [
+    {
+      "role": "user",
+      "content": "slow tool"
+    }
+  ],
+  "tools": [
+    {
+      "name": "slow",
+      "description": "",
+      "input_schema_json": "{}"
+    }
+  ],
+  "model": {
+    "provider": "fake",
+    "model": "fake-model"
+  },
+  "max_steps": 4,
+  "tool_timeout_ms": 20,
+  "provider_script": [
+    {
+      "tool_calls": [
+        {
+          "call_id": "call-1",
+          "name": "slow",
+          "arguments_json": "{}"
+        }
+      ]
+    },
+    {
+      "content": "after timeout"
+    }
+  ],
+  "tool_script": [
+    {
+      "sleep_ms": 200
+    }
+  ],
+  "expected": {
+    "status": "completed",
+    "steps": 2,
+    "provider_calls": 2,
+    "tool_calls": 1,
+    "tool_message_contains": [
+      "TOOL_TIMEOUT"
+    ],
+    "events": [
+      {
+        "type": "run_started",
+        "run_id": "run-tool-timeout"
+      },
+      {
+        "type": "step_started",
+        "step": 1
+      },
+      {
+        "type": "message_completed",
+        "step": 1,
+        "tool_calls": [
+          {
+            "call_id": "call-1",
+            "name": "slow"
+          }
+        ]
+      },
+      {
+        "type": "tool_started",
+        "step": 1,
+        "tool_name": "slow"
+      },
+      {
+        "type": "tool_finished",
+        "step": 1,
+        "tool_name": "slow",
+        "ok": false,
+        "error_code": "TOOL_TIMEOUT"
+      },
+      {
+        "type": "step_started",
+        "step": 2
+      },
+      {
+        "type": "message_completed",
+        "step": 2,
+        "content": "after timeout"
+      },
+      {
+        "type": "run_finished",
+        "status": "completed",
+        "steps": 2
+      }
+    ]
+  }
+}

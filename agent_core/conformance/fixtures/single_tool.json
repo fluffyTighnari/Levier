@@ -1,0 +1,124 @@
+{
+  "name": "single_tool",
+  "run_id": "run-single",
+  "messages": [
+    {
+      "role": "user",
+      "content": "add 1 and 2"
+    }
+  ],
+  "tools": [
+    {
+      "name": "add",
+      "description": "add",
+      "input_schema_json": "{}"
+    }
+  ],
+  "model": {
+    "provider": "fake",
+    "model": "fake-model"
+  },
+  "max_steps": 4,
+  "provider_script": [
+    {
+      "tool_calls": [
+        {
+          "call_id": "call-1",
+          "name": "add",
+          "arguments_json": "{\"a\":1,\"b\":2}"
+        }
+      ],
+      "usage": {
+        "input_tokens": 1,
+        "output_tokens": 1
+      }
+    },
+    {
+      "content": "3",
+      "usage": {
+        "input_tokens": 2,
+        "output_tokens": 1
+      },
+      "model": "fake-model"
+    }
+  ],
+  "tool_script": [
+    {
+      "ok": true,
+      "result_json": "3"
+    }
+  ],
+  "expected": {
+    "status": "completed",
+    "steps": 2,
+    "provider_calls": 2,
+    "tool_calls": 1,
+    "events": [
+      {
+        "type": "run_started",
+        "run_id": "run-single"
+      },
+      {
+        "type": "step_started",
+        "step": 1
+      },
+      {
+        "type": "usage",
+        "step": 1,
+        "usage": {
+          "input_tokens": 1,
+          "output_tokens": 1,
+          "total_tokens": 2
+        }
+      },
+      {
+        "type": "message_completed",
+        "step": 1,
+        "content": "",
+        "tool_calls": [
+          {
+            "call_id": "call-1",
+            "name": "add"
+          }
+        ]
+      },
+      {
+        "type": "tool_started",
+        "step": 1,
+        "tool_name": "add",
+        "arguments_json": "{\"a\":1,\"b\":2}"
+      },
+      {
+        "type": "tool_finished",
+        "step": 1,
+        "tool_name": "add",
+        "ok": true,
+        "result_json": "3"
+      },
+      {
+        "type": "step_started",
+        "step": 2
+      },
+      {
+        "type": "usage",
+        "step": 2,
+        "usage": {
+          "input_tokens": 2,
+          "output_tokens": 1,
+          "total_tokens": 3
+        }
+      },
+      {
+        "type": "message_completed",
+        "step": 2,
+        "content": "3",
+        "model": "fake-model"
+      },
+      {
+        "type": "run_finished",
+        "status": "completed",
+        "steps": 2
+      }
+    ]
+  }
+}
