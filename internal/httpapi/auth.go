@@ -55,30 +55,30 @@ func (s *Server) appFromRequest(r *http.Request) (runstore.App, error) {
 // writeAppAuthError separates bad credentials from a broken auth backend.
 func writeAppAuthError(w http.ResponseWriter, err error) {
 	if errors.Is(err, runstore.ErrAppNotFound) {
-		writeError(w, http.StatusUnauthorized, string(errs.CodeUnauthorized), "missing or invalid bearer token", false)
+		writeErrorCode(w, errs.CodeUnauthorized, "missing or invalid bearer token", false)
 		return
 	}
-	writeError(w, http.StatusServiceUnavailable, string(errs.CodeDependencyUnavailable), "app authentication backend unavailable", true)
+	writeErrorCode(w, errs.CodeDependencyUnavailable, "app authentication backend unavailable", true)
 }
 
 func (s *Server) resolveRequestApp(w http.ResponseWriter, r *http.Request, appID string) (string, bool) {
 	if s.authDisabled() {
 		if appID == "" {
-			writeError(w, http.StatusBadRequest, string(errs.CodeBadRequest), "app_id is required", false)
+			writeErrorCode(w, errs.CodeBadRequest, "app_id is required", false)
 			return "", false
 		}
 		return appID, true
 	}
 	if s.isAdmin(r) {
 		if appID == "" {
-			writeError(w, http.StatusBadRequest, string(errs.CodeBadRequest), "app_id is required", false)
+			writeErrorCode(w, errs.CodeBadRequest, "app_id is required", false)
 			return "", false
 		}
 		return appID, true
 	}
 	if app, err := s.appFromRequest(r); err == nil {
 		if appID != "" && appID != app.AppID {
-			writeError(w, http.StatusForbidden, string(errs.CodeForbidden), "app_id does not match the authenticated app", false)
+			writeErrorCode(w, errs.CodeForbidden, "app_id does not match the authenticated app", false)
 			return "", false
 		}
 		return app.AppID, true
@@ -88,7 +88,7 @@ func (s *Server) resolveRequestApp(w http.ResponseWriter, r *http.Request, appID
 	}
 	if s.legacyAllowed(r) {
 		if appID == "" {
-			writeError(w, http.StatusBadRequest, string(errs.CodeBadRequest), "app_id is required", false)
+			writeErrorCode(w, errs.CodeBadRequest, "app_id is required", false)
 			return "", false
 		}
 		return appID, true

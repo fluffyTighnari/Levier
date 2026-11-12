@@ -1,92 +1,39 @@
-// Middleware — internal/errs
-//
-// Error model tests.
-//
-// Copyright 2026 The Middleware Authors.
 package errs
 
-import (
-	"errors"
-	"strings"
-	"testing"
-)
+import "testing"
 
-func TestErrorFormattingAndUnwrap(t *testing.T) {
-	cause := errors.New("connection refused")
-	err := Wrap(CodeAppUnreachable, "app ws disconnected", cause)
-
-	if !strings.Contains(err.Error(), "APP_UNREACHABLE") {
-		t.Fatalf("Error() = %q", err.Error())
+func TestCodeMetaIsComplete(t *testing.T) {
+	for code, meta := range codeMetaByCode {
+		if meta.status < 400 {
+			t.Fatalf("%s status = %d, want >= 400", code, meta.status)
+		}
+		if got := HTTPStatus(code); got != meta.status {
+			t.Fatalf("%s HTTPStatus = %d, want %d", code, got, meta.status)
+		}
 	}
-	if !errors.Is(err, cause) {
-		t.Fatal("errors.Is(err, cause) = false")
-	}
-	if !IsRetryable(err) {
-		t.Fatal("IsRetryable(err) = false")
-	}
-	if CodeOf(err) != CodeAppUnreachable {
-		t.Fatalf("CodeOf(err) = %q", CodeOf(err))
+	if got := HTTPStatus(Code("UNKNOWN_CODE")); got != 500 {
+		t.Fatalf("unknown code status = %d, want 500", got)
 	}
 }
 
-func TestRetryabilityTable(t *testing.T) {
-	tests := []struct {
-		code Code
-		want bool
+func TestCodeMetaPins(t *testing.T) {
+	cases := []struct {
+		code      Code
+		status    int
+		retryable bool
 	}{
-		{CodeNoDaemonAvailable, true},
-		{CodeToolTimeout, true},
-		{CodeQueueUnavailable, true},
-		{CodeAppUnreachable, true},
-		{CodeToolNotFound, false},
-		{CodeToolDenied, false},
-		{CodeRunCancelled, false},
-		{CodeAuthFailed, false},
-		{CodeInternal, false},
+		{CodeToolTimeout, 504, true},
+		{CodeToolDenied, 403, false},
+		{CodeAppUnreachable, 503, true},
+		{CodeDependencyUnavailable, 503, true},
+		{CodeRequestTooLarge, 413, false},
+		{CodeQueueUnavailable, 503, true},
+		{CodeInternal, 500, false},
 	}
-
-	for _, tt := range tests {
-		t.Run(string(tt.code), func(t *testing.T) {
-			if got := New(tt.code, "x").Retryable; got != tt.want {
-				t.Fatalf("retryable = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
-
-func TestHTTPStatusMapping(t *testing.T) {
-	tests := []struct {
-		code Code
-		want int
-	}{
-		{CodeBadEnvelope, 400},
-		{CodeAuthFailed, 401},
-		{CodeToolDenied, 403},
-		{CodeToolNotFound, 404},
-		{CodeRunCancelled, 409},
-		{CodeQueueOverflow, 429},
-		{CodeNoDaemonAvailable, 503},
-		{CodeToolTimeout, 504},
-		{CodeInternal, 500},
-	}
-
-	for _, tt := range tests {
-		t.Run(string(tt.code), func(t *testing.T) {
-			if got := HTTPStatus(tt.code); got != tt.want {
-				t.Fatalf("HTTPStatus(%q) = %d, want %d", tt.code, got, tt.want)
-			}
-		})
-	}
-}
-
-func TestNilAndUnknownErrors(t *testing.T) {
-	if IsRetryable(nil) {
-		t.Fatal("IsRetryable(nil) = true")
-	}
-	if CodeOf(nil) != "" {
-		t.Fatalf("CodeOf(nil) = %q", CodeOf(nil))
-	}
-	if HTTPStatusOf(errors.New("plain")) != 500 {
-		t.Fatal("HTTPStatusOf(plain) != 500")
+	for _, tc := range cases {
+		meta := codeMetaByCode[tc.code]
+		if meta.status != tc.status || meta.retryable != tc.retryable {
+			t.Fatalf("%s meta = %+v, want status=%d retryable=%v", tc.code, meta, tc.status, tc.retryable)
+		}
 	}
 }

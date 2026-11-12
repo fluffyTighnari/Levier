@@ -15,11 +15,11 @@ import (
 
 func (s *Server) handleAdminCreateApp(w http.ResponseWriter, r *http.Request) {
 	if !s.isAdmin(r) {
-		writeError(w, http.StatusUnauthorized, string(errs.CodeUnauthorized), "admin token is required", false)
+		writeErrorCode(w, errs.CodeUnauthorized, "admin token is required", false)
 		return
 	}
 	if s.apps == nil {
-		writeError(w, http.StatusNotImplemented, string(errs.CodeNotImplemented), "app registry is not configured", false)
+		writeErrorCode(w, errs.CodeNotImplemented, "app registry is not configured", false)
 		return
 	}
 	var request AppUpsertRequest
@@ -27,12 +27,12 @@ func (s *Server) handleAdminCreateApp(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err := request.Validate(); err != nil {
-		writeError(w, http.StatusBadRequest, string(errs.CodeBadRequest), err.Error(), false)
+		writeErrorCode(w, errs.CodeBadRequest, err.Error(), false)
 		return
 	}
 	app, key, created, err := s.apps.RegisterApp(r.Context(), request.Name, request.Multiagent)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, string(errs.CodeInternal), "create app failed", true)
+		writeErrorCode(w, errs.CodeInternal, "create app failed", true)
 		return
 	}
 	if created && !s.applyAppCatalog(w, r, app.AppID, request) {
@@ -65,13 +65,13 @@ func (s *Server) applyAppCatalog(w http.ResponseWriter, r *http.Request, appID s
 			})
 		}
 		if _, err := catalog.ReplaceLocalTools(r.Context(), appID, tools); err != nil {
-			writeError(w, http.StatusBadRequest, string(errs.CodeBadTool), err.Error(), false)
+			writeErrorCode(w, errs.CodeBadTool, err.Error(), false)
 			return false
 		}
 	}
 	if request.MCPRefs != nil {
 		if err := catalog.SetAppMCPRefs(r.Context(), appID, request.MCPRefs); err != nil {
-			writeError(w, http.StatusBadRequest, string(errs.CodeBadMCPRef), err.Error(), false)
+			writeErrorCode(w, errs.CodeBadMCPRef, err.Error(), false)
 			return false
 		}
 	}
@@ -89,16 +89,16 @@ func (s *Server) handleUpdateApp(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err := request.Validate(); err != nil {
-		writeError(w, http.StatusBadRequest, string(errs.CodeBadRequest), err.Error(), false)
+		writeErrorCode(w, errs.CodeBadRequest, err.Error(), false)
 		return
 	}
 	updated, err := s.apps.UpdateApp(r.Context(), app.AppID, request.Name, request.Multiagent)
 	if errors.Is(err, runstore.ErrAppNotFound) {
-		writeError(w, http.StatusNotFound, string(errs.CodeAppNotFound), "app not found", false)
+		writeErrorCode(w, errs.CodeAppNotFound, "app not found", false)
 		return
 	}
 	if err != nil {
-		writeError(w, http.StatusConflict, string(errs.CodeAppNameConflict), "app name is already in use", false)
+		writeErrorCode(w, errs.CodeAppNameConflict, "app name is already in use", false)
 		return
 	}
 	if !s.applyAppCatalog(w, r, app.AppID, request) {
@@ -116,21 +116,21 @@ func (s *Server) handleGetApp(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		if app.AppID != appID {
-			writeError(w, http.StatusNotFound, string(errs.CodeAppNotFound), "app not found", false)
+			writeErrorCode(w, errs.CodeAppNotFound, "app not found", false)
 			return
 		}
 	}
 	if s.apps == nil {
-		writeError(w, http.StatusNotImplemented, string(errs.CodeNotImplemented), "app registry is not configured", false)
+		writeErrorCode(w, errs.CodeNotImplemented, "app registry is not configured", false)
 		return
 	}
 	app, err := s.apps.GetApp(r.Context(), appID)
 	if errors.Is(err, runstore.ErrAppNotFound) {
-		writeError(w, http.StatusNotFound, string(errs.CodeAppNotFound), "app not found", false)
+		writeErrorCode(w, errs.CodeAppNotFound, "app not found", false)
 		return
 	}
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, string(errs.CodeInternal), "get app failed", true)
+		writeErrorCode(w, errs.CodeInternal, "get app failed", true)
 		return
 	}
 	writeJSON(w, http.StatusOK, appView(app))
@@ -138,20 +138,20 @@ func (s *Server) handleGetApp(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) handleAdminRotateKey(w http.ResponseWriter, r *http.Request) {
 	if !s.isAdmin(r) {
-		writeError(w, http.StatusUnauthorized, string(errs.CodeUnauthorized), "admin token is required", false)
+		writeErrorCode(w, errs.CodeUnauthorized, "admin token is required", false)
 		return
 	}
 	if s.apps == nil {
-		writeError(w, http.StatusNotImplemented, string(errs.CodeNotImplemented), "app registry is not configured", false)
+		writeErrorCode(w, errs.CodeNotImplemented, "app registry is not configured", false)
 		return
 	}
 	key, err := s.apps.RotateAPIKey(r.Context(), r.PathValue("app_id"))
 	if errors.Is(err, runstore.ErrAppNotFound) {
-		writeError(w, http.StatusNotFound, string(errs.CodeAppNotFound), "app not found", false)
+		writeErrorCode(w, errs.CodeAppNotFound, "app not found", false)
 		return
 	}
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, string(errs.CodeInternal), "rotate app key failed", true)
+		writeErrorCode(w, errs.CodeInternal, "rotate app key failed", true)
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]string{"api_key": key})

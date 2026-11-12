@@ -16,7 +16,7 @@ func (s *Server) handleIssueWSToken(w http.ResponseWriter, r *http.Request) {
 	}
 	token := s.wsTokens.Issue(appID)
 	if token == "" {
-		writeError(w, http.StatusInternalServerError, string(errs.CodeInternal), "issue ws token failed", true)
+		writeErrorCode(w, errs.CodeInternal, "issue ws token failed", true)
 		return
 	}
 	writeJSON(w, http.StatusOK, WSTokenResponse{

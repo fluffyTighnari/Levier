@@ -50,6 +50,7 @@ const (
 	CodeBadMessage                   Code = "BAD_MESSAGE"
 	CodeReplayFailed                 Code = "REPLAY_FAILED"
 	CodeResponseTooLarge             Code = "RESPONSE_TOO_LARGE"
+	CodeRequestTooLarge              Code = "REQUEST_TOO_LARGE"
 	CodeToolNotAvailable             Code = "TOOL_NOT_AVAILABLE"
 	CodeToolBusy                     Code = "TOOL_BUSY"
 	CodeLocalToolUnknown             Code = "LOCAL_TOOL_UNKNOWN"
@@ -70,7 +71,7 @@ func New(code Code, message string) *Error {
 	return &Error{
 		Code:      code,
 		Message:   message,
-		Retryable: retryableByCode[code],
+		Retryable: codeMetaByCode[code].retryable,
 	}
 }
 
@@ -120,8 +121,8 @@ func CodeOf(err error) Code {
 
 // HTTPStatus maps an error code to an HTTP status.
 func HTTPStatus(code Code) int {
-	if status, ok := httpStatusByCode[code]; ok {
-		return status
+	if meta, ok := codeMetaByCode[code]; ok {
+		return meta.status
 	}
 	return 500
 }
@@ -131,92 +132,53 @@ func HTTPStatusOf(err error) int {
 	return HTTPStatus(CodeOf(err))
 }
 
-var retryableByCode = map[Code]bool{
-	CodeNoDaemonAvailable:            true,
-	CodeQueueOverflow:                false,
-	CodeQueueUnavailable:             true,
-	CodeToolNotFound:                 false,
-	CodeToolTimeout:                  true,
-	CodeToolDenied:                   false,
-	CodeToolExecError:                false,
-	CodeAppUnreachable:               true,
-	CodeRunTimeout:                   false,
-	CodeRunCancelled:                 false,
-	CodeDaemonLost:                   false,
-	CodeMaxAttemptsExceeded:          false,
-	CodeBadEnvelope:                  false,
-	CodeSeqGap:                       false,
-	CodeAuthFailed:                   false,
-	CodeTokenExpired:                 false,
-	CodeWorkflowTaskDead:             false,
-	CodeWorkflowLeaseLost:            true,
-	CodeInternal:                     false,
-	CodeBadRequest:                   false,
-	CodeUnauthorized:                 false,
-	CodeForbidden:                    false,
-	CodeNotImplemented:               false,
-	CodeDependencyUnavailable:        true,
-	CodeAppNotFound:                  false,
-	CodeAppNameConflict:              false,
-	CodeRunNotFound:                  false,
-	CodeSessionNotFound:              false,
-	CodeIdempotencyConflict:          false,
-	CodeBadTool:                      false,
-	CodeBadMCP:                       false,
-	CodeBadMCPRef:                    false,
-	CodeMCPNotFound:                  false,
-	CodeMCPInUse:                     false,
-	CodeBadMessage:                   false,
-	CodeReplayFailed:                 false,
-	CodeResponseTooLarge:             false,
-	CodeToolNotAvailable:             false,
-	CodeToolBusy:                     true,
-	CodeLocalToolUnknown:             false,
-	CodeLocalToolForbidden:           false,
-	CodeLocalToolCorrelationMismatch: false,
+type codeMeta struct {
+	retryable bool
+	status    int
 }
 
-var httpStatusByCode = map[Code]int{
-	CodeNoDaemonAvailable:            503,
-	CodeQueueOverflow:                429,
-	CodeQueueUnavailable:             503,
-	CodeToolNotFound:                 404,
-	CodeToolTimeout:                  504,
-	CodeToolDenied:                   403,
-	CodeToolExecError:                502,
-	CodeAppUnreachable:               503,
-	CodeRunTimeout:                   504,
-	CodeRunCancelled:                 409,
-	CodeDaemonLost:                   503,
-	CodeMaxAttemptsExceeded:          500,
-	CodeBadEnvelope:                  400,
-	CodeSeqGap:                       500,
-	CodeAuthFailed:                   401,
-	CodeTokenExpired:                 401,
-	CodeWorkflowTaskDead:             500,
-	CodeWorkflowLeaseLost:            409,
-	CodeInternal:                     500,
-	CodeBadRequest:                   400,
-	CodeUnauthorized:                 401,
-	CodeForbidden:                    403,
-	CodeNotImplemented:               501,
-	CodeDependencyUnavailable:        503,
-	CodeAppNotFound:                  404,
-	CodeAppNameConflict:              409,
-	CodeRunNotFound:                  404,
-	CodeSessionNotFound:              404,
-	CodeIdempotencyConflict:          409,
-	CodeBadTool:                      400,
-	CodeBadMCP:                       400,
-	CodeBadMCPRef:                    400,
-	CodeMCPNotFound:                  404,
-	CodeMCPInUse:                     409,
-	CodeBadMessage:                   400,
-	CodeReplayFailed:                 500,
-	CodeResponseTooLarge:             413,
-	CodeToolNotAvailable:             503,
-	CodeToolBusy:                     409,
-	CodeLocalToolUnknown:             404,
-	CodeLocalToolForbidden:           403,
-	CodeLocalToolCorrelationMismatch: 409,
+var codeMetaByCode = map[Code]codeMeta{
+	CodeNoDaemonAvailable:            {retryable: true, status: 503},
+	CodeQueueOverflow:                {retryable: false, status: 429},
+	CodeQueueUnavailable:             {retryable: true, status: 503},
+	CodeToolNotFound:                 {retryable: false, status: 404},
+	CodeToolTimeout:                  {retryable: true, status: 504},
+	CodeToolDenied:                   {retryable: false, status: 403},
+	CodeToolExecError:                {retryable: false, status: 502},
+	CodeAppUnreachable:               {retryable: true, status: 503},
+	CodeRunTimeout:                   {retryable: false, status: 504},
+	CodeRunCancelled:                 {retryable: false, status: 409},
+	CodeDaemonLost:                   {retryable: false, status: 503},
+	CodeMaxAttemptsExceeded:          {retryable: false, status: 500},
+	CodeBadEnvelope:                  {retryable: false, status: 400},
+	CodeSeqGap:                       {retryable: false, status: 500},
+	CodeAuthFailed:                   {retryable: false, status: 401},
+	CodeTokenExpired:                 {retryable: false, status: 401},
+	CodeWorkflowTaskDead:             {retryable: false, status: 500},
+	CodeWorkflowLeaseLost:            {retryable: true, status: 409},
+	CodeInternal:                     {retryable: false, status: 500},
+	CodeBadRequest:                   {retryable: false, status: 400},
+	CodeUnauthorized:                 {retryable: false, status: 401},
+	CodeForbidden:                    {retryable: false, status: 403},
+	CodeNotImplemented:               {retryable: false, status: 501},
+	CodeDependencyUnavailable:        {retryable: true, status: 503},
+	CodeAppNotFound:                  {retryable: false, status: 404},
+	CodeAppNameConflict:              {retryable: false, status: 409},
+	CodeRunNotFound:                  {retryable: false, status: 404},
+	CodeSessionNotFound:              {retryable: false, status: 404},
+	CodeIdempotencyConflict:          {retryable: false, status: 409},
+	CodeBadTool:                      {retryable: false, status: 400},
+	CodeBadMCP:                       {retryable: false, status: 400},
+	CodeBadMCPRef:                    {retryable: false, status: 400},
+	CodeMCPNotFound:                  {retryable: false, status: 404},
+	CodeMCPInUse:                     {retryable: false, status: 409},
+	CodeBadMessage:                   {retryable: false, status: 400},
+	CodeReplayFailed:                 {retryable: false, status: 500},
+	CodeResponseTooLarge:             {retryable: false, status: 413},
+	CodeToolNotAvailable:             {retryable: false, status: 503},
+	CodeToolBusy:                     {retryable: true, status: 409},
+	CodeLocalToolUnknown:             {retryable: false, status: 404},
+	CodeLocalToolForbidden:           {retryable: false, status: 403},
+	CodeLocalToolCorrelationMismatch: {retryable: false, status: 409},
+	CodeRequestTooLarge:              {retryable: false, status: 413},
 }

@@ -8,6 +8,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"github.com/fluffyTighnari/middleware/internal/contract"
 	"github.com/fluffyTighnari/middleware/internal/errs"
 	"strings"
 
@@ -169,7 +170,7 @@ func (c *Control) handleEvent(env *runtimev1.Envelope) {
 	if event.GetType() != runtimev1.EventType_RUN_STATUS {
 		return
 	}
-	statusValue, _ := eventData["status"].(string)
+	statusValue, _ := eventData[contract.EventFieldStatus].(string)
 	status := strings.ToLower(statusValue)
 	switch status {
 	case "running", "completed", "failed", "cancelled", "timeout":
@@ -241,8 +242,8 @@ func (c *Control) observeUsage(run runstore.Run, event *runtimev1.Event, data ma
 	if c.metrics == nil || event.GetType() != runtimev1.EventType_USAGE {
 		return
 	}
-	input, _ := data["input_tokens"].(float64)
-	output, _ := data["output_tokens"].(float64)
+	input, _ := data[contract.EventFieldInputTokens].(float64)
+	output, _ := data[contract.EventFieldOutputTokens].(float64)
 	if input == 0 && output == 0 {
 		return
 	}

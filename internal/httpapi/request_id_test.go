@@ -69,7 +69,7 @@ func TestBodyLimitAndUniformJSONErrors(t *testing.T) {
 	if resp.StatusCode != http.StatusRequestEntityTooLarge {
 		t.Fatalf("oversized status = %d", resp.StatusCode)
 	}
-	assertErrorEnvelope(t, resp, "BAD_REQUEST")
+	assertErrorEnvelope(t, resp, "REQUEST_TOO_LARGE")
 
 	resp = request(t, http.MethodPost, httpServer.URL+"/api/v1/runs", "token-1", []byte(`{`))
 	if resp.StatusCode != http.StatusBadRequest {

@@ -168,30 +168,30 @@ func (s *Server) handleHealth(w http.ResponseWriter, _ *http.Request) {
 func (s *Server) readJSONBody(w http.ResponseWriter, r *http.Request, target any, required bool) ([]byte, bool) {
 	if r.Body == nil {
 		if required {
-			writeError(w, http.StatusBadRequest, string(errs.CodeBadRequest), "request body is required", false)
+			writeErrorCode(w, errs.CodeBadRequest, "request body is required", false)
 			return nil, false
 		}
 		return nil, true
 	}
 	body, err := io.ReadAll(http.MaxBytesReader(w, r.Body, s.cfg.MaxBodyBytes))
 	if err != nil {
-		writeError(w, http.StatusRequestEntityTooLarge, string(errs.CodeBadRequest), "request body is too large", false)
+		writeErrorCode(w, errs.CodeRequestTooLarge, "request body is too large", false)
 		return nil, false
 	}
 	if len(bytes.TrimSpace(body)) == 0 {
 		if required {
-			writeError(w, http.StatusBadRequest, string(errs.CodeBadRequest), "request body is required", false)
+			writeErrorCode(w, errs.CodeBadRequest, "request body is required", false)
 			return nil, false
 		}
 		return body, true
 	}
 	decoder := json.NewDecoder(bytes.NewReader(body))
 	if err := decoder.Decode(target); err != nil {
-		writeError(w, http.StatusBadRequest, string(errs.CodeBadRequest), "invalid JSON body", false)
+		writeErrorCode(w, errs.CodeBadRequest, "invalid JSON body", false)
 		return nil, false
 	}
 	if err := decoder.Decode(&struct{}{}); !errors.Is(err, io.EOF) {
-		writeError(w, http.StatusBadRequest, string(errs.CodeBadRequest), "invalid JSON body", false)
+		writeErrorCode(w, errs.CodeBadRequest, "invalid JSON body", false)
 		return nil, false
 	}
 	return body, true
@@ -201,6 +201,11 @@ func writeJSON(w http.ResponseWriter, statusCode int, payload any) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(statusCode)
 	_ = json.NewEncoder(w).Encode(payload)
+}
+
+// writeErrorCode derives the HTTP status from the shared error model.
+func writeErrorCode(w http.ResponseWriter, code errs.Code, message string, retryable bool) {
+	writeError(w, errs.HTTPStatus(code), string(code), message, retryable)
 }
 
 func writeError(w http.ResponseWriter, statusCode int, code, message string, retryable bool) {

@@ -28,23 +28,23 @@ func (s *Server) handleCreateRun(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err := request.Validate(); err != nil {
-		writeError(w, http.StatusBadRequest, string(errs.CodeBadRequest), err.Error(), false)
+		writeErrorCode(w, errs.CodeBadRequest, err.Error(), false)
 		return
 	}
 
 	params, err := json.Marshal(emptyMap(request.Strategy.Params))
 	if err != nil {
-		writeError(w, http.StatusBadRequest, string(errs.CodeBadRequest), "invalid strategy params", false)
+		writeErrorCode(w, errs.CodeBadRequest, "invalid strategy params", false)
 		return
 	}
 	input, err := json.Marshal(request.Input)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, string(errs.CodeBadRequest), "invalid input", false)
+		writeErrorCode(w, errs.CodeBadRequest, "invalid input", false)
 		return
 	}
 	model, err := json.Marshal(request.Model)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, string(errs.CodeBadRequest), "invalid model", false)
+		writeErrorCode(w, errs.CodeBadRequest, "invalid model", false)
 		return
 	}
 
@@ -74,25 +74,25 @@ func (s *Server) handleCreateRun(w http.ResponseWriter, r *http.Request) {
 		TraceID:        traceIDFromRequest(r),
 	})
 	if errors.Is(err, runstore.ErrIdempotencyConflict) {
-		writeError(w, http.StatusConflict, string(errs.CodeIdempotencyConflict), "idempotency key was reused with a different request", false)
+		writeErrorCode(w, errs.CodeIdempotencyConflict, "idempotency key was reused with a different request", false)
 		return
 	}
 	if errors.Is(err, runstore.ErrInvalidRun) {
-		writeError(w, http.StatusBadRequest, string(errs.CodeBadRequest), err.Error(), false)
+		writeErrorCode(w, errs.CodeBadRequest, err.Error(), false)
 		return
 	}
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, string(errs.CodeInternal), "create run failed", true)
+		writeErrorCode(w, errs.CodeInternal, "create run failed", true)
 		return
 	}
 
 	if run.Status == runstore.StatusQueued {
 		if s.queue == nil {
-			writeError(w, http.StatusServiceUnavailable, string(errs.CodeQueueUnavailable), "dispatch queue is not configured", true)
+			writeErrorCode(w, errs.CodeQueueUnavailable, "dispatch queue is not configured", true)
 			return
 		}
 		if _, err := s.queue.Enqueue(r.Context(), workflow.NewTask(run.RunID, workflow.TaskDispatch, time.Now(), 0)); err != nil {
-			writeError(w, http.StatusServiceUnavailable, string(errs.CodeQueueUnavailable), "enqueue run task failed", true)
+			writeErrorCode(w, errs.CodeQueueUnavailable, "enqueue run task failed", true)
 			return
 		}
 		timeoutAt := run.CreatedAt
@@ -104,7 +104,7 @@ func (s *Server) handleCreateRun(w http.ResponseWriter, r *http.Request) {
 			timeoutAt = time.Now()
 		}
 		if _, err := s.queue.Enqueue(r.Context(), workflow.NewTask(run.RunID, workflow.TaskTimeout, timeoutAt, 0)); err != nil {
-			writeError(w, http.StatusServiceUnavailable, string(errs.CodeQueueUnavailable), "enqueue run timeout task failed", true)
+			writeErrorCode(w, errs.CodeQueueUnavailable, "enqueue run timeout task failed", true)
 			return
 		}
 	}
@@ -120,15 +120,15 @@ func (s *Server) handleCreateRun(w http.ResponseWriter, r *http.Request) {
 func (s *Server) handleGetRun(w http.ResponseWriter, r *http.Request) {
 	run, err := s.runs.GetRun(r.Context(), r.PathValue("run_id"))
 	if errors.Is(err, runstore.ErrRunNotFound) {
-		writeError(w, http.StatusNotFound, string(errs.CodeRunNotFound), "run not found", false)
+		writeErrorCode(w, errs.CodeRunNotFound, "run not found", false)
 		return
 	}
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, string(errs.CodeInternal), "get run failed", true)
+		writeErrorCode(w, errs.CodeInternal, "get run failed", true)
 		return
 	}
 	if !s.canAccessApp(r, run.AppID) {
-		writeError(w, http.StatusNotFound, string(errs.CodeRunNotFound), "run not found", false)
+		writeErrorCode(w, errs.CodeRunNotFound, "run not found", false)
 		return
 	}
 	strategyParams := map[string]any{}
@@ -153,34 +153,34 @@ func (s *Server) handleListEvents(w http.ResponseWriter, r *http.Request) {
 	runID := r.PathValue("run_id")
 	afterAttempt, err := queryInt32(r.URL.Query().Get("after_attempt"))
 	if err != nil {
-		writeError(w, http.StatusBadRequest, string(errs.CodeBadRequest), "after_attempt must be a non-negative integer", false)
+		writeErrorCode(w, errs.CodeBadRequest, "after_attempt must be a non-negative integer", false)
 		return
 	}
 	afterSeq, err := queryInt64(r.URL.Query().Get("after_seq"))
 	if err != nil {
-		writeError(w, http.StatusBadRequest, string(errs.CodeBadRequest), "after_seq must be a non-negative integer", false)
+		writeErrorCode(w, errs.CodeBadRequest, "after_seq must be a non-negative integer", false)
 		return
 	}
 	limit, err := queryLimit(r.URL.Query().Get("limit"))
 	if err != nil {
-		writeError(w, http.StatusBadRequest, string(errs.CodeBadRequest), "limit must be between 1 and 1000", false)
+		writeErrorCode(w, errs.CodeBadRequest, "limit must be between 1 and 1000", false)
 		return
 	}
 	run, err := s.runs.GetRun(r.Context(), runID)
 	if errors.Is(err, runstore.ErrRunNotFound) {
-		writeError(w, http.StatusNotFound, string(errs.CodeRunNotFound), "run not found", false)
+		writeErrorCode(w, errs.CodeRunNotFound, "run not found", false)
 		return
 	} else if err != nil {
-		writeError(w, http.StatusInternalServerError, string(errs.CodeInternal), "get run failed", true)
+		writeErrorCode(w, errs.CodeInternal, "get run failed", true)
 		return
 	}
 	if !s.canAccessApp(r, run.AppID) {
-		writeError(w, http.StatusNotFound, string(errs.CodeRunNotFound), "run not found", false)
+		writeErrorCode(w, errs.CodeRunNotFound, "run not found", false)
 		return
 	}
 	events, err := s.runs.ListEvents(r.Context(), runID, afterAttempt, afterSeq, limit)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, string(errs.CodeInternal), "list events failed", true)
+		writeErrorCode(w, errs.CodeInternal, "list events failed", true)
 		return
 	}
 	writeJSON(w, http.StatusOK, eventListResponse(events, limit))
@@ -189,19 +189,19 @@ func (s *Server) handleListEvents(w http.ResponseWriter, r *http.Request) {
 func (s *Server) handleCancelRun(w http.ResponseWriter, r *http.Request) {
 	run, err := s.runs.GetRun(r.Context(), r.PathValue("run_id"))
 	if errors.Is(err, runstore.ErrRunNotFound) {
-		writeError(w, http.StatusNotFound, string(errs.CodeRunNotFound), "run not found", false)
+		writeErrorCode(w, errs.CodeRunNotFound, "run not found", false)
 		return
 	}
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, string(errs.CodeInternal), "get run failed", true)
+		writeErrorCode(w, errs.CodeInternal, "get run failed", true)
 		return
 	}
 	if !s.canAccessApp(r, run.AppID) {
-		writeError(w, http.StatusNotFound, string(errs.CodeRunNotFound), "run not found", false)
+		writeErrorCode(w, errs.CodeRunNotFound, "run not found", false)
 		return
 	}
 	if s.canceller == nil {
-		writeError(w, http.StatusNotImplemented, string(errs.CodeNotImplemented), "cancellation is not configured", false)
+		writeErrorCode(w, errs.CodeNotImplemented, "cancellation is not configured", false)
 		return
 	}
 	reason := "user"
@@ -214,11 +214,11 @@ func (s *Server) handleCancelRun(w http.ResponseWriter, r *http.Request) {
 	}
 	cancelled, err := s.canceller.CancelRun(r.Context(), run.RunID, reason)
 	if errors.Is(err, runstore.ErrRunNotFound) {
-		writeError(w, http.StatusNotFound, string(errs.CodeRunNotFound), "run not found", false)
+		writeErrorCode(w, errs.CodeRunNotFound, "run not found", false)
 		return
 	}
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, string(errs.CodeInternal), "cancel run failed", true)
+		writeErrorCode(w, errs.CodeInternal, "cancel run failed", true)
 		return
 	}
 	writeJSON(w, http.StatusOK, CancelRunResponse{
