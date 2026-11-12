@@ -153,6 +153,7 @@
 | `docs/reports/P11.4.md` | P11.4：R20 控制面终态事件与 timeout 清理 |
 | `docs/reports/P11.5.md` | P11.5：R13 关键事件保护 |
 | `docs/reports/P11.6.md` | P11.6：R14 Gateway panic 兜底 |
+| `docs/reports/P11.7.md` | P11.7：R12 有界 replay 与 close/send |
 | `docs/reports/RETROFIT-E2E.md` | App 改造 P10：回归与一键收口 |
 | `docs/APP_ONBOARDING.md` | 任意 App 接入 Middleware 的标准流程 |
 

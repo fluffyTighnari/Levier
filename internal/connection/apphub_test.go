@@ -301,3 +301,61 @@ func TestResolveLocalToolValidation(t *testing.T) {
 		t.Fatal("cached result leaked to another app")
 	}
 }
+
+func replayPayload(seq int64) []byte {
+	return []byte(fmt.Sprintf(`{"type":"event","run_id":"run-1","attempt":1,"seq":%d}`, seq))
+}
+
+func TestReplayBufferOverflowIsBounded(t *testing.T) {
+	hub := NewAppHub()
+	sink := &recordingSink{}
+	conn := hub.Register("app-1", sink)
+	defer hub.CloseConn(conn)
+	conn.BeginReplay("run-1", 0, 0)
+
+	for seq := int64(1); seq <= maxReplayPayloads; seq++ {
+		if err := conn.SendRun("run-1", replayPayload(seq)); err != nil {
+			t.Fatalf("SendRun(%d) error = %v", seq, err)
+		}
+	}
+	if err := conn.SendRun("run-1", replayPayload(maxReplayPayloads+1)); !errors.Is(err, ErrReplayOverflow) {
+		t.Fatalf("overflow error = %v", err)
+	}
+	if err := conn.EndReplay("run-1", 0, 0); !errors.Is(err, ErrReplayOverflow) {
+		t.Fatalf("EndReplay() error = %v", err)
+	}
+}
+
+func TestPublishClosesOverflowedReplayConnection(t *testing.T) {
+	hub := NewAppHub()
+	sink := &recordingSink{}
+	conn := hub.Register("app-1", sink)
+	conn.Subscribe("run-1")
+	conn.BeginReplay("run-1", 0, 0)
+
+	for seq := int64(1); seq <= maxReplayPayloads+1; seq++ {
+		hub.Publish("app-1", "run-1", replayPayload(seq))
+	}
+	if hub.Count("app-1") != 0 {
+		t.Fatalf("connection count = %d, want 0", hub.Count("app-1"))
+	}
+	sink.mu.Lock()
+	closed := sink.closed
+	sink.mu.Unlock()
+	if !closed {
+		t.Fatal("overflowed sink was not closed")
+	}
+}
+
+func TestBroadcastRespectsClosedConnection(t *testing.T) {
+	hub := NewAppHub()
+	sink := &recordingSink{}
+	conn := hub.Register("app-1", sink)
+	conn.close()
+	if hub.Broadcast("app-1", []byte(`{"type":"ping"}`)) {
+		t.Fatal("Broadcast() reported delivery to a closed connection")
+	}
+	if sink.count() != 0 {
+		t.Fatalf("closed sink received %d payloads", sink.count())
+	}
+}

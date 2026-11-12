@@ -6,8 +6,10 @@ package connection
 
 import (
 	"errors"
-	"github.com/fluffyTighnari/middleware/internal/errs"
+	"log/slog"
 	"sync"
+
+	"github.com/fluffyTighnari/middleware/internal/errs"
 )
 
 // EventSink is the transport-neutral App connection writer.
@@ -110,6 +112,11 @@ func (h *AppHub) Publish(appID, runID string, payload []byte) {
 	h.mu.RUnlock()
 	for _, conn := range conns {
 		if err := conn.SendRun(runID, payload); err != nil {
+			if errors.Is(err, ErrReplayOverflow) {
+				slog.Warn("app replay buffer overflow",
+					"app_id", appID, "run_id", runID,
+				)
+			}
 			h.CloseConn(conn)
 		}
 	}
@@ -125,7 +132,7 @@ func (h *AppHub) Broadcast(appID string, payload []byte) bool {
 	h.mu.RUnlock()
 	delivered := false
 	for _, conn := range conns {
-		if err := conn.sink.Send(payload); err != nil {
+		if err := conn.Send(payload); err != nil {
 			h.CloseConn(conn)
 			continue
 		}

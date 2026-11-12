@@ -6,9 +6,18 @@ package connection
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"sync"
 )
+
+const (
+	maxReplayPayloads = 1024
+	maxReplayBytes    = 4 << 20
+)
+
+// ErrReplayOverflow reports that live events exceeded the replay buffer.
+var ErrReplayOverflow = errors.New("app replay buffer overflow")
 
 // runCursor is the last (attempt, seq) delivered to one run stream.
 type runCursor struct {
@@ -19,6 +28,8 @@ type runCursor struct {
 // replayBuffer holds live payloads that arrive while replay is running.
 type replayBuffer struct {
 	payloads [][]byte
+	bytes    int
+	overflow bool
 }
 
 // AppConn is one registered App WebSocket connection.
@@ -88,9 +99,19 @@ func (c *AppConn) SendRun(runID string, payload []byte) error {
 	attempt, seq, hasCursor := payloadCursor(payload)
 	c.mu.Lock()
 	if state := c.replays[runID]; state != nil {
-		if !hasCursor || cursorNewer(attempt, seq, c.cursors[runID]) {
-			state.payloads = append(state.payloads, payload)
+		if hasCursor && !cursorNewer(attempt, seq, c.cursors[runID]) {
+			c.mu.Unlock()
+			return nil
 		}
+		if state.overflow ||
+			len(state.payloads) >= maxReplayPayloads ||
+			state.bytes+len(payload) > maxReplayBytes {
+			state.overflow = true
+			c.mu.Unlock()
+			return ErrReplayOverflow
+		}
+		state.payloads = append(state.payloads, payload)
+		state.bytes += len(payload)
 		c.mu.Unlock()
 		return nil
 	}
@@ -132,6 +153,9 @@ func (c *AppConn) EndReplay(runID string, attempt int32, seq int64) error {
 	c.mu.Unlock()
 	if state == nil {
 		return nil
+	}
+	if state.overflow {
+		return ErrReplayOverflow
 	}
 
 	for _, payload := range state.payloads {

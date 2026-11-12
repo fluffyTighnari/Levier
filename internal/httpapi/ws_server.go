@@ -25,6 +25,7 @@ import (
 const (
 	wsSinkQueueMessages = 4096
 	wsSinkQueueBytes    = 4 << 20
+	wsSinkWriteTimeout  = 5 * time.Second
 )
 
 var errWSSinkClosed = errors.New("websocket sink is closed")
@@ -41,6 +42,7 @@ type wsSink struct {
 	once    sync.Once
 	mu      sync.Mutex
 	pending int
+	closed  bool
 }
 
 func newWSSink(conn *websocket.Conn, appID string, log *slog.Logger) *wsSink {
@@ -56,12 +58,11 @@ func newWSSink(conn *websocket.Conn, appID string, log *slog.Logger) *wsSink {
 }
 
 func (s *wsSink) Send(payload []byte) error {
-	select {
-	case <-s.done:
-		return errWSSinkClosed
-	default:
-	}
 	s.mu.Lock()
+	if s.closed {
+		s.mu.Unlock()
+		return errWSSinkClosed
+	}
 	if s.pending+len(payload) > wsSinkQueueBytes {
 		pending := s.pending
 		s.mu.Unlock()
@@ -70,16 +71,13 @@ func (s *wsSink) Send(payload []byte) error {
 		return errWSSinkClosed
 	}
 	s.pending += len(payload)
-	s.mu.Unlock()
-
 	select {
 	case s.queue <- payload:
+		s.mu.Unlock()
 		return nil
-	case <-s.done:
-		s.release(len(payload))
-		return errWSSinkClosed
 	default:
-		s.release(len(payload))
+		s.pending -= len(payload)
+		s.mu.Unlock()
 		s.warnSlowConsumer(s.pendingOf(), len(payload))
 		_ = s.Close()
 		return errWSSinkClosed
@@ -92,6 +90,13 @@ func (s *wsSink) writeLoop() {
 		case <-s.done:
 			return
 		case payload := <-s.queue:
+			s.mu.Lock()
+			closed := s.closed
+			s.mu.Unlock()
+			if closed {
+				return
+			}
+			_ = s.conn.SetWriteDeadline(time.Now().Add(wsSinkWriteTimeout))
 			if err := websocket.Message.Send(s.conn, string(payload)); err != nil {
 				_ = s.Close()
 				return
@@ -128,6 +133,9 @@ func (s *wsSink) warnSlowConsumer(pending, payload int) {
 
 func (s *wsSink) Close() error {
 	s.once.Do(func() {
+		s.mu.Lock()
+		s.closed = true
+		s.mu.Unlock()
 		close(s.done)
 		_ = s.conn.Close()
 	})
@@ -218,7 +226,9 @@ func (s *Server) handleWS(conn *websocket.Conn) {
 			appConn.BeginReplay(typed.RunID, typed.LastAttempt, typed.LastSeq)
 			appConn.Subscribe(typed.RunID)
 			attempt, seq, err := s.replayWS(appConn, typed)
-			_ = appConn.EndReplay(typed.RunID, attempt, seq)
+			if endErr := appConn.EndReplay(typed.RunID, attempt, seq); err == nil {
+				err = endErr
+			}
 			if err != nil {
 				_ = s.sendWS(appConn, ErrorMessage{
 					Type:  contract.WSMessageError,

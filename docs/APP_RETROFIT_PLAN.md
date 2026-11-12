@@ -582,7 +582,7 @@ P8C.1 契约 → P8C.2 抽循环 → P8C.3 工具 → P8C.4 conformance
 → P8C.6 回归 → （需要时）P8C.5 TS
 ```
 
-**当前进度**：P8C 完成；P11.1 完成（`docs/reports/P11.1.md`）；P11.3 完成（`docs/reports/P11.3.md`）；P11.4 完成（`docs/reports/P11.4.md`）；P11.5 完成（`docs/reports/P11.5.md`）；P11.6 完成（`docs/reports/P11.6.md`）；下一步 P11.7。
+**当前进度**：P8C 完成；P11.1 完成（`docs/reports/P11.1.md`）；P11.3 完成（`docs/reports/P11.3.md`）；P11.4 完成（`docs/reports/P11.4.md`）；P11.5 完成（`docs/reports/P11.5.md`）；P11.6 完成（`docs/reports/P11.6.md`）；P11.7 完成（`docs/reports/P11.7.md`）；下一步 P11.8。
 
 ---
 

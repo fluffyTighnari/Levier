@@ -8,6 +8,7 @@ package httpapi
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"github.com/fluffyTighnari/middleware/internal/contract"
 	"net/http/httptest"
 	"strings"
@@ -327,5 +328,29 @@ func TestWebSocketRunCompleted(t *testing.T) {
 	}
 	if !strings.Contains(raw, `"type":"run_completed"`) || !strings.Contains(raw, `"status":"completed"`) {
 		t.Fatalf("run_completed = %s", raw)
+	}
+}
+
+func TestWSSinkSendAfterClose(t *testing.T) {
+	server := httptest.NewServer(websocket.Handler(func(conn *websocket.Conn) {
+		for {
+			var raw string
+			if err := websocket.Message.Receive(conn, &raw); err != nil {
+				return
+			}
+		}
+	}))
+	defer server.Close()
+	wsURL := "ws" + strings.TrimPrefix(server.URL, "http")
+	conn, err := websocket.Dial(wsURL, "", server.URL)
+	if err != nil {
+		t.Fatalf("Dial() error = %v", err)
+	}
+	sink := newWSSink(conn, "app-1", nil)
+	if err := sink.Close(); err != nil {
+		t.Fatalf("Close() error = %v", err)
+	}
+	if err := sink.Send([]byte("payload")); !errors.Is(err, errWSSinkClosed) {
+		t.Fatalf("Send() error = %v, want errWSSinkClosed", err)
 	}
 }
