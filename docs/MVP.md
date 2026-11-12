@@ -221,6 +221,16 @@ demo 退出时删除凭据文件
 不把 key 写进日志、summary 或 git
 ```
 
+自动检查：
+
+```sh
+make secrets-check
+```
+
+扫描 git-tracked 源文件，排除生成代码和 evidence。
+覆盖 `sk-*`、Bearer、PostgreSQL 带密码 DSN、`DEEPSEEK_API_KEY=`、
+以及明显的 inline API key。示例配置使用 `change-me` 占位符。
+
 共享机器上仍建议使用独立的 App 名和数据库。
 
 ## 8. 下一步硬化

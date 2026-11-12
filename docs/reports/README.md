@@ -158,6 +158,7 @@
 | `docs/reports/P11.9.md` | P11.9：单机 MVP 故障矩阵 |
 | `docs/reports/P11.10.md` | P11.10：R19b Run 创建与任务入队同事务 |
 | `docs/reports/P11.11.md` | P11.11：R2 `/readyz` |
+| `docs/reports/P11.12.md` | P11.12：R8 密钥扫描与配置占位 |
 | `docs/reports/RETROFIT-E2E.md` | App 改造 P10：回归与一键收口 |
 | `docs/APP_ONBOARDING.md` | 任意 App 接入 Middleware 的标准流程 |
 

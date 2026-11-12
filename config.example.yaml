@@ -19,7 +19,7 @@ grpc:
     daemon-local-1: "change-me"
 
 database:
-  url: "postgres://middleware:middleware@localhost:5432/middleware?sslmode=disable"
+  url: "postgres://change-me:change-me@localhost:5432/middleware?sslmode=disable"
   max_conns: 20
   min_conns: 2
   connect_timeout: "5s"

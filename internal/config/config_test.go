@@ -18,7 +18,7 @@ http:
 grpc:
   addr: ":19090"
 database:
-  url: "postgres://user:pass@localhost:5432/middleware?sslmode=disable"
+  url: "postgres://change-me:change-me@localhost:5432/middleware?sslmode=disable"
 log:
   level: "debug"
   format: "text"
