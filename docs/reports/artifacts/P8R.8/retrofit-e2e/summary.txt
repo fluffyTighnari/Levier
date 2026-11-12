@@ -1,0 +1,8 @@
+run_id: 01M76WYD2KNNW7BPC3VK9AMPXW
+trace_id: retrofit-e2e-20261112T033108Z
+status: completed
+tool_calls: begin=3 end=3 invocations=3
+final_value: {"value": 5}
+events: 16/16/16 (count/max_seq/expected)
+tasks: RUN_DISPATCH=DONE,RUN_TIMEOUT=CANCELLED
+metrics: runs_completed=1 counter_add_ok=2 counter_get_ok=1 tool_begin=3
