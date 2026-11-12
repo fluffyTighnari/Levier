@@ -24,6 +24,10 @@ const (
 	MetricEventsTotal = "mw_events_total"
 	// MetricEventsDroppedTotal counts dropped or skipped events.
 	MetricEventsDroppedTotal = "mw_events_dropped_total"
+	// MetricEventAppendDuration observes run event persistence latency.
+	MetricEventAppendDuration = "mw_event_append_duration_seconds"
+	// MetricEventAppendErrorsTotal counts failed run event inserts.
+	MetricEventAppendErrorsTotal = "mw_event_append_errors_total"
 	// MetricWorkflowTasks reports task counts by type and status.
 	MetricWorkflowTasks = "mw_workflow_tasks"
 	// MetricWorkflowTaskAge reports the age of the oldest pending task per type.

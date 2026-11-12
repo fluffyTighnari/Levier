@@ -129,14 +129,15 @@ func (f *fakeRuns) AppendMWEvent(_ context.Context, event runstore.Event) (runst
 }
 
 type fakeHub struct {
-	mu           sync.Mutex
-	daemonID     string
-	sent         []*runtimev1.Envelope
-	onSend       func(*runtimev1.Envelope)
-	pickCalls    int
-	reserveCalls int
-	releaseCalls int
-	released     []string
+	mu              sync.Mutex
+	daemonID        string
+	sent            []*runtimev1.Envelope
+	onSend          func(*runtimev1.Envelope)
+	pickCalls       int
+	reserveCalls    int
+	releaseCalls    int
+	disconnectCalls int
+	released        []string
 }
 
 func (f *fakeHub) PickHealthy(runtimev1.RuntimeType, string, map[string]string) (string, bool) {
@@ -161,6 +162,12 @@ func (f *fakeHub) Release(daemonID string) {
 	defer f.mu.Unlock()
 	f.releaseCalls++
 	f.released = append(f.released, daemonID)
+}
+
+func (f *fakeHub) Disconnect(daemonID string) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.disconnectCalls++
 }
 
 func (f *fakeHub) Send(daemonID string, env *runtimev1.Envelope) error {
@@ -1279,4 +1286,105 @@ func TestDispatchToolCallDoesNotBlockAndRejectsWhenFull(t *testing.T) {
 		time.Sleep(5 * time.Millisecond)
 	}
 	t.Fatal("first tool result was not sent")
+}
+
+func TestCriticalEventIdentifiesTerminalAndError(t *testing.T) {
+	status := func(value string) *runtimev1.Event {
+		data, _ := structpb.NewStruct(map[string]any{"status": value})
+		return &runtimev1.Event{Type: runtimev1.EventType_RUN_STATUS, Data: data}
+	}
+	for _, value := range []string{"completed", "failed", "cancelled", "timeout"} {
+		if !criticalEvent(status(value)) {
+			t.Fatalf("status %q was not critical", value)
+		}
+	}
+	if criticalEvent(status("running")) {
+		t.Fatal("running status was critical")
+	}
+	if !criticalEvent(&runtimev1.Event{Type: runtimev1.EventType_ERROR}) {
+		t.Fatal("ERROR was not critical")
+	}
+	if criticalEvent(&runtimev1.Event{Type: runtimev1.EventType_MESSAGE_COMPLETED}) {
+		t.Fatal("MESSAGE_COMPLETED was critical")
+	}
+}
+
+func TestCriticalEventBufferFullDropsDaemon(t *testing.T) {
+	runs := &fakeRuns{run: newRun()}
+	runs.run.Status = "running"
+	runs.run.Attempt = 1
+	runs.run.LeaseEpoch = 1
+	runs.run.AssignedDaemonID = "d1"
+	tasks := &fakeTaskCanceller{}
+	hub := &fakeHub{}
+	ctrl := New(runs, hub, Config{
+		EventBuffer:       1,
+		CriticalEventWait: 10 * time.Millisecond,
+		Tasks:             tasks,
+	})
+
+	filler, _ := protocol.NewRun("run-1", 1, 1, &runtimev1.Event{
+		Seq: 1, Type: runtimev1.EventType_MESSAGE_COMPLETED, Source: protocol.EventSourceDaemon,
+	})
+	ctrl.events <- filler
+
+	data, _ := structpb.NewStruct(map[string]any{"status": "completed"})
+	terminal, _ := protocol.NewRun("run-1", 1, 1, &runtimev1.Event{
+		Seq: 2, Type: runtimev1.EventType_RUN_STATUS, Source: protocol.EventSourceDaemon, Data: data,
+	})
+	ctrl.HandleEnvelope("d1", terminal)
+
+	if ctrl.CriticalEvents() != 1 {
+		t.Fatalf("critical events = %d, want 1", ctrl.CriticalEvents())
+	}
+
+	deadline := time.Now().Add(time.Second)
+	for time.Now().Before(deadline) {
+		hub.mu.Lock()
+		disconnected := hub.disconnectCalls
+		hub.mu.Unlock()
+		current, _ := runs.GetRun(context.Background(), "run-1")
+		if disconnected == 1 && current.Status == runstore.StatusQueued {
+			if tasks.enqueueCalls != 1 {
+				t.Fatalf("retry enqueue calls = %d", tasks.enqueueCalls)
+			}
+			return
+		}
+		time.Sleep(5 * time.Millisecond)
+	}
+	hub.mu.Lock()
+	disconnected := hub.disconnectCalls
+	hub.mu.Unlock()
+	current, _ := runs.GetRun(context.Background(), "run-1")
+	t.Fatalf("disconnect=%d status=%q, want 1/queued", disconnected, current.Status)
+}
+
+func TestNormalEventBufferFullDropsWithoutDisconnect(t *testing.T) {
+	runs := &fakeRuns{run: newRun()}
+	runs.run.Status = "running"
+	runs.run.Attempt = 1
+	runs.run.LeaseEpoch = 1
+	runs.run.AssignedDaemonID = "d1"
+	hub := &fakeHub{}
+	ctrl := New(runs, hub, Config{EventBuffer: 1, CriticalEventWait: 10 * time.Millisecond})
+
+	filler, _ := protocol.NewRun("run-1", 1, 1, &runtimev1.Event{
+		Seq: 1, Type: runtimev1.EventType_MESSAGE_COMPLETED, Source: protocol.EventSourceDaemon,
+	})
+	ctrl.events <- filler
+
+	normal, _ := protocol.NewRun("run-1", 1, 1, &runtimev1.Event{
+		Seq: 2, Type: runtimev1.EventType_MESSAGE_COMPLETED, Source: protocol.EventSourceDaemon,
+	})
+	ctrl.HandleEnvelope("d1", normal)
+
+	if ctrl.CriticalEvents() != 0 {
+		t.Fatalf("critical events = %d, want 0", ctrl.CriticalEvents())
+	}
+	hub.mu.Lock()
+	disconnected := hub.disconnectCalls
+	hub.mu.Unlock()
+	if disconnected != 0 {
+		t.Fatalf("disconnect calls = %d, want 0", disconnected)
+	}
 }

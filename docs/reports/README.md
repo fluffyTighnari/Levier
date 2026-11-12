@@ -151,6 +151,7 @@
 | `docs/reports/P11.1.md` | P11.1：单机 MVP 一键 demo 与文档 |
 | `docs/reports/P11.3.md` | P11.3：R17 Hello 对账收敛 |
 | `docs/reports/P11.4.md` | P11.4：R20 控制面终态事件与 timeout 清理 |
+| `docs/reports/P11.5.md` | P11.5：R13 关键事件保护 |
 | `docs/reports/RETROFIT-E2E.md` | App 改造 P10：回归与一键收口 |
 | `docs/APP_ONBOARDING.md` | 任意 App 接入 Middleware 的标准流程 |
 

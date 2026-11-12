@@ -115,12 +115,13 @@ func main() {
 		gateway.WithMetrics(metrics),
 	)
 	controller := control.New(runs, hub, control.Config{
-		Logger:     logger,
-		Publisher:  appHub,
-		Scheduler:  control.NewHubScheduler(hub),
-		Tools:      toolInvoker,
-		Tasks:      queue,
-		LocalTools: appHub,
+		Logger:      logger,
+		Publisher:   appHub,
+		Scheduler:   control.NewHubScheduler(hub),
+		Tools:       toolInvoker,
+		Tasks:       queue,
+		EventBuffer: cfg.Workflow.EventBuffer,
+		LocalTools:  appHub,
 		DaemonAvailable: func(daemonID string) bool {
 			_, ok := hub.Get(daemonID)
 			return ok

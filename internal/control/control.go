@@ -35,6 +35,7 @@ type Config struct {
 	RetryDelay           time.Duration
 	MaxPlacementAttempts int
 	EventBuffer          int
+	CriticalEventWait    time.Duration
 	ToolConcurrency      int
 	Publisher            EventPublisher
 	Scheduler            Scheduler
@@ -86,6 +87,7 @@ type DaemonHub interface {
 	Reserve(daemonID string) bool
 	Release(daemonID string)
 	Send(daemonID string, env *runtimev1.Envelope) error
+	Disconnect(daemonID string)
 }
 
 // Control claims RUN_DISPATCH tasks, assigns daemons, and drives run state.
@@ -113,6 +115,7 @@ type Control struct {
 	staleEvents     atomic.Int64
 	gapEvents       atomic.Int64
 	ephemeralEvents atomic.Int64
+	criticalEvents  atomic.Int64
 }
 
 // New returns a Control instance.
@@ -128,6 +131,9 @@ func New(runs RunStore, hub DaemonHub, cfg Config, assemblers ...MaterialAssembl
 	}
 	if cfg.EventBuffer <= 0 {
 		cfg.EventBuffer = 256
+	}
+	if cfg.CriticalEventWait <= 0 {
+		cfg.CriticalEventWait = 500 * time.Millisecond
 	}
 	if cfg.ToolConcurrency <= 0 {
 		cfg.ToolConcurrency = 64

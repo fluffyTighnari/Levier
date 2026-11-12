@@ -8,9 +8,11 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"strings"
+	"time"
+
 	"github.com/fluffyTighnari/middleware/internal/contract"
 	"github.com/fluffyTighnari/middleware/internal/errs"
-	"strings"
 
 	runtimev1 "github.com/fluffyTighnari/middleware/gen/middleware/runtime/v1"
 	"github.com/fluffyTighnari/middleware/internal/observe"
@@ -19,7 +21,7 @@ import (
 )
 
 // HandleEnvelope routes TaskAck and Event messages from DaemonHub.
-func (c *Control) HandleEnvelope(_ string, env *runtimev1.Envelope) {
+func (c *Control) HandleEnvelope(daemonID string, env *runtimev1.Envelope) {
 	if env == nil {
 		return
 	}
@@ -36,17 +38,87 @@ func (c *Control) HandleEnvelope(_ string, env *runtimev1.Envelope) {
 		return
 	}
 	if env.GetEvent() != nil {
-		select {
-		case c.events <- env:
-		default:
-			if c.metrics != nil {
-				c.metrics.Inc(observe.MetricEventsDroppedTotal, "Dropped or skipped events by reason.", map[string]string{
-					"reason": "control_buffer_full",
-				})
-			}
-			c.log.Warn("control event buffer full", "run_id", env.GetRunId())
-		}
+		c.enqueueEvent(daemonID, env)
 	}
+}
+
+func (c *Control) enqueueEvent(daemonID string, env *runtimev1.Envelope) {
+	if c.enqueueImmediate(env) {
+		return
+	}
+	if !criticalEvent(env.GetEvent()) {
+		c.recordEventDrop("control_buffer_full", daemonID, env)
+		return
+	}
+
+	timer := time.NewTimer(c.cfg.CriticalEventWait)
+	defer timer.Stop()
+	select {
+	case c.events <- env:
+		return
+	case <-timer.C:
+	}
+
+	c.criticalEvents.Add(1)
+	c.recordEventDrop("critical_buffer_full", daemonID, env)
+	c.log.Error("control critical event buffer full",
+		observe.FieldDaemonID, daemonID,
+		observe.FieldRunID, env.GetRunId(),
+		"event_type", runtimev1.EventType_name[int32(env.GetEvent().GetType())],
+	)
+	go c.dropDaemonForCriticalEvent(daemonID)
+}
+
+func (c *Control) enqueueImmediate(env *runtimev1.Envelope) bool {
+	select {
+	case c.events <- env:
+		return true
+	default:
+		return false
+	}
+}
+
+func (c *Control) recordEventDrop(reason, daemonID string, env *runtimev1.Envelope) {
+	if c.metrics != nil {
+		c.metrics.Inc(observe.MetricEventsDroppedTotal, "Dropped or skipped events by reason.", map[string]string{
+			"reason": reason,
+		})
+	}
+	c.log.Warn("control event buffer full",
+		observe.FieldDaemonID, daemonID,
+		observe.FieldRunID, env.GetRunId(),
+		"reason", reason,
+	)
+}
+
+// dropDaemonForCriticalEvent requeues the daemon's runs and closes its stream.
+// The old execution is fenced by the new lease epoch.
+func (c *Control) dropDaemonForCriticalEvent(daemonID string) {
+	c.log.Warn("control dropping daemon after critical event loss",
+		observe.FieldDaemonID, daemonID,
+	)
+	c.HandleDaemonOffline(daemonID)
+	if c.hub != nil {
+		c.hub.Disconnect(daemonID)
+	}
+}
+
+func criticalEvent(event *runtimev1.Event) bool {
+	if event == nil {
+		return false
+	}
+	if event.GetType() == runtimev1.EventType_ERROR {
+		return true
+	}
+	if event.GetType() != runtimev1.EventType_RUN_STATUS || event.GetData() == nil {
+		return false
+	}
+	status, _ := event.GetData().AsMap()[contract.EventFieldStatus].(string)
+	switch strings.ToLower(status) {
+	case "completed", "failed", "cancelled", "timeout":
+		return true
+	}
+	return false
 }
 
 func (c *Control) eventLoop() {
@@ -105,6 +177,7 @@ func (c *Control) handleEvent(env *runtimev1.Envelope) {
 	if source == "" {
 		source = protocol.EventSourceDaemon
 	}
+	appendStarted := time.Now()
 	result, err := c.runs.AppendEvent(ctx, runstore.Event{
 		RunID:      env.GetRunId(),
 		Attempt:    int(env.GetAttempt()),
@@ -115,7 +188,16 @@ func (c *Control) handleEvent(env *runtimev1.Envelope) {
 		TSMs:       env.GetTsMs(),
 		LeaseEpoch: env.GetLeaseEpoch(),
 	})
+	if c.metrics != nil {
+		c.metrics.Observe(observe.MetricEventAppendDuration, "Run event persistence latency in seconds.",
+			map[string]string{"source": source}, time.Since(appendStarted).Seconds())
+	}
 	if err != nil {
+		if c.metrics != nil {
+			c.metrics.Inc(observe.MetricEventAppendErrorsTotal, "Failed run event inserts.", map[string]string{
+				"source": source,
+			})
+		}
 		c.log.Warn("control append event failed", "run_id", env.GetRunId(), "err", err)
 		return
 	}
@@ -237,6 +319,9 @@ func (c *Control) GapEvents() int64 { return c.gapEvents.Load() }
 
 // EphemeralEvents returns the number of skipped ephemeral events.
 func (c *Control) EphemeralEvents() int64 { return c.ephemeralEvents.Load() }
+
+// CriticalEvents returns the number of critical events lost to a full buffer.
+func (c *Control) CriticalEvents() int64 { return c.criticalEvents.Load() }
 
 func (c *Control) observeUsage(run runstore.Run, event *runtimev1.Event, data map[string]any) {
 	if c.metrics == nil || event.GetType() != runtimev1.EventType_USAGE {

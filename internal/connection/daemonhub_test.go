@@ -577,3 +577,41 @@ func TestPickHealthy(t *testing.T) {
 		t.Fatal("PickHealthy() matched unsupported strategy")
 	}
 }
+
+func TestDisconnectClosesStreamAndFiresOffline(t *testing.T) {
+	offline := make(chan string, 1)
+	hub, addr := startHub(t, Config{
+		HelloTimeout:         time.Second,
+		HeartbeatCheckPeriod: time.Hour,
+		Authenticate:         func(daemonID, token string) bool { return true },
+		OnOffline: func(id string) {
+			select {
+			case offline <- id:
+			default:
+			}
+		},
+	})
+	cfg := fakedaemon.DefaultConfig()
+	cfg.DaemonID = "daemon-disconnect"
+	daemon, err := fakedaemon.Dial(context.Background(), addr, cfg)
+	if err != nil {
+		t.Fatalf("Dial() error = %v", err)
+	}
+	defer daemon.Close()
+	if !waitFor(t, time.Second, func() bool { return hub.Count() == 1 }) {
+		t.Fatal("daemon was not registered")
+	}
+
+	hub.Disconnect("daemon-disconnect")
+	if !waitFor(t, time.Second, func() bool { return hub.Count() == 0 }) {
+		t.Fatal("disconnect did not remove the daemon")
+	}
+	select {
+	case id := <-offline:
+		if id != "daemon-disconnect" {
+			t.Fatalf("offline id = %q", id)
+		}
+	case <-time.After(time.Second):
+		t.Fatal("OnOffline was not called")
+	}
+}

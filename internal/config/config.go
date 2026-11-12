@@ -66,6 +66,7 @@ type WorkflowConfig struct {
 	ReapInterval  Duration `yaml:"reap_interval"`
 	ReapLimit     int      `yaml:"reap_limit"`
 	RecoveryDelay Duration `yaml:"recovery_delay"`
+	EventBuffer   int      `yaml:"event_buffer"`
 }
 
 // LogConfig configures structured logging.
@@ -104,6 +105,7 @@ func Default() Config {
 			ReapInterval:  Duration(10 * time.Second),
 			ReapLimit:     100,
 			RecoveryDelay: Duration(10 * time.Second),
+			EventBuffer:   256,
 		},
 		Log: LogConfig{
 			Level:  "info",
@@ -187,6 +189,9 @@ func ApplyEnv(cfg *Config, lookup func(string) (string, bool)) error {
 	if err := durationOverride(lookup, "MIDDLEWARE_WORKFLOW_RECOVERY_DELAY", &cfg.Workflow.RecoveryDelay); err != nil {
 		return err
 	}
+	if err := intOverride(lookup, "MIDDLEWARE_WORKFLOW_EVENT_BUFFER", &cfg.Workflow.EventBuffer); err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -256,6 +261,9 @@ func (c Config) Validate() error {
 	}
 	if c.Workflow.RecoveryDelay.Std() <= 0 {
 		problems = append(problems, "workflow.recovery_delay must be positive")
+	}
+	if c.Workflow.EventBuffer <= 0 {
+		problems = append(problems, "workflow.event_buffer must be positive")
 	}
 	switch strings.ToLower(c.Log.Level) {
 	case "debug", "info", "warn", "error":

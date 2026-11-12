@@ -64,6 +64,17 @@ func (h *Hub) Send(daemonID string, env *runtimev1.Envelope) error {
 	}
 }
 
+// Disconnect closes one daemon stream. The channel handler then removes the
+// daemon and fires OnOffline, which requeues its active runs.
+func (h *Hub) Disconnect(daemonID string) {
+	h.mu.RLock()
+	conn := h.daemons[daemonID]
+	h.mu.RUnlock()
+	if conn != nil {
+		conn.close()
+	}
+}
+
 // ClassifyEnvelope classifies an outbound envelope for backpressure.
 func ClassifyEnvelope(env *runtimev1.Envelope) SendKind {
 	if env == nil {

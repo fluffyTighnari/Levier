@@ -85,6 +85,7 @@ func TestApplyEnv(t *testing.T) {
 		"MIDDLEWARE_WORKFLOW_REAP_INTERVAL":   "15s",
 		"MIDDLEWARE_WORKFLOW_REAP_LIMIT":      "25",
 		"MIDDLEWARE_WORKFLOW_RECOVERY_DELAY":  "12s",
+		"MIDDLEWARE_WORKFLOW_EVENT_BUFFER":    "128",
 		"MIDDLEWARE_LOG_LEVEL":                "warn",
 		"MIDDLEWARE_HTTP_ALLOW_LEGACY_BEARER": "true",
 	}
@@ -110,6 +111,9 @@ func TestApplyEnv(t *testing.T) {
 	}
 	if cfg.Workflow.RecoveryDelay.Std() != 12*time.Second {
 		t.Fatalf("recovery delay = %v", cfg.Workflow.RecoveryDelay.Std())
+	}
+	if cfg.Workflow.EventBuffer != 128 {
+		t.Fatalf("event buffer = %d", cfg.Workflow.EventBuffer)
 	}
 	if cfg.Log.Level != "warn" {
 		t.Fatalf("Log.Level = %q", cfg.Log.Level)
@@ -148,6 +152,7 @@ func TestValidateRejectsBadConfig(t *testing.T) {
 		{"zero reap interval", func(c *Config) { c.Workflow.ReapInterval = 0 }, "workflow.reap_interval"},
 		{"zero reap limit", func(c *Config) { c.Workflow.ReapLimit = 0 }, "workflow.reap_limit"},
 		{"zero recovery delay", func(c *Config) { c.Workflow.RecoveryDelay = 0 }, "workflow.recovery_delay"},
+		{"zero event buffer", func(c *Config) { c.Workflow.EventBuffer = 0 }, "workflow.event_buffer"},
 	}
 
 	for _, tt := range tests {
