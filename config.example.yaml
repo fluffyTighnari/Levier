@@ -30,6 +30,9 @@ workflow:
   lease_ttl: "30s"
   poll_interval: "200ms"
   max_attempts: 5
+  reap_interval: "10s"
+  reap_limit: 100
+  recovery_delay: "10s"
 
 log:
   level: "info"

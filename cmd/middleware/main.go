@@ -85,6 +85,23 @@ func main() {
 	runs := runstore.New(pool)
 	registry := register.New(pool)
 	queue := workflow.NewPostgres(pool)
+	reaperDone := make(chan struct{})
+	go func() {
+		defer close(reaperDone)
+		workflow.RunReaper(ctx, queue, cfg.Workflow.ReapInterval.Std(), cfg.Workflow.ReapLimit,
+			func(result workflow.ReapResult) {
+				if result.Err != nil {
+					logger.Warn("workflow reaper failed", "err", result.Err)
+					return
+				}
+				if result.Count == 0 {
+					return
+				}
+				logger.Info("workflow reaped expired tasks", "count", result.Count)
+				metrics.Add(observe.MetricWorkflowReapedTotal,
+					"Cumulative expired leases reclaimed by the reaper.", nil, float64(result.Count))
+			})
+	}()
 	appHub := connection.NewAppHub()
 	defer appHub.Close()
 	toolInvoker := gateway.NewInvoker(
@@ -104,11 +121,15 @@ func main() {
 		Tools:      toolInvoker,
 		Tasks:      queue,
 		LocalTools: appHub,
-		Metrics:    metrics,
+		DaemonAvailable: func(daemonID string) bool {
+			_, ok := hub.Get(daemonID)
+			return ok
+		},
+		Metrics: metrics,
 	}, registry)
 	hub.SetOnEnvelope(func(daemonID string, env *runtimev1.Envelope) {
 		if env.GetToolCallRequest() != nil {
-			_ = controller.HandleToolCall(daemonID, env)
+			controller.DispatchToolCall(daemonID, env)
 			return
 		}
 		controller.HandleEnvelope(daemonID, env)
@@ -118,6 +139,10 @@ func main() {
 	controller.Start(ctx)
 	defer controller.Close()
 
+	if err := controller.RecoverQueued(ctx); err != nil {
+		logger.Warn("recover queued runs failed", "err", err)
+	}
+
 	workers := workflow.NewPool(queue, controller, cfg.Workflow.Workers, workflow.WorkerConfig{
 		Owner:        "control",
 		LeaseTTL:     cfg.Workflow.LeaseTTL.Std(),
@@ -125,6 +150,21 @@ func main() {
 	})
 	workers.Start()
 	defer workers.Stop()
+
+	recoveryDone := make(chan struct{})
+	go func() {
+		defer close(recoveryDone)
+		timer := time.NewTimer(cfg.Workflow.RecoveryDelay.Std())
+		defer timer.Stop()
+		select {
+		case <-ctx.Done():
+			return
+		case <-timer.C:
+		}
+		if err := controller.RecoverActive(ctx); err != nil {
+			logger.Warn("recover active runs failed", "err", err)
+		}
+	}()
 
 	metricsCollector := func(ctx context.Context) {
 		stats, err := queue.Stats(ctx)
@@ -253,6 +293,8 @@ func main() {
 		grpcServer.Stop()
 	}
 	_ = listener.Close()
+	<-recoveryDone
+	<-reaperDone
 	logger.Info("middleware stopped")
 }
 

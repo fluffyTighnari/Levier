@@ -1,0 +1,4 @@
+=== RUN   TestRunReaperRunsImmediatelyAndOnInterval
+--- PASS: TestRunReaperRunsImmediatelyAndOnInterval (0.01s)
+PASS
+ok  	github.com/fluffyTighnari/middleware/internal/workflow	0.353s

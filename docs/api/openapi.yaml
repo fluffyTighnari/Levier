@@ -125,6 +125,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/CreateRunResponse'
+        "503":
+          description: Dispatch queue unavailable; retry with the same Idempotency-Key
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
         default:
           $ref: '#/components/responses/Error'
   /runs/{run_id}:
