@@ -1,0 +1,8 @@
+pi-eval@1.0.0 /private/tmp/pi-eval
+└── @earendil-works/pi-agent-core@1.5.2
+
+v24.21.0
+      84 spike.mjs
+      31 abort.mjs
+     115 total
+pi-ai 1.5.2
