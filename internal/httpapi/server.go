@@ -76,6 +76,7 @@ type Config struct {
 	MaxBodyBytes         int64
 	WSTokenTTL           time.Duration
 	AppHub               *connection.AppHub
+	ReadinessCheck       func(context.Context) error
 	Canceller            Canceller
 	Metrics              *observe.Registry
 	MetricsCollector     func(context.Context)
@@ -141,6 +142,7 @@ func (s *Server) Handler() http.Handler {
 
 func (s *Server) routes() {
 	s.mux.HandleFunc("GET /healthz", s.handleHealth)
+	s.mux.HandleFunc("GET /readyz", s.handleReady)
 	if s.cfg.Metrics != nil {
 		s.mux.HandleFunc("GET /metrics", s.handleMetrics)
 	}
@@ -163,6 +165,24 @@ func (s *Server) routes() {
 
 func (s *Server) handleHealth(w http.ResponseWriter, _ *http.Request) {
 	writeJSON(w, http.StatusOK, HealthResponse{Status: "ok"})
+}
+
+func (s *Server) handleReady(w http.ResponseWriter, r *http.Request) {
+	if s.cfg.ReadinessCheck == nil {
+		writeJSON(w, http.StatusServiceUnavailable, HealthResponse{
+			Status: "degraded", Database: "not_configured",
+		})
+		return
+	}
+	ctx, cancel := context.WithTimeout(r.Context(), 2*time.Second)
+	defer cancel()
+	if err := s.cfg.ReadinessCheck(ctx); err != nil {
+		writeJSON(w, http.StatusServiceUnavailable, HealthResponse{
+			Status: "degraded", Database: "unavailable",
+		})
+		return
+	}
+	writeJSON(w, http.StatusOK, HealthResponse{Status: "ready", Database: "up"})
 }
 
 func (s *Server) readJSONBody(w http.ResponseWriter, r *http.Request, target any, required bool) ([]byte, bool) {

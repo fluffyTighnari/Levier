@@ -440,3 +440,46 @@ func TestQueueTimeoutFailureThenRetryAddsMissingTask(t *testing.T) {
 		t.Fatalf("task types = %v/%v", queue.tasks[0].Type, queue.tasks[1].Type)
 	}
 }
+
+func TestHealthAndReady(t *testing.T) {
+	tests := []struct {
+		name       string
+		check      func(context.Context) error
+		wantStatus int
+		wantState  string
+		wantDB     string
+	}{
+		{"not configured", nil, http.StatusServiceUnavailable, "degraded", "not_configured"},
+		{"ready", func(context.Context) error { return nil }, http.StatusOK, "ready", "up"},
+		{"database down", func(context.Context) error { return errors.New("down") }, http.StatusServiceUnavailable, "degraded", "unavailable"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			server := NewServer(newFakeStore(), &fakeQueue{}, Config{ReadinessCheck: tt.check})
+			httpServer := httptest.NewServer(server.Handler())
+			defer httpServer.Close()
+
+			health, err := http.Get(httpServer.URL + "/healthz")
+			if err != nil {
+				t.Fatalf("healthz: %v", err)
+			}
+			var liveness HealthResponse
+			_ = json.NewDecoder(health.Body).Decode(&liveness)
+			health.Body.Close()
+			if health.StatusCode != http.StatusOK || liveness.Status != "ok" {
+				t.Fatalf("healthz = %d %+v", health.StatusCode, liveness)
+			}
+
+			ready, err := http.Get(httpServer.URL + "/readyz")
+			if err != nil {
+				t.Fatalf("readyz: %v", err)
+			}
+			var readiness HealthResponse
+			_ = json.NewDecoder(ready.Body).Decode(&readiness)
+			ready.Body.Close()
+			if ready.StatusCode != tt.wantStatus || readiness.Status != tt.wantState || readiness.Database != tt.wantDB {
+				t.Fatalf("readyz = %d %+v", ready.StatusCode, readiness)
+			}
+		})
+	}
+}

@@ -141,7 +141,7 @@ internal/control ──► internal/workflow (PostgreSQL run_tasks, SKIP LOCKED)
 
 - [x] **P0-07 PostgreSQL 基础与迁移**
   - `internal/db`：`pgx` 连接池、超时、健康检查；版本化 SQL 迁移（`schema_migrations`）；本地 SSH 隧道访问 PostgreSQL 16；`make migrate`。
-  - 验收：空库迁移可重复；重启后数据在；`/healthz` 能检查 DB；连接池不泄漏。
+  - 验收：空库迁移可重复；重启后数据在；`/readyz` 能检查 DB；`/healthz` 保持 liveness；连接池不泄漏。
   - 完成记录：远端 PostgreSQL 16.15；`middleware`/`middleware_test` 库；`0001_init.sql` 建 `runs/run_events/run_tasks`；`make migrate/test/lint/build` 全绿；二进制 `database connected` 后 SIGTERM 退出码 0。报告：`docs/reports/P0-07.md`。
 
 **G0 审查物：** 归档 tag、两个 ADR、范围文档、工程基线 PR、PostgreSQL 迁移与健康检查、P0-07 报告。

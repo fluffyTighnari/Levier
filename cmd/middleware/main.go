@@ -247,10 +247,13 @@ func main() {
 		DefaultRunTimeoutMS:  1_800_000,
 		DefaultToolTimeoutMS: 60_000,
 		AppHub:               appHub,
-		Canceller:            controller,
-		Metrics:              metrics,
-		MetricsCollector:     metricsCollector,
-		Logger:               logger,
+		ReadinessCheck: func(ctx context.Context) error {
+			return db.Health(ctx, pool, cfg.Database.HealthTimeout.Std())
+		},
+		Canceller:        controller,
+		Metrics:          metrics,
+		MetricsCollector: metricsCollector,
+		Logger:           logger,
 	}, registry)
 	httpListener, err := net.Listen("tcp", cfg.HTTP.Addr)
 	if err != nil {

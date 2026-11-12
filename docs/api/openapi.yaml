@@ -27,6 +27,24 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/HealthResponse'
+  /readyz:
+    get:
+      summary: Readiness check (database)
+      operationId: ready
+      security: []
+      responses:
+        "200":
+          description: Middleware and database are ready
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+        "503":
+          description: Database is unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
   /admin/apps:
     post:
       summary: Create an App and return its API key once
