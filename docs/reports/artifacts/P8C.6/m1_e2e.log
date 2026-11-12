@@ -1,0 +1,13 @@
+go build -o bin/middleware ./cmd/middleware
+./scripts/m1_e2e.sh
+== migrations ==
+2026/11/12 12:19:16 INFO database migrations applied
+app: app_01M6ZRXR02CJ3874KEF2M0TN4B
+metrics: available
+create: {"run_id": "01M76ZPGY68BT1GHJ6TJP5KJZN", "status": "queued", "ws_url": "/api/v1/ws", "ws_token": "[REDACTED]"}
+run_id: 01M76ZPGY68BT1GHJ6TJP5KJZN
+run status: completed
+events: seq 1/2/3 valid
+metrics: run completed
+workflow task: DONE
+artifacts: docs/reports/artifacts/P4-36

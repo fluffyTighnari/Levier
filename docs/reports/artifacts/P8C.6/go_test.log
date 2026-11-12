@@ -1,0 +1,23 @@
+?   	github.com/fluffyTighnari/middleware/cmd/middleware	[no test files]
+?   	github.com/fluffyTighnari/middleware/cmd/migrate	[no test files]
+?   	github.com/fluffyTighnari/middleware/cmd/mw-daemon-check	[no test files]
+?   	github.com/fluffyTighnari/middleware/gen/middleware/runtime/v1	[no test files]
+ok  	github.com/fluffyTighnari/middleware/internal/clock	(cached)
+ok  	github.com/fluffyTighnari/middleware/internal/config	(cached)
+ok  	github.com/fluffyTighnari/middleware/internal/connection	0.889s
+ok  	github.com/fluffyTighnari/middleware/internal/contract	0.827s
+ok  	github.com/fluffyTighnari/middleware/internal/control	1.132s
+ok  	github.com/fluffyTighnari/middleware/internal/db	(cached)
+ok  	github.com/fluffyTighnari/middleware/internal/errs	1.256s
+ok  	github.com/fluffyTighnari/middleware/internal/gateway	1.536s
+ok  	github.com/fluffyTighnari/middleware/internal/gateway/executor	1.792s
+ok  	github.com/fluffyTighnari/middleware/internal/httpapi	1.999s
+ok  	github.com/fluffyTighnari/middleware/internal/id	(cached)
+ok  	github.com/fluffyTighnari/middleware/internal/observe	(cached)
+ok  	github.com/fluffyTighnari/middleware/internal/protocol	2.065s
+ok  	github.com/fluffyTighnari/middleware/internal/register	1.760s
+ok  	github.com/fluffyTighnari/middleware/internal/runstore	1.954s
+ok  	github.com/fluffyTighnari/middleware/internal/testutil/fakedaemon	1.889s
+ok  	github.com/fluffyTighnari/middleware/internal/workflow	(cached)
+?   	github.com/fluffyTighnari/middleware/scripts/size_functions	[no test files]
+?   	github.com/fluffyTighnari/middleware/scripts/split_decls	[no test files]

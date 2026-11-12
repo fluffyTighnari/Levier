@@ -1,0 +1,15 @@
+/Users/mac/go/bin/buf lint
+/Users/mac/go/bin/buf build -o /dev/null
+/Users/mac/go/bin/buf breaking --against '.git#branch=main'
+go test ./internal/protocol -run TestContractGolden -v
+=== RUN   TestContractGolden
+--- PASS: TestContractGolden (0.00s)
+PASS
+ok  	github.com/fluffyTighnari/middleware/internal/protocol	0.267s
+PYTHONPATH=agent_core/src:harness/src/gen:harness/src harness/.venv/bin/python tests/contract/test_contract.py -v
+test_envelopes_round_trip (__main__.ContractGoldenTest.test_envelopes_round_trip) ... ok
+
+----------------------------------------------------------------------
+Ran 1 test in 0.002s
+
+OK

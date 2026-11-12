@@ -147,6 +147,7 @@
 | `docs/reports/P8C.1.md` | P8C.1：Agent Core 契约与类型 |
 | `docs/reports/P8C.2.md` | P8C.2：抽取 ReAct 循环 |
 | `docs/reports/P8C.4.md` | P8C.4：语言无关 conformance fixtures |
+| `docs/reports/P8C.6.md` | P8C.6：Agent Core 全量回归 |
 | `docs/reports/RETROFIT-E2E.md` | App 改造 P10：回归与一键收口 |
 | `docs/APP_ONBOARDING.md` | 任意 App 接入 Middleware 的标准流程 |
 
