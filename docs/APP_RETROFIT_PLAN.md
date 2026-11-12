@@ -582,7 +582,7 @@ P8C.1 契约 → P8C.2 抽循环 → P8C.3 工具 → P8C.4 conformance
 → P8C.6 回归 → （需要时）P8C.5 TS
 ```
 
-**当前进度**：P8C.1 完成（`docs/reports/P8C.1.md`）；P8C.2 完成（`docs/reports/P8C.2.md`）；P8C.3 随 P8C.2 完成；P8C.4 完成（`docs/reports/P8C.4.md`）；P8C.5 按需；P8C.6 完成（`docs/reports/P8C.6.md`）。
+**当前进度**：P8C 完成；P11.1 完成（`docs/reports/P11.1.md`）；下一步 P11.2/P11.3。
 
 ---
 
@@ -909,3 +909,23 @@ expected: tool result reaches Harness
 observed: ok
 evidence: local_tool_result.json, tool_result.log
 ```
+
+
+---
+
+## P11 单机 MVP 硬化
+
+目标：先把单机、单 Harness、单 App 的 `normal` runtime 做成可重复运行、
+不会永久卡住、终态不丢的最小可用版本。并发、HA、sandbox、longterm 不在本阶段。
+
+| 步骤 | 内容 | 验收 |
+|---|---|---|
+| P11.1 | 一键 demo 与文档 | `make mvp-demo` / `mvp-demo-react` 通过，README 与现状一致 |
+| P11.2 | 容器化 demo | compose 启动 PG/MW/Harness/App，echo 与 react 通过 |
+| P11.3 | R17 对账收敛 | assigned/running 未上报、epoch mismatch 都有明确去向 |
+| P11.4 | R20 控制面终态 | cancel/timeout 写 `source=mw` 事件并清理任务 |
+| P11.5 | R13 关键事件保护 | 终态/ERROR 不因事件缓冲满静默丢失 |
+| P11.6 | R14 + R12 | 工具 panic 兜底、single-flight 释放、replay 有界、close/send 收口 |
+| P11.7 | R21 Harness 韧性 | backoff 成功重置、出站满不阻塞心跳/Ack |
+| P11.8 | R19b + R2/R8/R22 | 创建 Run 与入队同事务、readyz、密钥扫描、访问日志 |
+| P11.9 | 故障矩阵与收口 | App 断线、Harness kill -9、MW 重启、DB 暂停、长工具、取消、超时 |

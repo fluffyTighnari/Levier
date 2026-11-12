@@ -1,0 +1,29 @@
+./scripts/mvp_demo.sh echo
+== build ==
+== migrate ==
+== start Middleware ==
+== start Harness ==
+== bootstrap App ==
+== start App ==
+== submit echo run ==
+run_id=01M773SVPMGVR20JAGCS2H65MB
+== wait for terminal state ==
+mode: echo
+run_id: 01M773SVPMGVR20JAGCS2H65MB
+status: completed
+attempt: 1
+events: 3
+tool_calls: begin=0 end=0
+errors: 0
+final_message: hello mvp
+
+mode: echo
+run_id: 01M773SVPMGVR20JAGCS2H65MB
+status: completed
+attempt: 1
+events: 3
+tool_calls: begin=0 end=0
+errors: 0
+final_message: hello mvp
+
+mvp-demo: PASS (evidence: docs/reports/artifacts/P11.1/echo)

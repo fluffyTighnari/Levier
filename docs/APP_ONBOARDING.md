@@ -5,6 +5,9 @@
 这份文档描述**当前可用**的接入方式，对应 P6B 已闭环的实现。
 它以 Counter Agent 为参考，但内容不绑定语言、SDK 或文件布局。
 
+> MVP 只支持 `runtime=normal`。`sandbox` 与 `longterm` 尚未闭环，
+> 不要在接入中使用；崩溃语义与限制见 `docs/MVP.md`。
+
 ---
 
 ## 1. 心智模型
