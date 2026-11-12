@@ -117,6 +117,7 @@ make agent-core-test
 make harness-test
 make mcp-runtime-test
 make counter-agent-test
+make secrets-check
 
 # 真实 PostgreSQL；不设置会跳过 DB 集成用例
 set -a; . ./.env.local; set +a
