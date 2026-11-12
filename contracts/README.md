@@ -7,6 +7,7 @@
 | `docs/api/openapi.yaml` | App/Admin HTTP API（OpenAPI 3.1） |
 | `contracts/app-ws.schema.json` | App WebSocket v1（JSON Schema 2020-12） |
 | `internal/errs/errors.go` | 错误码、retryable、HTTP 映射 |
+| `docs/DAEMON_CONTRACT.md` | Daemon RuntimeChannel 契约与自检 |
 
 ## HTTP
 
