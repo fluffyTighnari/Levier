@@ -25,7 +25,7 @@ PATTERNS = {
     "openai-style key": re.compile(r"sk-[A-Za-z0-9]{20,}"),
     "bearer token": re.compile(r"Bearer\s+[A-Za-z0-9._~+/=-]{20,}"),
     "postgres password": re.compile(r"postgres(?:ql)?://[^\s\"']+:[^\s\"']+@"),
-    "deepseek key": re.compile(r"DEEPSEEK_API_KEY=\S+"),
+    "deepseek key": re.compile(r"DEEPSEEK_API_KEY=[A-Za-z0-9_./+~-]{16,}"),
     "inline api key": re.compile(
         r"(?i)(?:api[_-]?key|secret|token)\s*[:=]\s*(?:[\"'][^\"']{20,}[\"']|[A-Z][A-Z0-9_]{2,}\s*=\s*[A-Za-z0-9_./+~-]{32,})"
     ),
