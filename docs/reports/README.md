@@ -134,6 +134,7 @@
 | `docs/reports/MCP-M5.md` | MCP M5：真实第三方 filesystem server |
 | `docs/reports/MCP-M6.md` | MCP M6：一键回归与收口 |
 | `docs/reports/MCP-M7.md` | MCP M7：真实 SSE / streamable_http |
+| `docs/reports/MCP-M8.md` | MCP M8：HTTP transport 断线与恢复 |
 | `docs/reports/P8R.1.md` | P8R.1：依赖与规模基线护栏 |
 | `docs/reports/P8R.2.md` | P8R.2：契约常量与错误码单一来源 |
 | `docs/reports/P8R.3.md` | P8R.3：拆分 control/httpapi/register/runstore |

@@ -8,6 +8,7 @@ Run:
 from __future__ import annotations
 
 import argparse
+import asyncio
 
 from mcp.server.mcpserver import Context, MCPServer
 
@@ -24,6 +25,13 @@ def echo(text: str) -> str:
 def add(a: int, b: int) -> int:
     """Add two integers."""
     return a + b
+
+
+@server.tool()
+async def slow(seconds: float) -> str:
+    """Sleep for the given seconds (used for disconnect tests)."""
+    await asyncio.sleep(seconds)
+    return "slow-done"
 
 
 @server.tool()

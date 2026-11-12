@@ -185,7 +185,17 @@ make mcp-e2e
 - MW 不负责启动或托管 runtime，部署方需要保证 socket 可达。
 - 第三方 server 依赖外部安装（例如 npm）；生产应固定版本或使用离线镜像。
 - session 按 Run 建立；没有跨 Run 连接池。
-- SSE 断线重连 / 事件续传未测。
+### 传输中断
+
+```text
+SSE 没有自动重连
+streamable_http 的 GET 事件流可以带 Last-Event-ID 重连
+正在进行的 tools/call 不会重放
+
+调用中断 → TOOL_EXEC_ERROR
+会话保留到 close
+server 恢复后新会话可以继续
+```
 
 ## 10. 相关证据
 
