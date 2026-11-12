@@ -1,0 +1,4 @@
+step: M7 real MCP HTTP transports
+expected: SSE and streamable_http servers open, list tools, execute calls, and receive ${secret:http_token} in the Authorization header end to end
+observed: runtime probe opened both transports, echo returned sse-ok/http-ok, auth_header returned "Bearer http-secret"; one Run called three MCP tools over both transports and completed; tool_invocations=0; 4 sessions opened/closed; header secret absent from middleware/harness/runtime/server logs
+evidence: probe.json, catalog_sse.json, catalog_http.json, db.txt, runtime.log, sse_server.log, http_server.log, submit_run.json

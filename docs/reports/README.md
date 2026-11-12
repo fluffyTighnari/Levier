@@ -133,6 +133,7 @@
 | `docs/reports/MCP-M4.md` | MCP M4：allowlist / 缺失 secret / 并发 / 停机 |
 | `docs/reports/MCP-M5.md` | MCP M5：真实第三方 filesystem server |
 | `docs/reports/MCP-M6.md` | MCP M6：一键回归与收口 |
+| `docs/reports/MCP-M7.md` | MCP M7：真实 SSE / streamable_http |
 | `docs/reports/RETROFIT-E2E.md` | App 改造 P10：回归与一键收口 |
 | `docs/APP_ONBOARDING.md` | 任意 App 接入 Middleware 的标准流程 |
 

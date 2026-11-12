@@ -180,11 +180,12 @@ make mcp-e2e
 
 ## 9. 当前限制
 
-- 真实链路只验证了 stdio；SSE / streamable_http 只有 fake 单测。
+- 真实链路已验证 stdio 与本地 SSE / streamable_http；TLS、反向代理、服务端鉴权挑战未测。
 - MCP 调用不进入 `tool_invocations`，没有 Gateway 幂等/配额。
 - MW 不负责启动或托管 runtime，部署方需要保证 socket 可达。
 - 第三方 server 依赖外部安装（例如 npm）；生产应固定版本或使用离线镜像。
 - session 按 Run 建立；没有跨 Run 连接池。
+- SSE 断线重连 / 事件续传未测。
 
 ## 10. 相关证据
 
