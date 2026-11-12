@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # Middleware — file and function size baseline report.
 #
-# Reports the largest non-test Go files, long Go functions, and large Python
-# modules. P8R.1 records the baseline; later steps compare against it.
+# Advisory: files >450 are split candidates; functions >80 are review-only.
+# Do not split a cohesive function just to satisfy the line limit.
 set -euo pipefail
 
 cd "$(dirname "$0")/.."
@@ -11,6 +11,8 @@ FILE_LIMIT="${FILE_LIMIT:-450}"
 FUNC_LIMIT="${FUNC_LIMIT:-80}"
 PY_LIMIT="${PY_LIMIT:-300}"
 
+echo "size report is advisory: split by responsibility, not by line count"
+echo
 echo "== Go files (non-test), top 20 =="
 find internal cmd -name '*.go' -not -name '*_test.go' -exec wc -l {} + \
   | sort -n | tail -20

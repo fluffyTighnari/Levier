@@ -401,7 +401,7 @@ contract  → 无 internal 依赖
 
 ### 工作包
 
-进度：P8R.1 完成（`docs/reports/P8R.1.md`）；P8R.2 完成（`docs/reports/P8R.2.md`）；P8R.3 完成（`docs/reports/P8R.3.md`）；P8R.4 完成（`docs/reports/P8R.4.md`）；P8R.5 完成（`docs/reports/P8R.5.md`）；P8R.6 完成（`docs/reports/P8R.6.md`）；P8R.7–P8R.8 待做。
+进度：P8R.1 完成（`docs/reports/P8R.1.md`）；P8R.2 完成（`docs/reports/P8R.2.md`）；P8R.3 完成（`docs/reports/P8R.3.md`）；P8R.4 完成（`docs/reports/P8R.4.md`）；P8R.5 完成（`docs/reports/P8R.5.md`）；P8R.6 完成（`docs/reports/P8R.6.md`）；P8R.7 完成（`docs/reports/P8R.7.md`）；P8R.8 待做。
 
 | ID | 内容 | 产出 | 验收 |
 |---|---|---|---|
@@ -411,14 +411,14 @@ contract  → 无 internal 依赖
 | P8R.4 | 错误与事件一致性 | 统一映射与字段定义 | contract 外错误码字面量 = 0 |
 | P8R.5 | App 接入套件 | JSON schema + `app_check` | 非 Python 客户端按文档通过 |
 | P8R.6 | Daemon 接入套件 | `DAEMON_CONTRACT.md` + `mw-daemon-check` | 新 daemon 不改 MW 代码 |
-| P8R.7 | 清理与架构文档 | `ARCHITECTURE.md`、删除重复 helper | 文档一页可读 |
+| P8R.7 | 清理与架构文档 | `ARCHITECTURE.md`、删除明确重复；**不强制拆函数** | 文档一页可读；长函数经评审保留 |
 | P8R.8 | 回归与评估 | 全量测试 + 两个 e2e | 全部通过 |
 
 ### 评估指标
 
 ```text
 最大非生成文件      < 450 行
-最长函数            < 80 行
+长函数              评审制：只在重复逻辑/深层嵌套时拆分，不为行数拆
 依赖违规            0
 contract 外错误码   0
 现有测试            全绿
@@ -430,8 +430,13 @@ Daemon 自检         文档 + checker 通过
 ### 顺序
 
 ```text
-P8R.1 护栏 → P8R.2 契约 → P8R.3 拆分 → P8R.4 一致性
-→ P8R.5 App 套件 → P8R.6 Daemon 套件 → P8R.7 清理 → P8R.8 回归
+P8R.1 护栏 → P8R.2 契约 → P8R.3 文件拆分 → P8R.4 一致性
+→ P8R.5 App 套件 → P8R.6 Daemon 套件 → P8R.7 清理/文档 → P8R.8 回归
+
+P8R.7 只做：
+- ARCHITECTURE.md
+- 删除明确重复的 helper
+- 长函数评审：保留有内聚性的，不为行数拆
 ```
 
 ### 风险
