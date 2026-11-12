@@ -401,7 +401,7 @@ contract  → 无 internal 依赖
 
 ### 工作包
 
-进度：P8R.1 完成（`docs/reports/P8R.1.md`）；P8R.2 完成（`docs/reports/P8R.2.md`）；P8R.3–P8R.8 待做。
+进度：P8R.1 完成（`docs/reports/P8R.1.md`）；P8R.2 完成（`docs/reports/P8R.2.md`）；P8R.3 完成（`docs/reports/P8R.3.md`）；P8R.4–P8R.8 待做。
 
 | ID | 内容 | 产出 | 验收 |
 |---|---|---|---|

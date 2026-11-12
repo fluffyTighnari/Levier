@@ -38,6 +38,8 @@ const (
 	MetricWorkflowFailsTotal = "mw_workflow_fails_total"
 	// MetricWorkflowDeadTotal reports cumulative dead-lettered tasks.
 	MetricWorkflowDeadTotal = "mw_workflow_dead_total"
+	// MetricWorkflowReapedTotal reports cumulative expired leases reclaimed.
+	MetricWorkflowReapedTotal = "mw_workflow_reaped_total"
 	// MetricWorkflowLeaseLostTotal reports cumulative lost leases.
 	MetricWorkflowLeaseLostTotal = "mw_workflow_lease_lost_total"
 	// MetricWorkflowPanicsTotal reports cumulative handler panics.

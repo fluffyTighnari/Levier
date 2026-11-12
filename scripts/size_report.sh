@@ -25,7 +25,7 @@ echo "== Go functions over ${FUNC_LIMIT} lines =="
 if [ -x /usr/local/go/bin/go ]; then
   export PATH="/usr/local/go/bin:$PATH"
 fi
-go run ./scripts/size_functions.go "$FUNC_LIMIT"
+go run ./scripts/size_functions "$FUNC_LIMIT"
 
 echo
 echo "== Python modules over ${PY_LIMIT} lines =="

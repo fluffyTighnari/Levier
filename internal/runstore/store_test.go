@@ -645,6 +645,42 @@ func TestListActiveRunsAndRequeue(t *testing.T) {
 	}
 }
 
+func TestListActiveRuns(t *testing.T) {
+	store := New(testPool(t))
+	ctx := context.Background()
+	app := createApp(t, store)
+	run, _ := store.CreateRun(ctx, Run{RunID: "run-" + id.New(), AppID: app.AppID})
+	if _, err := store.AssignRun(ctx, Assignment{
+		RunID: run.RunID, ExpectedStatus: StatusQueued,
+		ExpectedAttempt: 0, ExpectedLeaseEpoch: 0,
+		Attempt: 1, LeaseEpoch: 1, DaemonID: "daemon-1",
+	}); err != nil {
+		t.Fatalf("AssignRun() error = %v", err)
+	}
+	if _, err := store.Transition(ctx, Transition{
+		RunID: run.RunID, ExpectedStatus: StatusAssigned,
+		ToStatus: StatusRunning, ExpectedAttempt: 1, ExpectedLeaseEpoch: 1,
+	}); err != nil {
+		t.Fatalf("Transition(running) error = %v", err)
+	}
+	runs, err := store.ListActiveRuns(ctx)
+	if err != nil {
+		t.Fatalf("ListActiveRuns() error = %v", err)
+	}
+	found := false
+	for _, active := range runs {
+		if active.RunID == run.RunID {
+			found = true
+		}
+		if active.Status != StatusAssigned && active.Status != StatusRunning {
+			t.Fatalf("unexpected active status %q", active.Status)
+		}
+	}
+	if !found {
+		t.Fatalf("running run missing from %+v", runs)
+	}
+}
+
 func TestRequeueRunKeepsTerminalAttempt(t *testing.T) {
 	store := New(testPool(t))
 	ctx := context.Background()

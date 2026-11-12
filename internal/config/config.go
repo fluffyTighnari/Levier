@@ -59,10 +59,13 @@ type DatabaseConfig struct {
 
 // WorkflowConfig configures the RunTaskQueue worker runtime.
 type WorkflowConfig struct {
-	Workers      int      `yaml:"workers"`
-	LeaseTTL     Duration `yaml:"lease_ttl"`
-	PollInterval Duration `yaml:"poll_interval"`
-	MaxAttempts  int      `yaml:"max_attempts"`
+	Workers       int      `yaml:"workers"`
+	LeaseTTL      Duration `yaml:"lease_ttl"`
+	PollInterval  Duration `yaml:"poll_interval"`
+	MaxAttempts   int      `yaml:"max_attempts"`
+	ReapInterval  Duration `yaml:"reap_interval"`
+	ReapLimit     int      `yaml:"reap_limit"`
+	RecoveryDelay Duration `yaml:"recovery_delay"`
 }
 
 // LogConfig configures structured logging.
@@ -94,10 +97,13 @@ func Default() Config {
 			HealthTimeout:  Duration(2 * time.Second),
 		},
 		Workflow: WorkflowConfig{
-			Workers:      4,
-			LeaseTTL:     Duration(30 * time.Second),
-			PollInterval: Duration(200 * time.Millisecond),
-			MaxAttempts:  5,
+			Workers:       4,
+			LeaseTTL:      Duration(30 * time.Second),
+			PollInterval:  Duration(200 * time.Millisecond),
+			MaxAttempts:   5,
+			ReapInterval:  Duration(10 * time.Second),
+			ReapLimit:     100,
+			RecoveryDelay: Duration(10 * time.Second),
 		},
 		Log: LogConfig{
 			Level:  "info",
@@ -172,6 +178,15 @@ func ApplyEnv(cfg *Config, lookup func(string) (string, bool)) error {
 	if err := intOverride(lookup, "MIDDLEWARE_WORKFLOW_MAX_ATTEMPTS", &cfg.Workflow.MaxAttempts); err != nil {
 		return err
 	}
+	if err := durationOverride(lookup, "MIDDLEWARE_WORKFLOW_REAP_INTERVAL", &cfg.Workflow.ReapInterval); err != nil {
+		return err
+	}
+	if err := intOverride(lookup, "MIDDLEWARE_WORKFLOW_REAP_LIMIT", &cfg.Workflow.ReapLimit); err != nil {
+		return err
+	}
+	if err := durationOverride(lookup, "MIDDLEWARE_WORKFLOW_RECOVERY_DELAY", &cfg.Workflow.RecoveryDelay); err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -232,6 +247,15 @@ func (c Config) Validate() error {
 	}
 	if c.Workflow.MaxAttempts <= 0 {
 		problems = append(problems, "workflow.max_attempts must be positive")
+	}
+	if c.Workflow.ReapInterval.Std() <= 0 {
+		problems = append(problems, "workflow.reap_interval must be positive")
+	}
+	if c.Workflow.ReapLimit <= 0 {
+		problems = append(problems, "workflow.reap_limit must be positive")
+	}
+	if c.Workflow.RecoveryDelay.Std() <= 0 {
+		problems = append(problems, "workflow.recovery_delay must be positive")
 	}
 	switch strings.ToLower(c.Log.Level) {
 	case "debug", "info", "warn", "error":

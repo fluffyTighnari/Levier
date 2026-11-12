@@ -82,6 +82,9 @@ func TestApplyEnv(t *testing.T) {
 		"MIDDLEWARE_WORKFLOW_WORKERS":         "9",
 		"MIDDLEWARE_WORKFLOW_LEASE_TTL":       "45s",
 		"MIDDLEWARE_WORKFLOW_MAX_ATTEMPTS":    "7",
+		"MIDDLEWARE_WORKFLOW_REAP_INTERVAL":   "15s",
+		"MIDDLEWARE_WORKFLOW_REAP_LIMIT":      "25",
+		"MIDDLEWARE_WORKFLOW_RECOVERY_DELAY":  "12s",
 		"MIDDLEWARE_LOG_LEVEL":                "warn",
 		"MIDDLEWARE_HTTP_ALLOW_LEGACY_BEARER": "true",
 	}
@@ -101,6 +104,12 @@ func TestApplyEnv(t *testing.T) {
 	}
 	if cfg.Workflow.LeaseTTL.Std() != 45*time.Second {
 		t.Fatalf("LeaseTTL = %v", cfg.Workflow.LeaseTTL.Std())
+	}
+	if cfg.Workflow.ReapInterval.Std() != 15*time.Second || cfg.Workflow.ReapLimit != 25 {
+		t.Fatalf("reaper = interval %v limit %d", cfg.Workflow.ReapInterval.Std(), cfg.Workflow.ReapLimit)
+	}
+	if cfg.Workflow.RecoveryDelay.Std() != 12*time.Second {
+		t.Fatalf("recovery delay = %v", cfg.Workflow.RecoveryDelay.Std())
 	}
 	if cfg.Log.Level != "warn" {
 		t.Fatalf("Log.Level = %q", cfg.Log.Level)
@@ -136,6 +145,9 @@ func TestValidateRejectsBadConfig(t *testing.T) {
 		{"bad log level", func(c *Config) { c.Log.Level = "verbose" }, "log.level"},
 		{"bad min conns", func(c *Config) { c.Database.MinConns = 100 }, "database.min_conns"},
 		{"zero workers", func(c *Config) { c.Workflow.Workers = 0 }, "workflow.workers"},
+		{"zero reap interval", func(c *Config) { c.Workflow.ReapInterval = 0 }, "workflow.reap_interval"},
+		{"zero reap limit", func(c *Config) { c.Workflow.ReapLimit = 0 }, "workflow.reap_limit"},
+		{"zero recovery delay", func(c *Config) { c.Workflow.RecoveryDelay = 0 }, "workflow.recovery_delay"},
 	}
 
 	for _, tt := range tests {
