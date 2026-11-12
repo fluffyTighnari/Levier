@@ -1,3 +1,0 @@
-go vet ./...
-python3 scripts/check_secrets.py
-secret scan: OK

@@ -1,2 +1,0 @@
-./scripts/check_deps.sh
-dependency check: OK (8 packages with rules, 16 packages scanned)

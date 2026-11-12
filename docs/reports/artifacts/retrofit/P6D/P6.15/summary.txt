@@ -1,6 +1,0 @@
-step: P6.15
-time_utc: 2026-11-11T04:08:00Z
-expected: another App cannot resolve an invocation owned by this App
-observed: run 01M74CM3SEQR2NNX2TMT9NC3EA completed; foreign app app_01M74CJ5YPPJ3Y72ABRXNA7V3P received LOCAL_TOOL_FORBIDDEN; the owner app completed the call
-evidence: fault_host.log, db.txt, submit_run.json, bootstrap_b.json
-design: AppHub.ResolveLocalToolChecked / CallLocalTool timeout / Invoker error mapping

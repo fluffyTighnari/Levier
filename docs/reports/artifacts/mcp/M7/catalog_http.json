@@ -1,1 +1,0 @@
-{"name":"mcp-http","transport":"streamable_http","allowed_tools":["echo","auth_header"],"secret_refs":["http_token"]}

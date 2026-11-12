@@ -1,6 +1,0 @@
-{"time":"2026-11-12T12:18:32.122825+08:00","level":"INFO","msg":"middleware starting","config":"config.example.yaml","database":"connected","grpc_addr":":9090","http_addr":":8080"}
-{"time":"2026-11-12T12:18:34.482718+08:00","level":"INFO","msg":"ws connected","app_id":"app_01M76ZN5S8T2JN57GJWRGCMNXK","remote_addr":"127.0.0.1:59349"}
-{"time":"2026-11-12T12:18:34.751752+08:00","level":"INFO","msg":"control assigned run","run_id":"01M76ZN5Z9BEB6H009KTMMS09R","trace_id":"retrofit-e2e-20261112T041831Z","app_id":"app_01M76ZN5S8T2JN57GJWRGCMNXK","attempt":1,"lease_epoch":1,"daemon_id":"daemon-local-1","runtime":"normal","strategy":"react"}
-{"time":"2026-11-12T12:18:38.141299+08:00","level":"INFO","msg":"control run terminal","run_id":"01M76ZN5Z9BEB6H009KTMMS09R","trace_id":"retrofit-e2e-20261112T041831Z","app_id":"app_01M76ZN5S8T2JN57GJWRGCMNXK","attempt":1,"status":"completed"}
-{"time":"2026-11-12T12:18:39.032924+08:00","level":"INFO","msg":"ws disconnected","app_id":"app_01M76ZN5S8T2JN57GJWRGCMNXK","duration_ms":4550}
-{"time":"2026-11-12T12:18:39.047672+08:00","level":"INFO","msg":"middleware stopped"}

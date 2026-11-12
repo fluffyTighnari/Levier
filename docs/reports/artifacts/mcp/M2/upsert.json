@@ -1,1 +1,0 @@
-{"name":"probe-1794401673","transport":"stdio","allowed_tools":["echo"],"secret_refs":["probe_token"]}

@@ -1,1 +1,0 @@
-{"app_id": "app_01M74B10JPQKZ2KJD7PFDM8REE", "token_ms": 8.936, "connect_ms": 0.456, "count": 200, "rtt_ms": {"min": 0.072, "p50": 0.092, "p90": 0.105, "p99": 0.232, "max": 0.409, "mean": 0.097, "stdev": 0.034}}

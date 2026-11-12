@@ -1,1 +1,0 @@
-{"health": {"status": "ok", "sessions": 0, "version": "0.1.0"}, "tools": ["mcp__secret-echo__echo_token"], "call_ok": true, "call_result": "{\"content\":[{\"type\":\"text\",\"text\":\"resolved-from-env\"}],\"structured_content\":{\"result\":\"resolved-from-env\"},\"is_error\":false}", "missing_secret_code": "SECRET_MISSING"}

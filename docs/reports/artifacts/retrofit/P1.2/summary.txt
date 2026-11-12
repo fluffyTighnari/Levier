@@ -1,7 +1,0 @@
-step: P1.2
-commit: 7d8e852
-time_utc: 2026-11-10T02:57:20Z
-expected: dispatcher parses arguments_json and calls Counter.add, returning result_json
-observed: counter_add delta=2 -> {"value":2}; counter state=2
-evidence: test.log
-design: DESIGN §5.3; DESIGN §4.5; proto ToolCallResult/ErrorInfo

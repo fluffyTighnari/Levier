@@ -1,7 +1,0 @@
-step: P3.2
-commit: 1326df1
-time_utc: 2026-11-10T08:59:51Z
-expected: apps row exists for P3.1 app_id; name matches; status=active; api_key_hash is 64-char SHA-256 hex and not plaintext
-observed: exactly one row; status=active; hash_len=64; hash_is_sha256_hex=true; hash_is_plaintext=false; rows_with_name=1
-evidence: query.sql, db_apps.txt
-design: DESIGN §4.2; internal/register/registry.go RegisterApp; PostgreSQL apps

@@ -1,5 +1,0 @@
-{"app_id": "app_01M74CJ5QZ2JR3ZF033BC3P9CH", "connected": true, "counter": 0, "foreign_app_id": "", "mode": "unknown"}
-{"sent_unknown_invocation": "unknown-01M74CKKMHEKWMPSFRTZX4Q9NS"}
-{"server_error": {"error": {"code": "LOCAL_TOOL_UNKNOWN", "message": "local tool invocation is not pending"}, "type": "error"}}
-{"sent_correct": {"correlation_id": "01M74CKKMN8EW7XE8KN4A25CP5", "invocation_id": "01M74CKKMHEKWMPSFRTZX4Q9NS", "ok": true, "result_json": "{\"value\": 3}", "type": "local_tool_result"}}
-{"closed": true, "counter": 3, "handled": 1, "mode": "unknown"}

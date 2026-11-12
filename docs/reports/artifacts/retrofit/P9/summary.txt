@@ -1,5 +1,0 @@
-step: P9 (P9.1-P9.9)
-time_utc: 2026-11-11T06:30:00Z
-observed: app disconnect keeps the run alive and reconnect replays 16 events; LLM 429/500 map to RATE_LIMITED/PROVIDER_UNAVAILABLE and fail the run; daemon kill requeues with epoch 2; MW restart keeps the run queued and the on-hello sweep recovers after retry exhaustion (attempt 2/epoch 3 completed); DB outage returns 503 DEPENDENCY_UNAVAILABLE
-P9.10: stalled subscriber blocked Control before the fix; wsSink now uses a 4 MiB bounded queue and disconnects slow consumers, all runs complete
-evidence: P9.1/ P9.6/ P9.7/ P9.8/ P9.8f2/ P9.9/ go_test_final.log lint_final.log harness_test.log

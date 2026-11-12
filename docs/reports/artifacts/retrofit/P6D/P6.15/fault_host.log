@@ -1,5 +1,0 @@
-{"app_id": "app_01M74CJ5QZ2JR3ZF033BC3P9CH", "connected": true, "counter": 0, "foreign_app_id": "app_01M74CJ5YPPJ3Y72ABRXNA7V3P", "mode": "foreign"}
-{"forged_invocation_id": "01M74CM4S7Y7QRXPPTDM1BW8CA", "sent_via_foreign_app": "app_01M74CJ5YPPJ3Y72ABRXNA7V3P"}
-{"server_error": {"error": {"code": "LOCAL_TOOL_FORBIDDEN", "message": "local tool invocation belongs to another app"}, "type": "error"}}
-{"sent_correct": {"correlation_id": "01M74CM4SEM3ZJJRCQ03BJF86Q", "invocation_id": "01M74CM4S7Y7QRXPPTDM1BW8CA", "ok": true, "result_json": "{\"value\": 4}", "type": "local_tool_result"}}
-{"closed": true, "counter": 4, "handled": 1, "mode": "foreign"}

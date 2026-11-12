@@ -1,5 +1,0 @@
-           run_id           |             app_id             | runtime | strategy |  status   | attempt |      trace_id       
-----------------------------+--------------------------------+---------+----------+-----------+---------+---------------------
- 01M74CYEXPRG5DM9FWGBDCDNGA | app_01M74CWXT44CWACYF02146JXYF | normal  | react    | completed |       1 | p7-trace-1794370386
-(1 row)
-

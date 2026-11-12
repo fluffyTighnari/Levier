@@ -1,6 +1,0 @@
-step: P6.12
-time_utc: 2026-11-11T04:08:00Z
-expected: the same local_tool_result sent twice is delivered once
-observed: run 01M74CJKFCRYQ6HR6YXJ1WMDHC completed; 1 TOOL_CALL_BEGIN/END; 1 invocation completed; duplicate ignored without error
-evidence: fault_host.log, db.txt, submit_run.json
-design: AppHub.ResolveLocalToolChecked / CallLocalTool timeout / Invoker error mapping

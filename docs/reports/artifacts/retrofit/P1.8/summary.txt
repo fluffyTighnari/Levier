@@ -1,7 +1,0 @@
-step: P1.8
-commit: 4c9eb11
-time_utc: 2026-11-10T03:22:09Z
-expected: main.py uses dispatch_counter_tool; tool specs derive from TOOL_DEFINITIONS; baseline final=5 with add/add/get
-observed: 2 main wiring tests passed; standalone final=5 steps=4 with 3 tool calls
-evidence: test.log, standalone.log
-design: DESIGN §5.3; DESIGN §4.2; proto ToolManifest

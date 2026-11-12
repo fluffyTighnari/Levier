@@ -1,8 +1,0 @@
-mode: react
-run_id: 01M7765907P1PDFH99FDJDNFYP
-status: completed
-attempt: 1
-events: 14
-tool_calls: begin=3 end=3
-errors: 0
-final_message: Added 2, then added 3. The counter now reads **5**.

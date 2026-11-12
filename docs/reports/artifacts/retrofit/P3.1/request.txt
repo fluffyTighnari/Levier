@@ -1,6 +1,0 @@
-POST http://127.0.0.1:8080/admin/apps
-Authorization: Bearer [REDACTED]
-Content-Type: application/json
-Accept: application/json
-
-{"name":"retrofit-p3-1794300014","multiagent":false}

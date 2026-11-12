@@ -1,4 +1,0 @@
-upsert_status=200
-{"name":"probe-1794401673","transport":"stdio","allowed_tools":["echo"],"secret_refs":["probe_token"]}
-app_update=200
-delete_in_use=409 delete_force=200

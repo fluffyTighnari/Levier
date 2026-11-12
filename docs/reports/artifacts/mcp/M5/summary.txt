@@ -1,4 +1,0 @@
-step: M5 real MCP server
-expected: a published MCP server can be registered, allowlisted, and called end to end
-observed: official @modelcontextprotocol/server-filesystem exposes 16 tools; allowlist exposes only read_text_file/list_directory; run 01M75CDS14H00WJXC5228AKJ09 completed; read_text_file returned m5-content-from-filesystem; tool_invocations=0; no leftover node server processes
-evidence: versions.txt, probe.json, probe_allow.json, catalog.json, app.json, db.txt, runtime.log, harness.log, submit_run.json

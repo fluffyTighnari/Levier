@@ -1,1 +1,0 @@
-{"name":"m3echo","transport":"stdio","allowed_tools":["echo_token"],"secret_refs":["m3_token"]}

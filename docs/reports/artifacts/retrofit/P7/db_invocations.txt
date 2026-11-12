@@ -1,7 +1,0 @@
-       invocation_id        |  tool_name  |  status   | result_json  
-----------------------------+-------------+-----------+--------------
- 01M74CYG22CBYGE43HYBF5YP2P | counter_add | completed | {"value": 2}
- 01M74CYH3STB0VEHVGB80BYNTH | counter_add | completed | {"value": 5}
- 01M74CYHR9ZZ1CXHNDENSF4J1A | counter_get | completed | {"value": 5}
-(3 rows)
-

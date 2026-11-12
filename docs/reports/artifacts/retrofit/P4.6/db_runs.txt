@@ -1,6 +1,0 @@
-           run_id           |             app_id             | strategy |  status   
-----------------------------+--------------------------------+----------+-----------
- 01M72DH7Z53XYRFQZEV5EJZKZP | app_01M72DH7RKCP4S1Z8WBF2SY2D8 | echo     | completed
- 01M72DH85GTG7WWW8PFTV8QS30 | app_01M72DH7RKCP4S1Z8WBF2SY2D8 | echo     | completed
-(2 rows)
-

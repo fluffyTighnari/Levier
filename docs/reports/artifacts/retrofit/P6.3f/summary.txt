@@ -1,7 +1,0 @@
-step: P6.3f
-commit: 3e36fb6
-time_utc: 2026-11-11T01:04:29Z
-expected: a terminal RUN_STATUS already persisted for the current attempt blocks daemon-offline requeue; a rejected terminal transition must not publish run_completed or release capacity
-observed: runstore test shows RequeueRun -> ErrRunNotAssignable and status stays running/epoch 1 after a cancelled event; control test shows no publish and no release for a superseded terminal event; full go test ./... and make lint pass with MIDDLEWARE_TEST_POSTGRES=1
-evidence: control_test.log, runstore_test.log, go_test_all.log, lint.log, summary.txt
-design: run_events terminal RUN_STATUS guard inside RequeueRun UPDATE (row lock serializes with AppendEvent); control transitions only publish on success

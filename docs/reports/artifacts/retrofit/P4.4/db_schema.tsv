@@ -1,3 +1,0 @@
-counter_add	{"type":"object","properties":{"delta":{"type":"integer"}},"required":["delta"],"additionalProperties":false}
-counter_get	{"type":"object","properties":{},"additionalProperties":false}
-counter_reset	{"type":"object","properties":{},"additionalProperties":false}

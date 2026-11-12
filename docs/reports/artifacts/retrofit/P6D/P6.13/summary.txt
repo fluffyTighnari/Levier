@@ -1,6 +1,0 @@
-step: P6.13
-time_utc: 2026-11-11T04:08:00Z
-expected: wrong correlation_id is rejected with LOCAL_TOOL_CORRELATION_MISMATCH and the pending call survives
-observed: run 01M74CK1RPG4RQGS9V14CZNQ8P completed; server error LOCAL_TOOL_CORRELATION_MISMATCH; resend with the real msg_id completed the call
-evidence: fault_host.log, db.txt, submit_run.json
-design: AppHub.ResolveLocalToolChecked / CallLocalTool timeout / Invoker error mapping

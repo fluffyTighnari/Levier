@@ -1,5 +1,0 @@
-step: P9.7
-time_utc: 2026-11-11T06:30:00Z
-expected: daemon loss requeues a running run and fences the old epoch
-observed: kill -9 while running -> status queued, lease_epoch 2, daemon cleared, RUN_RETRY pending
-evidence: db_after_kill.txt, submit_run.json, harness_1.log

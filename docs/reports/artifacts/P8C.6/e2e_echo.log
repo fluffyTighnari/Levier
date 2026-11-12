@@ -1,5 +1,0 @@
-go build -o bin/middleware ./cmd/middleware
-./scripts/e2e_echo.sh
-create: {"run_id":"01M76ZQN1TVATVF7MJM0NA4PJP","status":"queued","ws_url":"/api/v1/ws","ws_token":"[REDACTED]"}
-run: 01M76ZQN1TVATVF7MJM0NA4PJP completed
-events: {"events":[{"run_id":"01M76ZQN1TVATVF7MJM0NA4PJP","attempt":1,"seq":1,"source":"daemon","event_type":"RUN_STATUS","data":{"status":"running"},"ts_ms":1794457195623},{"run_id":"01M76ZQN1TVATVF7MJM0NA4PJP","attempt":1,"seq":2,"source":"daemon","event_type":"MESSAGE_COMPLETED","data":{"role":"assistant","content":"hello e2e","message_id":"01M76ZQN376DHHR90QCBGBXVAT"},"ts_ms":1794457195623},{"run_id":"01M76ZQN1TVATVF7MJM0NA4PJP","attempt":1,"seq":3,"source":"daemon","event_type":"RUN_STATUS","data":{"status":"completed"},"ts_ms":1794457195623}],"caught_up":true,"next_attempt":1,"next_seq":3}

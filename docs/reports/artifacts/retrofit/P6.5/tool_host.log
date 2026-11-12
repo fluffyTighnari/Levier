@@ -1,4 +1,0 @@
-{"app_id": "app_01M749EJ48N46C4KKXRQXY12RZ", "connected": true, "counter": 41}
-{"counter": 41, "local_tool_call": {"arguments_json": "{}", "invocation_id": "01M749EM87KHS9A1MT3F6EGTZ7", "msg_id": "01M749EM8N81DEDGW7K7V17Z52", "tool_name": "counter_get"}, "local_tool_result": {"correlation_id": "01M749EM8N81DEDGW7K7V17Z52", "invocation_id": "01M749EM87KHS9A1MT3F6EGTZ7", "ok": true, "result_json": "{\"value\": 41}", "type": "local_tool_result"}}
-{"handled": 1, "idle_timeout": true}
-{"closed": true, "counter": 41, "handled": 1}

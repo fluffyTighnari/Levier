@@ -1,2 +1,0 @@
-{"time":"2026-11-10T02:18:07.523135+00:00","level":"INFO","logger":"middleware_harness","message":"harness starting","daemon_id":"daemon-local-1"}
-{"time":"2026-11-10T02:18:09.388661+00:00","level":"INFO","logger":"middleware_harness","message":"harness stopped"}

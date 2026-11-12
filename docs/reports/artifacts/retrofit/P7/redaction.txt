@@ -1,7 +1,0 @@
-checks (key value never printed):
-evidence+logs contains api_key: 0
-tracked files contains api_key: 0
-logs contain 'Bearer ': 0
-logs contain 'ws_token=': 0
-apps.api_key_hash equals plaintext key: f
-apps.api_key_hash length: 64

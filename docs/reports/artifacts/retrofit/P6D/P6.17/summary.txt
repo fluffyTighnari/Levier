@@ -1,6 +1,0 @@
-step: P6.17
-time_utc: 2026-11-11T04:08:00Z
-expected: a late result past tool_ms yields TOOL_TIMEOUT and the late result is rejected
-observed: run 01M74CN8NA0CGH5BSDDGQSWXVW completed; TOOL_CALL_END TOOL_TIMEOUT at 1201 ms with tool_ms=1200; invocation failed retryable; late result got LOCAL_TOOL_UNKNOWN
-evidence: fault_host.log, db.txt, submit_run.json
-design: AppHub.ResolveLocalToolChecked / CallLocalTool timeout / Invoker error mapping

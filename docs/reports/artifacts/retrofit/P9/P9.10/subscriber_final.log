@@ -1,6 +1,0 @@
-{"caught_up": {"type": "caught_up", "run_id": "01M74SV0YABK8WVVERSC25Y4AG", "attempt": 0, "seq": 0}}
-{"caught_up": {"type": "caught_up", "run_id": "01M74SV12QD0AN7VVJ3QNK0XWS", "attempt": 0, "seq": 0}}
-{"caught_up": {"type": "caught_up", "run_id": "01M74SV174YQHTS3N8C1X92CRW", "attempt": 0, "seq": 0}}
-{"caught_up": {"type": "caught_up", "run_id": "01M74SV1BF23T5RDAHGSXWW0NE", "attempt": 0, "seq": 0}}
-{"caught_up": {"type": "caught_up", "run_id": "01M74SV1FR1KYYGX8AEXKGZBTT", "attempt": 0, "seq": 0}}
-{"stalled": true, "seconds": 60.0}

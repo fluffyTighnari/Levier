@@ -1,7 +1,0 @@
-step: P5.5
-commit: de62f96
-time_utc: 2026-11-10T12:34:44Z
-expected: subscribe before running Harness; after caught_up, receive three events and run_completed
-observed: app_id=app_01M72Q7QB0MDYEVRQN9CDVR33F; run_id=01M72Q7QEDN123TV5X0HWGEWRX; caught_up(0,0); received RUN_STATUS, MESSAGE_COMPLETED, RUN_STATUS, run_completed; DB status=completed events=3
-evidence: bootstrap.json, submit_run.json, subscribe.log, subscribe.err, harness.log, middleware.log, db_run.txt, summary.txt
-design: DESIGN §4.3; internal/httpapi AppHub.Publish; EventMessage/RunCompleted; Control terminal publish

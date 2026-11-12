@@ -1,8 +1,0 @@
-mode: echo
-run_id: 01M773SVPMGVR20JAGCS2H65MB
-status: completed
-attempt: 1
-events: 3
-tool_calls: begin=0 end=0
-errors: 0
-final_message: hello mvp

@@ -1,4 +1,0 @@
-catalog_status=200
-{"name":"m3echo","transport":"stdio","allowed_tools":["echo_token"],"secret_refs":["m3_token"]}
-app_status=200
-status=completed

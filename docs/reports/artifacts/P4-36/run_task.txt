@@ -1,6 +1,0 @@
-          task_id           |           run_id           |  task_type   |  status   | attempt | max_attempts | lease_owner | lease_token | lease_expires_at |          updated_at           
-----------------------------+----------------------------+--------------+-----------+---------+--------------+-------------+-------------+------------------+-------------------------------
- 01M6ZS0QA665YMZCZTEV0103DS | 01M6ZS0QA2D4D56GWYV0SV3T20 | RUN_TIMEOUT  | CANCELLED |       0 |            3 |             |           0 |                  | 2026-11-09 17:07:51.784199+08
- 01M6ZS0QA512A65VB4WF6FWZ6M | 01M6ZS0QA2D4D56GWYV0SV3T20 | RUN_DISPATCH | DONE      |       1 |            5 |             |           1 |                  | 2026-11-09 17:07:51.780099+08
-(2 rows)
-

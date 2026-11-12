@@ -1,7 +1,0 @@
-step: P4.6
-commit: 61807bb
-time_utc: 2026-11-10T09:45:03Z
-expected: before run TaskAssign has 3 tools; after re-register only counter_add, new TaskAssign has 1 tool; tool_defs pruned
-observed: app_id=app_01M72DH7RKCP4S1Z8WBF2SY2D8; before=[counter_add,counter_get,counter_reset]; after=[counter_add]; pruned=true; DB has only counter_add version=2; both runs completed
-evidence: bootstrap.json, register_three.json, counter_add_only.json, register_one.json, submit_before.json, submit_after.json, harness.log, prune.json, db_tools.txt, db_runs.txt
-design: DESIGN §5.3; internal/register ReplaceLocalTools prune/upsert; Control toolManifests

@@ -1,1 +1,0 @@
-{"name":"m4allow","transport":"stdio","allowed_tools":["echo_token","echo_pid"],"secret_refs":["m4_token"]}

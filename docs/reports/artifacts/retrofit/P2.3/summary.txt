@@ -1,7 +1,0 @@
-step: P2.3
-commit: e7b0666
-time_utc: 2026-11-10T05:57:31Z
-expected: parse app_id/name/api_key from 200/201; duplicate app has empty key; bad/missing fields and non-2xx errors are structured; key not in repr
-observed: 5 tests passed; key masked in repr; error envelope mapped
-evidence: test.log
-design: DESIGN §4.2; internal/httpapi/contracts.go CreateAppResponse; internal/httpapi/server.go handleAdminCreateApp

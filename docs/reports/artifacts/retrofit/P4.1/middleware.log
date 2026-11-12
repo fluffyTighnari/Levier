@@ -1,8 +1,0 @@
-{"time":"2026-11-10T17:25:07.520747+08:00","level":"INFO","msg":"middleware starting","config":"config.example.yaml","database":"connected","grpc_addr":":9090","http_addr":":8080"}
-{"time":"2026-11-10T17:25:07.713988+08:00","level":"DEBUG","msg":"http request","request_id":"01M72CD2012X2CGQZ22YNTY33R","method":"GET","route":"GET /healthz","status":200,"duration_ms":0,"remote_addr":"127.0.0.1:63911"}
-{"time":"2026-11-10T17:25:09.869398+08:00","level":"DEBUG","msg":"http request","request_id":"01M72CD439YSJ2NX7YAKJYKWNJ","method":"POST","route":"POST /admin/apps","status":201,"duration_ms":4,"remote_addr":"127.0.0.1:63917"}
-{"time":"2026-11-10T17:25:09.984025+08:00","level":"DEBUG","msg":"http request","request_id":"01M72CD46TE1A8VXYX42716DFC","method":"POST","route":"POST /api/v1/apps","status":200,"duration_ms":5,"remote_addr":"127.0.0.1:63918"}
-{"time":"2026-11-10T17:25:10.090069+08:00","level":"DEBUG","msg":"http request","request_id":"01M72CD4A47SPPKZGVCBE322WZ","method":"POST","route":"POST /api/v1/runs","status":202,"duration_ms":5,"remote_addr":"127.0.0.1:63919"}
-{"time":"2026-11-10T17:25:10.167576+08:00","level":"INFO","msg":"control assigned run","run_id":"01M72CD4A5D508M14ZVF4D6PTS","trace_id":"01M72CD4A47SPPKZGVCBE322WZ","app_id":"app_01M72CD43AXKP68KQ0G5N3FZWT","attempt":1,"lease_epoch":1,"daemon_id":"daemon-local-1","runtime":"normal","strategy":"echo"}
-{"time":"2026-11-10T17:25:10.175424+08:00","level":"INFO","msg":"control run terminal","run_id":"01M72CD4A5D508M14ZVF4D6PTS","trace_id":"01M72CD4A47SPPKZGVCBE322WZ","app_id":"app_01M72CD43AXKP68KQ0G5N3FZWT","attempt":1,"status":"completed"}
-{"time":"2026-11-10T17:25:12.247029+08:00","level":"INFO","msg":"middleware stopped"}

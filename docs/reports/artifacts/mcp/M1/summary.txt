@@ -1,4 +1,0 @@
-step: M1 runtime secret resolution
-expected: mcp_runtime resolves ${secret:name} before connecting, never logs values
-observed: real stdio MCP server received PROBE_TOKEN=resolved-from-env; tool returned it; missing placeholder -> SECRET_MISSING and no connect; session open/close logged
-evidence: probe.json, probe.py, secret_echo_server.py, runtime.log

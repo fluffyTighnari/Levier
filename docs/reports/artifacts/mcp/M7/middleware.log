@@ -1,4 +1,0 @@
-{"time":"2026-11-12T09:59:30.222302+08:00","level":"INFO","msg":"middleware starting","config":"config.example.yaml","database":"connected","grpc_addr":":9090","http_addr":":8080"}
-{"time":"2026-11-12T09:59:54.032034+08:00","level":"INFO","msg":"control assigned run","run_id":"01M76QQ8BRC9S0DEEA3WC4QZ49","trace_id":"01M76QQ8BQEF5H9ZHFMHM8BKGN","app_id":"app_01M76QQ85EP3YM04PH3TW3KKV1","attempt":1,"lease_epoch":1,"daemon_id":"daemon-local-1","runtime":"normal","strategy":"react"}
-{"time":"2026-11-12T09:59:57.494484+08:00","level":"INFO","msg":"control run terminal","run_id":"01M76QQ8BRC9S0DEEA3WC4QZ49","trace_id":"01M76QQ8BQEF5H9ZHFMHM8BKGN","app_id":"app_01M76QQ85EP3YM04PH3TW3KKV1","attempt":1,"status":"completed"}
-{"time":"2026-11-12T10:00:37.261903+08:00","level":"INFO","msg":"middleware stopped"}

@@ -1,7 +1,0 @@
-step: P6.6
-commit: 239d4da
-time_utc: 2026-11-11T03:14:17Z
-expected: tool_invocations holds one completed row per local call with matching invocation_id and exact result_json
-observed: app=app_01M749HVFQ7VV6SW6N05JE7Q4S; run=01M749HVT28BBMZ2F29HPH027K; 3 invocations counter_add/reset/get all completed with error_json NULL; result_json {"value": 12},{"value": 0},{"value": 0} match TOOL_CALL_END payloads; count query 3/3 completed, 0 missing results; created_at < completed_at
-evidence: db_invocation.txt, tool_host.log, submit_run.json, bootstrap.json, register_tools.json, middleware.log, harness.log, migrate.log
-design: gateway Invoker creates in_flight row, ResolveLocalToolChecked completes it with result_json

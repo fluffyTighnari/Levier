@@ -1,7 +1,0 @@
-step: P3.4
-commit: 3c4a1a8
-time_utc: 2026-11-10T09:12:34Z
-expected: App key POST /api/v1/apps with full TOOL_DEFINITIONS; MW returns 200
-observed: app_id=app_01M72BNV0VX8A1BHP7W6CN7KE6; status=200; tool_count=3; tools=counter_add,counter_get,counter_reset; MW log route POST /api/v1/apps status=200
-evidence: bootstrap.json, registration_payload.json, register_tools.json, middleware.log, migrate.log, summary.txt
-design: DESIGN §4.2; internal/httpapi handleUpdateApp; internal/register ReplaceLocalTools; AppUpsertRequest

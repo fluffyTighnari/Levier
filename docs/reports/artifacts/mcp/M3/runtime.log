@@ -1,4 +1,0 @@
-2026-11-11 21:00:38,848 INFO mcp_runtime mcp runtime listening
-2026-11-11 21:00:51,510 INFO mcp_runtime.sessions mcp session opened
-2026-11-11 21:00:53,779 INFO mcp_runtime.sessions mcp session closed
-2026-11-11 21:01:31,100 INFO mcp_runtime mcp runtime stopped

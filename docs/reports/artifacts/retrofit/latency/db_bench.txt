@@ -1,9 +1,0 @@
-goos: darwin
-goarch: arm64
-pkg: github.com/fluffyTighnari/middleware/internal/gateway
-cpu: Apple M1
-BenchmarkInvocationStoreRoundTrip-8   	     300	    251958 ns/op	     522 B/op	      15 allocs/op
-BenchmarkInvocationStoreRoundTrip-8   	     300	    214612 ns/op	     523 B/op	      15 allocs/op
-BenchmarkInvocationStoreRoundTrip-8   	     300	    224298 ns/op	     523 B/op	      15 allocs/op
-PASS
-ok  	github.com/fluffyTighnari/middleware/internal/gateway	2.173s

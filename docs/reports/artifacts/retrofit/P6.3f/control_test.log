@@ -1,7 +1,0 @@
-=== RUN   TestTerminalEventAfterRequeueDoesNotPublish
---- PASS: TestTerminalEventAfterRequeueDoesNotPublish (0.02s)
-=== RUN   TestTerminalEventReleasesCapacity
-2026/11/11 09:04:13 INFO control run terminal run_id=run-1 trace_id=trace-1 app_id=app-1 attempt=1 status=completed
---- PASS: TestTerminalEventReleasesCapacity (0.01s)
-PASS
-ok  	github.com/fluffyTighnari/middleware/internal/control	0.474s

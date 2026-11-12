@@ -1,7 +1,0 @@
-step: P3.1
-commit: c7c8b16
-time_utc: 2026-11-10T08:40:28Z
-expected: App sends real POST /admin/apps to running Middleware; MW returns 201/200; app_id parsed
-observed: HTTP 201 from real MW; app_id present; has_api_key=true; MW debug log shows route POST /admin/apps status=201
-evidence: request.txt, response.json, middleware.log, migrate.log, register_app.err
-design: DESIGN §4.2; internal/httpapi/server.go handleAdminCreateApp; internal/register/registry.go RegisterApp

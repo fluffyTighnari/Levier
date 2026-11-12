@@ -1,5 +1,0 @@
-           run_id           |             app_id             | strategy |  status   | attempt |          trace_id          
-----------------------------+--------------------------------+----------+-----------+---------+----------------------------
- 01M72CD4A5D508M14ZVF4D6PTS | app_01M72CD43AXKP68KQ0G5N3FZWT | echo     | completed |       1 | 01M72CD4A47SPPKZGVCBE322WZ
-(1 row)
-

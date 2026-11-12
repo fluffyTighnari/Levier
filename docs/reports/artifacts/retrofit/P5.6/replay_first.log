@@ -1,4 +1,0 @@
-{"connected": true, "app_id": "app_01M72QTK8EZM510ZN93XW2H8C0", "ws_url": "/api/v1/ws"}
-{"caught_up": {"type": "caught_up", "run_id": "01M72QTKBP5FEP93KNCB6SV48H", "attempt": 1, "seq": 3}, "events_before": 3}
-{"received": [{"type": "event", "event_type": "RUN_STATUS", "attempt": 1, "seq": 1, "status": null}, {"type": "event", "event_type": "MESSAGE_COMPLETED", "attempt": 1, "seq": 2, "status": null}, {"type": "event", "event_type": "RUN_STATUS", "attempt": 1, "seq": 3, "status": null}]}
-{"closed": true}

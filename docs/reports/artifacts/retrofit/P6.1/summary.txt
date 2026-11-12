@@ -1,7 +1,0 @@
-step: P6.1
-commit: 68a963f
-time_utc: 2026-11-11T00:49:19Z
-expected: react Run with provider=deepseek reaches real Harness with 3 counter tools; provider is DeepSeek
-observed: app_id=app_01M7418WBTB130KS0J0K642BYP; run_id=01M7418WJPXS8RFHPQ3MMG95RY; strategy=react; status=completed; tool_count=3; USAGE model=deepseek-flash content=OK
-evidence: bootstrap.json, register_tools.json, submit_run.json, harness.log, middleware.log, db_run.txt, summary.txt
-design: DESIGN §5.3; TaskAssign tools; ProviderRouter deepseek; ReactStrategy

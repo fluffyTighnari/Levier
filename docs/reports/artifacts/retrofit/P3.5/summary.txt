@@ -1,7 +1,0 @@
-step: P3.5
-commit: 6cbbcf4
-time_utc: 2026-11-10T09:18:44Z
-expected: three local tool_defs rows for the P3.4 app; schema/timeout/version/scope match
-observed: app_id=app_01M72BNV0VX8A1BHP7W6CN7KE6; 3 rows; all_match=true; scope=local; timeout_ms=10000; version=1
-evidence: query.sql, db_tool_defs.txt, db_tool_defs.tsv, schema_compare.json
-design: DESIGN §4.2; internal/register ReplaceLocalTools; PostgreSQL tool_defs

@@ -1,7 +1,0 @@
-step: P6A.5
-commit: 7463e94
-time_utc: 2026-11-10T13:31:08Z
-expected: read DEEPSEEK_API_KEY/BASE_URL/MODEL when model fields are empty; missing key fails before request; explicit model key wins; real smoke works
-observed: 3 tests passed; real DeepSeek call returned content=OK model=deepseek-flash; no key printed
-evidence: test.log, real_smoke.log, summary.txt
-design: experimental Harness env credentials; production MW injection deferred

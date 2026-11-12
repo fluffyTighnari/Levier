@@ -1,4 +1,0 @@
-step: M2 admin MCP catalog
-expected: register/list/delete MCP entries; store placeholders only; reject deleting referenced entries unless forced
-observed: POST /admin/mcp 200 with secret_refs=["probe_token"]; DB config_json keeps ${secret:probe_token}; GET exposes no config; app mcp_refs set; DELETE 409 then force 200
-evidence: result.txt, upsert.json, list.json, app_update.json, delete_in_use.json, delete_force.json, db.txt, middleware.log

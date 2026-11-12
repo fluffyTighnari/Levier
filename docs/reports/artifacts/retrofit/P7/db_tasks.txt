@@ -1,6 +1,0 @@
-  task_type   |  status   | attempt 
---------------+-----------+---------
- RUN_DISPATCH | DONE      |       1
- RUN_TIMEOUT  | CANCELLED |       0
-(2 rows)
-

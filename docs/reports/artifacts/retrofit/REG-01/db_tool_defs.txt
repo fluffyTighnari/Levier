@@ -1,6 +1,0 @@
-             tool_id             | scope |             app_id             |    name     |             description              |                                                      schema_json                                                       | timeout_ms | version 
----------------------------------+-------+--------------------------------+-------------+--------------------------------------+------------------------------------------------------------------------------------------------------------------------+------------+---------
- tool_01M71NKR6KYJ1ZSR6FTSRATWC8 | local | app_01M71NKR6DPKZVWSAGF1N455RX | counter_add | Add an integer delta to the counter. | {"type": "object", "properties": {"delta": {"type": "integer"}}, "required": ["delta"], "additionalProperties": false} |      10000 |       1
- tool_01M71NKR6KYJ1ZSR6FTXDYQNMZ | local | app_01M71NKR6DPKZVWSAGF1N455RX | counter_get | Read the current counter value.      | {"type": "object", "properties": {}, "additionalProperties": false}                                                    |      10000 |       1
-(2 rows)
-

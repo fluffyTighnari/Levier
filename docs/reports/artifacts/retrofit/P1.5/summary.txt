@@ -1,7 +1,0 @@
-step: P1.5
-commit: 92bd589
-time_utc: 2026-11-10T03:15:57Z
-expected: unknown tool returns TOOL_NOT_FOUND, retryable=false, does not mutate counter
-observed: counter_missing -> TOOL_NOT_FOUND; counter remains 3
-evidence: test.log
-design: DESIGN §4.5; proto ErrorInfo

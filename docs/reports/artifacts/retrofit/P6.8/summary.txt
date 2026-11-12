@@ -1,7 +1,0 @@
-step: P6.8
-commit: 3021dca
-time_utc: 2026-11-11T03:17:11Z
-expected: run ends terminal completed, final answer uses the tool result, and daemon shutdown does not requeue it
-observed: app=app_01M749QBBE2S3Z9HBJTBM476EF; run=01M749QBNSA0VE9HRBR62SFWSZ; 12 events ending RUN_STATUS completed; final message cites 2; after harness shutdown status still completed, lease_epoch=1, exactly 1 terminal event, tasks RUN_DISPATCH DONE + RUN_TIMEOUT CANCELLED, no retry
-evidence: db_terminal.txt, tool_host.log, submit_run.json, middleware.log, harness.log, bootstrap.json, register_tools.json, migrate.log
-design: Control terminal projection + P6.3f requeue guard; ReactStrategy returns completed when a step has no tool_calls

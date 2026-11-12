@@ -1,9 +1,0 @@
-step: P8 (P8.1-P8.5)
-commit: 62a225c
-time_utc: 2026-11-11T04:59:46Z
-P8.1: python stdlib http smoke passed (health, bootstrap, ws-token, run, events, error envelope, cancel)
-P8.2: Node 24 built-in WebSocket connected with ws_token and received pong
-P8.3: Node app handled counter_add(2), counter_add(3), counter_get() and the run 01M74FJAQ4ZJXPG0S971D4FG6W completed with final 5 and 3 completed invocations
-P8.4: imports only node:http, node:https, node:fs; no package.json, no node_modules, no SDK/generated imports
-P8.5: msg_id/correlation_id/invocation_id/tool_name/arguments_json/result_json/ok match DESIGN proto fields
-evidence: py_http_smoke.log, node_serve.log, node_serve.err, db_run.txt, submit_run.json, bootstrap_node.json, node_deps.txt, field_alignment.txt, middleware.log, harness.log, migrate.log

@@ -1,7 +1,0 @@
-step: P2.2
-commit: 0ff6b0f
-time_utc: 2026-11-10T05:53:29Z
-expected: build POST /admin/apps with correct method/url/headers/body; send via injected transport only
-observed: one recorded request; Authorization Bearer admin token; JSON body name+multiagent; no socket opened
-evidence: test.log
-design: DESIGN §4.2 §13.1; internal/httpapi/server.go; internal/httpapi/contracts.go AppUpsertRequest

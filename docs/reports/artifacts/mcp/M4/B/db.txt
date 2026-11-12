@@ -1,9 +1,0 @@
- seq |       type        |      code      |                  message                  |  status   
------+-------------------+----------------+-------------------------------------------+-----------
-   1 | RUN_STATUS        |                |                                           | running
-   2 | ERROR             | SECRET_MISSING | secret 'not_configured' is not configured | 
-   3 | USAGE             |                |                                           | 
-   4 | MESSAGE_COMPLETED |                |                                           | 
-   5 | RUN_STATUS        |                |                                           | completed
-(5 rows)
-

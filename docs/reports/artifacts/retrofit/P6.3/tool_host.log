@@ -1,3 +1,0 @@
-{"connected": true, "app_id": "app_01M741S23G63MZ5J9ANJZVZYDP"}
-{"local_tool_call": {"msg_id": "01M741S3GFV98P3J1ZSE9C8F67", "invocation_id": "01M741S3G67EGX3XQH1TS19652", "tool_name": "counter_add", "arguments_json": "{\"delta\": 2}", "timeout_ms": 10000}}
-{"closed": true}

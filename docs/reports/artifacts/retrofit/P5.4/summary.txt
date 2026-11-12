@@ -1,7 +1,0 @@
-step: P5.4
-commit: c9d40e8
-time_utc: 2026-11-10T12:26:16Z
-expected: subscribe to a queued run with no events -> caught_up attempt=0 seq=0, events=0
-observed: app_id=app_01M72PRFVJY5RV3Q51MSKJY1YR; run_id=01M72PRFYS7T24H35CFAXJBK79; caught_up attempt=0 seq=0; events=0; DB status=queued event_count=0
-evidence: bootstrap.json, submit_run.json, subscribe.log, subscribe.err, db_run.txt, middleware.log, summary.txt
-design: DESIGN §4.3; internal/httpapi replayWS; runs.ListEvents; CaughtUpMessage

@@ -1,7 +1,0 @@
-step: REG-01
-commit: 58ba50c
-time_utc: 2026-11-10T02:47:39Z
-expected: app row persisted; two local tools persisted; TaskAssign carries both tools
-observed: app_id=app_01M71NKR6DPKZVWSAGF1N455RX; run_id=01M71NKR71MMWYJRHACYM5C7Q5; tool_count=2; both scope=LOCAL; schema_json matches registration
-evidence: registration_payload.json, task_assign.json, db_apps.txt, db_tool_defs.txt, observer.err, middleware.log
-design: docs/DESIGN.md §4.2 §5.3; proto ToolManifest; internal/register/materials.go

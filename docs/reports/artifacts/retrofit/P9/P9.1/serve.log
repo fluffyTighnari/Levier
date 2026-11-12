@@ -1,3 +1,0 @@
-{"app_id": "app_01M74KZ9BEXX0Y9R9FYN155SGB", "app_name": "p9-app-1794377753", "counter": 0, "registered_tools": ["counter_add", "counter_get", "counter_reset"], "serving": true}
-{"counter": 2, "local_tool_call": {"arguments_json": "{\"delta\": 2}", "invocation_id": "01M74KZPM5MF2PX211053DP0ME", "msg_id": "01M74KZPMETQ4FWRAAXKHB2BYT", "tool_name": "counter_add"}, "local_tool_result": {"correlation_id": "01M74KZPMETQ4FWRAAXKHB2BYT", "invocation_id": "01M74KZPM5MF2PX211053DP0ME", "ok": true, "result_json": "{\"value\": 2}", "type": "local_tool_result"}}
-{"counter": 2, "handled": 1, "reason": "count", "stopped": true}

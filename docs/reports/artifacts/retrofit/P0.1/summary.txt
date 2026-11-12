@@ -1,6 +1,0 @@
-step: P0.1
-commit: 75b93bd
-time_utc: 2026-11-10T02:18:24Z
-expected: final counter=5 with 3 tool calls (add/add/get)
-observed: final=5, steps=4, tool calls=3
-evidence: counter.log

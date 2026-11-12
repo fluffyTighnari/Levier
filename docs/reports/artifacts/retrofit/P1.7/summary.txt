@@ -1,7 +1,0 @@
-step: P1.7
-commit: 671bc32
-time_utc: 2026-11-10T03:18:07Z
-expected: registration tools use schema object; TaskAssign manifests use input_schema_json string
-observed: 2 tests passed; schemas round-trip; manifests isolated
-evidence: test.log, manifests.json
-design: DESIGN §4.2; DESIGN §5.3; proto ToolManifest; internal/httpapi/contracts.go ToolDefinition

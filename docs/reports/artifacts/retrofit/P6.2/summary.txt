@@ -1,7 +1,0 @@
-step: P6.2
-commit: efa2c17
-time_utc: 2026-11-11T00:53:17Z
-expected: DeepSeek returns tool_calls; Harness emits ToolCallRequest; MW records invocations; no App WS yet -> APP_UNREACHABLE
-observed: app_id=app_01M741G06PA2WV6HW1T5XYTPP3; run_id=01M741G0DBA550VQZ0HQKAYE2T; events include counter_add/counter_get TOOL_CALL_BEGIN/END; tool_invocations 2 rows failed APP_UNREACHABLE; run completed
-evidence: bootstrap.json, register_tools.json, submit_run.json, harness.log, middleware.log, db_run.txt, summary.txt
-design: DESIGN §5.3 §7.1; ReactStrategy; ToolBridge; gateway Invoker local path; AppHub no connection
