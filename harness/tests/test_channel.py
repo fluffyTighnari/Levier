@@ -212,3 +212,82 @@ class ChannelClientTest(unittest.IsolatedAsyncioTestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class ReconnectingClient(ChannelClient):
+    """A client whose sessions succeed without opening a transport."""
+
+    sessions = 0
+
+    async def _session(self) -> bool:
+        type(self).sessions += 1
+        return True
+
+
+class ChannelBackpressureTest(unittest.IsolatedAsyncioTestCase):
+    async def asyncSetUp(self) -> None:
+        self.client = ChannelClient(
+            ChannelConfig(
+                address="127.0.0.1:1",
+                daemon_id="daemon-test",
+                auth_token="token-test",
+                reconnect_initial=0.01,
+                reconnect_max=0.05,
+            )
+        )
+
+    async def asyncTearDown(self) -> None:
+        await self.client.stop()
+
+    async def test_heartbeat_send_does_not_block_on_full_events(self) -> None:
+        for _ in range(self.client._outbound.maxsize):
+            self.client._outbound.put_nowait(new_envelope(
+                runtime_pb2.Event(seq=1, type=runtime_pb2.EventType.MESSAGE_COMPLETED),
+                "event",
+                run_id="run-1",
+                attempt=1,
+                lease_epoch=1,
+            ))
+
+        heartbeat = new_envelope(runtime_pb2.Heartbeat(running_count=0), "heartbeat")
+        await asyncio.wait_for(self.client.send(heartbeat), timeout=0.1)
+        self.assertEqual(self.client._control.qsize(), 1)
+
+    async def test_writer_prefers_control_messages(self) -> None:
+        heartbeat = new_envelope(runtime_pb2.Heartbeat(running_count=0), "heartbeat")
+        event = new_envelope(
+            runtime_pb2.Event(seq=1, type=runtime_pb2.EventType.MESSAGE_COMPLETED),
+            "event",
+            run_id="run-1",
+            attempt=1,
+            lease_epoch=1,
+        )
+        self.client._control.put_nowait(heartbeat)
+        self.client._outbound.put_nowait(event)
+        got = await self.client._next_envelope()
+        self.assertEqual(got.WhichOneof("payload"), "heartbeat")
+
+
+class ChannelBackoffTest(unittest.IsolatedAsyncioTestCase):
+    async def test_successful_session_resets_backoff(self) -> None:
+        ReconnectingClient.sessions = 0
+        client = ReconnectingClient(
+            ChannelConfig(
+                address="127.0.0.1:1",
+                daemon_id="daemon-test",
+                auth_token="token-test",
+                reconnect_initial=0.01,
+                reconnect_max=0.05,
+                reconnect_stable_after=0.0,
+            )
+        )
+        await client.start()
+        try:
+            for _ in range(100):
+                if ReconnectingClient.sessions >= 3:
+                    break
+                await asyncio.sleep(0.01)
+            self.assertGreaterEqual(ReconnectingClient.sessions, 3)
+            self.assertLessEqual(client._last_reconnect_delay, 0.012)
+        finally:
+            await client.stop()

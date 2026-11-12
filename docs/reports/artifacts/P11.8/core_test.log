@@ -1,0 +1,24 @@
+PYTHONPATH=agent_core/src python3 -m unittest discover -s agent_core/tests -v
+test_fixtures (test_conformance.ConformanceTest) ... ok
+test_abort (test_loop.LoopTest) ... ok
+test_completes_without_tools (test_loop.LoopTest) ... ok
+test_max_steps (test_loop.LoopTest) ... ok
+test_provider_failure (test_loop.LoopTest) ... ok
+test_step_timeout (test_loop.LoopTest) ... ok
+test_tool_call_and_continuation (test_loop.LoopTest) ... ok
+test_tool_error_is_fed_back (test_loop.LoopTest) ... ok
+test_error_and_finish (test_types.EventTest) ... ok
+test_event_types_are_stable (test_types.EventTest) ... ok
+test_usage_event_serializes_nested_usage (test_types.EventTest) ... ok
+test_core_has_no_middleware_or_mcp_imports (test_types.ImportBoundaryTest) ... ok
+test_message_completed_carries_calls (test_types.TypeTest) ... ok
+test_run_spec_defaults (test_types.TypeTest) ... ok
+test_tool_result (test_types.TypeTest) ... ok
+test_dict_shape (test_types.UsageTest) ... ok
+test_explicit_total_is_kept (test_types.UsageTest) ... ok
+test_total_is_derived (test_types.UsageTest) ... ok
+
+----------------------------------------------------------------------
+Ran 18 tests in 0.089s
+
+OK

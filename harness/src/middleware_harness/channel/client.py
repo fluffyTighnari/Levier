@@ -12,6 +12,7 @@ import asyncio
 import inspect
 import logging
 import random
+import time
 from dataclasses import dataclass, field
 from typing import Awaitable, Callable, Sequence
 
@@ -42,6 +43,7 @@ class ChannelConfig:
     heartbeat_interval: float = 10.0
     reconnect_initial: float = 1.0
     reconnect_max: float = 30.0
+    reconnect_stable_after: float = 5.0
     hello_timeout: float = 3.0
 
 
@@ -62,12 +64,14 @@ class ChannelClient:
         self.running_count = running_count or (lambda: 0)
         self.logger = logger or logging.getLogger("middleware_harness.channel")
 
+        self._control: asyncio.Queue[runtime_pb2.Envelope] = asyncio.Queue(maxsize=64)
         self._outbound: asyncio.Queue[runtime_pb2.Envelope] = asyncio.Queue(maxsize=256)
         self._connected = asyncio.Event()
         self._stopped = asyncio.Event()
         self._runner: asyncio.Task[None] | None = None
         self._call: Any = None
         self._pending: dict[str, asyncio.Future[runtime_pb2.Envelope]] = {}
+        self._last_reconnect_delay = 0.0
 
     @property
     def connected(self) -> bool:
@@ -85,9 +89,16 @@ class ChannelClient:
         await asyncio.wait_for(self._connected.wait(), timeout)
 
     async def send(self, envelope: runtime_pb2.Envelope) -> None:
-        """Queue an outbound envelope for the current stream."""
+        """Queue an outbound envelope for the current stream.
+
+        Heartbeats, Acks, tool results and errors use a small control queue so
+        a full event queue cannot make a healthy daemon look offline.
+        """
         if self._stopped.is_set():
             raise RuntimeError("channel client is stopped")
+        if _is_control_envelope(envelope):
+            await self._control.put(envelope)
+            return
         await self._outbound.put(envelope)
 
     async def send_response(self, request: runtime_pb2.Envelope, payload: Any, field: str) -> None:
@@ -138,8 +149,10 @@ class ChannelClient:
     async def _run(self) -> None:
         delay = self.config.reconnect_initial
         while not self._stopped.is_set():
+            started = time.monotonic()
+            connected = False
             try:
-                await self._session()
+                connected = await self._session()
             except asyncio.CancelledError:
                 raise
             except Exception as exc:  # keep the daemon alive across transport errors
@@ -147,26 +160,34 @@ class ChannelClient:
                     "daemon_id": self.config.daemon_id,
                     "error": str(exc),
                 })
+            duration = time.monotonic() - started
+            if connected and duration >= self.config.reconnect_stable_after:
+                delay = self.config.reconnect_initial
             if self._stopped.is_set():
                 return
             sleep_for = min(delay, self.config.reconnect_max)
             sleep_for *= random.uniform(0.8, 1.2)
+            self._last_reconnect_delay = sleep_for
             self.logger.info("runtime channel reconnecting", extra={
                 "daemon_id": self.config.daemon_id,
                 "delay_seconds": round(sleep_for, 3),
+                "session_seconds": round(duration, 3),
             })
             await asyncio.sleep(sleep_for)
             delay = min(delay * 2, self.config.reconnect_max)
 
-    async def _session(self) -> None:
+    async def _session(self) -> bool:
         channel = self._make_channel()
+        connected = False
         try:
             await asyncio.wait_for(channel.channel_ready(), self.config.hello_timeout)
+            self._drain_control()
             stub = runtime_pb2_grpc.RuntimeServiceStub(channel)
             call = stub.Channel()
             self._call = call
             await call.write(self._hello())
             self._connected.set()
+            connected = True
 
             writer = asyncio.create_task(self._writer(call), name="runtime-writer")
             heartbeat = asyncio.create_task(self._heartbeat(), name="runtime-heartbeat")
@@ -183,6 +204,7 @@ class ChannelClient:
         finally:
             await channel.close()
             self._connected.clear()
+        return connected
 
     def _make_channel(self) -> grpc.aio.Channel:
         if self.config.tls:
@@ -211,8 +233,44 @@ class ChannelClient:
 
     async def _writer(self, call: Any) -> None:
         while True:
-            envelope = await self._outbound.get()
+            envelope = await self._next_envelope()
             await call.write(envelope)
+
+    async def _next_envelope(self) -> runtime_pb2.Envelope:
+        try:
+            return self._control.get_nowait()
+        except asyncio.QueueEmpty:
+            pass
+        try:
+            return self._outbound.get_nowait()
+        except asyncio.QueueEmpty:
+            pass
+
+        control_get = asyncio.create_task(self._control.get())
+        event_get = asyncio.create_task(self._outbound.get())
+        try:
+            done, pending = await asyncio.wait(
+                {control_get, event_get},
+                return_when=asyncio.FIRST_COMPLETED,
+            )
+        except asyncio.CancelledError:
+            control_get.cancel()
+            event_get.cancel()
+            await asyncio.gather(control_get, event_get, return_exceptions=True)
+            raise
+        for task in pending:
+            task.cancel()
+        await asyncio.gather(*pending, return_exceptions=True)
+        for task in done:
+            return task.result()
+        raise RuntimeError("outbound wait completed without a task")
+
+    def _drain_control(self) -> None:
+        while True:
+            try:
+                self._control.get_nowait()
+            except asyncio.QueueEmpty:
+                return
 
     async def _heartbeat(self) -> None:
         while True:
@@ -249,6 +307,16 @@ class ChannelClient:
         for future in pending:
             if not future.done():
                 future.set_exception(exc)
+
+
+def _is_control_envelope(envelope: runtime_pb2.Envelope) -> bool:
+    return envelope.WhichOneof("payload") in {
+        "hello",
+        "heartbeat",
+        "task_ack",
+        "tool_call_result",
+        "error",
+    }
 
 
 def _runtime_type(value: str) -> int:
