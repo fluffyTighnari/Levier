@@ -5,7 +5,7 @@
 | 状态 | 提议（P3-29 设计修订） |
 | 日期 | 2026-11-06 |
 | 决策者 | middleware 项目 |
-| 关联 | `docs/DESIGN.md`、`docs/adr/0002-harness.md`、`docs/adr/0003-scope.md`、`docs/IMPLEMENTATION_PLAN_V2.md` |
+| 关联 | `docs/DESIGN.md`、`docs/adr/0002-harness.md`、`docs/adr/0003-scope.md` |
 | 修订 | ADR-0002 §9.2–§9.4 的 MCP 归属描述；不改变“总控不持有连接”的结论 |
 
 ---

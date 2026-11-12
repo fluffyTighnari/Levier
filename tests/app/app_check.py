@@ -13,8 +13,8 @@ Two modes:
     served it. Requires the App under test to be running.
 
 Usage:
-  python3 scripts/app_check.py --credentials /path/app.json
-  python3 scripts/app_check.py --credentials /path/app.json \
+  python3 tests/app/app_check.py --credentials /path/app.json
+  python3 tests/app/app_check.py --credentials /path/app.json \
       --run-tool --tool-name counter_add --arguments '{"delta":2}'
 """
 
@@ -30,7 +30,7 @@ import urllib.request
 from pathlib import Path
 from typing import Any
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "examples" / "counter_agent"))
 
 from ws_client import WebSocketClient, WebSocketError, websocket_url  # noqa: E402

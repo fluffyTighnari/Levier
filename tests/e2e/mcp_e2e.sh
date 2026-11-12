@@ -11,7 +11,7 @@
 #   - bin/middleware built, harness/.venv and mcp_runtime/.venv present
 set -euo pipefail
 
-cd "$(dirname "$0")/.."
+cd "$(dirname "$0")/../.."
 
 if [ -x /usr/local/go/bin/go ]; then
   export PATH="/usr/local/go/bin:$PATH"

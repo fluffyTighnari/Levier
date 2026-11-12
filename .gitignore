@@ -14,6 +14,7 @@
 /dist/
 /data/
 /logs/
+/mw-daemon-check
 *.db
 *.sqlite
 *.sqlite3
@@ -34,3 +35,6 @@ __pycache__/
 # Go
 vendor/
 /middleware
+
+# Local verification evidence and historical reports
+/docs/reports/

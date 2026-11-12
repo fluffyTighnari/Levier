@@ -11,10 +11,10 @@
 #
 # Usage:
 #   make retrofit-e2e
-#   RETROFIT_E2E_OUT=/tmp/retrofit ./scripts/retrofit_e2e.sh
+#   RETROFIT_E2E_OUT=/tmp/retrofit ./tests/e2e/retrofit_e2e.sh
 set -euo pipefail
 
-cd "$(dirname "$0")/.."
+cd "$(dirname "$0")/../.."
 
 if [ -x /usr/local/go/bin/go ]; then
   export PATH="/usr/local/go/bin:$PATH"

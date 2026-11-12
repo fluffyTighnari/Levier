@@ -16,11 +16,11 @@
 # Usage:
 #   make mvp-demo
 #   make mvp-demo-react
-#   MVP_DEMO_MODE=react scripts/mvp_demo.sh
-#   MVP_DEMO_OUT=/tmp/mvp-demo scripts/mvp_demo.sh
+#   MVP_DEMO_MODE=react tests/e2e/mvp_demo.sh
+#   MVP_DEMO_OUT=/tmp/mvp-demo tests/e2e/mvp_demo.sh
 set -euo pipefail
 
-cd "$(dirname "$0")/.."
+cd "$(dirname "$0")/../.."
 
 if [ -x /usr/local/go/bin/go ]; then
   export PATH="/usr/local/go/bin:$PATH"

@@ -56,8 +56,8 @@ HTTP 状态由错误码推导，客户端应读取 `error.code`，不要只依�
 ## 自检
 
 ```sh
-python3 scripts/app_check.py --credentials /path/app.json
-python3 scripts/app_check.py --credentials /path/app.json \
+python3 tests/app/app_check.py --credentials /path/app.json
+python3 tests/app/app_check.py --credentials /path/app.json \
   --run-tool --tool-name counter_add --arguments '{"delta":2}'
 ```
 

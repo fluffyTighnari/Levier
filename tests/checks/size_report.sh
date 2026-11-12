@@ -5,7 +5,7 @@
 # Do not split a cohesive function just to satisfy the line limit.
 set -euo pipefail
 
-cd "$(dirname "$0")/.."
+cd "$(dirname "$0")/../.."
 
 FILE_LIMIT="${FILE_LIMIT:-450}"
 FUNC_LIMIT="${FUNC_LIMIT:-80}"
@@ -27,7 +27,7 @@ echo "== Go functions over ${FUNC_LIMIT} lines =="
 if [ -x /usr/local/go/bin/go ]; then
   export PATH="/usr/local/go/bin:$PATH"
 fi
-go run ./scripts/size_functions "$FUNC_LIMIT"
+go run ./tests/checks/size_functions "$FUNC_LIMIT"
 
 echo
 echo "== Python modules over ${PY_LIMIT} lines =="

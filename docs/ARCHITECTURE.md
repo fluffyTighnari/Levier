@@ -41,15 +41,15 @@ runstore  → 无 internal 依赖
 contract  → 无 internal 依赖
 ```
 
-强制执行：`scripts/check_deps.sh`（`make deps-check`）。
+强制执行：`tests/checks/check_deps.sh`（`make deps-check`）。
 
 ## 3. 一次 Run
 
 ```text
 App POST /runs
   → handleCreateRun（httpapi/runs.go）
-  → runstore.CreateRun(queued)
-  → workflow RUN_DISPATCH
+  → 同一事务：runstore.CreateRunWithTx + RUN_DISPATCH/RUN_TIMEOUT
+  → workflow
   → control.Handle（control/schedule.go）
       → register.AssembleTaskMaterials
       → AssignRun(attempt/lease_epoch)
@@ -87,7 +87,7 @@ MCP      Harness → mcp_runtime（本地 JSON-RPC）→ MCP server
 | 新 MCP transport | `mcp_runtime/sessions.py` + 测试 |
 | 新存储查询 | 对应 `runstore/*.go` |
 
-## 6. Agent Core（P8C）
+## 6. Agent Core
 
 ```text
 agent_core/          循环、工具编排、CoreEvent、取消（无 MW 依赖）
@@ -95,7 +95,7 @@ harness adapter      TaskAssign ↔ RunSpec、CoreEvent ↔ MW Event、工具桥
 ```
 
 契约：`docs/AGENT_CORE_CONTRACT.md`。
-P8C.2 已把 ReAct 循环搬入 core；harness 只保留 TaskAssign/事件/工具适配。
+harness 只保留 TaskAssign/事件/工具适配。
 
 ## 7. 明确不做的事
 

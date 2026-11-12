@@ -6,7 +6,7 @@
 | 日期 | 2026-11-03 |
 | 决策者 | middleware 项目 |
 | 取代 | 旧 `workflow_engine`（DAG/Effect/Saga，已归档） |
-| 关联 | `docs/DESIGN.md`、`docs/IMPLEMENTATION_PLAN_V2.md`、`docs/WORKFLOW_ENGINE_AUDIT.md` |
+| 关联 | `docs/DESIGN.md`、`docs/ARCHITECTURE.md` |
 
 ---
 

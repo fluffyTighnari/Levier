@@ -5,7 +5,7 @@
 | 状态 | 提议（P0-04） |
 | 日期 | 2026-11-03 |
 | 决策者 | middleware 项目 |
-| 关联 | `docs/DESIGN.md` v0.2、`docs/adr/0001-workflow-engine.md`、`docs/adr/0002-harness.md`、`docs/adr/0004-mcp-ownership.md`、`docs/IMPLEMENTATION_PLAN_V2.md` |
+| 关联 | `docs/DESIGN.md`、`docs/adr/0001-workflow-engine.md`、`docs/adr/0002-harness.md`、`docs/adr/0004-mcp-ownership.md` |
 
 ---
 
@@ -274,7 +274,7 @@ longterm run
 | D13 存储 | 统一 PostgreSQL | ADR-0001 |
 | D14 模块 | 根模块 + `internal/workflow` + `harness/` | 本 ADR |
 | D15 工具链 | Go 1.26 / Python 3.12 / PG 16+ | 本 ADR |
-| D16 旧能力 | 归档 DAG/Effect/Saga | `docs/ARCHIVE.md` |
+| D16 旧能力 | 归档 DAG/Effect/Saga | 工作流引擎已归档 |
 | D17 MCP | 独立 `mcp_runtime`，总控只存目录/ACL | ADR-0002、ADR-0004 |
 
 ---
@@ -288,7 +288,7 @@ longterm run
   - 安全/正确性缺陷。
 - 范围变更必须更新：
   1. 本 ADR；
-  2. `IMPLEMENTATION_PLAN_V2.md`；
+  2. `docs/MVP.md`；
   3. `DESIGN.md`（如涉及架构）；
   4. 验收脚本。
 - 未更新文档的实现变更不合并。

@@ -98,7 +98,7 @@ pg_ctl -D /opt/homebrew/var/postgresql@16 -o "-p 5433" start
 ```
 
 如果使用 5433，把 `.env` 的 DSN 改成 `:5433`。
-`scripts/mvp_demo.sh` 会先跑迁移，连不上数据库会直接失败并指向迁移日志。
+`tests/e2e/mvp_demo.sh` 会先跑迁移，连不上数据库会直接失败并指向迁移日志。
 
 ## 4. 运行
 
@@ -168,7 +168,7 @@ mvp-demo: PASS
 
 ## 5. 脚本做了什么
 
-`scripts/mvp_demo.sh`：
+`tests/e2e/mvp_demo.sh`：
 
 ```text
 1. 读取 .env.local / .env
@@ -260,4 +260,4 @@ PostgreSQL 整体停机演练
 sandbox / longterm
 ```
 
-最终回归见 `docs/reports/P11.14.md`。
+最终回归证据保留在本地 `docs/reports/`（不纳入版本库）。

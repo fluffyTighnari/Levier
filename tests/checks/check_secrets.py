@@ -15,7 +15,7 @@ import subprocess
 import sys
 
 EXCLUDE_PREFIXES = (
-    "docs/reports/artifacts/",
+    "docs/reports/",
     "gen/",
     "harness/src/gen/",
     "workflow_engine/",

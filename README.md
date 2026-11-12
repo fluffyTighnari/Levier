@@ -141,8 +141,8 @@ harness/          Python Harness
 agent_core/       语言无关的 Agent 循环与 conformance fixtures
 mcp_runtime/      独立 MCP 连接进程
 examples/         counter_agent 等接入示例
-scripts/          e2e、demo、护栏脚本
-docs/             设计、契约、接入文档、报告
+tests/            单元/契约/E2E 与检查脚本
+docs/             核心设计、契约、接入文档
 deploy/           容器镜像定义
 ```
 
@@ -150,10 +150,10 @@ deploy/           容器镜像定义
 
 | 文档 | 内容 |
 |---|---|
+| `docs/DESIGN.md` | 核心设计（当前实现） |
 | `docs/MVP.md` | 单机 MVP 的边界、启动、验收与限制 |
 | `docs/ARCHITECTURE.md` | 一页架构与依赖方向 |
 | `docs/APP_ONBOARDING.md` | App 接入流程 |
 | `docs/DAEMON_CONTRACT.md` | Daemon 协议 |
 | `docs/MCP.md` | MCP runtime |
 | `docs/AGENT_CORE_CONTRACT.md` | Agent Core v1 契约 |
-| `docs/reports/` | 每一步的实现与验证报告 |

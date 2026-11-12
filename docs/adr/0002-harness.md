@@ -5,7 +5,7 @@
 | 状态 | 提议（P0-03；MCP 章节按 ADR-0004 修订） |
 | 日期 | 2026-11-03 |
 | 决策者 | middleware 项目 |
-| 关联 | `docs/DESIGN.md`、`docs/IMPLEMENTATION_PLAN_V2.md`、`docs/adr/0001-workflow-engine.md`、`docs/adr/0004-mcp-ownership.md` |
+| 关联 | `docs/DESIGN.md`、`docs/adr/0001-workflow-engine.md`、`docs/adr/0004-mcp-ownership.md` |
 
 ---
 

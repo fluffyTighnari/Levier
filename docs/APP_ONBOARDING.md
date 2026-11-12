@@ -502,7 +502,7 @@ ws_token      只放内存，不入库
 协议自检：
 
 ```sh
-python3 scripts/app_check.py --credentials /path/to/app.json
+python3 tests/app/app_check.py --credentials /path/to/app.json
 ```
 
 检查：
@@ -522,7 +522,7 @@ WS hello + ping/pong
 真实工具自检（App 必须已经在运行）：
 
 ```sh
-python3 scripts/app_check.py   --credentials /path/to/app.json   --run-tool   --tool-name counter_add   --arguments '{"delta":2}'   --expect-substring 'value'
+python3 tests/app/app_check.py   --credentials /path/to/app.json   --run-tool   --tool-name counter_add   --arguments '{"delta":2}'   --expect-substring 'value'
 ```
 
 退出码：
@@ -547,12 +547,9 @@ internal/errs/errors.go          错误码
 ## 16. 相关文档
 
 ```text
-docs/DESIGN.md                  架构与契约
-docs/APP_RETROFIT_PLAN.md       逐边验证计划与进度
-docs/reports/REGISTRATION-CONTRACT.md   注册合同实测
-docs/reports/RETROFIT-P6.3.md   工具调用下发
-docs/reports/RETROFIT-P6.4.md   工具结果回传
-docs/reports/RETROFIT-P6C.md    与基线对照
+docs/DESIGN.md                  核心设计
+docs/MVP.md                     单机 MVP 边界与运行
 docs/MCP.md                     MCP 接入与运行
 contracts/README.md             机器可读契约索引
+tests/app/app_check.py          App 接入自检
 ```

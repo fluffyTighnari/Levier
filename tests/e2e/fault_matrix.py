@@ -31,7 +31,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 STAMP = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
 OUT = Path(os.environ.get("FAULT_MATRIX_OUT", ROOT / "data" / "fault-matrix" / STAMP))
 MW_URL = os.environ.get("MW_URL", "http://127.0.0.1:8080")

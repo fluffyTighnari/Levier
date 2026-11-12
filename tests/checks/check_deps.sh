@@ -4,7 +4,7 @@
 # Enforces the P8R layering rules. Run after moving files or adding packages.
 set -euo pipefail
 
-cd "$(dirname "$0")/.."
+cd "$(dirname "$0")/../.."
 
 if [ -x /usr/local/go/bin/go ]; then
   export PATH="/usr/local/go/bin:$PATH"

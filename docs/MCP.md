@@ -176,7 +176,7 @@ make mcp-e2e
 清理进程与凭据
 ```
 
-证据写入 `docs/reports/artifacts/mcp/M6/run-<UTC>/`。
+回归入口：`make mcp-e2e`。
 
 ## 9. 当前限制
 
@@ -197,12 +197,8 @@ streamable_http 的 GET 事件流可以带 Last-Event-ID 重连
 server 恢复后新会话可以继续
 ```
 
-## 10. 相关证据
+## 10. 回归
 
-```text
-docs/reports/MCP-M1-M2.md   目录 API + runtime 凭据
-docs/reports/MCP-M3.md      目录 → TaskAssign → runtime 端到端
-docs/reports/MCP-M4.md      allowlist / secret / 并发 / 停机
-docs/reports/MCP-M5.md      第三方 filesystem server
-docs/reports/MCP-M6.md      一键回归与收口
+```sh
+make mcp-e2e
 ```

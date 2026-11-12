@@ -14,7 +14,7 @@ export
 BIN_DIR := bin
 GO_FILES := $(shell find . -name '*.go' -not -path './workflow_engine/*' -not -path './vendor/*')
 
-.PHONY: all build test lint fmt fmt-check vet run clean dev-up dev-down migrate proto proto-check proto-lint contract-check harness-test mcp-runtime-test image-harness image-mcp-runtime e2e-echo m1-e2e counter-agent counter-agent-test http-smoke retrofit-e2e mcp-e2e deps-check size-report daemon-check agent-core-test mvp-demo mvp-demo-react fault-matrix secrets-check
+.PHONY: all build test lint fmt fmt-check vet run clean dev-up dev-down migrate proto proto-check proto-lint contract-check harness-test mcp-runtime-test image-harness image-mcp-runtime counter-agent counter-agent-test http-smoke retrofit-e2e mcp-e2e deps-check size-report daemon-check agent-core-test mvp-demo mvp-demo-react fault-matrix secrets-check
 
 all: build
 
@@ -82,12 +82,6 @@ image-harness:
 image-mcp-runtime:
 	docker build -f deploy/mcp-runtime.Dockerfile -t middleware-mcp-runtime:dev .
 
-e2e-echo: build
-	./scripts/e2e_echo.sh
-
-m1-e2e: build
-	./scripts/m1_e2e.sh
-
 counter-agent:
 	$(PYTHON) examples/counter_agent/main.py
 
@@ -95,16 +89,16 @@ http-smoke:
 	$(PYTHON) examples/http_client/client.py
 
 retrofit-e2e:
-	./scripts/retrofit_e2e.sh
+	./tests/e2e/retrofit_e2e.sh
 
 mcp-e2e:
-	./scripts/mcp_e2e.sh
+	./tests/e2e/mcp_e2e.sh
 
 deps-check:
-	./scripts/check_deps.sh
+	./tests/checks/check_deps.sh
 
 size-report:
-	./scripts/size_report.sh
+	./tests/checks/size_report.sh
 
 daemon-check:
 	go run ./cmd/mw-daemon-check
@@ -113,16 +107,16 @@ agent-core-test:
 	PYTHONPATH=agent_core/src python3 -m unittest discover -s agent_core/tests -v
 
 mvp-demo:
-	./scripts/mvp_demo.sh echo
+	./tests/e2e/mvp_demo.sh echo
 
 mvp-demo-react:
-	./scripts/mvp_demo.sh react
+	./tests/e2e/mvp_demo.sh react
 
 fault-matrix:
-	python3 scripts/fault_matrix.py
+	python3 tests/e2e/fault_matrix.py
 
 secrets-check:
-	python3 scripts/check_secrets.py
+	python3 tests/checks/check_secrets.py
 
 counter-agent-test:
 	cd examples/counter_agent && python3 -m unittest discover -s . -p 'test_*.py' -v
