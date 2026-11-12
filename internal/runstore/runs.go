@@ -48,9 +48,49 @@ func (s *Store) CreateRun(ctx context.Context, run Run) (Run, error) {
 	if err != nil {
 		return Run{}, err
 	}
+	return createRun(ctx, s.pool, normalized)
+}
 
+// TxFunc runs inside a CreateRunWithTx transaction. The created or existing
+// run is passed so callers can enqueue tasks for the right RunID.
+type TxFunc func(ctx context.Context, tx pgx.Tx, run Run) error
+
+// CreateRunWithTx inserts a run and invokes after in the same transaction.
+// Returning an error from after rolls back the run insert.
+func (s *Store) CreateRunWithTx(ctx context.Context, run Run, after TxFunc) (Run, error) {
+	if s == nil || s.pool == nil {
+		return Run{}, fmt.Errorf("runstore: postgres pool is nil")
+	}
+	normalized, err := normalizeRun(run)
+	if err != nil {
+		return Run{}, err
+	}
+	tx, err := s.pool.Begin(ctx)
+	if err != nil {
+		return Run{}, fmt.Errorf("create run: begin: %w", err)
+	}
+	defer func() {
+		_ = tx.Rollback(context.Background())
+	}()
+
+	created, err := createRun(ctx, tx, normalized)
+	if err != nil {
+		return Run{}, err
+	}
+	if after != nil {
+		if err := after(ctx, tx, created); err != nil {
+			return Run{}, err
+		}
+	}
+	if err := tx.Commit(ctx); err != nil {
+		return Run{}, fmt.Errorf("create run: commit: %w", err)
+	}
+	return created, nil
+}
+
+func createRun(ctx context.Context, q querier, normalized Run) (Run, error) {
 	for attempt := 0; attempt < 2; attempt++ {
-		inserted, err := scanRun(s.pool.QueryRow(ctx, insertRunSQL,
+		inserted, err := scanRun(q.QueryRow(ctx, insertRunSQL,
 			normalized.RunID,
 			normalized.AppID,
 			normalized.IdempotencyKey,
@@ -81,11 +121,8 @@ func (s *Store) CreateRun(ctx context.Context, run Run) (Run, error) {
 			return Run{}, fmt.Errorf("create run: %w", err)
 		}
 
-		existing, lookupErr := s.getRunByIdempotency(
-			ctx,
-			normalized.AppID,
-			normalized.IdempotencyKey,
-		)
+		existing, lookupErr := getRunByIdempotency(ctx, q,
+			normalized.AppID, normalized.IdempotencyKey)
 		if lookupErr == nil {
 			if existing.RequestHash != normalized.RequestHash {
 				return Run{}, ErrIdempotencyConflict

@@ -10,6 +10,7 @@ import (
 	"fmt"
 
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -23,8 +24,13 @@ func New(pool *pgxpool.Pool) *Store {
 	return &Store{pool: pool}
 }
 
-func (s *Store) getRunByIdempotency(ctx context.Context, appID, key string) (Run, error) {
-	run, err := scanRun(s.pool.QueryRow(ctx,
+type querier interface {
+	Exec(ctx context.Context, sql string, args ...any) (pgconn.CommandTag, error)
+	QueryRow(ctx context.Context, sql string, args ...any) pgx.Row
+}
+
+func getRunByIdempotency(ctx context.Context, q querier, appID, key string) (Run, error) {
+	run, err := scanRun(q.QueryRow(ctx,
 		"SELECT "+runColumns+" FROM runs WHERE app_id = $1 AND idempotency_key = $2",
 		appID, key,
 	))

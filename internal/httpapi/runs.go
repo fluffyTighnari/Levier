@@ -5,17 +5,31 @@
 package httpapi
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
-	"github.com/fluffyTighnari/middleware/internal/errs"
+	"fmt"
 	"net/http"
 	"strings"
 	"time"
 
+	"github.com/jackc/pgx/v5"
+
+	"github.com/fluffyTighnari/middleware/internal/errs"
 	"github.com/fluffyTighnari/middleware/internal/id"
 	"github.com/fluffyTighnari/middleware/internal/runstore"
 	"github.com/fluffyTighnari/middleware/internal/workflow"
 )
+
+var errQueueUnavailable = errors.New("queue unavailable")
+
+type transactionalRunStore interface {
+	CreateRunWithTx(ctx context.Context, run runstore.Run, after runstore.TxFunc) (runstore.Run, error)
+}
+
+type transactionalTaskQueue interface {
+	EnqueueTx(ctx context.Context, tx pgx.Tx, task workflow.Task) (workflow.Task, error)
+}
 
 func (s *Server) handleCreateRun(w http.ResponseWriter, r *http.Request) {
 	var request CreateRunRequest
@@ -57,7 +71,7 @@ func (s *Server) handleCreateRun(w http.ResponseWriter, r *http.Request) {
 		toolTimeout = int64(s.cfg.DefaultToolTimeoutMS)
 	}
 	runID := id.New()
-	run, err := s.runs.CreateRun(r.Context(), runstore.Run{
+	run, transactional, err := s.createRun(r.Context(), runstore.Run{
 		RunID:          runID,
 		AppID:          appID,
 		IdempotencyKey: strings.TrimSpace(r.Header.Get("Idempotency-Key")),
@@ -72,7 +86,11 @@ func (s *Server) handleCreateRun(w http.ResponseWriter, r *http.Request) {
 		RunTimeoutMS:   int(runTimeout),
 		ToolTimeoutMS:  int(toolTimeout),
 		TraceID:        traceIDFromRequest(r),
-	})
+	}, runTimeout)
+	if errors.Is(err, errQueueUnavailable) {
+		writeErrorCode(w, errs.CodeQueueUnavailable, "enqueue run task failed", true)
+		return
+	}
 	if errors.Is(err, runstore.ErrIdempotencyConflict) {
 		writeErrorCode(w, errs.CodeIdempotencyConflict, "idempotency key was reused with a different request", false)
 		return
@@ -86,7 +104,7 @@ func (s *Server) handleCreateRun(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if run.Status == runstore.StatusQueued {
+	if !transactional && run.Status == runstore.StatusQueued {
 		if s.queue == nil {
 			writeErrorCode(w, errs.CodeQueueUnavailable, "dispatch queue is not configured", true)
 			return
@@ -115,6 +133,43 @@ func (s *Server) handleCreateRun(w http.ResponseWriter, r *http.Request) {
 		WSURL:   WSURL,
 		WSToken: s.wsTokens.Issue(appID),
 	})
+}
+
+func (s *Server) createRun(
+	ctx context.Context,
+	run runstore.Run,
+	runTimeout int64,
+) (runstore.Run, bool, error) {
+	txRuns, txRunsOK := s.runs.(transactionalRunStore)
+	txQueue, txQueueOK := s.queue.(transactionalTaskQueue)
+	if !txRunsOK || !txQueueOK {
+		created, err := s.runs.CreateRun(ctx, run)
+		return created, false, err
+	}
+
+	created, err := txRuns.CreateRunWithTx(ctx, run, func(ctx context.Context, tx pgx.Tx, created runstore.Run) error {
+		if created.Status != runstore.StatusQueued {
+			return nil
+		}
+		dispatch := workflow.NewTask(created.RunID, workflow.TaskDispatch, time.Now(), 0)
+		if _, err := txQueue.EnqueueTx(ctx, tx, dispatch); err != nil {
+			return fmt.Errorf("%w: enqueue dispatch: %v", errQueueUnavailable, err)
+		}
+		timeoutAt := created.CreatedAt
+		if timeoutAt.IsZero() {
+			timeoutAt = time.Now()
+		}
+		timeoutAt = timeoutAt.Add(time.Duration(runTimeout) * time.Millisecond)
+		if timeoutAt.Before(time.Now()) {
+			timeoutAt = time.Now()
+		}
+		timeout := workflow.NewTask(created.RunID, workflow.TaskTimeout, timeoutAt, 0)
+		if _, err := txQueue.EnqueueTx(ctx, tx, timeout); err != nil {
+			return fmt.Errorf("%w: enqueue timeout: %v", errQueueUnavailable, err)
+		}
+		return nil
+	})
+	return created, true, err
 }
 
 func (s *Server) handleGetRun(w http.ResponseWriter, r *http.Request) {
