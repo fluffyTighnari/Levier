@@ -9,3 +9,4 @@
 {"time":"2026-11-11T21:16:09.295145+08:00","level":"INFO","msg":"control run terminal","run_id":"01M75C0RDMQBWWGN1EFP131FD4","trace_id":"01M75C0RDMQBWWGN1EFNTSMCG2","app_id":"app_01M75BZ5DANQDW9BHCGMW7NWW0","attempt":1,"status":"completed"}
 {"time":"2026-11-11T21:17:17.82593+08:00","level":"INFO","msg":"control assigned run","run_id":"01M75C2WH8R9F8H9HCVDH2TVRG","trace_id":"01M75C2WH8R9F8H9HCVAAC021Z","app_id":"app_01M75BZ5DANQDW9BHCGMW7NWW0","attempt":1,"lease_epoch":1,"daemon_id":"daemon-local-1","runtime":"normal","strategy":"react"}
 {"time":"2026-11-11T21:17:18.508383+08:00","level":"INFO","msg":"control run terminal","run_id":"01M75C2WH8R9F8H9HCVDH2TVRG","trace_id":"01M75C2WH8R9F8H9HCVAAC021Z","app_id":"app_01M75BZ5DANQDW9BHCGMW7NWW0","attempt":1,"status":"completed"}
+{"time":"2026-11-11T21:18:04.444014+08:00","level":"INFO","msg":"middleware stopped"}

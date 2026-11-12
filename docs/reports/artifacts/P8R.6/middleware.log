@@ -8,3 +8,4 @@
 {"time":"2026-11-12T11:20:51.929271+08:00","level":"INFO","msg":"control scheduled queued runs","daemon_id":"daemon-local-1","count":1}
 {"time":"2026-11-12T11:20:52.020985+08:00","level":"INFO","msg":"control assigned run","run_id":"01M76WBGEPY5XRGNEQ7ZVJ1NQK","trace_id":"01M76WBGEPY5XRGNEQ7YSSVZGB","app_id":"app_01M76WBG5ZBJV5MXFVBZ6YVVCS","attempt":1,"lease_epoch":1,"daemon_id":"daemon-local-1","runtime":"normal","strategy":"echo"}
 {"time":"2026-11-12T11:20:52.027788+08:00","level":"INFO","msg":"control run terminal superseded","run_id":"01M76WBGEPY5XRGNEQ7ZVJ1NQK","trace_id":"01M76WBGEPY5XRGNEQ7YSSVZGB","app_id":"app_01M76WBG5ZBJV5MXFVBZ6YVVCS","attempt":1,"status":"running","current_status":"assigned"}
+{"time":"2026-11-12T11:21:43.902187+08:00","level":"INFO","msg":"middleware stopped"}

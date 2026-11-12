@@ -29,3 +29,4 @@ Effective allowed directories (from the command line):
   /private/tmp/m5-mcp
 2026-11-11 21:23:14,772 INFO mcp_runtime.sessions mcp session opened
 2026-11-11 21:23:16,836 INFO mcp_runtime.sessions mcp session closed
+2026-11-11 21:23:49,434 INFO mcp_runtime mcp runtime stopped

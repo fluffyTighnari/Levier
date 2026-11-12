@@ -14,3 +14,7 @@ INFO:     127.0.0.1:64520 - "POST /messages/?session_id=fb4b05ccd6dd4eccb178b5bb
 INFO:     127.0.0.1:64520 - "POST /messages/?session_id=fb4b05ccd6dd4eccb178b5bb9a07c79d HTTP/1.1" 202 Accepted
 INFO:     127.0.0.1:64520 - "POST /messages/?session_id=fb4b05ccd6dd4eccb178b5bb9a07c79d HTTP/1.1" 202 Accepted
 INFO:     127.0.0.1:64520 - "POST /messages/?session_id=fb4b05ccd6dd4eccb178b5bb9a07c79d HTTP/1.1" 202 Accepted
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [85410]
