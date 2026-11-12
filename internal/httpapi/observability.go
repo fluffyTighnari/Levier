@@ -46,11 +46,12 @@ func (s *Server) instrumentHandler(next http.Handler) http.Handler {
 				"method": r.Method, "route": route,
 			}, duration.Seconds())
 		}
-		level := slog.LevelDebug
-		if status >= http.StatusInternalServerError {
+		level := slog.LevelInfo
+		switch {
+		case status >= http.StatusInternalServerError:
 			level = slog.LevelWarn
-		} else if status >= http.StatusBadRequest {
-			level = slog.LevelInfo
+		case r.URL.Path == "/healthz" || r.URL.Path == "/readyz":
+			level = slog.LevelDebug
 		}
 		s.log.Log(r.Context(), level, "http request",
 			observe.FieldRequestID, requestIDFromContext(r.Context()),

@@ -10,8 +10,10 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"log/slog"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
@@ -481,5 +483,39 @@ func TestHealthAndReady(t *testing.T) {
 				t.Fatalf("readyz = %d %+v", ready.StatusCode, readiness)
 			}
 		})
+	}
+}
+
+func TestSuccessfulAPIRequestIsLoggedAtInfo(t *testing.T) {
+	store := newFakeStore()
+	queue := &fakeQueue{}
+	var buf bytes.Buffer
+	logger := slog.New(slog.NewTextHandler(&buf, &slog.HandlerOptions{Level: slog.LevelDebug}))
+	server := NewServer(store, queue, Config{
+		BearerToken:       "token-1",
+		AllowLegacyBearer: true,
+		Logger:            logger,
+	})
+	httpServer := httptest.NewServer(server.Handler())
+	defer httpServer.Close()
+
+	response := request(t, http.MethodPost, httpServer.URL+"/api/v1/runs", "token-1", []byte(validBody))
+	response.Body.Close()
+	if response.StatusCode != http.StatusAccepted {
+		t.Fatalf("status = %d", response.StatusCode)
+	}
+	output := buf.String()
+	if !strings.Contains(output, "level=INFO") || !strings.Contains(output, "route=\"POST /api/v1/runs\"") {
+		t.Fatalf("missing info access log:\n%s", output)
+	}
+
+	buf.Reset()
+	health, err := http.Get(httpServer.URL + "/healthz")
+	if err != nil {
+		t.Fatalf("healthz: %v", err)
+	}
+	health.Body.Close()
+	if strings.Contains(buf.String(), "level=INFO") {
+		t.Fatalf("health probe was logged at INFO:\n%s", buf.String())
 	}
 }
