@@ -119,23 +119,27 @@ func (c *Control) ReconcileDaemon(info connection.DaemonInfo) {
 		running[run.RunID] = run
 	}
 	cancelIDs := make([]string, 0)
+	requeue := make([]runstore.Run, 0)
+	failTools := make([]runstore.Run, 0)
 	for _, run := range runs {
 		if runstore.TerminalStatus(run.Status) {
 			if _, ok := running[run.RunID]; ok {
 				cancelIDs = append(cancelIDs, run.RunID)
+				failTools = append(failTools, run)
 				delete(running, run.RunID)
 			}
 			continue
 		}
 		reported, ok := running[run.RunID]
 		if !ok {
-			if run.Status == runstore.StatusRunning {
-				c.requeueRun(ctx, run, "daemon lost run")
+			if run.Status == runstore.StatusRunning || assignedBeforeHello(run, info) {
+				requeue = append(requeue, run)
 			}
 			continue
 		}
 		if reported.LeaseEpoch != run.LeaseEpoch {
 			cancelIDs = append(cancelIDs, run.RunID)
+			requeue = append(requeue, run)
 		}
 		delete(running, run.RunID)
 	}
@@ -146,12 +150,29 @@ func (c *Control) ReconcileDaemon(info connection.DaemonInfo) {
 		envelope, err := protocol.New(&runtimev1.Reconcile{CancelRunIds: cancelIDs})
 		if err != nil {
 			c.log.Warn("control build reconcile failed", "daemon_id", info.DaemonID, "err", err)
-			return
-		}
-		if err := c.hub.Send(info.DaemonID, envelope); err != nil {
+		} else if err := c.hub.Send(info.DaemonID, envelope); err != nil {
 			c.log.Warn("control send reconcile failed", "daemon_id", info.DaemonID, "err", err)
 		}
 	}
+	for _, run := range requeue {
+		c.requeueRun(ctx, run, "daemon reconcile")
+	}
+	for _, run := range failTools {
+		c.cancelLocalTools(run.AppID, run.RunID, string(errs.CodeRunCancelled), "run already terminal")
+	}
+}
+
+// assignedBeforeHello reports whether an assigned run predates the daemon's
+// current stream. Runs assigned after Hello are left alone so a concurrent
+// dispatch is not mistaken for a lost run.
+func assignedBeforeHello(run runstore.Run, info connection.DaemonInfo) bool {
+	if run.Status != runstore.StatusAssigned {
+		return false
+	}
+	if run.AssignedAt == nil || info.ConnectedAt.IsZero() {
+		return true
+	}
+	return !run.AssignedAt.After(info.ConnectedAt)
 }
 
 // scheduleQueuedRuns re-arms runs left queued while no daemon was available.

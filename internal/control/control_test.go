@@ -495,6 +495,102 @@ func TestReconcileDaemonCases(t *testing.T) {
 		}
 	})
 
+	t.Run("assigned run missing from hello requeues", func(t *testing.T) {
+		runs := &fakeRuns{run: newRun()}
+		runs.run.Status = "assigned"
+		runs.run.Attempt = 1
+		runs.run.LeaseEpoch = 1
+		runs.run.AssignedDaemonID = "d1"
+		tasks := &fakeTaskCanceller{}
+		localTools := &fakeLocalTools{}
+		ctrl := New(runs, &fakeHub{}, Config{Tasks: tasks, LocalTools: localTools})
+		ctrl.ReconcileDaemon(connection.DaemonInfo{DaemonID: "d1"})
+		current, _ := runs.GetRun(context.Background(), "run-1")
+		if current.Status != "queued" || current.LeaseEpoch != 2 {
+			t.Fatalf("requeued = %+v", current)
+		}
+		if tasks.enqueueCalls != 1 {
+			t.Fatalf("retry enqueue calls = %d", tasks.enqueueCalls)
+		}
+		if localTools.calls != 1 || localTools.code != "DAEMON_LOST" {
+			t.Fatalf("local tools = %+v", localTools)
+		}
+	})
+
+	t.Run("assigned after hello is left alone", func(t *testing.T) {
+		connectedAt := time.Now()
+		assignedAt := connectedAt.Add(time.Second)
+		runs := &fakeRuns{run: newRun()}
+		runs.run.Status = "assigned"
+		runs.run.Attempt = 1
+		runs.run.LeaseEpoch = 1
+		runs.run.AssignedDaemonID = "d1"
+		runs.run.AssignedAt = &assignedAt
+		tasks := &fakeTaskCanceller{}
+		ctrl := New(runs, &fakeHub{}, Config{Tasks: tasks})
+		ctrl.ReconcileDaemon(connection.DaemonInfo{DaemonID: "d1", ConnectedAt: connectedAt})
+		current, _ := runs.GetRun(context.Background(), "run-1")
+		if current.Status != "assigned" || current.LeaseEpoch != 1 {
+			t.Fatalf("run was changed = %+v", current)
+		}
+		if tasks.enqueueCalls != 0 {
+			t.Fatalf("retry enqueue calls = %d", tasks.enqueueCalls)
+		}
+	})
+
+	t.Run("epoch mismatch requeues and fails tools", func(t *testing.T) {
+		runs := &fakeRuns{run: newRun()}
+		runs.run.Status = "running"
+		runs.run.Attempt = 2
+		runs.run.LeaseEpoch = 2
+		runs.run.AssignedDaemonID = "d1"
+		tasks := &fakeTaskCanceller{}
+		localTools := &fakeLocalTools{}
+		hub := &fakeHub{}
+		ctrl := New(runs, hub, Config{Tasks: tasks, LocalTools: localTools})
+		ctrl.ReconcileDaemon(connection.DaemonInfo{
+			DaemonID:    "d1",
+			RunningRuns: []connection.RunRef{{RunID: "run-1", LeaseEpoch: 1}},
+		})
+		current, _ := runs.GetRun(context.Background(), "run-1")
+		if current.Status != "queued" || current.LeaseEpoch != 3 {
+			t.Fatalf("requeued = %+v", current)
+		}
+		if len(hub.sent) != 1 || hub.sent[0].GetReconcile() == nil {
+			t.Fatalf("reconcile = %+v", hub.sent)
+		}
+		if tasks.enqueueCalls != 1 {
+			t.Fatalf("retry enqueue calls = %d", tasks.enqueueCalls)
+		}
+		if localTools.calls != 1 || localTools.code != "DAEMON_LOST" {
+			t.Fatalf("local tools = %+v", localTools)
+		}
+		if hub.releaseCalls != 1 {
+			t.Fatalf("release calls = %d", hub.releaseCalls)
+		}
+	})
+
+	t.Run("terminal run reported cancels tools", func(t *testing.T) {
+		runs := &fakeRuns{run: newRun()}
+		runs.run.Status = "completed"
+		runs.run.Attempt = 1
+		runs.run.LeaseEpoch = 1
+		runs.run.AssignedDaemonID = "d1"
+		localTools := &fakeLocalTools{}
+		hub := &fakeHub{}
+		ctrl := New(runs, hub, Config{LocalTools: localTools})
+		ctrl.ReconcileDaemon(connection.DaemonInfo{
+			DaemonID:    "d1",
+			RunningRuns: []connection.RunRef{{RunID: "run-1", LeaseEpoch: 1}},
+		})
+		if len(hub.sent) != 1 || hub.sent[0].GetReconcile() == nil {
+			t.Fatalf("reconcile = %+v", hub.sent)
+		}
+		if localTools.calls != 1 || localTools.code != "RUN_CANCELLED" {
+			t.Fatalf("local tools = %+v", localTools)
+		}
+	})
+
 	t.Run("queued run is rescheduled on reconnect", func(t *testing.T) {
 		runs := &fakeRuns{run: newRun()}
 		runs.run.Status = "queued"
