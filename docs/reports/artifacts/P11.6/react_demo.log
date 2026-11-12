@@ -1,0 +1,29 @@
+./scripts/mvp_demo.sh react
+== build ==
+== migrate ==
+== start Middleware ==
+== start Harness ==
+== bootstrap App ==
+== start App ==
+== submit react run ==
+run_id=01M776B6QNWEMHGH9WET0B8RJC
+== wait for terminal state ==
+mode: react
+run_id: 01M776B6QNWEMHGH9WET0B8RJC
+status: completed
+attempt: 1
+events: 16
+tool_calls: begin=3 end=3
+errors: 0
+final_message: The final counter value is **5**.
+
+mode: react
+run_id: 01M776B6QNWEMHGH9WET0B8RJC
+status: completed
+attempt: 1
+events: 16
+tool_calls: begin=3 end=3
+errors: 0
+final_message: The final counter value is **5**.
+
+mvp-demo: PASS (evidence: docs/reports/artifacts/P11.6/react)

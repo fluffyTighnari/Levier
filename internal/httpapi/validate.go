@@ -10,6 +10,8 @@ import (
 	"fmt"
 )
 
+const maxToolTimeoutMS = 240_000
+
 // Validate checks a create-run request.
 func (r CreateRunRequest) Validate() error {
 	switch r.Runtime {
@@ -25,6 +27,9 @@ func (r CreateRunRequest) Validate() error {
 	}
 	if r.Timeouts.RunMS < 0 || r.Timeouts.ToolMS < 0 {
 		return fmt.Errorf("timeouts must not be negative")
+	}
+	if r.Timeouts.ToolMS > maxToolTimeoutMS {
+		return fmt.Errorf("timeouts.tool_ms must be <= %d", maxToolTimeoutMS)
 	}
 	for i, message := range r.Input {
 		if message.Role == "" || message.Content == "" {
@@ -56,6 +61,9 @@ func (r AppUpsertRequest) Validate() error {
 		}
 		if tool.TimeoutMS < 0 {
 			return fmt.Errorf("tools[%d].timeout_ms must not be negative", i)
+		}
+		if tool.TimeoutMS > maxToolTimeoutMS {
+			return fmt.Errorf("tools[%d].timeout_ms must be <= %d", i, maxToolTimeoutMS)
 		}
 	}
 	return nil

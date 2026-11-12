@@ -195,6 +195,7 @@ func TestValidateCreateRunRequest(t *testing.T) {
 		{"missing strategy", func(r *CreateRunRequest) { r.Strategy.Name = "" }, "strategy.name"},
 		{"missing model", func(r *CreateRunRequest) { r.Model.Provider = "" }, "model.provider"},
 		{"negative timeout", func(r *CreateRunRequest) { r.Timeouts.RunMS = -1 }, "timeouts"},
+		{"tool timeout too large", func(r *CreateRunRequest) { r.Timeouts.ToolMS = maxToolTimeoutMS + 1 }, "tool_ms"},
 		{"session on normal", func(r *CreateRunRequest) { r.SessionID = "s-1" }, "session_id"},
 		{"empty input role", func(r *CreateRunRequest) { r.Input[0].Role = "" }, "input[0]"},
 	}
@@ -235,6 +236,7 @@ func TestValidateAppUpsertRequest(t *testing.T) {
 		}, "duplicate name"},
 		{"bad schema", func(r *AppUpsertRequest) { r.Tools[0].Schema = json.RawMessage(`{`) }, "not valid JSON"},
 		{"negative timeout", func(r *AppUpsertRequest) { r.Tools[0].TimeoutMS = -1 }, "timeout_ms"},
+		{"tool timeout too large", func(r *AppUpsertRequest) { r.Tools[0].TimeoutMS = maxToolTimeoutMS + 1 }, "timeout_ms"},
 	}
 
 	for _, tt := range tests {

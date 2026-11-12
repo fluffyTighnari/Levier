@@ -195,3 +195,77 @@ func TestInvokerRecordsMetrics(t *testing.T) {
 		}
 	}
 }
+
+type panicLocal struct{}
+
+func (f *panicLocal) CallLocalTool(context.Context, string, connection.LocalToolRequest) (connection.LocalToolResult, error) {
+	panic("tool boom")
+}
+
+func TestInvokerRecoversToolPanicAndClearsFlight(t *testing.T) {
+	resolver := &fakeResolver{tools: map[string]register.ToolMaterial{
+		"bad": {Name: "bad", Scope: "local", TimeoutMS: 1000},
+	}}
+	invoker := NewInvoker(resolver, &panicLocal{}, nil)
+	result := invoker.Invoke(context.Background(), "run-1", "app-1", requestWithID("inv-panic", "bad"))
+	if result.GetError().GetCode() != "TOOL_EXEC_ERROR" {
+		t.Fatalf("result = %+v", result)
+	}
+	invoker.state.mu.Lock()
+	flights := len(invoker.state.flights)
+	invoker.state.mu.Unlock()
+	if flights != 0 {
+		t.Fatalf("flights = %d, want 0", flights)
+	}
+
+	second := invoker.Invoke(context.Background(), "run-1", "app-1", requestWithID("inv-panic", "bad"))
+	if second.GetError().GetCode() != "TOOL_EXEC_ERROR" {
+		t.Fatalf("second result = %+v", second)
+	}
+}
+
+func TestInvokerCancelledExecutionAndWaiter(t *testing.T) {
+	resolver := &fakeResolver{tools: map[string]register.ToolMaterial{
+		"search": {Name: "search", Scope: "local", TimeoutMS: 1000},
+	}}
+	local := &fakeLocal{err: context.Canceled}
+	result := NewInvoker(resolver, local, nil).Invoke(context.Background(), "run-1", "app-1", requestWithID("inv-cancel", "search"))
+	if result.GetError().GetCode() != "RUN_CANCELLED" || result.GetError().GetRetryable() {
+		t.Fatalf("result = %+v", result)
+	}
+
+	blocking := newBlockingLocal()
+	invoker := NewInvoker(resolver, blocking, nil)
+	done := make(chan *runtimev1.ToolCallResult, 1)
+	go func() {
+		done <- invoker.Invoke(context.Background(), "run-1", "app-1", requestWithID("inv-wait", "search"))
+	}()
+	<-blocking.started
+
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	waiter := invoker.Invoke(ctx, "run-1", "app-1", requestWithID("inv-wait", "search"))
+	if waiter.GetError().GetCode() != "RUN_CANCELLED" || waiter.GetError().GetRetryable() {
+		t.Fatalf("waiter = %+v", waiter)
+	}
+	close(blocking.release)
+	owner := <-done
+	if !owner.GetOk() {
+		t.Fatalf("owner = %+v", owner)
+	}
+}
+
+func TestInvokerClampsToolTimeout(t *testing.T) {
+	resolver := &fakeResolver{tools: map[string]register.ToolMaterial{
+		"search": {Name: "search", Scope: "local", TimeoutMS: 1000},
+	}}
+	local := &fakeLocal{result: connection.LocalToolResult{OK: true, ResultJSON: "ok"}}
+	req := requestWithID("inv-clamp", "search")
+	req.TimeoutMs = int64(24 * time.Hour / time.Millisecond)
+	if result := NewInvoker(resolver, local, nil).Invoke(context.Background(), "run-1", "app-1", req); !result.GetOk() {
+		t.Fatalf("result = %+v", result)
+	}
+	if local.request.TimeoutMS != maxToolTimeout.Milliseconds() {
+		t.Fatalf("timeout = %d, want %d", local.request.TimeoutMS, maxToolTimeout.Milliseconds())
+	}
+}

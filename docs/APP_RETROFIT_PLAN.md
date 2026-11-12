@@ -582,7 +582,7 @@ P8C.1 契约 → P8C.2 抽循环 → P8C.3 工具 → P8C.4 conformance
 → P8C.6 回归 → （需要时）P8C.5 TS
 ```
 
-**当前进度**：P8C 完成；P11.1 完成（`docs/reports/P11.1.md`）；P11.3 完成（`docs/reports/P11.3.md`）；P11.4 完成（`docs/reports/P11.4.md`）；P11.5 完成（`docs/reports/P11.5.md`）；下一步 P11.6。
+**当前进度**：P8C 完成；P11.1 完成（`docs/reports/P11.1.md`）；P11.3 完成（`docs/reports/P11.3.md`）；P11.4 完成（`docs/reports/P11.4.md`）；P11.5 完成（`docs/reports/P11.5.md`）；P11.6 完成（`docs/reports/P11.6.md`）；下一步 P11.7。
 
 ---
 
@@ -925,7 +925,8 @@ evidence: local_tool_result.json, tool_result.log
 | P11.3 | R17 对账收敛 | assigned/running 未上报、epoch mismatch 都有明确去向 |
 | P11.4 | R20 控制面终态 | cancel/timeout 写 `source=mw` 事件并清理任务 |
 | P11.5 | R13 关键事件保护 | 终态/ERROR 不因事件缓冲满静默丢失 |
-| P11.6 | R14 + R12 | 工具 panic 兜底、single-flight 释放、replay 有界、close/send 收口 |
-| P11.7 | R21 Harness 韧性 | backoff 成功重置、出站满不阻塞心跳/Ack |
-| P11.8 | R19b + R2/R8/R22 | 创建 Run 与入队同事务、readyz、密钥扫描、访问日志 |
-| P11.9 | 故障矩阵与收口 | App 断线、Harness kill -9、MW 重启、DB 暂停、长工具、取消、超时 |
+| P11.6 | R14 Gateway panic | 工具 panic 兜底、single-flight 释放、错误码与超时上限 |
+| P11.7 | R12 replay/close | replay 有界、close/send 串行化 |
+| P11.8 | R21 Harness 韧性 | backoff 成功重置、出站满不阻塞心跳/Ack |
+| P11.9 | R19b + R2/R8/R22 | 创建 Run 与入队同事务、readyz、密钥扫描、访问日志 |
+| P11.10 | 故障矩阵与收口 | App 断线、Harness kill -9、MW 重启、DB 暂停、长工具、取消、超时 |

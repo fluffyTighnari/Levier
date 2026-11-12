@@ -12,6 +12,7 @@ import (
 	"fmt"
 	"github.com/fluffyTighnari/middleware/internal/errs"
 	"log/slog"
+	"runtime/debug"
 	"strings"
 	"time"
 
@@ -21,7 +22,10 @@ import (
 	"github.com/fluffyTighnari/middleware/internal/register"
 )
 
-const defaultToolTimeout = 60 * time.Second
+const (
+	defaultToolTimeout = 60 * time.Second
+	maxToolTimeout     = 4 * time.Minute
+)
 
 // ToolResolver is the Registry subset used for routing.
 type ToolResolver interface {
@@ -152,13 +156,44 @@ func (i *Invoker) Invoke(
 	if !owner {
 		result, err := i.state.wait(ctx, pending)
 		if err != nil {
-			return toolError(invocationID, string(errs.CodeToolTimeout), "cancelled while waiting for invocation", true)
+			if errors.Is(err, context.Canceled) {
+				return toolError(invocationID, string(errs.CodeRunCancelled), "cancelled while waiting for invocation", false)
+			}
+			return toolError(invocationID, string(errs.CodeToolTimeout), "timed out waiting for invocation", true)
 		}
 		return result
 	}
-	result := i.execute(ctx, runID, appID, request)
+	if cached, ok := i.state.get(invocationID); ok {
+		i.state.finish(invocationID, pending, cached)
+		return cached
+	}
+	result := i.executeSafe(ctx, runID, appID, request)
 	i.state.finish(invocationID, pending, result)
 	return cloneResult(result)
+}
+
+// executeSafe contains panics so one bad tool cannot kill the process or leave
+// the single-flight entry stuck.
+func (i *Invoker) executeSafe(
+	ctx context.Context,
+	runID, appID string,
+	request *runtimev1.ToolCallRequest,
+) (result *runtimev1.ToolCallResult) {
+	invocationID := request.GetInvocationId()
+	defer func() {
+		if recovered := recover(); recovered != nil {
+			slog.Error("gateway tool invocation panicked",
+				"run_id", runID,
+				"invocation_id", invocationID,
+				"tool_name", request.GetToolName(),
+				"panic", recovered,
+				"stack", string(debug.Stack()),
+			)
+			result = toolError(invocationID, string(errs.CodeToolExecError), "tool invocation panicked", false)
+			i.state.put(invocationID, result)
+		}
+	}()
+	return i.execute(ctx, runID, appID, request)
 }
 
 // execute claims the invocation in the durable store, then runs it.
@@ -229,6 +264,9 @@ func (i *Invoker) invokeOnce(
 	if timeout <= 0 {
 		timeout = defaultToolTimeout
 	}
+	if timeout > maxToolTimeout {
+		timeout = maxToolTimeout
+	}
 
 	started := time.Now()
 	var result *runtimev1.ToolCallResult
@@ -274,6 +312,8 @@ func (i *Invoker) invokeLocal(
 		switch {
 		case errors.Is(err, connection.ErrAppUnreachable):
 			return toolError(request.GetInvocationId(), string(errs.CodeAppUnreachable), err.Error(), true)
+		case errors.Is(err, context.Canceled):
+			return toolError(request.GetInvocationId(), string(errs.CodeRunCancelled), "local tool cancelled", false)
 		case errors.Is(err, connection.ErrLocalToolTimeout), errors.Is(err, context.DeadlineExceeded):
 			return toolError(request.GetInvocationId(), string(errs.CodeToolTimeout), "local tool timed out", true)
 		default:
@@ -327,6 +367,9 @@ func (i *Invoker) invokeGlobal(
 		Timeout:        timeout,
 	})
 	if err != nil {
+		if errors.Is(err, context.Canceled) && !errors.Is(callCtx.Err(), context.DeadlineExceeded) {
+			return toolError(request.GetInvocationId(), string(errs.CodeRunCancelled), "global tool cancelled", false)
+		}
 		if errors.Is(err, context.DeadlineExceeded) || errors.Is(callCtx.Err(), context.DeadlineExceeded) {
 			return toolError(request.GetInvocationId(), string(errs.CodeToolTimeout), "global tool timed out", true)
 		}
