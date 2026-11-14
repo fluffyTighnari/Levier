@@ -1,6 +1,6 @@
-<!-- Middleware-Harness_Scheduler — repository landing page. -->
+<!-- Middleware-runtime_Scheduler — repository landing page. -->
 
-# Middleware-Harness_Scheduler
+# Middleware-runtime_Scheduler
 
 Middleware 是 Agent Run 的控制面与工具/事件中介层：
 
