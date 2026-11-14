@@ -14,7 +14,7 @@ export
 BIN_DIR := bin
 GO_FILES := $(shell find . -name '*.go' -not -path './workflow_engine/*' -not -path './vendor/*')
 
-.PHONY: all build test lint fmt fmt-check vet run clean dev-up dev-down migrate proto proto-check proto-lint contract-check harness-test mcp-runtime-test image-harness image-mcp-runtime counter-agent counter-agent-test http-smoke retrofit-e2e mcp-e2e deps-check size-report daemon-check agent-core-test mvp-demo mvp-demo-react fault-matrix secrets-check
+.PHONY: all build test lint fmt fmt-check vet run clean dev-up dev-down migrate proto proto-check proto-lint contract-check harness-test mcp-runtime-test image-harness image-mcp-runtime counter-agent counter-agent-test http-smoke retrofit-e2e mcp-e2e deps-check size-report daemon-check agent-core-test mvp-demo mvp-demo-react fault-matrix secrets-check docker-up docker-down docker-smoke docker-logs docker-reset
 
 all: build
 
@@ -117,6 +117,21 @@ fault-matrix:
 
 secrets-check:
 	python3 tests/checks/check_secrets.py
+
+docker-up:
+	docker compose up --build -d
+
+docker-down:
+	docker compose down
+
+docker-smoke: docker-up
+	docker compose --profile smoke run --rm smoke
+
+docker-logs:
+	docker compose logs -f
+
+docker-reset:
+	docker compose down -v
 
 counter-agent-test:
 	cd examples/counter_agent && python3 -m unittest discover -s . -p 'test_*.py' -v

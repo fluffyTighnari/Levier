@@ -253,7 +253,7 @@ R22 成功请求访问日志
 仍未覆盖：
 
 ```text
-Docker Compose 真实构建/启动
+Docker Compose 真实构建/启动（配置已提供，需在有 Docker 的环境执行）
 PostgreSQL 整体停机演练
 40s 长工具真实 E2E
 多 Harness / 多 MW / HA

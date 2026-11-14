@@ -1,0 +1,135 @@
+# Middleware — Docker Compose single-node MVP.
+#
+# Core services:
+#   postgres      PostgreSQL 16
+#   middleware    Go control plane
+#   mcp-runtime   independent MCP runtime (runtime 1)
+#   harness       Python Agent runtime (runtime 2)
+#   agent         counter_agent App
+#
+# Smoke profile:
+#   docker compose --profile smoke run --rm smoke
+#
+# Copyright 2026 The Middleware Authors.
+
+name: middleware-mvp
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: middleware
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-change-me}
+      POSTGRES_DB: middleware
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U middleware -d middleware"]
+      interval: 3s
+      timeout: 3s
+      retries: 30
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    restart: unless-stopped
+
+  middleware:
+    build:
+      context: .
+      dockerfile: deploy/middleware.Dockerfile
+    environment:
+      MIDDLEWARE_DATABASE_URL: postgres://middleware:${POSTGRES_PASSWORD:-change-me}@postgres:5432/middleware?sslmode=disable
+      MIDDLEWARE_HTTP_ADMIN_TOKEN: ${MW_ADMIN_TOKEN:-admin-change-me}
+      MIDDLEWARE_LOG_LEVEL: ${MW_LOG_LEVEL:-info}
+      MIDDLEWARE_LOG_FORMAT: json
+    ports:
+      - "8080:8080"
+      - "9090:9090"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8080/readyz >/dev/null"]
+      interval: 3s
+      timeout: 3s
+      retries: 30
+    restart: unless-stopped
+
+  mcp-runtime:
+    build:
+      context: .
+      dockerfile: deploy/mcp-runtime.Dockerfile
+    command: ["--socket", "/run/middleware/mcp.sock"]
+    environment:
+      MIDDLEWARE_SECRET_E2E_TOKEN: ${MCP_E2E_TOKEN:-mcp-e2e-secret}
+    volumes:
+      - mcp_socket:/run/middleware
+    healthcheck:
+      test: ["CMD-SHELL", "test -e /run/middleware/mcp.sock"]
+      interval: 3s
+      timeout: 3s
+      retries: 30
+    restart: unless-stopped
+
+  harness:
+    build:
+      context: .
+      dockerfile: deploy/harness.Dockerfile
+    environment:
+      HARNESS_MIDDLEWARE_ADDRESS: middleware:9090
+      HARNESS_DAEMON_ID: daemon-local-1
+      HARNESS_DAEMON_AUTH_TOKEN: change-me
+      HARNESS_MCP_RUNTIME_SOCKET: /run/middleware/mcp.sock
+      HARNESS_LOGGING_FORMAT: json
+      DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY:-}
+      DEEPSEEK_BASE_URL: ${DEEPSEEK_BASE_URL:-https://api.deepseek.com}
+      DEEPSEEK_MODEL: ${DEEPSEEK_MODEL:-deepseek-flash}
+    volumes:
+      - mcp_socket:/run/middleware
+    depends_on:
+      middleware:
+        condition: service_healthy
+      mcp-runtime:
+        condition: service_healthy
+    restart: unless-stopped
+
+  agent:
+    build:
+      context: .
+      dockerfile: deploy/agent.Dockerfile
+    environment:
+      MW_URL: http://middleware:8080
+      MW_ADMIN_TOKEN: ${MW_ADMIN_TOKEN:-admin-change-me}
+      MW_APP_NAME: ${MW_APP_NAME:-counter-agent}
+      COUNTER_APP_CREDENTIALS: /data/credentials.json
+    volumes:
+      - agent_data:/data
+    depends_on:
+      middleware:
+        condition: service_healthy
+    restart: unless-stopped
+
+  smoke:
+    image: python:3.12-slim
+    command: ["python", "/app/smoke.py"]
+    environment:
+      MW_URL: http://middleware:8080
+      MCP_SOCKET: /run/middleware/mcp.sock
+      CREDENTIALS: /data/credentials.json
+      DAEMON_ID: daemon-local-1
+    volumes:
+      - ./deploy/smoke.py:/app/smoke.py:ro
+      - mcp_socket:/run/middleware
+      - agent_data:/data
+    depends_on:
+      middleware:
+        condition: service_healthy
+      mcp-runtime:
+        condition: service_healthy
+      harness:
+        condition: service_started
+      agent:
+        condition: service_started
+    profiles: ["smoke"]
+
+volumes:
+  pgdata:
+  mcp_socket:
+  agent_data:

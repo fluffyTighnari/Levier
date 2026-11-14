@@ -99,6 +99,14 @@ final_message: The final counter value is **5**...
 mvp-demo: PASS
 ```
 
+Docker Compose（需要 Docker）：
+
+```sh
+make docker-up       # 构建并启动 postgres/middleware/mcp-runtime/harness/agent
+make docker-smoke    # 启动并跑一次 smoke
+make docker-down
+```
+
 故障矩阵：
 
 ```sh
@@ -157,3 +165,4 @@ deploy/           容器镜像定义
 | `docs/DAEMON_CONTRACT.md` | Daemon 协议 |
 | `docs/MCP.md` | MCP runtime |
 | `docs/AGENT_CORE_CONTRACT.md` | Agent Core v1 契约 |
+| `deploy/README.md` | Docker 镜像与 Compose |

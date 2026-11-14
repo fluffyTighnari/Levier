@@ -433,7 +433,7 @@ Conformance fixtures：`agent_core/conformance/fixtures/*.json`。
 PostgreSQL 整体停机演练
 40s 长工具真实 E2E
 多 Harness / 多 MW
-Docker Compose 真实构建
+Docker Compose 真实构建（配置见 `deploy/README.md`，需在有 Docker 的环境执行）
 ```
 
 ---

@@ -5,6 +5,7 @@
 .DS_Store
 .idea/
 .stfolder/
+.stignore
 
 # Archived nested engine: read-only, keeps its own git history.
 /workflow_engine/
