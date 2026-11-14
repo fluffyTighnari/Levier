@@ -15,8 +15,15 @@ COPY harness/pyproject.toml harness/README.md /app/harness/
 COPY harness/src /app/harness/src
 COPY harness/config.example.yaml /app/harness/config.example.yaml
 
-RUN pip install --no-cache-dir -e /app/agent_core \
- && pip install --no-cache-dir -e /app/harness
+# middleware-agent-core is a local path dependency. Install it explicitly and
+# keep pip from trying to resolve it from PyPI.
+RUN pip install --no-cache-dir --no-deps -e /app/agent_core -e /app/harness \
+ && pip install --no-cache-dir \
+      "grpcio>=1.75.0" "protobuf>=7.36.2" "pydantic>=2.14.3" "PyYAML>=6.0"
+
+# Fail the image build if generated protobuf modules or the adapter cannot import.
+RUN PYTHONPATH=/app/harness/src:/app/harness/src/gen \
+    python -m middleware_harness --config /app/harness/config.example.yaml --check
 
 ENTRYPOINT ["python", "-m", "middleware_harness"]
 CMD ["--config", "/app/harness/config.example.yaml"]
