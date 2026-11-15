@@ -1,0 +1,863 @@
+{
+  "version": 1,
+  "skeleton": {
+    "id": "20261115-094104-逻辑骨架-本地推测-b00f",
+    "trackId": "20261114-230926-整体了解-021f",
+    "focus": "帮我做一份完整的三端（app、中间件、harness）链路图",
+    "title": "逻辑骨架（本地推测）",
+    "overview": "模型不可用，按文件名与命名推测主流程。配置 key 后可获得真正的骨架与节点讲解。",
+    "main": [
+      {
+        "id": "g_586a39",
+        "title": "入口 / 路由",
+        "summary": "按命名推测",
+        "phase": "本地推测",
+        "symbolIds": [
+          "cmd/mw-daemon-check/main.go::(*apiClient).cancelRun",
+          "cmd/mw-daemon-check/main.go::(*apiClient).createApp",
+          "cmd/mw-daemon-check/main.go::(*apiClient).createRun",
+          "cmd/mw-daemon-check/main.go::(*apiClient).do",
+          "cmd/mw-daemon-check/main.go::(*apiClient).waitStatus",
+          "docs/reports/artifacts/mcp/M1/secret_echo_server.py::echo_pid",
+          "docs/reports/artifacts/mcp/M1/secret_echo_server.py::echo_token",
+          "docs/reports/artifacts/mcp/M1/secret_echo_server.py::other_tool",
+          "docs/reports/artifacts/retrofit/P9/P9.10/llm_huge_stub.py::Handler.do_POST",
+          "docs/reports/artifacts/retrofit/P9/P9.10/llm_huge_stub.py::Handler.log_message",
+          "docs/reports/artifacts/retrofit/P9/llm_stub.py::Handler.do_POST",
+          "docs/reports/artifacts/retrofit/P9/llm_stub.py::Handler.log_message",
+          "examples/counter_agent/dispatch.py::_error",
+          "examples/counter_agent/dispatch.py::_parse_arguments",
+          "examples/counter_agent/dispatch.py::_success",
+          "examples/counter_agent/dispatch.py::dispatch_counter_tool",
+          "examples/counter_agent/http_client.py::AppRegistration.has_api_key",
+          "examples/counter_agent/http_client.py::parse_app_view",
+          "examples/counter_agent/tests/test_dispatch.py::DispatcherTest.test_p1_2_dispatcher_counter_add",
+          "examples/counter_agent/tests/test_dispatch.py::DispatcherTest.test_p1_3_dispatcher_counter_get",
+          "examples/counter_agent/tests/test_dispatch.py::DispatcherTest.test_p1_4_dispatcher_counter_reset",
+          "examples/counter_agent/tests/test_dispatch.py::DispatcherTest.test_p1_5_unknown_tool",
+          "examples/counter_agent/tests/test_dispatch.py::DispatcherTest.test_p1_6_invalid_arguments",
+          "examples/counter_agent/tests/test_main.py::MainWiringTest.test_p1_8_execute_tool_delegates_to_dispatcher"
+        ],
+        "files": [
+          "cmd/mw-daemon-check/main.go",
+          "docs/reports/artifacts/mcp/M1/secret_echo_server.py",
+          "docs/reports/artifacts/retrofit/P9/P9.10/llm_huge_stub.py",
+          "docs/reports/artifacts/retrofit/P9/llm_stub.py",
+          "examples/counter_agent/dispatch.py",
+          "examples/counter_agent/http_client.py",
+          "examples/counter_agent/tests/test_dispatch.py",
+          "examples/counter_agent/tests/test_main.py"
+        ],
+        "detail": "## 节点定位\n按命名推测\n\n## 核心函数\n(*apiClient).cancelRun, (*apiClient).createApp, (*apiClient).createRun, (*apiClient).do, (*apiClient).waitStatus, echo_pid, echo_token, other_tool, Handler.do_POST, Handler.log_message, Handler.do_POST, Handler.log_message, _error, _parse_arguments, _success, dispatch_counter_tool, AppRegistration.has_api_key, parse_app_view, DispatcherTest.test_p1_2_dispatcher_counter_add, DispatcherTest.test_p1_3_dispatcher_counter_get, DispatcherTest.test_p1_4_dispatcher_counter_reset, DispatcherTest.test_p1_5_unknown_tool, DispatcherTest.test_p1_6_invalid_arguments, MainWiringTest.test_p1_8_execute_tool_delegates_to_dispatcher\n\n## 关系与数据流\n模型当前不可用，无法生成完整关系讲解。\n\n## 本节点总结\n这是本地回退说明；配置模型后可获得完整讲解。",
+        "detailCreatedAt": "2026-11-15T01:41:36+00:00",
+        "detailSource": "heuristic"
+      },
+      {
+        "id": "g_42ecb2",
+        "title": "业务逻辑",
+        "summary": "按命名推测",
+        "phase": "本地推测",
+        "symbolIds": [
+          "gen/middleware/runtime/v1/runtime_grpc.pb.go::(*runtimeServiceClient).Channel",
+          "gen/middleware/runtime/v1/runtime_grpc.pb.go::NewRuntimeServiceClient",
+          "gen/middleware/runtime/v1/runtime_grpc.pb.go::RuntimeServiceClient.Channel",
+          "harness/src/gen/middleware/runtime/v1/runtime_pb2_grpc.py::RuntimeService.Channel",
+          "harness/src/gen/middleware/runtime/v1/runtime_pb2_grpc.py::RuntimeServiceServicer.Channel",
+          "harness/src/gen/middleware/runtime/v1/runtime_pb2_grpc.py::RuntimeServiceStub.__init__",
+          "harness/src/middleware_harness/llm/http.py::UrllibTransport.worker",
+          "harness/src/middleware_harness/runtime/manager.py::NoopRunner.__call__",
+          "harness/src/middleware_harness/runtime/manager.py::RunManager.__init__",
+          "harness/src/middleware_harness/runtime/manager.py::RunManager._execute",
+          "harness/src/middleware_harness/runtime/manager.py::RunManager._handle_cancel",
+          "harness/src/middleware_harness/runtime/manager.py::RunManager._handle_reconcile",
+          "harness/src/middleware_harness/runtime/manager.py::RunManager._handle_task_assign",
+          "harness/src/middleware_harness/runtime/manager.py::RunManager._resume_state",
+          "harness/src/middleware_harness/runtime/manager.py::RunManager._send_ack",
+          "harness/src/middleware_harness/runtime/manager.py::RunManager._validation_error",
+          "harness/src/middleware_harness/runtime/manager.py::RunManager.close",
+          "harness/src/middleware_harness/runtime/manager.py::RunManager.handle",
+          "harness/src/middleware_harness/runtime/manager.py::RunManager.running_count",
+          "harness/src/middleware_harness/runtime/manager.py::RunManager.running_runs",
+          "harness/src/middleware_harness/runtime/manager.py::Runner.__call__",
+          "harness/tests/test_channel.py::FakeRuntimeService.Channel",
+          "harness/tests/test_channel.py::FakeRuntimeService.__init__",
+          "harness/tests/test_channel.py::FakeRuntimeService.consume"
+        ],
+        "files": [
+          "gen/middleware/runtime/v1/runtime_grpc.pb.go",
+          "harness/src/gen/middleware/runtime/v1/runtime_pb2_grpc.py",
+          "harness/src/middleware_harness/llm/http.py",
+          "harness/src/middleware_harness/runtime/manager.py",
+          "harness/tests/test_channel.py"
+        ],
+        "detail": "",
+        "detailCreatedAt": ""
+      },
+      {
+        "id": "g_a72b6b",
+        "title": "数据访问",
+        "summary": "按命名推测",
+        "phase": "本地推测",
+        "symbolIds": [
+          "agent_core/src/agent_core/protocols.py::ModelProvider.complete",
+          "agent_core/tests/test_conformance.py::AbortFlag.__init__",
+          "agent_core/tests/test_conformance.py::AbortFlag.is_set",
+          "agent_core/tests/test_conformance.py::ConformanceTest.emit",
+          "agent_core/tests/test_conformance.py::ConformanceTest.on_step_end",
+          "agent_core/tests/test_conformance.py::ConformanceTest.run_fixture",
+          "agent_core/tests/test_conformance.py::ConformanceTest.test_fixtures",
+          "agent_core/tests/test_conformance.py::IdGen.__call__",
+          "agent_core/tests/test_conformance.py::IdGen.__init__",
+          "agent_core/tests/test_conformance.py::ScriptedProvider.__init__",
+          "agent_core/tests/test_conformance.py::ScriptedProvider.complete",
+          "agent_core/tests/test_conformance.py::ScriptedTools.__init__",
+          "agent_core/tests/test_conformance.py::ScriptedTools.call",
+          "agent_core/tests/test_conformance.py::assert_subset",
+          "agent_core/tests/test_conformance.py::build_spec",
+          "agent_core/tests/test_conformance.py::normalize",
+          "docs/reports/artifacts/mcp/M1/probe.py::main",
+          "docs/reports/artifacts/mcp/M4/A/probe.py::main",
+          "docs/reports/artifacts/mcp/M5/probe.py::main",
+          "docs/reports/artifacts/mcp/M5/probe_allow.py::main",
+          "docs/reports/artifacts/mcp/M7/probe.py::main",
+          "docs/reports/artifacts/mcp/M7/probe.py::probe",
+          "docs/reports/artifacts/mcp/M8/probe.py::main",
+          "docs/reports/artifacts/mcp/M8/probe.py::stop"
+        ],
+        "files": [
+          "agent_core/src/agent_core/protocols.py",
+          "agent_core/tests/test_conformance.py",
+          "docs/reports/artifacts/mcp/M1/probe.py",
+          "docs/reports/artifacts/mcp/M4/A/probe.py",
+          "docs/reports/artifacts/mcp/M5/probe.py",
+          "docs/reports/artifacts/mcp/M5/probe_allow.py",
+          "docs/reports/artifacts/mcp/M7/probe.py",
+          "docs/reports/artifacts/mcp/M8/probe.py"
+        ],
+        "detail": "",
+        "detailCreatedAt": ""
+      },
+      {
+        "id": "g_09c6cc",
+        "title": "观测",
+        "summary": "按命名推测",
+        "phase": "本地推测",
+        "symbolIds": [
+          "deploy/smoke.py::log",
+          "deploy/smoke.py::metrics",
+          "examples/counter_agent/serve.py::_log",
+          "examples/counter_agent/ws_tool_host.py::_log",
+          "examples/node_counter_agent/serve.mjs::log",
+          "gen/middleware/runtime/v1/runtime.pb.go::(*TaskAssign).GetTraceContext",
+          "harness/src/middleware_harness/logging.py::configure_logging",
+          "harness/src/middleware_harness/logging.py::get_logger",
+          "harness/tests/test_logging.py::LoggingTest.test_configure_logging_json",
+          "internal/control/control_test.go::TestControlRecordsMetrics",
+          "internal/gateway/invoker.go::WithMetrics",
+          "internal/gateway/invoker_test.go::TestInvokerRecordsMetrics",
+          "internal/observe/log.go::NewLogger",
+          "internal/observe/log.go::NewLoggerWithWriter",
+          "internal/observe/log.go::parseLevel",
+          "internal/observe/log_test.go::TestNewLoggerJSONFields",
+          "internal/observe/log_test.go::TestNewLoggerRejectsBadConfig",
+          "internal/observe/metrics.go::(*Registry).Add",
+          "internal/observe/metrics.go::(*Registry).AddGauge",
+          "internal/observe/metrics.go::(*Registry).Inc",
+          "internal/observe/metrics.go::(*Registry).Observe",
+          "internal/observe/metrics.go::(*Registry).Set",
+          "internal/observe/metrics.go::(*Registry).SetCounter",
+          "internal/observe/metrics.go::(*Registry).WritePrometheus"
+        ],
+        "files": [
+          "deploy/smoke.py",
+          "examples/counter_agent/serve.py",
+          "examples/counter_agent/ws_tool_host.py",
+          "examples/node_counter_agent/serve.mjs",
+          "gen/middleware/runtime/v1/runtime.pb.go",
+          "harness/src/middleware_harness/logging.py",
+          "harness/tests/test_logging.py",
+          "internal/control/control_test.go",
+          "internal/gateway/invoker.go",
+          "internal/gateway/invoker_test.go",
+          "internal/observe/log.go",
+          "internal/observe/log_test.go",
+          "internal/observe/metrics.go"
+        ],
+        "detail": "",
+        "detailCreatedAt": ""
+      }
+    ],
+    "support": [
+      {
+        "id": "g_1a26ed",
+        "title": "其他",
+        "summary": "按命名推测",
+        "phase": "本地推测",
+        "symbolIds": [
+          "agent_core/src/agent_core/errors.py::ProviderFailure.__init__",
+          "agent_core/src/agent_core/events.py::_Event.to_dict",
+          "agent_core/src/agent_core/events.py::_now_ms",
+          "agent_core/src/agent_core/events.py::event_to_dict",
+          "agent_core/src/agent_core/loop.py::AgentCore.__init__",
+          "agent_core/src/agent_core/loop.py::AgentCore.on_delta",
+          "agent_core/src/agent_core/loop.py::AgentCore.run",
+          "agent_core/src/agent_core/loop.py::_NeverAbort.is_set",
+          "agent_core/src/agent_core/loop.py::_add_usage",
+          "agent_core/src/agent_core/loop.py::_has_usage",
+          "agent_core/src/agent_core/loop.py::_tool_message",
+          "agent_core/src/agent_core/loop.py::_with_timeout",
+          "agent_core/src/agent_core/protocols.py::AbortSignal.is_set",
+          "agent_core/src/agent_core/protocols.py::DeltaCallback.__call__",
+          "agent_core/src/agent_core/protocols.py::ToolProvider.call",
+          "agent_core/src/agent_core/types.py::RunResult.to_dict",
+          "agent_core/src/agent_core/types.py::Usage.__post_init__",
+          "agent_core/src/agent_core/types.py::Usage.to_dict",
+          "agent_core/tests/test_loop.py::FakeAbort.__init__",
+          "agent_core/tests/test_loop.py::FakeAbort.is_set",
+          "agent_core/tests/test_loop.py::FakeTools.__init__",
+          "agent_core/tests/test_loop.py::FakeTools.call",
+          "agent_core/tests/test_loop.py::LoopTest.Slow.complete",
+          "agent_core/tests/test_loop.py::LoopTest.emit"
+        ],
+        "files": [
+          "agent_core/src/agent_core/errors.py",
+          "agent_core/src/agent_core/events.py",
+          "agent_core/src/agent_core/loop.py",
+          "agent_core/src/agent_core/protocols.py",
+          "agent_core/src/agent_core/types.py",
+          "agent_core/tests/test_loop.py"
+        ],
+        "detail": "## 节点定位\n按命名推测\n\n## 核心函数\nProviderFailure.__init__, _Event.to_dict, _now_ms, event_to_dict, AgentCore.__init__, AgentCore.on_delta, AgentCore.run, _NeverAbort.is_set, _add_usage, _has_usage, _tool_message, _with_timeout, AbortSignal.is_set, DeltaCallback.__call__, ToolProvider.call, RunResult.to_dict, Usage.__post_init__, Usage.to_dict, FakeAbort.__init__, FakeAbort.is_set, FakeTools.__init__, FakeTools.call, LoopTest.Slow.complete, LoopTest.emit\n\n## 关系与数据流\n模型当前不可用，无法生成完整关系讲解。\n\n## 本节点总结\n这是本地回退说明；配置模型后可获得完整讲解。",
+        "detailCreatedAt": "2026-11-15T01:41:31+00:00",
+        "detailSource": "heuristic"
+      }
+    ],
+    "links": [
+      {
+        "from": "g_586a39",
+        "to": "g_42ecb2",
+        "status": "inferred",
+        "file": "",
+        "line": null
+      },
+      {
+        "from": "g_42ecb2",
+        "to": "g_a72b6b",
+        "status": "inferred",
+        "file": "",
+        "line": null
+      },
+      {
+        "from": "g_a72b6b",
+        "to": "g_09c6cc",
+        "status": "inferred",
+        "file": "",
+        "line": null
+      }
+    ],
+    "createdAt": "2026-11-15T01:41:04+00:00",
+    "revision": "394279b88ddac841",
+    "fingerprints": {
+      "agent_core/src/agent_core/errors.py::ProviderFailure.__init__": {
+        "line": 13,
+        "endLine": 16,
+        "signature": "def __init__(self, code: str, message: str, *, retryable: bool = False) -> None:"
+      },
+      "agent_core/src/agent_core/events.py::_Event.to_dict": {
+        "line": 25,
+        "endLine": 26,
+        "signature": "def to_dict(self) -> dict[str, Any]:"
+      },
+      "agent_core/src/agent_core/events.py::_now_ms": {
+        "line": 18,
+        "endLine": 19,
+        "signature": "def _now_ms() -> int:"
+      },
+      "agent_core/src/agent_core/events.py::event_to_dict": {
+        "line": 135,
+        "endLine": 137,
+        "signature": "def event_to_dict(event: CoreEvent) -> dict[str, Any]:"
+      },
+      "agent_core/src/agent_core/loop.py::AgentCore.__init__": {
+        "line": 47,
+        "endLine": 56,
+        "signature": "def __init__( self, provider: ModelProvider, tools: ToolProvider, *, new_id: Callable[[], str] | None = None, ) -> None:"
+      },
+      "agent_core/src/agent_core/loop.py::AgentCore.on_delta": {
+        "line": 90,
+        "endLine": 98,
+        "signature": "async def on_delta(text: str) -> None:"
+      },
+      "agent_core/src/agent_core/loop.py::AgentCore.run": {
+        "line": 58,
+        "endLine": 239,
+        "signature": "async def run( self, spec: RunSpec, emit: Emit, *, abort: AbortSignal | None = None, on_step_end: StepHook | None = None, on_cancel: CancelHook | None = None, ) -> RunResult:"
+      },
+      "agent_core/src/agent_core/loop.py::_NeverAbort.is_set": {
+        "line": 40,
+        "endLine": 41,
+        "signature": "def is_set(self) -> bool:"
+      },
+      "agent_core/src/agent_core/loop.py::_add_usage": {
+        "line": 257,
+        "endLine": 264,
+        "signature": "def _add_usage(total: Usage, step: Usage) -> Usage:"
+      },
+      "agent_core/src/agent_core/loop.py::_has_usage": {
+        "line": 248,
+        "endLine": 254,
+        "signature": "def _has_usage(usage: Usage) -> bool:"
+      },
+      "agent_core/src/agent_core/loop.py::_tool_message": {
+        "line": 267,
+        "endLine": 279,
+        "signature": "def _tool_message(call: ToolCall, result: ToolResult) -> Message:"
+      },
+      "agent_core/src/agent_core/loop.py::_with_timeout": {
+        "line": 242,
+        "endLine": 245,
+        "signature": "async def _with_timeout(awaitable: Awaitable, timeout_ms: int):"
+      },
+      "agent_core/src/agent_core/protocols.py::AbortSignal.is_set": {
+        "line": 41,
+        "endLine": 42,
+        "signature": "def is_set(self) -> bool:"
+      },
+      "agent_core/src/agent_core/protocols.py::DeltaCallback.__call__": {
+        "line": 13,
+        "endLine": 14,
+        "signature": "async def __call__(self, delta: str) -> None:"
+      },
+      "agent_core/src/agent_core/protocols.py::ModelProvider.complete": {
+        "line": 20,
+        "endLine": 28,
+        "signature": "async def complete( self, messages: Sequence[Message], tools: Sequence[ToolSpec], model: ModelRef, *, on_delta: DeltaCallback | None = None, ) -> LLMResponse:"
+      },
+      "agent_core/src/agent_core/protocols.py::ToolProvider.call": {
+        "line": 34,
+        "endLine": 35,
+        "signature": "async def call(self, call: ToolCall) -> ToolResult:"
+      },
+      "agent_core/src/agent_core/types.py::RunResult.to_dict": {
+        "line": 136,
+        "endLine": 143,
+        "signature": "def to_dict(self) -> dict[str, Any]:"
+      },
+      "agent_core/src/agent_core/types.py::Usage.__post_init__": {
+        "line": 72,
+        "endLine": 74,
+        "signature": "def __post_init__(self) -> None:"
+      },
+      "agent_core/src/agent_core/types.py::Usage.to_dict": {
+        "line": 76,
+        "endLine": 83,
+        "signature": "def to_dict(self) -> dict[str, int]:"
+      },
+      "agent_core/tests/test_conformance.py::AbortFlag.__init__": {
+        "line": 83,
+        "endLine": 84,
+        "signature": "def __init__(self) -> None:"
+      },
+      "agent_core/tests/test_conformance.py::AbortFlag.is_set": {
+        "line": 86,
+        "endLine": 87,
+        "signature": "def is_set(self) -> bool:"
+      },
+      "agent_core/tests/test_conformance.py::ConformanceTest.emit": {
+        "line": 152,
+        "endLine": 153,
+        "signature": "async def emit(event) -> None:"
+      },
+      "agent_core/tests/test_conformance.py::ConformanceTest.on_step_end": {
+        "line": 155,
+        "endLine": 157,
+        "signature": "async def on_step_end(_messages, step: int) -> None:"
+      },
+      "agent_core/tests/test_conformance.py::ConformanceTest.run_fixture": {
+        "line": 146,
+        "endLine": 177,
+        "signature": "async def run_fixture(self, data: dict[str, Any]) -> None:"
+      },
+      "agent_core/tests/test_conformance.py::ConformanceTest.test_fixtures": {
+        "line": 139,
+        "endLine": 144,
+        "signature": "async def test_fixtures(self) -> None:"
+      },
+      "agent_core/tests/test_conformance.py::IdGen.__call__": {
+        "line": 94,
+        "endLine": 96,
+        "signature": "def __call__(self) -> str:"
+      },
+      "agent_core/tests/test_conformance.py::IdGen.__init__": {
+        "line": 91,
+        "endLine": 92,
+        "signature": "def __init__(self) -> None:"
+      },
+      "agent_core/tests/test_conformance.py::ScriptedProvider.__init__": {
+        "line": 29,
+        "endLine": 31,
+        "signature": "def __init__(self, script: list[dict[str, Any]]) -> None:"
+      },
+      "agent_core/tests/test_conformance.py::ScriptedProvider.complete": {
+        "line": 33,
+        "endLine": 59,
+        "signature": "async def complete(self, messages, tools, model, *, on_delta=None):"
+      },
+      "agent_core/tests/test_conformance.py::ScriptedTools.__init__": {
+        "line": 63,
+        "endLine": 65,
+        "signature": "def __init__(self, script: list[dict[str, Any]]) -> None:"
+      },
+      "agent_core/tests/test_conformance.py::ScriptedTools.call": {
+        "line": 67,
+        "endLine": 79,
+        "signature": "async def call(self, call):"
+      },
+      "agent_core/tests/test_conformance.py::assert_subset": {
+        "line": 105,
+        "endLine": 121,
+        "signature": "def assert_subset(expected: Any, actual: Any, path: str = \"$\") -> None:"
+      },
+      "agent_core/tests/test_conformance.py::build_spec": {
+        "line": 124,
+        "endLine": 135,
+        "signature": "def build_spec(data: dict[str, Any]) -> RunSpec:"
+      },
+      "agent_core/tests/test_conformance.py::normalize": {
+        "line": 99,
+        "endLine": 102,
+        "signature": "def normalize(event) -> dict[str, Any]:"
+      },
+      "agent_core/tests/test_loop.py::FakeAbort.__init__": {
+        "line": 54,
+        "endLine": 55,
+        "signature": "def __init__(self, value=False):"
+      },
+      "agent_core/tests/test_loop.py::FakeAbort.is_set": {
+        "line": 57,
+        "endLine": 58,
+        "signature": "def is_set(self):"
+      },
+      "agent_core/tests/test_loop.py::FakeTools.__init__": {
+        "line": 41,
+        "endLine": 43,
+        "signature": "def __init__(self, results):"
+      },
+      "agent_core/tests/test_loop.py::FakeTools.call": {
+        "line": 45,
+        "endLine": 50,
+        "signature": "async def call(self, call):"
+      },
+      "agent_core/tests/test_loop.py::LoopTest.Slow.complete": {
+        "line": 135,
+        "endLine": 137,
+        "signature": "async def complete(self, *args, **kwargs):"
+      },
+      "agent_core/tests/test_loop.py::LoopTest.emit": {
+        "line": 65,
+        "endLine": 66,
+        "signature": "async def emit(event):"
+      },
+      "cmd/mw-daemon-check/main.go::(*apiClient).cancelRun": {
+        "line": 295,
+        "endLine": 301,
+        "signature": "func (c *apiClient) cancelRun(runID, reason string) error {"
+      },
+      "cmd/mw-daemon-check/main.go::(*apiClient).createApp": {
+        "line": 253,
+        "endLine": 276,
+        "signature": "func (c *apiClient) createApp(name string) (appCredentials, error) {"
+      },
+      "cmd/mw-daemon-check/main.go::(*apiClient).createRun": {
+        "line": 278,
+        "endLine": 293,
+        "signature": "func (c *apiClient) createRun(strategy string) (string, error) {"
+      },
+      "cmd/mw-daemon-check/main.go::(*apiClient).do": {
+        "line": 219,
+        "endLine": 251,
+        "signature": "func (c *apiClient) do(method, path, token string, body any, out any) (int, error) {"
+      },
+      "cmd/mw-daemon-check/main.go::(*apiClient).waitStatus": {
+        "line": 303,
+        "endLine": 321,
+        "signature": "func (c *apiClient) waitStatus(runID, want string, timeout time.Duration) error {"
+      },
+      "deploy/smoke.py::log": {
+        "line": 28,
+        "endLine": 29,
+        "signature": "def log(message: str) -> None:"
+      },
+      "deploy/smoke.py::metrics": {
+        "line": 61,
+        "endLine": 63,
+        "signature": "def metrics() -> str:"
+      },
+      "docs/reports/artifacts/mcp/M1/probe.py::main": {
+        "line": 21,
+        "endLine": 85,
+        "signature": "async def main() -> int:"
+      },
+      "docs/reports/artifacts/mcp/M1/secret_echo_server.py::echo_pid": {
+        "line": 18,
+        "endLine": 21,
+        "signature": "def echo_pid() -> str:"
+      },
+      "docs/reports/artifacts/mcp/M1/secret_echo_server.py::echo_token": {
+        "line": 12,
+        "endLine": 15,
+        "signature": "def echo_token() -> str:"
+      },
+      "docs/reports/artifacts/mcp/M1/secret_echo_server.py::other_tool": {
+        "line": 24,
+        "endLine": 27,
+        "signature": "def other_tool() -> str:"
+      },
+      "docs/reports/artifacts/mcp/M4/A/probe.py::main": {
+        "line": 19,
+        "endLine": 42,
+        "signature": "async def main() -> int:"
+      },
+      "docs/reports/artifacts/mcp/M5/probe.py::main": {
+        "line": 19,
+        "endLine": 51,
+        "signature": "async def main() -> int:"
+      },
+      "docs/reports/artifacts/mcp/M5/probe_allow.py::main": {
+        "line": 18,
+        "endLine": 35,
+        "signature": "async def main() -> int:"
+      },
+      "docs/reports/artifacts/mcp/M7/probe.py::main": {
+        "line": 40,
+        "endLine": 47,
+        "signature": "async def main() -> int:"
+      },
+      "docs/reports/artifacts/mcp/M7/probe.py::probe": {
+        "line": 18,
+        "endLine": 37,
+        "signature": "async def probe(client: McpRuntimeClient, transport: str, url: str, namespace: str, server_name: str) -> dict:"
+      },
+      "docs/reports/artifacts/mcp/M8/probe.py::main": {
+        "line": 50,
+        "endLine": 138,
+        "signature": "async def main(transport: str, port: int) -> int:"
+      },
+      "docs/reports/artifacts/mcp/M8/probe.py::stop": {
+        "line": 39,
+        "endLine": 47,
+        "signature": "async def stop(process: asyncio.subprocess.Process) -> None:"
+      },
+      "docs/reports/artifacts/retrofit/P9/P9.10/llm_huge_stub.py::Handler.do_POST": {
+        "line": 20,
+        "endLine": 33,
+        "signature": "def do_POST(self) -> None:"
+      },
+      "docs/reports/artifacts/retrofit/P9/P9.10/llm_huge_stub.py::Handler.log_message": {
+        "line": 35,
+        "endLine": 36,
+        "signature": "def log_message(self, *args) -> None:"
+      },
+      "docs/reports/artifacts/retrofit/P9/llm_stub.py::Handler.do_POST": {
+        "line": 12,
+        "endLine": 26,
+        "signature": "def do_POST(self):"
+      },
+      "docs/reports/artifacts/retrofit/P9/llm_stub.py::Handler.log_message": {
+        "line": 28,
+        "endLine": 29,
+        "signature": "def log_message(self, *args):"
+      },
+      "examples/counter_agent/dispatch.py::_error": {
+        "line": 23,
+        "endLine": 31,
+        "signature": "def _error(code: str, message: str, retryable: bool = False) -> dict[str, Any]:"
+      },
+      "examples/counter_agent/dispatch.py::_parse_arguments": {
+        "line": 34,
+        "endLine": 44,
+        "signature": "def _parse_arguments(arguments_json: str) -> dict[str, Any]:"
+      },
+      "examples/counter_agent/dispatch.py::_success": {
+        "line": 47,
+        "endLine": 48,
+        "signature": "def _success(value: int) -> dict[str, Any]:"
+      },
+      "examples/counter_agent/dispatch.py::dispatch_counter_tool": {
+        "line": 51,
+        "endLine": 85,
+        "signature": "def dispatch_counter_tool( counter: Counter, tool_name: str, arguments_json: str, ) -> dict[str, Any]:"
+      },
+      "examples/counter_agent/http_client.py::AppRegistration.has_api_key": {
+        "line": 109,
+        "endLine": 112,
+        "signature": "def has_api_key(self) -> bool:"
+      },
+      "examples/counter_agent/http_client.py::parse_app_view": {
+        "line": 200,
+        "endLine": 217,
+        "signature": "def parse_app_view(response: HttpResponse) -> AppView:"
+      },
+      "examples/counter_agent/serve.py::_log": {
+        "line": 66,
+        "endLine": 67,
+        "signature": "def _log(payload: dict) -> None:"
+      },
+      "examples/counter_agent/tests/test_dispatch.py::DispatcherTest.test_p1_2_dispatcher_counter_add": {
+        "line": 15,
+        "endLine": 21,
+        "signature": "def test_p1_2_dispatcher_counter_add(self) -> None:"
+      },
+      "examples/counter_agent/tests/test_dispatch.py::DispatcherTest.test_p1_3_dispatcher_counter_get": {
+        "line": 23,
+        "endLine": 29,
+        "signature": "def test_p1_3_dispatcher_counter_get(self) -> None:"
+      },
+      "examples/counter_agent/tests/test_dispatch.py::DispatcherTest.test_p1_4_dispatcher_counter_reset": {
+        "line": 31,
+        "endLine": 37,
+        "signature": "def test_p1_4_dispatcher_counter_reset(self) -> None:"
+      },
+      "examples/counter_agent/tests/test_dispatch.py::DispatcherTest.test_p1_5_unknown_tool": {
+        "line": 39,
+        "endLine": 47,
+        "signature": "def test_p1_5_unknown_tool(self) -> None:"
+      },
+      "examples/counter_agent/tests/test_dispatch.py::DispatcherTest.test_p1_6_invalid_arguments": {
+        "line": 49,
+        "endLine": 66,
+        "signature": "def test_p1_6_invalid_arguments(self) -> None:"
+      },
+      "examples/counter_agent/tests/test_main.py::MainWiringTest.test_p1_8_execute_tool_delegates_to_dispatcher": {
+        "line": 23,
+        "endLine": 35,
+        "signature": "def test_p1_8_execute_tool_delegates_to_dispatcher(self) -> None:"
+      },
+      "examples/counter_agent/ws_tool_host.py::_log": {
+        "line": 131,
+        "endLine": 132,
+        "signature": "def _log(payload: dict[str, Any]) -> None:"
+      },
+      "examples/node_counter_agent/serve.mjs::log": {
+        "line": 72,
+        "endLine": 74,
+        "signature": "function log(payload) {"
+      },
+      "gen/middleware/runtime/v1/runtime.pb.go::(*TaskAssign).GetTraceContext": {
+        "line": 921,
+        "endLine": 926,
+        "signature": "func (x *TaskAssign) GetTraceContext() string {"
+      },
+      "gen/middleware/runtime/v1/runtime_grpc.pb.go::(*runtimeServiceClient).Channel": {
+        "line": 47,
+        "endLine": 55,
+        "signature": "func (c *runtimeServiceClient) Channel(ctx context.Context, opts ...grpc.CallOption) (grpc.BidiStreamingClient[Envelope, Envelope], error) {"
+      },
+      "gen/middleware/runtime/v1/runtime_grpc.pb.go::NewRuntimeServiceClient": {
+        "line": 43,
+        "endLine": 45,
+        "signature": "func NewRuntimeServiceClient(cc grpc.ClientConnInterface) RuntimeServiceClient {"
+      },
+      "gen/middleware/runtime/v1/runtime_grpc.pb.go::RuntimeServiceClient.Channel": {
+        "line": 36,
+        "endLine": 36,
+        "signature": "Channel(ctx context.Context, opts ...grpc.CallOption) (grpc.BidiStreamingClient[Envelope, Envelope], error)"
+      },
+      "harness/src/gen/middleware/runtime/v1/runtime_pb2_grpc.py::RuntimeService.Channel": {
+        "line": 59,
+        "endLine": 84,
+        "signature": "def Channel(request_iterator, target, options=(), channel_credentials=None, call_credentials=None, insecure=False, compression=None, wait_for_ready=None, timeout=None,"
+      },
+      "harness/src/gen/middleware/runtime/v1/runtime_pb2_grpc.py::RuntimeServiceServicer.Channel": {
+        "line": 31,
+        "endLine": 36,
+        "signature": "def Channel(self, request_iterator, context):"
+      },
+      "harness/src/gen/middleware/runtime/v1/runtime_pb2_grpc.py::RuntimeServiceStub.__init__": {
+        "line": 13,
+        "endLine": 23,
+        "signature": "def __init__(self, channel):"
+      },
+      "harness/src/middleware_harness/llm/http.py::UrllibTransport.worker": {
+        "line": 75,
+        "endLine": 101,
+        "signature": "def worker() -> None:"
+      },
+      "harness/src/middleware_harness/logging.py::configure_logging": {
+        "line": 53,
+        "endLine": 68,
+        "signature": "def configure_logging(level: str, log_format: str, stream: Any = None) -> None:"
+      },
+      "harness/src/middleware_harness/logging.py::get_logger": {
+        "line": 71,
+        "endLine": 73,
+        "signature": "def get_logger(name: str = \"middleware_harness\") -> logging.Logger:"
+      },
+      "harness/src/middleware_harness/runtime/manager.py::NoopRunner.__call__": {
+        "line": 31,
+        "endLine": 32,
+        "signature": "async def __call__(self, ctx: RunContext) -> str:"
+      },
+      "harness/src/middleware_harness/runtime/manager.py::RunManager.__init__": {
+        "line": 49,
+        "endLine": 61,
+        "signature": "def __init__( self, sender: EventSender, config: ManagerConfig | None = None, runner: Runner | None = None, logger: logging.Logger | None = None, ) -> None:"
+      },
+      "harness/src/middleware_harness/runtime/manager.py::RunManager._execute": {
+        "line": 202,
+        "endLine": 232,
+        "signature": "async def _execute(self, ctx: RunContext) -> None:"
+      },
+      "harness/src/middleware_harness/runtime/manager.py::RunManager._handle_cancel": {
+        "line": 234,
+        "endLine": 240,
+        "signature": "async def _handle_cancel(self, envelope: runtime_pb2.Envelope) -> None:"
+      },
+      "harness/src/middleware_harness/runtime/manager.py::RunManager._handle_reconcile": {
+        "line": 242,
+        "endLine": 249,
+        "signature": "async def _handle_reconcile(self, envelope: runtime_pb2.Envelope) -> None:"
+      },
+      "harness/src/middleware_harness/runtime/manager.py::RunManager._handle_task_assign": {
+        "line": 73,
+        "endLine": 146,
+        "signature": "async def _handle_task_assign(self, envelope: runtime_pb2.Envelope) -> None:"
+      },
+      "harness/src/middleware_harness/runtime/manager.py::RunManager._resume_state": {
+        "line": 148,
+        "endLine": 167,
+        "signature": "def _resume_state(self, assign: runtime_pb2.TaskAssign) -> tuple[CheckpointState | None, str]:"
+      },
+      "harness/src/middleware_harness/runtime/manager.py::RunManager._send_ack": {
+        "line": 192,
+        "endLine": 200,
+        "signature": "async def _send_ack( self, request: runtime_pb2.Envelope, *, accepted: bool, reason: str = \"\", ) -> None:"
+      },
+      "harness/src/middleware_harness/runtime/manager.py::RunManager._validation_error": {
+        "line": 169,
+        "endLine": 190,
+        "signature": "def _validation_error( self, envelope: runtime_pb2.Envelope, assign: runtime_pb2.TaskAssign, ) -> str:"
+      },
+      "harness/src/middleware_harness/runtime/manager.py::RunManager.close": {
+        "line": 262,
+        "endLine": 273,
+        "signature": "async def close(self) -> None:"
+      },
+      "harness/src/middleware_harness/runtime/manager.py::RunManager.handle": {
+        "line": 63,
+        "endLine": 71,
+        "signature": "async def handle(self, envelope: runtime_pb2.Envelope) -> None:"
+      },
+      "harness/src/middleware_harness/runtime/manager.py::RunManager.running_count": {
+        "line": 258,
+        "endLine": 260,
+        "signature": "def running_count(self) -> int:"
+      },
+      "harness/src/middleware_harness/runtime/manager.py::RunManager.running_runs": {
+        "line": 251,
+        "endLine": 256,
+        "signature": "def running_runs(self) -> list[tuple[str, int]]:"
+      },
+      "harness/src/middleware_harness/runtime/manager.py::Runner.__call__": {
+        "line": 24,
+        "endLine": 25,
+        "signature": "async def __call__(self, ctx: RunContext) -> str:"
+      },
+      "harness/tests/test_channel.py::FakeRuntimeService.Channel": {
+        "line": 30,
+        "endLine": 50,
+        "signature": "async def Channel( # type: ignore[override] self, request_iterator: AsyncIterator[runtime_pb2.Envelope], context: grpc.aio.ServicerContext, ) -> AsyncIterator[runtime_pb2.Envelope]:"
+      },
+      "harness/tests/test_channel.py::FakeRuntimeService.__init__": {
+        "line": 25,
+        "endLine": 28,
+        "signature": "def __init__(self) -> None:"
+      },
+      "harness/tests/test_channel.py::FakeRuntimeService.consume": {
+        "line": 37,
+        "endLine": 39,
+        "signature": "async def consume() -> None:"
+      },
+      "harness/tests/test_logging.py::LoggingTest.test_configure_logging_json": {
+        "line": 32,
+        "endLine": 38,
+        "signature": "def test_configure_logging_json(self) -> None:"
+      },
+      "internal/control/control_test.go::TestControlRecordsMetrics": {
+        "line": 1090,
+        "endLine": 1135,
+        "signature": "func TestControlRecordsMetrics(t *testing.T) {"
+      },
+      "internal/gateway/invoker.go::WithMetrics": {
+        "line": 100,
+        "endLine": 104,
+        "signature": "func WithMetrics(metrics *observe.Registry) InvokerOption {"
+      },
+      "internal/gateway/invoker_test.go::TestInvokerRecordsMetrics": {
+        "line": 173,
+        "endLine": 197,
+        "signature": "func TestInvokerRecordsMetrics(t *testing.T) {"
+      },
+      "internal/observe/log.go::NewLogger": {
+        "line": 40,
+        "endLine": 42,
+        "signature": "func NewLogger(level, format string) (*slog.Logger, error) {"
+      },
+      "internal/observe/log.go::NewLoggerWithWriter": {
+        "line": 45,
+        "endLine": 66,
+        "signature": "func NewLoggerWithWriter(level, format string, w io.Writer) (*slog.Logger, error) {"
+      },
+      "internal/observe/log.go::parseLevel": {
+        "line": 68,
+        "endLine": 81,
+        "signature": "func parseLevel(level string) (slog.Level, error) {"
+      },
+      "internal/observe/log_test.go::TestNewLoggerJSONFields": {
+        "line": 14,
+        "endLine": 28,
+        "signature": "func TestNewLoggerJSONFields(t *testing.T) {"
+      },
+      "internal/observe/log_test.go::TestNewLoggerRejectsBadConfig": {
+        "line": 30,
+        "endLine": 40,
+        "signature": "func TestNewLoggerRejectsBadConfig(t *testing.T) {"
+      },
+      "internal/observe/metrics.go::(*Registry).Add": {
+        "line": 62,
+        "endLine": 66,
+        "signature": "func (r *Registry) Add(name, help string, labels map[string]string, delta float64) {"
+      },
+      "internal/observe/metrics.go::(*Registry).AddGauge": {
+        "line": 83,
+        "endLine": 87,
+        "signature": "func (r *Registry) AddGauge(name, help string, labels map[string]string, delta float64) {"
+      },
+      "internal/observe/metrics.go::(*Registry).Inc": {
+        "line": 57,
+        "endLine": 59,
+        "signature": "func (r *Registry) Inc(name, help string, labels map[string]string) {"
+      },
+      "internal/observe/metrics.go::(*Registry).Observe": {
+        "line": 90,
+        "endLine": 100,
+        "signature": "func (r *Registry) Observe(name, help string, labels map[string]string, value float64) {"
+      },
+      "internal/observe/metrics.go::(*Registry).Set": {
+        "line": 76,
+        "endLine": 80,
+        "signature": "func (r *Registry) Set(name, help string, labels map[string]string, value float64) {"
+      },
+      "internal/observe/metrics.go::(*Registry).SetCounter": {
+        "line": 69,
+        "endLine": 73,
+        "signature": "func (r *Registry) SetCounter(name, help string, labels map[string]string, value float64) {"
+      },
+      "internal/observe/metrics.go::(*Registry).WritePrometheus": {
+        "line": 135,
+        "endLine": 197,
+        "signature": "func (r *Registry) WritePrometheus(w io.Writer) error {"
+      }
+    }
+  }
+}

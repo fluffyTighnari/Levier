@@ -1,0 +1,15 @@
+{
+  "version": 1,
+  "track": {
+    "id": "20261114-230926-整体了解-021f",
+    "name": "整体了解",
+    "intent": "先建立整体位置感，再决定深入哪里。",
+    "depth": "粗看",
+    "planId": "",
+    "planThreadId": "20261114-230926-整体了解-计划设计-937e",
+    "pinnedSliceIds": [],
+    "stage": "architecture",
+    "createdAt": "2026-11-14T15:09:26+00:00",
+    "updatedAt": "2026-11-15T01:40:27+00:00"
+  }
+}
