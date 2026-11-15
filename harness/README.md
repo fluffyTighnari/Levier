@@ -27,6 +27,9 @@ or with the standard library:
 ```sh
 python3 -m venv .venv
 .venv/bin/python -m ensurepip
+# middleware-agent-core is a local workspace package; pip does not read
+# [tool.uv.sources], so install it first when not using uv.
+.venv/bin/python -m pip install -e ../agent_core
 .venv/bin/python -m pip install -e .
 ```
 
