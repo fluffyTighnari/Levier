@@ -11,7 +11,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/fluffyTighnari/middleware/internal/errs"
+	"github.com/fluffyTighnari/levier/internal/errs"
 	"io"
 	"net/http"
 	"net/url"
@@ -21,7 +21,7 @@ import (
 
 	"golang.org/x/net/http/httpguts"
 
-	"github.com/fluffyTighnari/middleware/internal/gateway"
+	"github.com/fluffyTighnari/levier/internal/gateway"
 )
 
 const (

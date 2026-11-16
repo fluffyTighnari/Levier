@@ -9,7 +9,7 @@ import (
 	"log/slog"
 	"sync"
 
-	"github.com/fluffyTighnari/middleware/internal/errs"
+	"github.com/fluffyTighnari/levier/internal/errs"
 )
 
 // EventSink is the transport-neutral App connection writer.

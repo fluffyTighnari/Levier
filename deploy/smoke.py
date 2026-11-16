@@ -19,8 +19,8 @@ import time
 import urllib.error
 import urllib.request
 
-MW_URL = os.environ.get("MW_URL", "http://middleware:8080").rstrip("/")
-MCP_SOCKET = os.environ.get("MCP_SOCKET", "/run/middleware/mcp.sock")
+MW_URL = (os.environ.get("LEVIER_URL") or os.environ.get("MW_URL") or "http://levier:8080").rstrip("/")
+MCP_SOCKET = os.environ.get("MCP_SOCKET", "/run/levier/mcp.sock")
 CREDENTIALS = os.environ.get("CREDENTIALS", "/data/credentials.json")
 DAEMON_ID = os.environ.get("DAEMON_ID", "daemon-local-1")
 
@@ -103,7 +103,7 @@ def main() -> int:
     app_key = credentials["api_key"]
     wait_for(
         "agent websocket",
-        lambda: (f'mw_ws_connections{{app="{app_id}"}} 1' in metrics(), ""),
+        lambda: (f'levier_ws_connections{{app="{app_id}"}} 1' in metrics(), ""),
     )
 
     wait_for(

@@ -1,19 +1,21 @@
-<!-- Middleware-runtime_Scheduler — usage-oriented landing page. -->
+<!-- Levier — usage-oriented landing page. -->
 
-# Middleware-runtime_Scheduler
+# Levier
 
-Middleware 是一个 **Agent Run 控制面**：你把业务能力声明成工具，把一次智能任务作为 Run 提交进来；调度、模型循环、工具路由、超时、取消和事件持久化都由 Middleware 负责。
+Levier 是一个 **Agent Run 控制面**：你把业务能力声明成工具，把一次智能任务作为 Run 提交进来；调度、模型循环、工具路由、超时、取消和事件持久化都由 Levier 负责。
 
 ```text
 你的 App      业务函数 + 工具声明 + 一条 WebSocket
-Middleware    注册、调度、租约、工具路由、事件持久化
+Levier    注册、调度、租约、工具路由、事件持久化
 Harness       单次 Run 的 Agent 循环（当前 Python）
 MCP Runtime   独立的 MCP 连接/凭据进程（可选）
 PostgreSQL    App、工具、Run、事件、任务、调用记录
 ```
 
+> **仓库导航：`docs/MAP.md`；文档索引：`docs/README.md`。**
+>
 > **当前状态：单机 MVP。**
-> 只支持 `runtime=normal`，单 Middleware + 单 PostgreSQL + 单 Harness + 单 App。
+> 只支持 `runtime=normal`，单 Levier + 单 PostgreSQL + 单 Harness + 单 App。
 > 调度语义是 **at-least-once**：Harness 崩溃后 Run 会从头重跑，本地工具可能重复执行。
 > `sandbox`、`longterm`、多实例 / HA、工具 exactly-once 均不在当前范围内。
 
@@ -36,7 +38,7 @@ PostgreSQL    App、工具、Run、事件、任务、调用记录
 
 ## 1. 先判断要不要接入
 
-Middleware 不是模型 SDK 的替代品，它解决的是 **“谁来跑循环、谁来调度、工具怎么回到业务代码、Run 怎么被观测和收敛”**。
+Levier 不是模型 SDK 的替代品，它解决的是 **“谁来跑循环、谁来调度、工具怎么回到业务代码、Run 怎么被观测和收敛”**。
 
 | 你的现状 | 建议 |
 |---|---|
@@ -48,19 +50,19 @@ Middleware 不是模型 SDK 的替代品，它解决的是 **“谁来跑循环�
 
 接入后，**你仍然负责**：业务函数、业务数据、租户隔离、用户鉴权、前端交互、副作用补偿。
 
-**Middleware 负责**：App/工具注册、Run 排队与调度、模型的工具调用路由、事件落库与补拉、租约与故障恢复。
+**Levier 负责**：App/工具注册、Run 排队与调度、模型的工具调用路由、事件落库与补拉、租约与故障恢复。
 
 ---
 
 ## 2. 架构与一次 Run
 
 ```text
-App 后端 ── 1. 提交 Run（HTTP）──▶ Middleware ── 2. 调度（gRPC）──▶ Harness
+App 后端 ── 1. 提交 Run（HTTP）──▶ Levier ── 2. 调度（gRPC）──▶ Harness
    ▲                                    │                           │
    │                                    │                           ├─ 3. 调模型
    │◀── 5. local_tool_call（WS）─────────┘                           └─ 4. 返回 tool_call
    ├─ 6. 执行业务函数
-   └── 7. local_tool_result（WS）──▶ Middleware ── 8. 回填──────────▶ Harness
+   └── 7. local_tool_result（WS）──▶ Levier ── 8. 回填──────────▶ Harness
                                                                      │
                                                              9. Run 终态
 ```
@@ -70,21 +72,21 @@ App 后端 ── 1. 提交 Run（HTTP）──▶ Middleware ── 2. 调度�
 | 组件 | 负责 | 不负责 |
 |---|---|---|
 | App | 业务函数、工具声明、一条 WebSocket、提交 Run | 不跑模型循环，不决定工具调用顺序 |
-| Middleware | 注册表、调度、租约、工具路由、幂等、事件持久化 | 不执行 App 业务代码，不代理 MCP 调用 |
+| Levier | 注册表、调度、租约、工具路由、幂等、事件持久化 | 不执行 App 业务代码，不代理 MCP 调用 |
 | Harness | 单次 Run 的 ReAct 循环、模型适配、工具桥 | 不接触 App 明文密钥，不持久化业务数据 |
-| MCP Runtime | MCP 连接、会话、stdio 子进程、凭据解析 | 不直连 Middleware，不写 Run 事件 |
+| MCP Runtime | MCP 连接、会话、stdio 子进程、凭据解析 | 不直连 Levier，不写 Run 事件 |
 | PostgreSQL | App、工具、Run、事件、任务、调用记录 | 不承担业务数据存储 |
 
 ### 2.2 一次带工具调用的 Run
 
 1. App 用 App key 提交 Run。
-2. Middleware 在一个事务里创建 Run 和调度/超时任务，返回 `202` 和 `run_id`。
+2. Levier 在一个事务里创建 Run 和调度/超时任务，返回 `202` 和 `run_id`。
 3. 调度器把 Run 分配给一台声明了对应策略的 Harness。
 4. Harness 调用模型。
-5. 模型返回工具调用，Harness 把请求交回 Middleware。
-6. Middleware 按 `app_id` 把调用路由到该 App 的 WebSocket。
-7. App 执行原有业务函数，把结果回给 Middleware。
-8. Middleware 落库并回填给 Harness，模型进入下一轮。
+5. 模型返回工具调用，Harness 把请求交回 Levier。
+6. Levier 按 `app_id` 把调用路由到该 App 的 WebSocket。
+7. App 执行原有业务函数，把结果回给 Levier。
+8. Levier 落库并回填给 Harness，模型进入下一轮。
 9. Run 到达终态，事件可查询、可回放，也可通过 WebSocket 实时推送。
 
 ### 2.3 三种工具路径
@@ -92,7 +94,7 @@ App 后端 ── 1. 提交 Run（HTTP）──▶ Middleware ── 2. 调度�
 | 路径 | 谁执行工具 | 典型场景 | 是否经过 Gateway | 是否记录调用 |
 |---|---|---|---|---|
 | `local` | App，经 WebSocket | 业务系统内部函数、数据库读写、租户内操作 | 是 | `tool_invocations` |
-| `global` | Middleware 的 http/webhook executor | 通用 HTTP 接口、跨 App 的公共能力 | 是 | `tool_invocations` |
+| `global` | Levier 的 http/webhook executor | 通用 HTTP 接口、跨 App 的公共能力 | 是 | `tool_invocations` |
 | `MCP` | 独立 `mcp_runtime` 连接的 MCP Server | GitHub、文件系统、第三方 MCP 工具 | 否 | 只有 Harness 事件 |
 
 大多数业务接入只需要 `local`。已有 MCP Server 时优先走 MCP，不必为它改 App 代码。
@@ -108,8 +110,8 @@ App 后端 ── 1. 提交 Run（HTTP）──▶ Middleware ── 2. 调度�
 ```sh
 cp -n .env.example .env
 # 至少检查 .env：
-#   MIDDLEWARE_DATABASE_URL 由 compose 覆盖，本地可保持默认
-#   MW_ADMIN_TOKEN          管理凭据，仅用于创建/轮换 App
+#   LEVIER_DATABASE_URL 由 compose 覆盖，本地可保持默认
+#   LEVIER_ADMIN_TOKEN          管理凭据，仅用于创建/轮换 App
 #   DEEPSEEK_API_KEY        只在跑真实模型时需要
 
 docker compose up --build -d
@@ -124,7 +126,7 @@ docker compose ps
 ```text
 postgres 就绪
 → middleware 迁移数据库并启动
-→ mcp-runtime 创建 /run/middleware/mcp.sock
+→ mcp-runtime 创建 /run/levier/mcp.sock
 → harness 连接 middleware，注册为 daemon-local-1
 → agent 等待 /readyz，bootstrap App，注册工具，建立 WebSocket
 ```
@@ -141,7 +143,7 @@ docker compose --profile smoke run --rm smoke
 docker-smoke: PASS
 ```
 
-它覆盖了：Middleware 健康检查、Harness 注册、App bootstrap、App WebSocket、MCP runtime socket、提交一个 echo Run 并到达 `completed`。
+它覆盖了：Levier 健康检查、Harness 注册、App bootstrap、App WebSocket、MCP runtime socket、提交一个 echo Run 并到达 `completed`。
 
 跑真实模型 + 本地工具：
 
@@ -151,7 +153,7 @@ docker compose up --build -d
 
 docker compose exec agent python3 /app/examples/counter_agent/submit_run.py \
   --credentials /data/credentials.json \
-  --mw-url http://middleware:8080 \
+  --mw-url http://levier:8080 \
   --strategy react \
   --provider deepseek \
   --model deepseek-flash \
@@ -173,11 +175,11 @@ Windows 建议使用 WSL / Git Bash 执行 Makefile，或直接用 Docker Compos
 
 ```sh
 cp -n .env.example .env
-# 编辑 .env：数据库 DSN、MW_ADMIN_TOKEN
+# 编辑 .env：数据库 DSN、LEVIER_ADMIN_TOKEN
 # 跑 react 模式再加 DEEPSEEK_API_KEY / DEEPSEEK_BASE_URL / DEEPSEEK_MODEL
 
 make build
-cd harness && uv sync --locked && cd ..
+(cd execution/harness && uv sync --locked)
 ```
 
 启动 PostgreSQL（示例为本机 Homebrew，端口 5433；请让 `.env` 的 DSN 指向实际端口）：
@@ -227,19 +229,19 @@ set -a; . ./.env; set +a
 
 ```sh
 # 1. 迁移数据库
-go run ./cmd/migrate -config config.example.yaml
+go run ./cmd/migrate -config levier.example.yaml
 
-# 2. 启动 Middleware（HTTP :8080，gRPC :9090）
-bin/middleware -config config.example.yaml
+# 2. 启动 Levier（HTTP :8080，gRPC :9090）
+bin/levier -config levier.example.yaml
 
 # 3. 启动 Harness
-(cd harness && PYTHONPATH=src:src/gen .venv/bin/python -m middleware_harness \
-  --config config.example.yaml)
+(cd execution/harness && PYTHONPATH=src:src/gen .venv/bin/python -m levier_harness \
+  --config levier.example.yaml)
 
 # 4. 可选：启动 MCP runtime
-(cd mcp_runtime && uv sync --locked && \
-  PYTHONPATH=src .venv/bin/python -m mcp_runtime \
-  --socket /tmp/middleware-mcp.sock)
+(cd execution/mcp_runtime && uv sync --locked && \
+  PYTHONPATH=src .venv/bin/python -m levier_mcp_runtime \
+  --socket /tmp/levier-mcp.sock)
 
 # 5. 启动参考 App（bootstrap + 注册工具 + 连 WS）
 python3 examples/counter_agent/bootstrap_app.py \
@@ -261,14 +263,14 @@ python3 examples/counter_agent/submit_run.py \
 ```sh
 curl -s http://127.0.0.1:8080/healthz      # {"status":"ok"}
 curl -s http://127.0.0.1:8080/readyz       # {"status":"ready","database":"up"}
-curl -s http://127.0.0.1:8080/metrics | grep -E 'mw_daemon_capacity|mw_ws_connections'
+curl -s http://127.0.0.1:8080/metrics | grep -E 'levier_daemon_capacity|levier_ws_connections'
 ```
 
 预期能在指标里看到：
 
 ```text
-mw_daemon_capacity{daemon="daemon-local-1",...}
-mw_ws_connections{app="app_..."} 1
+levier_daemon_capacity{daemon="daemon-local-1",...}
+levier_ws_connections{app="app_..."} 1
 ```
 
 前者说明 Harness 已注册，后者说明 App 的长连接在线。
@@ -281,14 +283,14 @@ mw_ws_connections{app="app_..."} 1
 
 | 凭据 | 谁持有 | 用途 | 生命周期 |
 |---|---|---|---|
-| `MW_ADMIN_TOKEN` | 运维 / 部署系统 | 创建 App、轮换 App key、注册 MCP | 只用于 bootstrap，不进运行时 |
+| `LEVIER_ADMIN_TOKEN` | 运维 / 部署系统 | 创建 App、轮换 App key、注册 MCP | 只用于 bootstrap，不进运行时 |
 | `APP_ID` + `APP_KEY` | 你的 App 服务 | 验证身份、注册工具、提交 Run、换 ws_token | 长期，`APP_KEY` 只在创建/轮换时返回一次 |
 | `ws_token` | 你的 App 进程内存 | 建立 App WebSocket | 短期，默认 10 分钟 |
 
 接入前你需要确定：
 
 ```text
-MW_URL        Middleware 的 HTTP 地址（非秘密）
+LEVIER_URL        Levier 的 HTTP 地址（非秘密）
 APP_NAME      App 自己选定的全局唯一名称
 ```
 
@@ -297,7 +299,7 @@ APP_NAME      App 自己选定的全局唯一名称
 ```text
 APP_ID
 APP_KEY
-MW_URL
+LEVIER_URL
 ```
 
 ### 4.2 接入的最小能力
@@ -318,7 +320,7 @@ MW_URL
 
 - **一个产品一个 App**：默认选择，工具名在 App 内唯一。
 - **一个租户一个 App**：租户之间工具、凭据、事件天然隔离，推荐给多租户 SaaS。
-- **不要用同一个 `app_id` 起多个 App 实例**：Middleware 会把工具调用广播到该 App 的所有连接，只有一个实例能正确回包。需要多实例时，先设计连接归属（例如每个实例独立 App，或只让 leader 持有连接）。
+- **不要用同一个 `app_id` 起多个 App 实例**：Levier 会把工具调用广播到该 App 的所有连接，只有一个实例能正确回包。需要多实例时，先设计连接归属（例如每个实例独立 App，或只让 leader 持有连接）。
 - 工具数量建议按业务域拆分，单 App 保持在模型容易选择的规模；工具太多时优先拆成多个 App 或按场景分组。
 
 ---
@@ -340,7 +342,7 @@ MW_URL
              └─ 循环到模型停止
 
 改造后
-用户请求 → 你的 App 后端 ──提交 Run──▶ Middleware ──▶ Harness ──▶ 模型
+用户请求 → 你的 App 后端 ──提交 Run──▶ Levier ──▶ Harness ──▶ 模型
              ▲                                         │
              │◀──── local_tool_call（WebSocket）────────┘
              └─ 执行原有业务函数 ──▶ local_tool_result
@@ -354,11 +356,11 @@ MW_URL
 | 模型 SDK 调用、API key 管理 | **移除**，模型调用和 key 都在 Harness / 部署环境 |
 | ReAct / function-calling 循环 | **移除**，由 Harness 的 `react` 策略承担 |
 | prompt 拼装、system message | **保留**，放到提交 Run 的 `input` 里 |
-| 工具 schema / function 定义 | **保留**，改成 Middleware 的工具注册格式 |
+| 工具 schema / function 定义 | **保留**，改成 Levier 的工具注册格式 |
 | 工具执行的 switch / router | **保留**，改成从 WebSocket 消息分发 |
 | 对话历史 | 当前 MVP 由 `input` 显式传入；`longterm` 续跑未闭环 |
 | 前端流式输出 | 改为订阅 WebSocket 事件，或轮询 Run 状态 |
-| 用户鉴权、租户校验 | **保留在 App 入口**；Middleware 只认 App key |
+| 用户鉴权、租户校验 | **保留在 App 入口**；Levier 只认 App key |
 
 ### 5.2 改造步骤
 
@@ -430,8 +432,8 @@ timeout_ms     该工具的截止时间，必须 ≤ 240000
 **只做一次**（部署初始化或运维脚本）：
 
 ```http
-POST {MW_URL}/admin/apps
-Authorization: Bearer {MW_ADMIN_TOKEN}
+POST {LEVIER_URL}/admin/apps
+Authorization: Bearer {LEVIER_ADMIN_TOKEN}
 Content-Type: application/json
 
 {"name": "{APP_NAME}", "multiagent": false}
@@ -441,8 +443,8 @@ Content-Type: application/json
 - `200`：App 已存在，`api_key` 为空；需要轮换时调用
 
 ```http
-POST {MW_URL}/admin/apps/{APP_ID}/rotate-key
-Authorization: Bearer {MW_ADMIN_TOKEN}
+POST {LEVIER_URL}/admin/apps/{APP_ID}/rotate-key
+Authorization: Bearer {LEVIER_ADMIN_TOKEN}
 ```
 
 把 `app_id` / `app_name` / `api_key` 写进 0600 凭据文件。**Admin token 不要进入 App 的长期运行环境。**
@@ -450,7 +452,7 @@ Authorization: Bearer {MW_ADMIN_TOKEN}
 **每次启动**（或每次工具变更发布时）注册工具：
 
 ```http
-POST {MW_URL}/api/v1/apps
+POST {LEVIER_URL}/api/v1/apps
 Authorization: Bearer {APP_KEY}
 Content-Type: application/json
 
@@ -500,14 +502,14 @@ schema 为空会补成 {}
 换 token：
 
 ```http
-POST {MW_URL}/api/v1/ws-token
+POST {LEVIER_URL}/api/v1/ws-token
 Authorization: Bearer {APP_KEY}
 ```
 
 连接：
 
 ```text
-GET {MW_URL}{ws_url}?app_id={APP_ID}&token={ws_token}
+GET {LEVIER_URL}{ws_url}?app_id={APP_ID}&token={ws_token}
 Upgrade: websocket
 ```
 
@@ -525,7 +527,7 @@ Upgrade: websocket
 提交方应该是 **App 后端**，不要把 App key 放进浏览器或移动端。
 
 ```http
-POST {MW_URL}/api/v1/runs
+POST {LEVIER_URL}/api/v1/runs
 Authorization: Bearer {APP_KEY}
 Content-Type: application/json
 Idempotency-Key: {可选但建议}
@@ -568,7 +570,7 @@ Idempotency-Key: {可选但建议}
 | `timeouts.tool_ms` | 单次工具调用上限，默认 60 秒，最大 240 秒 |
 | `Idempotency-Key` | 同一次用户操作重试时复用；内容不同会 `409` |
 
-工具清单**不要**在 Run 里传，Middleware 会按 `app_id` 从注册表组装。
+工具清单**不要**在 Run 里传，Levier 会按 `app_id` 从注册表组装。
 
 调用方只需要拿到 `run_id`；`ws_token` 可以交给同一个后端进程用于订阅事件，也可以不下发。
 
@@ -579,8 +581,8 @@ Idempotency-Key: {可选但建议}
 **轮询**
 
 ```http
-GET {MW_URL}/api/v1/runs/{run_id}
-GET {MW_URL}/api/v1/runs/{run_id}/events?after_attempt=&after_seq=&limit=
+GET {LEVIER_URL}/api/v1/runs/{run_id}
+GET {LEVIER_URL}/api/v1/runs/{run_id}/events?after_attempt=&after_seq=&limit=
 ```
 
 **WebSocket 订阅**
@@ -602,7 +604,7 @@ completed / failed / cancelled / timeout
 需要取消时：
 
 ```http
-POST {MW_URL}/api/v1/runs/{run_id}/cancel
+POST {LEVIER_URL}/api/v1/runs/{run_id}/cancel
 ```
 
 `failed` / `timeout` / `cancelled` 都要有明确的业务兜底，不要把“没有收到 completed”当成成功。
@@ -632,7 +634,7 @@ POST {MW_URL}/api/v1/runs/{run_id}/cancel
 
 ```text
 同一次调用被重复投递 / App 重复回包
-  → Middleware 按 invocation_id 去重
+  → Levier 按 invocation_id 去重
 
 Harness 崩溃后 Run 从头重跑
   → 新 attempt、新的工具调用、新的 invocation_id
@@ -666,12 +668,12 @@ B. 接受重复，并提供人工或自动补偿
 | 现有形态 | 推荐做法 |
 |---|---|
 | 传统 REST 服务 | 把 controller 里的业务调用抽到 service 层；工具体直接调 service，不要为了复用再绕一次公网 HTTP |
-| 已有 Chat / WebSocket 服务 | 新增一条到 Middleware 的 WebSocket，不要复用面向用户的连接；消息类型做命名空间隔离 |
+| 已有 Chat / WebSocket 服务 | 新增一条到 Levier 的 WebSocket，不要复用面向用户的连接；消息类型做命名空间隔离 |
 | CLI / 批处理 | 把“一次执行”封装成工具；服务进程必须常驻以维持 WebSocket，不能执行完就退出 |
 | 多租户 SaaS | 每租户一个 App，或至少每租户独立凭据；不要用一个 App 承载所有租户 |
 | 长耗时任务 | 工具立即返回 `job_id`，另提供查询工具；不要让调用阻塞到超时 |
 | 有状态单例 | 单实例部署；多实例会导致状态不一致，且调用会广播到所有连接 |
-| 已有 MCP Server | 不用改 App；在 Middleware 注册 MCP，App 通过 `mcp_refs` 引用 |
+| 已有 MCP Server | 不用改 App；在 Levier 注册 MCP，App 通过 `mcp_refs` 引用 |
 | 已有大量函数工具 | 先按业务域拆 App，再控制单 App 工具数量；不要一次把几百个函数都交给模型 |
 
 ### 5.7 明确不要做的事
@@ -695,7 +697,7 @@ B. 接受重复，并提供人工或自动补偿
 [ ] GET /healthz、/readyz 正常
 [ ] 用 App key 验证身份返回 200 且 status=active
 [ ] 工具注册成功，Run 中模型能调用到
-[ ] mw_ws_connections{app="..."} 为 1
+[ ] levier_ws_connections{app="..."} 为 1
 [ ] echo Run 能 completed
 [ ] react Run 的 TOOL_CALL_BEGIN 与 TOOL_CALL_END 成对
 [ ] 工具结果能被模型引用，最终回答正确
@@ -863,17 +865,19 @@ Run 终态会以 `run_completed` 推送，`status` 为 `completed / failed / can
 
 | 变量 | 用途 |
 |---|---|
-| `MIDDLEWARE_DATABASE_URL` | Middleware 的 PostgreSQL DSN |
-| `MIDDLEWARE_TEST_DATABASE_URL` | 测试库 DSN |
-| `MW_ADMIN_TOKEN` | Admin token，必须与配置里的 `http.admin_token` 一致 |
-| `MW_APP_NAME` | Compose 中 agent 的 App 名称 |
+| `LEVIER_DATABASE_URL` | Levier 的 PostgreSQL DSN |
+| `LEVIER_TEST_DATABASE_URL` | 测试库 DSN |
+| `LEVIER_ADMIN_TOKEN` | Admin token，必须与配置里的 `http.admin_token` 一致 |
+| `LEVIER_APP_NAME` | Compose 中 agent 的 App 名称 |
 | `DEEPSEEK_API_KEY` | Harness 调用 DeepSeek 的 key |
 | `DEEPSEEK_BASE_URL` | 模型网关地址 |
 | `DEEPSEEK_MODEL` | 默认模型名 |
 | `POSTGRES_PASSWORD` | Compose 中 PostgreSQL 密码 |
 | `MCP_E2E_TOKEN` | MCP 回归用的 secret |
 
-### 7.2 Middleware 配置（`config.example.yaml`）
+> 旧名 `MIDDLEWARE_*` / `MW_*` 在一个版本内仍兼容；新部署请使用 `LEVIER_*`。
+
+### 7.2 Levier 配置（`levier.example.yaml`）
 
 ```yaml
 http:
@@ -904,7 +908,7 @@ log:
 
 生产部署前必须替换 `change-me` 类占位符，并为每个 daemon 分配独立 token。
 
-### 7.3 Harness 配置（`harness/config.example.yaml`）
+### 7.3 Harness 配置（`execution/harness/levier.example.yaml`）
 
 ```yaml
 middleware:
@@ -912,7 +916,7 @@ middleware:
   tls: false
 
 mcp_runtime:
-  socket: "/tmp/middleware-mcp.sock"
+  socket: "/tmp/levier-mcp.sock"
 
 daemon:
   id: "daemon-local-1"
@@ -928,7 +932,7 @@ logging:
   format: "json"
 ```
 
-`daemon_id` 与 token 必须先在 Middleware 配置里预分配；Harness 不能自助注册。
+`daemon_id` 与 token 必须先在 Levier 配置里预分配；Harness 不能自助注册。
 不声明 `supported_strategies` 的 Harness 永远不会拿到对应策略的任务。
 
 ### 7.4 Compose 默认值
@@ -936,8 +940,8 @@ logging:
 | 变量 | 默认值 |
 |---|---|
 | `POSTGRES_PASSWORD` | `change-me` |
-| `MW_ADMIN_TOKEN` | `admin-change-me` |
-| `MW_APP_NAME` | `counter-agent` |
+| `LEVIER_ADMIN_TOKEN` | `admin-change-me` |
+| `LEVIER_APP_NAME` | `counter-agent` |
 | `MCP_E2E_TOKEN` | `mcp-e2e-secret` |
 | daemon token | `change-me`（本地 demo 固定值） |
 
@@ -951,8 +955,8 @@ logging:
 
 ```text
 postgres      PostgreSQL 16
-middleware    Go 控制面（8080 HTTP / 9090 gRPC）
-mcp-runtime   MCP 连接进程（共享 /run/middleware/mcp.sock）
+levier        Go 控制面（8080 HTTP / 9090 gRPC）
+mcp-runtime   MCP 连接进程（共享 /run/levier/mcp.sock）
 harness       Agent 循环（daemon-local-1）
 agent         counter_agent 参考 App
 smoke         一次性 smoke 容器（profile）
@@ -961,10 +965,10 @@ smoke         一次性 smoke 容器（profile）
 `deploy/` 下还有各镜像的 Dockerfile；也可以单独构建：
 
 ```sh
-docker build -f deploy/middleware.Dockerfile -t middleware:dev .
-docker build -f deploy/harness.Dockerfile -t middleware-harness:dev .
-docker build -f deploy/mcp-runtime.Dockerfile -t middleware-mcp-runtime:dev .
-docker build -f deploy/agent.Dockerfile -t middleware-agent:dev .
+docker build -f deploy/levier.Dockerfile -t levier:dev .
+docker build -f deploy/harness.Dockerfile -t levier-harness:dev .
+docker build -f deploy/mcp-runtime.Dockerfile -t levier-mcp-runtime:dev .
+docker build -f deploy/agent.Dockerfile -t levier-agent:dev .
 ```
 
 ### 8.2 数据与密钥
@@ -995,8 +999,8 @@ MCP secret 用 ${secret:name} 占位，由 runtime 解析
 1. 运维用 Admin token 注册 MCP Server：
 
 ```http
-POST {MW_URL}/admin/mcp
-Authorization: Bearer {MW_ADMIN_TOKEN}
+POST {LEVIER_URL}/admin/mcp
+Authorization: Bearer {LEVIER_ADMIN_TOKEN}
 
 {
   "name": "github",
@@ -1036,13 +1040,13 @@ curl -s http://127.0.0.1:8080/metrics
 重点指标：
 
 ```text
-mw_runs_total{status,runtime}
-mw_events_total{type}
-mw_events_dropped_total{reason}
-mw_tool_invocations_total{tool,scope,status}
-mw_daemon_capacity{daemon,kind,runtime}
-mw_ws_connections{app}
-mw_workflow_*（claim / lease / reaper）
+levier_runs_total{status,runtime}
+levier_events_total{type}
+levier_events_dropped_total{reason}
+levier_tool_invocations_total{tool,scope,status}
+levier_daemon_capacity{daemon,kind,runtime}
+levier_ws_connections{app}
+levier_workflow_*（claim / lease / reaper）
 ```
 
 ### 9.2 常见现象
@@ -1050,13 +1054,13 @@ mw_workflow_*（claim / lease / reaper）
 | 现象 | 原因 | 处理 |
 |---|---|---|
 | `/readyz` 503 | 数据库不可用 | 检查 PostgreSQL、DSN、迁移 |
-| Harness 一直不接任务 | daemon 未注册 / token 不匹配 / 策略未声明 | 看 middleware 日志与 `mw_daemon_capacity` |
-| App 收不到工具调用 | WebSocket 未连上 / 多实例抢连接 | 看 `mw_ws_connections`，确认只有一个逻辑连接 |
+| Harness 一直不接任务 | daemon 未注册 / token 不匹配 / 策略未声明 | 看 middleware 日志与 `levier_daemon_capacity` |
+| App 收不到工具调用 | WebSocket 未连上 / 多实例抢连接 | 看 `levier_ws_connections`，确认只有一个逻辑连接 |
 | 工具总是 `TOOL_TIMEOUT` | 工具执行过慢或 `tool_ms` 太小 | 优化工具或调大超时（≤ 240s） |
 | `TOOL_NOT_FOUND` | 注册列表与调用名不一致 | 重新注册完整工具列表 |
 | `APP_UNREACHABLE` | 回包前连接断开 | 保持连接常驻，断线退避重连 |
 | Run 一直 `queued` | 没有匹配的 Harness 或容量不足 | 检查 daemon 容量、策略、标签 |
-| Run 反复 requeue | Harness 崩溃或事件缓冲满 | 看 Harness 日志、`mw_events_dropped_total` |
+| Run 反复 requeue | Harness 崩溃或事件缓冲满 | 看 Harness 日志、`levier_events_dropped_total` |
 | `409` 创建 Run | 同一个 `Idempotency-Key` 但请求内容不同 | 换 key，或复用完全相同的请求 |
 | 启动报 `already serving` | 8080 上已有旧进程 | 停掉旧进程或换端口 |
 
@@ -1070,7 +1074,7 @@ make fault-matrix
 
 ```text
 Harness kill -9 中途 → requeue → 新 attempt 完成
-Middleware 重启      → Harness 重连 → Run 完成
+Levier 重启      → Harness 重连 → Run 完成
 App 断线             → pending 工具失败 → Run 收敛
 取消                 → cancelled + MW 终态事件 + 任务取消
 超时                 → timeout + MW 终态事件 + 任务取消
@@ -1079,8 +1083,8 @@ App 断线             → pending 工具失败 → Run 收敛
 ### 9.4 轮换 App key
 
 ```http
-POST {MW_URL}/admin/apps/{APP_ID}/rotate-key
-Authorization: Bearer {MW_ADMIN_TOKEN}
+POST {LEVIER_URL}/admin/apps/{APP_ID}/rotate-key
+Authorization: Bearer {LEVIER_ADMIN_TOKEN}
 ```
 
 新 key 只返回一次。轮换后旧 key 立即失效，App 需要用新 key 重新验证和换 ws_token。
@@ -1090,7 +1094,9 @@ Authorization: Bearer {MW_ADMIN_TOKEN}
 ## 10. 测试与回归
 
 ```sh
-make lint                 # gofmt + vet + secrets-check
+make lint                 # gofmt + vet + secrets + structure
+make structure-check
+make deps-check
 make build
 make agent-core-test
 make harness-test
@@ -1100,8 +1106,8 @@ make secrets-check
 
 # 真实 PostgreSQL；不设置会跳过 DB 集成用例
 set -a; . ./.env.local; set +a
-MIDDLEWARE_TEST_POSTGRES=1 go test -count=1 ./...
-MIDDLEWARE_TEST_POSTGRES=1 go test -race -count=1 ./...
+LEVIER_TEST_POSTGRES=1 go test -count=1 ./...
+LEVIER_TEST_POSTGRES=1 go test -race -count=1 ./...
 ```
 
 端到端回归：
@@ -1129,19 +1135,26 @@ python3 tests/app/app_check.py --credentials /path/to/app.json \
 ## 11. 目录与文档
 
 ```text
-cmd/              middleware / migrate / daemon-check 入口
+cmd/              levier / migrate / daemon-check 入口
 internal/         控制面、存储、调度、网关、HTTP/WS
-harness/          Python Harness
-agent_core/       语言无关的 Agent 循环与 conformance fixtures
-mcp_runtime/      独立 MCP 连接进程
+contracts/        HTTP / WS 机器可读契约
+proto/            gRPC 契约
+gen/              proto 生成的 Go 代码
+execution/agent_core/       语言无关的 Agent 循环与 conformance fixtures
+execution/harness/          Python Harness
+execution/mcp_runtime/      独立 MCP 连接进程
 examples/         counter_agent、HTTP/Node 接入示例
 tests/            单元/契约/E2E 与检查脚本
-docs/             设计、契约、接入文档
+docs/             设计、契约、接入、迁移文档
 deploy/           容器镜像与 Compose
 ```
 
 | 文档 | 内容 |
 |---|---|
+| `docs/SCOPE.md` | 产品边界与责任矩阵 |
+| `docs/MAP.md` | 仓库地图与单元入口 |
+| `docs/NAMING.md` | 命名、标识符与改名记录 |
+| `docs/MIGRATION-1D.md` | Compose / 数据库 / 指标迁移 |
 | `docs/APP_ONBOARDING.md` | App 接入流程与协议细节 |
 | `docs/DESIGN.md` | 核心设计（当前实现） |
 | `docs/MVP.md` | 单机 MVP 的边界、启动、验收与限制 |
@@ -1170,7 +1183,7 @@ examples/http_client         只验证 HTTP：认证、创建、查询、取消
 ```text
 [runtime]     只支持 normal
 [sandbox]     未实现
-[longterm]    checkpoint 协议在 Harness 侧已有，Middleware 侧未闭环
+[longterm]    checkpoint 协议在 Harness 侧已有，Levier 侧未闭环
 [多实例/HA]   不在 MVP 范围
 [exactly-once] 不保证；按业务键幂等或接受重复
 [压测]        不在 MVP 范围

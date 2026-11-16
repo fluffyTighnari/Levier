@@ -12,11 +12,11 @@ import (
 	"sync/atomic"
 	"time"
 
-	runtimev1 "github.com/fluffyTighnari/middleware/gen/middleware/runtime/v1"
-	"github.com/fluffyTighnari/middleware/internal/observe"
-	"github.com/fluffyTighnari/middleware/internal/register"
-	"github.com/fluffyTighnari/middleware/internal/runstore"
-	"github.com/fluffyTighnari/middleware/internal/workflow"
+	runtimev1 "github.com/fluffyTighnari/levier/gen/middleware/runtime/v1"
+	"github.com/fluffyTighnari/levier/internal/observe"
+	"github.com/fluffyTighnari/levier/internal/register"
+	"github.com/fluffyTighnari/levier/internal/runstore"
+	"github.com/fluffyTighnari/levier/internal/workflow"
 )
 
 var (

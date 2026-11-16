@@ -21,14 +21,20 @@ type TaskMaterials struct {
 func (r EnvSecretResolver) Resolve(_ context.Context, ref string) (string, error) {
 	prefix := r.Prefix
 	if prefix == "" {
-		prefix = "MIDDLEWARE_SECRET_"
+		prefix = "LEVIER_SECRET_"
 	}
-	key := prefix + strings.ToUpper(strings.ReplaceAll(ref, "-", "_"))
-	value, ok := os.LookupEnv(key)
-	if !ok {
-		return "", fmt.Errorf("secret %q is not configured (env %s)", ref, key)
+	suffix := strings.ToUpper(strings.ReplaceAll(ref, "-", "_"))
+	key := prefix + suffix
+	if value, ok := os.LookupEnv(key); ok {
+		return value, nil
 	}
-	return value, nil
+	if r.Prefix == "" {
+		legacyKey := "MIDDLEWARE_SECRET_" + suffix
+		if value, ok := os.LookupEnv(legacyKey); ok {
+			return value, nil
+		}
+	}
+	return "", fmt.Errorf("secret %q is not configured (env %s)", ref, key)
 }
 
 // Resolve implements SecretResolver.

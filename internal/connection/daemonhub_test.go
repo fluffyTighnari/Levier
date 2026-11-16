@@ -16,9 +16,9 @@ import (
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/structpb"
 
-	runtimev1 "github.com/fluffyTighnari/middleware/gen/middleware/runtime/v1"
-	"github.com/fluffyTighnari/middleware/internal/protocol"
-	"github.com/fluffyTighnari/middleware/internal/testutil/fakedaemon"
+	runtimev1 "github.com/fluffyTighnari/levier/gen/middleware/runtime/v1"
+	"github.com/fluffyTighnari/levier/internal/protocol"
+	"github.com/fluffyTighnari/levier/internal/testutil/fakedaemon"
 )
 
 func startHub(t *testing.T, cfg Config) (*Hub, string) {

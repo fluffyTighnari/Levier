@@ -9,8 +9,8 @@
 #   react   real DeepSeek model call + counter tools
 #
 # Requirements:
-#   - PostgreSQL reachable via MIDDLEWARE_DATABASE_URL
-#   - harness/.venv (see README)
+#   - PostgreSQL reachable via LEVIER_DATABASE_URL
+#   - execution/harness/.venv (see README)
 #   - react mode: DEEPSEEK_API_KEY in .env
 #
 # Usage:
@@ -40,13 +40,13 @@ case "$MODE" in
   *) echo "mvp-demo: mode must be echo or react" >&2; exit 2 ;;
 esac
 
-MIDDLEWARE_BIN="${MIDDLEWARE_BIN:-bin/middleware}"
-MIDDLEWARE_CONFIG="${MIDDLEWARE_CONFIG:-config.example.yaml}"
-HARNESS_CONFIG="${HARNESS_CONFIG:-harness/config.example.yaml}"
-HARNESS_PYTHON="${HARNESS_PYTHON:-harness/.venv/bin/python}"
-MW_URL="${MW_URL:-http://127.0.0.1:8080}"
-ADMIN_TOKEN="${MW_ADMIN_TOKEN:-admin-change-me}"
-DATABASE_URL="${MIDDLEWARE_DATABASE_URL:-}"
+LEVIER_BIN="${LEVIER_BIN:-${MIDDLEWARE_BIN:-bin/levier}}"
+LEVIER_CONFIG="${LEVIER_CONFIG:-${MIDDLEWARE_CONFIG:-levier.example.yaml}}"
+HARNESS_CONFIG="${HARNESS_CONFIG:-execution/harness/levier.example.yaml}"
+HARNESS_PYTHON="${HARNESS_PYTHON:-execution/harness/.venv/bin/python}"
+LEVIER_URL="${LEVIER_URL:-${MW_URL:-http://127.0.0.1:8080}}"
+ADMIN_TOKEN="${LEVIER_ADMIN_TOKEN:-${MW_ADMIN_TOKEN:-admin-change-me}}"
+DATABASE_URL="${LEVIER_DATABASE_URL:-${MIDDLEWARE_DATABASE_URL:-}}"
 STAMP="$(date -u +%Y%m%dT%H%M%SZ)"
 OUT="${MVP_DEMO_OUT:-data/mvp-demo/$STAMP-$MODE}"
 CREDENTIALS="$OUT/credentials.json"
@@ -60,11 +60,11 @@ fail() {
 }
 
 if [ -z "$DATABASE_URL" ]; then
-  fail "MIDDLEWARE_DATABASE_URL is required (source .env.local or start PostgreSQL)"
+  fail "LEVIER_DATABASE_URL is required (source .env.local or start PostgreSQL)"
 fi
 command -v curl >/dev/null 2>&1 || fail "curl is required"
 command -v python3 >/dev/null 2>&1 || fail "python3 is required"
-[ -x "$HARNESS_PYTHON" ] || fail "harness Python not found: $HARNESS_PYTHON (cd harness && uv sync --locked)"
+[ -x "$HARNESS_PYTHON" ] || fail "harness Python not found: $HARNESS_PYTHON (cd execution/harness && uv sync --locked)"
 
 mkdir -p "$OUT"
 chmod 700 "$OUT"
@@ -83,23 +83,23 @@ cleanup() {
 }
 trap cleanup EXIT
 
-if curl -fsS "$MW_URL/healthz" >/dev/null 2>&1; then
-  fail "$MW_URL is already serving; stop it before running the demo"
+if curl -fsS "$LEVIER_URL/healthz" >/dev/null 2>&1; then
+  fail "$LEVIER_URL is already serving; stop it before running the demo"
 fi
 
 echo "== build =="
 make build >/dev/null
 
 echo "== migrate =="
-go run ./cmd/migrate -config "$MIDDLEWARE_CONFIG" >"$OUT/migrate.log" 2>&1 \
+go run ./cmd/migrate -config "$LEVIER_CONFIG" >"$OUT/migrate.log" 2>&1 \
   || fail "migration failed; is PostgreSQL running? see $OUT/migrate.log"
 
 echo "== start Middleware =="
-"$MIDDLEWARE_BIN" -config "$MIDDLEWARE_CONFIG" >"$OUT/middleware.log" 2>&1 &
+"$LEVIER_BIN" -config "$LEVIER_CONFIG" >"$OUT/middleware.log" 2>&1 &
 MW_PID=$!
 ready=""
 for _ in $(seq 1 100); do
-  if curl -fsS "$MW_URL/healthz" >/dev/null 2>&1; then
+  if curl -fsS "$LEVIER_URL/healthz" >/dev/null 2>&1; then
     ready=1
     break
   fi
@@ -108,20 +108,20 @@ done
 [ -n "$ready" ] || fail "Middleware did not become healthy; see $OUT/middleware.log"
 
 echo "== start Harness =="
-PYTHONPATH="agent_core/src:harness/src/gen:harness/src" "$HARNESS_PYTHON" -m middleware_harness \
+PYTHONPATH="execution/agent_core/src:execution/harness/src/gen:execution/harness/src" "$HARNESS_PYTHON" -m levier_harness \
   --config "$HARNESS_CONFIG" >"$OUT/harness.log" 2>&1 &
 HARNESS_PID=$!
 sleep 2
 
 echo "== bootstrap App =="
-MW_URL="$MW_URL" MW_ADMIN_TOKEN="$ADMIN_TOKEN" MW_APP_NAME="mvp-demo-$MODE-$STAMP" \
+LEVIER_URL="$LEVIER_URL" LEVIER_ADMIN_TOKEN="$ADMIN_TOKEN" LEVIER_APP_NAME="mvp-demo-$MODE-$STAMP" \
   python3 examples/counter_agent/bootstrap_app.py --credentials-out "$CREDENTIALS" \
   >"$OUT/bootstrap.json" 2>"$OUT/bootstrap.err" || fail "bootstrap failed; see $OUT/bootstrap.err"
 
 echo "== start App =="
 python3 examples/counter_agent/serve.py \
   --credentials "$CREDENTIALS" \
-  --mw-url "$MW_URL" \
+  --mw-url "$LEVIER_URL" \
   --timeout 300 \
   >"$OUT/serve.log" 2>"$OUT/serve.err" &
 SERVE_PID=$!
@@ -142,7 +142,7 @@ if [ "$MODE" = "react" ]; then
   fi
   python3 examples/counter_agent/submit_run.py \
     --credentials "$CREDENTIALS" \
-    --mw-url "$MW_URL" \
+    --mw-url "$LEVIER_URL" \
     --strategy react \
     --prompt "$PROMPT_REACT" \
     --provider deepseek \
@@ -154,7 +154,7 @@ if [ "$MODE" = "react" ]; then
 else
   python3 examples/counter_agent/submit_run.py \
     --credentials "$CREDENTIALS" \
-    --mw-url "$MW_URL" \
+    --mw-url "$LEVIER_URL" \
     --strategy echo \
     --prompt "$PROMPT_ECHO" \
     --run-ms 30000 \
@@ -166,7 +166,7 @@ RUN_ID="$(python3 -c 'import json,sys;print(json.load(open(sys.argv[1]))["run_id
 echo "run_id=$RUN_ID"
 
 echo "== wait for terminal state =="
-python3 - "$MW_URL" "$CREDENTIALS" "$RUN_ID" "$RUN_TIMEOUT_S" "$MODE" "$OUT/summary.txt" <<'PY'
+python3 - "$LEVIER_URL" "$CREDENTIALS" "$RUN_ID" "$RUN_TIMEOUT_S" "$MODE" "$OUT/summary.txt" <<'PY'
 import json
 import sys
 import time

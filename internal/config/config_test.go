@@ -78,16 +78,16 @@ func TestApplyEnv(t *testing.T) {
 	cfg := Default()
 	cfg.Database.URL = "postgres://localhost/middleware"
 	env := map[string]string{
-		"MIDDLEWARE_HTTP_ADDR":                ":28080",
-		"MIDDLEWARE_WORKFLOW_WORKERS":         "9",
-		"MIDDLEWARE_WORKFLOW_LEASE_TTL":       "45s",
-		"MIDDLEWARE_WORKFLOW_MAX_ATTEMPTS":    "7",
-		"MIDDLEWARE_WORKFLOW_REAP_INTERVAL":   "15s",
-		"MIDDLEWARE_WORKFLOW_REAP_LIMIT":      "25",
-		"MIDDLEWARE_WORKFLOW_RECOVERY_DELAY":  "12s",
-		"MIDDLEWARE_WORKFLOW_EVENT_BUFFER":    "128",
-		"MIDDLEWARE_LOG_LEVEL":                "warn",
-		"MIDDLEWARE_HTTP_ALLOW_LEGACY_BEARER": "true",
+		"LEVIER_HTTP_ADDR":                ":28080",
+		"LEVIER_WORKFLOW_WORKERS":         "9",
+		"LEVIER_WORKFLOW_LEASE_TTL":       "45s",
+		"LEVIER_WORKFLOW_MAX_ATTEMPTS":    "7",
+		"LEVIER_WORKFLOW_REAP_INTERVAL":   "15s",
+		"LEVIER_WORKFLOW_REAP_LIMIT":      "25",
+		"LEVIER_WORKFLOW_RECOVERY_DELAY":  "12s",
+		"LEVIER_WORKFLOW_EVENT_BUFFER":    "128",
+		"LEVIER_LOG_LEVEL":                "warn",
+		"LEVIER_HTTP_ALLOW_LEGACY_BEARER": "true",
 	}
 
 	if err := ApplyEnv(&cfg, func(key string) (string, bool) {
@@ -123,11 +123,50 @@ func TestApplyEnv(t *testing.T) {
 	}
 }
 
+func TestApplyEnvLegacyMiddlewareNames(t *testing.T) {
+	cfg := Default()
+	cfg.Database.URL = "postgres://localhost/middleware"
+	env := map[string]string{
+		"MIDDLEWARE_HTTP_ADDR":        ":38080",
+		"MIDDLEWARE_WORKFLOW_WORKERS": "11",
+	}
+	if err := ApplyEnv(&cfg, func(key string) (string, bool) {
+		value, ok := env[key]
+		return value, ok
+	}); err != nil {
+		t.Fatalf("ApplyEnv() error = %v", err)
+	}
+	if cfg.HTTP.Addr != ":38080" {
+		t.Fatalf("HTTP.Addr = %q", cfg.HTTP.Addr)
+	}
+	if cfg.Workflow.Workers != 11 {
+		t.Fatalf("Workflow.Workers = %d", cfg.Workflow.Workers)
+	}
+}
+
+func TestApplyEnvPrefersLevierNames(t *testing.T) {
+	cfg := Default()
+	cfg.Database.URL = "postgres://localhost/middleware"
+	env := map[string]string{
+		"LEVIER_HTTP_ADDR":     ":48080",
+		"MIDDLEWARE_HTTP_ADDR": ":38080",
+	}
+	if err := ApplyEnv(&cfg, func(key string) (string, bool) {
+		value, ok := env[key]
+		return value, ok
+	}); err != nil {
+		t.Fatalf("ApplyEnv() error = %v", err)
+	}
+	if cfg.HTTP.Addr != ":48080" {
+		t.Fatalf("HTTP.Addr = %q", cfg.HTTP.Addr)
+	}
+}
+
 func TestApplyEnvRejectsBadValues(t *testing.T) {
 	cfg := Default()
 	cfg.Database.URL = "postgres://localhost/middleware"
 	err := ApplyEnv(&cfg, func(key string) (string, bool) {
-		if key == "MIDDLEWARE_WORKFLOW_WORKERS" {
+		if key == "LEVIER_WORKFLOW_WORKERS" {
 			return "many", true
 		}
 		return "", false

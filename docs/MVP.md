@@ -68,8 +68,8 @@ cp -n .env.example .env
 至少设置：
 
 ```text
-MIDDLEWARE_DATABASE_URL   PostgreSQL DSN
-MW_ADMIN_TOKEN            与 config 的 http.admin_token 一致
+LEVIER_DATABASE_URL   PostgreSQL DSN
+LEVIER_ADMIN_TOKEN            与 config 的 http.admin_token 一致
 ```
 
 `react` 模式还需要：
@@ -86,7 +86,7 @@ DEEPSEEK_MODEL
 
 ```sh
 make build
-cd harness && uv sync --locked && cd ..
+(cd execution/harness && uv sync --locked)
 ```
 
 ### 3.3 PostgreSQL
@@ -174,7 +174,7 @@ mvp-demo: PASS
 1. 读取 .env.local / .env
 2. make build
 3. go run ./cmd/migrate
-4. 启动 bin/middleware
+4. 启动 bin/levier
 5. 等 /healthz
 6. 启动 harness
 7. 用 Admin token bootstrap 一个唯一 App
@@ -204,9 +204,9 @@ data/mvp-demo/<时间>-<mode>/
 
 | 现象 | 原因 | 处理 |
 |---|---|---|
-| `MIDDLEWARE_DATABASE_URL is required` | 没 source `.env` | `cp -n .env.example .env` 后重跑 |
+| `LEVIER_DATABASE_URL is required` | 没 source `.env` | `cp -n .env.example .env` 后重跑 |
 | 迁移失败 | PostgreSQL 未启动或端口不对 | 看 `data/mvp-demo/.../migrate.log` |
-| `already serving` | 8080 上还有旧 MW | 停掉旧进程或改 `MW_URL` |
+| `already serving` | 8080 上还有旧 MW | 停掉旧进程或改 `LEVIER_URL` |
 | App did not start serving | bootstrap/注册/WS 失败 | 看 `serve.log`、`serve.err` |
 | react 模式失败 | 没有有效 `DEEPSEEK_API_KEY` | 设置 key 或先用 echo 模式 |
 | Run failed | 模型/工具错误 | 看 `summary.txt` 和 `middleware.log` |

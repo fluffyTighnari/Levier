@@ -9,8 +9,8 @@ import (
 	"slices"
 	"sort"
 
-	runtimev1 "github.com/fluffyTighnari/middleware/gen/middleware/runtime/v1"
-	"github.com/fluffyTighnari/middleware/internal/connection"
+	runtimev1 "github.com/fluffyTighnari/levier/gen/middleware/runtime/v1"
+	"github.com/fluffyTighnari/levier/internal/connection"
 )
 
 // PlacementRequest describes one scheduling decision.

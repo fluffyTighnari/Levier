@@ -123,7 +123,7 @@ func Load(path string) (Config, error) {
 	return Parse(data)
 }
 
-// Parse parses YAML, applies MIDDLEWARE_* env overrides, and validates.
+// Parse parses YAML, applies LEVIER_* env overrides, and validates.
 func Parse(data []byte) (Config, error) {
 	cfg := Default()
 
@@ -142,54 +142,54 @@ func Parse(data []byte) (Config, error) {
 	return cfg, nil
 }
 
-// ApplyEnv applies the supported MIDDLEWARE_* environment overrides.
+// ApplyEnv applies the supported LEVIER_* environment overrides.
 func ApplyEnv(cfg *Config, lookup func(string) (string, bool)) error {
 	if lookup == nil {
 		return nil
 	}
 
-	stringOverride(lookup, "MIDDLEWARE_HTTP_ADDR", &cfg.HTTP.Addr)
-	stringOverride(lookup, "MIDDLEWARE_HTTP_BEARER_TOKEN", &cfg.HTTP.BearerToken)
-	stringOverride(lookup, "MIDDLEWARE_HTTP_ADMIN_TOKEN", &cfg.HTTP.AdminToken)
-	if err := boolOverride(lookup, "MIDDLEWARE_HTTP_ALLOW_LEGACY_BEARER", &cfg.HTTP.AllowLegacyBearer); err != nil {
+	stringOverride(lookup, "LEVIER_HTTP_ADDR", &cfg.HTTP.Addr)
+	stringOverride(lookup, "LEVIER_HTTP_BEARER_TOKEN", &cfg.HTTP.BearerToken)
+	stringOverride(lookup, "LEVIER_HTTP_ADMIN_TOKEN", &cfg.HTTP.AdminToken)
+	if err := boolOverride(lookup, "LEVIER_HTTP_ALLOW_LEGACY_BEARER", &cfg.HTTP.AllowLegacyBearer); err != nil {
 		return err
 	}
-	stringOverride(lookup, "MIDDLEWARE_GRPC_ADDR", &cfg.GRPC.Addr)
-	stringOverride(lookup, "MIDDLEWARE_DATABASE_URL", &cfg.Database.URL)
-	stringOverride(lookup, "MIDDLEWARE_LOG_LEVEL", &cfg.Log.Level)
-	stringOverride(lookup, "MIDDLEWARE_LOG_FORMAT", &cfg.Log.Format)
+	stringOverride(lookup, "LEVIER_GRPC_ADDR", &cfg.GRPC.Addr)
+	stringOverride(lookup, "LEVIER_DATABASE_URL", &cfg.Database.URL)
+	stringOverride(lookup, "LEVIER_LOG_LEVEL", &cfg.Log.Level)
+	stringOverride(lookup, "LEVIER_LOG_FORMAT", &cfg.Log.Format)
 
-	if err := durationOverride(lookup, "MIDDLEWARE_HTTP_SHUTDOWN_TIMEOUT", &cfg.HTTP.ShutdownTimeout); err != nil {
+	if err := durationOverride(lookup, "LEVIER_HTTP_SHUTDOWN_TIMEOUT", &cfg.HTTP.ShutdownTimeout); err != nil {
 		return err
 	}
-	if err := durationOverride(lookup, "MIDDLEWARE_HTTP_WS_TOKEN_TTL", &cfg.HTTP.WSTokenTTL); err != nil {
+	if err := durationOverride(lookup, "LEVIER_HTTP_WS_TOKEN_TTL", &cfg.HTTP.WSTokenTTL); err != nil {
 		return err
 	}
-	if err := durationOverride(lookup, "MIDDLEWARE_GRPC_SHUTDOWN_TIMEOUT", &cfg.GRPC.ShutdownTimeout); err != nil {
+	if err := durationOverride(lookup, "LEVIER_GRPC_SHUTDOWN_TIMEOUT", &cfg.GRPC.ShutdownTimeout); err != nil {
 		return err
 	}
-	if err := durationOverride(lookup, "MIDDLEWARE_WORKFLOW_LEASE_TTL", &cfg.Workflow.LeaseTTL); err != nil {
+	if err := durationOverride(lookup, "LEVIER_WORKFLOW_LEASE_TTL", &cfg.Workflow.LeaseTTL); err != nil {
 		return err
 	}
-	if err := durationOverride(lookup, "MIDDLEWARE_WORKFLOW_POLL_INTERVAL", &cfg.Workflow.PollInterval); err != nil {
+	if err := durationOverride(lookup, "LEVIER_WORKFLOW_POLL_INTERVAL", &cfg.Workflow.PollInterval); err != nil {
 		return err
 	}
-	if err := intOverride(lookup, "MIDDLEWARE_WORKFLOW_WORKERS", &cfg.Workflow.Workers); err != nil {
+	if err := intOverride(lookup, "LEVIER_WORKFLOW_WORKERS", &cfg.Workflow.Workers); err != nil {
 		return err
 	}
-	if err := intOverride(lookup, "MIDDLEWARE_WORKFLOW_MAX_ATTEMPTS", &cfg.Workflow.MaxAttempts); err != nil {
+	if err := intOverride(lookup, "LEVIER_WORKFLOW_MAX_ATTEMPTS", &cfg.Workflow.MaxAttempts); err != nil {
 		return err
 	}
-	if err := durationOverride(lookup, "MIDDLEWARE_WORKFLOW_REAP_INTERVAL", &cfg.Workflow.ReapInterval); err != nil {
+	if err := durationOverride(lookup, "LEVIER_WORKFLOW_REAP_INTERVAL", &cfg.Workflow.ReapInterval); err != nil {
 		return err
 	}
-	if err := intOverride(lookup, "MIDDLEWARE_WORKFLOW_REAP_LIMIT", &cfg.Workflow.ReapLimit); err != nil {
+	if err := intOverride(lookup, "LEVIER_WORKFLOW_REAP_LIMIT", &cfg.Workflow.ReapLimit); err != nil {
 		return err
 	}
-	if err := durationOverride(lookup, "MIDDLEWARE_WORKFLOW_RECOVERY_DELAY", &cfg.Workflow.RecoveryDelay); err != nil {
+	if err := durationOverride(lookup, "LEVIER_WORKFLOW_RECOVERY_DELAY", &cfg.Workflow.RecoveryDelay); err != nil {
 		return err
 	}
-	if err := intOverride(lookup, "MIDDLEWARE_WORKFLOW_EVENT_BUFFER", &cfg.Workflow.EventBuffer); err != nil {
+	if err := intOverride(lookup, "LEVIER_WORKFLOW_EVENT_BUFFER", &cfg.Workflow.EventBuffer); err != nil {
 		return err
 	}
 	return nil
@@ -297,8 +297,25 @@ func validateAddr(name, addr string) error {
 	return nil
 }
 
+const (
+	envPrefix       = "LEVIER_"
+	legacyEnvPrefix = "MIDDLEWARE_"
+)
+
+// lookupEnv reads the new LEVIER_* key first, then falls back to the legacy
+// MIDDLEWARE_* key for one release.
+func lookupEnv(lookup func(string) (string, bool), key string) (string, bool) {
+	if value, ok := lookup(key); ok {
+		return value, true
+	}
+	if strings.HasPrefix(key, envPrefix) {
+		return lookup(legacyEnvPrefix + strings.TrimPrefix(key, envPrefix))
+	}
+	return "", false
+}
+
 func boolOverride(lookup func(string) (string, bool), key string, dst *bool) error {
-	value, ok := lookup(key)
+	value, ok := lookupEnv(lookup, key)
 	if !ok || value == "" {
 		return nil
 	}
@@ -311,13 +328,13 @@ func boolOverride(lookup func(string) (string, bool), key string, dst *bool) err
 }
 
 func stringOverride(lookup func(string) (string, bool), key string, dst *string) {
-	if value, ok := lookup(key); ok {
+	if value, ok := lookupEnv(lookup, key); ok {
 		*dst = value
 	}
 }
 
 func durationOverride(lookup func(string) (string, bool), key string, dst *Duration) error {
-	value, ok := lookup(key)
+	value, ok := lookupEnv(lookup, key)
 	if !ok {
 		return nil
 	}
@@ -330,7 +347,7 @@ func durationOverride(lookup func(string) (string, bool), key string, dst *Durat
 }
 
 func intOverride(lookup func(string) (string, bool), key string, dst *int) error {
-	value, ok := lookup(key)
+	value, ok := lookupEnv(lookup, key)
 	if !ok {
 		return nil
 	}

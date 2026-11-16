@@ -14,12 +14,12 @@ import (
 
 	"google.golang.org/protobuf/types/known/structpb"
 
-	runtimev1 "github.com/fluffyTighnari/middleware/gen/middleware/runtime/v1"
-	"github.com/fluffyTighnari/middleware/internal/observe"
-	"github.com/fluffyTighnari/middleware/internal/protocol"
-	"github.com/fluffyTighnari/middleware/internal/register"
-	"github.com/fluffyTighnari/middleware/internal/runstore"
-	"github.com/fluffyTighnari/middleware/internal/workflow"
+	runtimev1 "github.com/fluffyTighnari/levier/gen/middleware/runtime/v1"
+	"github.com/fluffyTighnari/levier/internal/observe"
+	"github.com/fluffyTighnari/levier/internal/protocol"
+	"github.com/fluffyTighnari/levier/internal/register"
+	"github.com/fluffyTighnari/levier/internal/runstore"
+	"github.com/fluffyTighnari/levier/internal/workflow"
 )
 
 // Handle implements workflow.Handler for one claimed task.

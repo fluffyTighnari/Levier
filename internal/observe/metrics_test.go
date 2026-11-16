@@ -26,15 +26,15 @@ func TestRegistryRendersPrometheusText(t *testing.T) {
 	}
 	output := buf.String()
 	for _, want := range []string{
-		"# TYPE mw_http_requests_total counter",
-		`mw_http_requests_total{method="POST",route="POST /runs",status="202"} 1`,
-		"# TYPE mw_ws_connections gauge",
-		`mw_ws_connections{app="app-1"} 3`,
-		"# TYPE mw_tool_duration_seconds histogram",
-		`mw_tool_duration_seconds_bucket{le="0.025",tool="search"} 1`,
-		`mw_tool_duration_seconds_bucket{le="+Inf",tool="search"} 1`,
-		`mw_tool_duration_seconds_sum{tool="search"} 0.02`,
-		`mw_tool_duration_seconds_count{tool="search"} 1`,
+		"# TYPE levier_http_requests_total counter",
+		`levier_http_requests_total{method="POST",route="POST /runs",status="202"} 1`,
+		"# TYPE levier_ws_connections gauge",
+		`levier_ws_connections{app="app-1"} 3`,
+		"# TYPE levier_tool_duration_seconds histogram",
+		`levier_tool_duration_seconds_bucket{le="0.025",tool="search"} 1`,
+		`levier_tool_duration_seconds_bucket{le="+Inf",tool="search"} 1`,
+		`levier_tool_duration_seconds_sum{tool="search"} 0.02`,
+		`levier_tool_duration_seconds_count{tool="search"} 1`,
 	} {
 		if !strings.Contains(output, want) {
 			t.Fatalf("output does not contain %q:\n%s", want, output)
@@ -44,15 +44,15 @@ func TestRegistryRendersPrometheusText(t *testing.T) {
 
 func TestRegistryEscapesLabelsAndSortsFamilies(t *testing.T) {
 	registry := NewRegistry()
-	registry.Inc("mw_b_total", "B.", map[string]string{"value": "a\"b\nc"})
-	registry.Inc("mw_a_total", "A.", nil)
+	registry.Inc("levier_b_total", "B.", map[string]string{"value": "a\"b\nc"})
+	registry.Inc("levier_a_total", "A.", nil)
 
 	var buf bytes.Buffer
 	if err := registry.WritePrometheus(&buf); err != nil {
 		t.Fatalf("WritePrometheus() error = %v", err)
 	}
 	output := buf.String()
-	if strings.Index(output, "mw_a_total") > strings.Index(output, "mw_b_total") {
+	if strings.Index(output, "levier_a_total") > strings.Index(output, "levier_b_total") {
 		t.Fatalf("families are not sorted:\n%s", output)
 	}
 	if !strings.Contains(output, `value="a\"b\nc"`) {
@@ -68,7 +68,7 @@ func TestRegistryConcurrentUpdates(t *testing.T) {
 		go func() {
 			defer wg.Done()
 			for j := 0; j < 100; j++ {
-				registry.Inc("mw_test_total", "Test.", map[string]string{"k": "v"})
+				registry.Inc("levier_test_total", "Test.", map[string]string{"k": "v"})
 			}
 		}()
 	}
@@ -78,7 +78,7 @@ func TestRegistryConcurrentUpdates(t *testing.T) {
 	if err := registry.WritePrometheus(&buf); err != nil {
 		t.Fatalf("WritePrometheus() error = %v", err)
 	}
-	if !strings.Contains(buf.String(), `mw_test_total{k="v"} 1600`) {
+	if !strings.Contains(buf.String(), `levier_test_total{k="v"} 1600`) {
 		t.Fatalf("counter = %s", buf.String())
 	}
 }

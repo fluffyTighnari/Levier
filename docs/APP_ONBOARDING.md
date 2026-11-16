@@ -54,8 +54,8 @@ App 需要实现的只有：
 ## 2. 接入前需要什么
 
 ```text
-MW_URL          Middleware HTTP 地址（非秘密）
-MW_ADMIN_TOKEN  管理凭据，只用于创建/轮换 App
+LEVIER_URL          Middleware HTTP 地址（非秘密）
+LEVIER_ADMIN_TOKEN  管理凭据，只用于创建/轮换 App
 APP_NAME        App 自己选定的全局唯一名称
 ```
 
@@ -64,7 +64,7 @@ APP_NAME        App 自己选定的全局唯一名称
 ```text
 APP_ID
 APP_KEY
-MW_URL
+LEVIER_URL
 ```
 
 ---
@@ -72,8 +72,8 @@ MW_URL
 ## 3. 一次性 bootstrap
 
 ```http
-POST {MW_URL}/admin/apps
-Authorization: Bearer {MW_ADMIN_TOKEN}
+POST {LEVIER_URL}/admin/apps
+Authorization: Bearer {LEVIER_ADMIN_TOKEN}
 Content-Type: application/json
 ```
 
@@ -102,8 +102,8 @@ Content-Type: application/json
 `api_key` 只在创建时返回一次。为空说明需要轮换：
 
 ```http
-POST {MW_URL}/admin/apps/{APP_ID}/rotate-key
-Authorization: Bearer {MW_ADMIN_TOKEN}
+POST {LEVIER_URL}/admin/apps/{APP_ID}/rotate-key
+Authorization: Bearer {LEVIER_ADMIN_TOKEN}
 ```
 
 ```json
@@ -124,7 +124,7 @@ api_key           秘密
 ## 4. 运行时自检
 
 ```http
-GET {MW_URL}/api/v1/apps/{APP_ID}
+GET {LEVIER_URL}/api/v1/apps/{APP_ID}
 Authorization: Bearer {APP_KEY}
 ```
 
@@ -169,7 +169,7 @@ timeout_ms    超时（请求未指定时的兜底）
 ### 5.2 注册
 
 ```http
-POST {MW_URL}/api/v1/apps
+POST {LEVIER_URL}/api/v1/apps
 Authorization: Bearer {APP_KEY}
 Content-Type: application/json
 ```
@@ -209,7 +209,7 @@ FROM tool_defs WHERE app_id = '{APP_ID}' ORDER BY name;
 ### 6.1 换 token
 
 ```http
-POST {MW_URL}/api/v1/ws-token
+POST {LEVIER_URL}/api/v1/ws-token
 Authorization: Bearer {APP_KEY}
 ```
 
@@ -222,7 +222,7 @@ token 是短期的，只放内存。
 ### 6.2 连接
 
 ```text
-GET {MW_URL}{ws_url}?app_id={APP_ID}&token={ws_token}
+GET {LEVIER_URL}{ws_url}?app_id={APP_ID}&token={ws_token}
  Upgrade: websocket
 ```
 
@@ -344,7 +344,7 @@ correlation_id 不匹配           → LOCAL_TOOL_CORRELATION_MISMATCH（原调�
 ## 8. 提交 Run
 
 ```http
-POST {MW_URL}/api/v1/runs
+POST {LEVIER_URL}/api/v1/runs
 Authorization: Bearer {APP_KEY}
 Content-Type: application/json
 Idempotency-Key: {可选}
@@ -379,8 +379,8 @@ Idempotency-Key: {可选}
 查询：
 
 ```http
-GET {MW_URL}/api/v1/runs/{run_id}
-GET {MW_URL}/api/v1/runs/{run_id}/events?attempt=&seq=
+GET {LEVIER_URL}/api/v1/runs/{run_id}
+GET {LEVIER_URL}/api/v1/runs/{run_id}/events?attempt=&seq=
 ```
 
 ---

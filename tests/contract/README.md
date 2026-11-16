@@ -15,5 +15,5 @@ Validation:
 
 ```sh
 go test ./internal/protocol -run TestContractGolden
-PYTHONPATH=harness/src/gen:harness/src python3 tests/contract/test_contract.py -v
+PYTHONPATH=execution/harness/src/gen:execution/harness/src python3 tests/contract/test_contract.py -v
 ```

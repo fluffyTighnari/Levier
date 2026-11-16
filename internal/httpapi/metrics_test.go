@@ -14,7 +14,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/fluffyTighnari/middleware/internal/observe"
+	"github.com/fluffyTighnari/levier/internal/observe"
 )
 
 func TestMetricsEndpointExposesHTTPMetrics(t *testing.T) {
@@ -52,9 +52,9 @@ func TestMetricsEndpointExposesHTTPMetrics(t *testing.T) {
 	}
 	output := string(payload)
 	for _, want := range []string{
-		`mw_http_requests_total{method="GET",route="GET /healthz",status="200"} 1`,
-		`mw_workflow_tasks{status="PENDING",type="RUN_DISPATCH"} 2`,
-		"# TYPE mw_http_request_duration_seconds histogram",
+		`levier_http_requests_total{method="GET",route="GET /healthz",status="200"} 1`,
+		`levier_workflow_tasks{status="PENDING",type="RUN_DISPATCH"} 2`,
+		"# TYPE levier_http_request_duration_seconds histogram",
 	} {
 		if !strings.Contains(output, want) {
 			t.Fatalf("metrics do not contain %q:\n%s", want, output)

@@ -40,7 +40,7 @@ def default_credentials_path() -> Path:
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Bootstrap a Middleware App")
-    parser.add_argument("--name", default="", help="App name; defaults to MW_APP_NAME")
+    parser.add_argument("--name", default="", help="App name; defaults to LEVIER_APP_NAME")
     parser.add_argument("--credentials-out", default="", help="0600 credential file path")
     parser.add_argument("--rotate", action="store_true", help="always rotate the API key")
     return parser

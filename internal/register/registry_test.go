@@ -8,26 +8,26 @@ package register
 import (
 	"context"
 	"errors"
-	"os"
 	"strings"
 	"testing"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"github.com/fluffyTighnari/middleware/internal/db"
-	"github.com/fluffyTighnari/middleware/internal/id"
-	"github.com/fluffyTighnari/middleware/internal/runstore"
+	"github.com/fluffyTighnari/levier/internal/db"
+	"github.com/fluffyTighnari/levier/internal/id"
+	"github.com/fluffyTighnari/levier/internal/runstore"
+	"github.com/fluffyTighnari/levier/internal/testutil"
 )
 
 func testPool(t *testing.T) *pgxpool.Pool {
 	t.Helper()
-	if os.Getenv("MIDDLEWARE_TEST_POSTGRES") != "1" {
-		t.Skip("MIDDLEWARE_TEST_POSTGRES is not set to 1")
+	if testutil.EnvOrLegacy("LEVIER_TEST_POSTGRES", "MIDDLEWARE_TEST_POSTGRES") != "1" {
+		t.Skip("LEVIER_TEST_POSTGRES is not set to 1")
 	}
-	dsn := os.Getenv("MIDDLEWARE_TEST_DATABASE_URL")
+	dsn := testutil.EnvOrLegacy("LEVIER_TEST_DATABASE_URL", "MIDDLEWARE_TEST_DATABASE_URL")
 	if dsn == "" {
-		t.Skip("MIDDLEWARE_TEST_DATABASE_URL is not set")
+		t.Skip("LEVIER_TEST_DATABASE_URL is not set")
 	}
 	ctx := context.Background()
 	schema := strings.ToLower("mw_test_" + id.New())

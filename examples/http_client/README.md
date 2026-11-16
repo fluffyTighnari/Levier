@@ -18,14 +18,14 @@
 先启动 Middleware：
 
 ```sh
-make m1-e2e   # 或单独启动 bin/middleware
+make m1-e2e   # 或单独启动 bin/levier
 ```
 
 再运行：
 
 ```sh
-MW_URL=http://127.0.0.1:8080 \
-MW_ADMIN_TOKEN=admin-change-me \
+LEVIER_URL=http://127.0.0.1:8080 \
+LEVIER_ADMIN_TOKEN=admin-change-me \
 python3 examples/http_client/client.py
 ```
 

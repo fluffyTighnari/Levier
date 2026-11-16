@@ -8,7 +8,7 @@ package httpapi
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/fluffyTighnari/middleware/internal/contract"
+	"github.com/fluffyTighnari/levier/internal/contract"
 )
 
 // ClientMessage is any App→middleware WebSocket message.

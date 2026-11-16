@@ -34,14 +34,20 @@ from typing import Any
 ROOT = Path(__file__).resolve().parents[2]
 STAMP = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
 OUT = Path(os.environ.get("FAULT_MATRIX_OUT", ROOT / "data" / "fault-matrix" / STAMP))
-MW_URL = os.environ.get("MW_URL", "http://127.0.0.1:8080")
-CONFIG = os.environ.get("MIDDLEWARE_CONFIG", "config.example.yaml")
-HARNESS_CONFIG = os.environ.get("HARNESS_CONFIG", "harness/config.example.yaml")
-HARNESS_PYTHON = ROOT / os.environ.get("HARNESS_PYTHON", "harness/.venv/bin/python")
+
+
+def _env(name: str, legacy: str, default: str = "") -> str:
+    return os.environ.get(name) or os.environ.get(legacy) or default
+
+
+MW_URL = _env("LEVIER_URL", "MW_URL", "http://127.0.0.1:8080")
+CONFIG = _env("LEVIER_CONFIG", "MIDDLEWARE_CONFIG", "levier.example.yaml")
+HARNESS_CONFIG = os.environ.get("HARNESS_CONFIG", "execution/harness/levier.example.yaml")
+HARNESS_PYTHON = ROOT / os.environ.get("HARNESS_PYTHON", "execution/harness/.venv/bin/python")
 APP_PYTHON = os.environ.get("APP_PYTHON", sys.executable)
-ADMIN_TOKEN = os.environ.get("MW_ADMIN_TOKEN", "admin-change-me")
-DAEMON_TOKEN = os.environ.get("MW_DAEMON_TOKEN", "change-me")
-DATABASE_URL = os.environ.get("MIDDLEWARE_DATABASE_URL", "")
+ADMIN_TOKEN = _env("LEVIER_ADMIN_TOKEN", "MW_ADMIN_TOKEN", "admin-change-me")
+DAEMON_TOKEN = _env("LEVIER_DAEMON_TOKEN", "MW_DAEMON_TOKEN", "change-me")
+DATABASE_URL = _env("LEVIER_DATABASE_URL", "MIDDLEWARE_DATABASE_URL", "")
 PSQL = shutil.which("psql") or "/opt/homebrew/opt/postgresql@16/bin/psql"
 GO = shutil.which("go") or "/usr/local/go/bin/go"
 CREDENTIALS = OUT / "credentials.json"
@@ -176,7 +182,7 @@ def wait_metric(needle: str, timeout: float) -> None:
 
 def psql(sql: str) -> str:
     if not DATABASE_URL:
-        raise FaultError("MIDDLEWARE_DATABASE_URL is required")
+        raise FaultError("LEVIER_DATABASE_URL is required")
     result = run([PSQL, DATABASE_URL, "-At", "-v", "ON_ERROR_STOP=1", "-c", sql], timeout=30)
     if result.returncode != 0:
         raise FaultError(f"psql failed: {result.stderr.strip()}")
@@ -292,12 +298,12 @@ def start_middleware() -> None:
 
 def start_harness() -> None:
     env = {
-        "PYTHONPATH": "agent_core/src:harness/src/gen:harness/src",
-        "HARNESS_MIDDLEWARE_ADDRESS": "127.0.0.1:9090",
+        "PYTHONPATH": "execution/agent_core/src:execution/harness/src/gen:execution/harness/src",
+        "HARNESS_LEVIER_ADDRESS": "127.0.0.1:9090",
         "HARNESS_DAEMON_ID": "daemon-local-1",
         "HARNESS_DAEMON_AUTH_TOKEN": DAEMON_TOKEN,
     }
-    start("harness", [str(HARNESS_PYTHON), "-m", "middleware_harness", "--config", HARNESS_CONFIG], env=env)
+    start("harness", [str(HARNESS_PYTHON), "-m", "levier_harness", "--config", HARNESS_CONFIG], env=env)
     wait_metric('daemon="daemon-local-1"', 10)
 
 
@@ -320,9 +326,9 @@ def start_app() -> None:
 
 def bootstrap() -> None:
     env = {
-        "MW_URL": MW_URL,
-        "MW_ADMIN_TOKEN": ADMIN_TOKEN,
-        "MW_APP_NAME": APP_NAME,
+        "LEVIER_URL": MW_URL,
+        "LEVIER_ADMIN_TOKEN": ADMIN_TOKEN,
+        "LEVIER_APP_NAME": APP_NAME,
     }
     result = run([
         APP_PYTHON,
@@ -425,7 +431,7 @@ def main() -> int:
     CREDENTIALS = OUT / "credentials.json"
     load_env()
     if not DATABASE_URL:
-        print("fault-matrix: MIDDLEWARE_DATABASE_URL is required", file=sys.stderr)
+        print("fault-matrix: LEVIER_DATABASE_URL is required", file=sys.stderr)
         return 2
     if not HARNESS_PYTHON.exists():
         print(f"fault-matrix: harness Python not found: {HARNESS_PYTHON}", file=sys.stderr)
@@ -435,7 +441,7 @@ def main() -> int:
         return 2
 
     print(f"evidence: {OUT}")
-    build = run([GO, "build", "-o", "bin/middleware", "./cmd/middleware"], timeout=120)
+    build = run([GO, "build", "-o", "bin/levier", "./cmd/levier"], timeout=120)
     if build.returncode != 0:
         print(build.stderr, file=sys.stderr)
         return 1

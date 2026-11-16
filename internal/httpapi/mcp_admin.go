@@ -10,11 +10,11 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"github.com/fluffyTighnari/middleware/internal/errs"
+	"github.com/fluffyTighnari/levier/internal/errs"
 	"net/http"
 	"strings"
 
-	"github.com/fluffyTighnari/middleware/internal/register"
+	"github.com/fluffyTighnari/levier/internal/register"
 )
 
 // MCPRegistry is the admin catalog subset used by the MCP routes.

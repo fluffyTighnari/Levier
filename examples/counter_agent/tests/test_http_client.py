@@ -15,9 +15,9 @@ class HttpRequestTest(unittest.TestCase):
     def test_p2_2_builds_admin_app_request(self) -> None:
         config = from_env(
             {
-                "MW_URL": "http://127.0.0.1:8080/",
-                "MW_ADMIN_TOKEN": "admin-secret",
-                "MW_APP_NAME": "retrofit-counter",
+                "LEVIER_URL": "http://127.0.0.1:8080/",
+                "LEVIER_ADMIN_TOKEN": "admin-secret",
+                "LEVIER_APP_NAME": "retrofit-counter",
             }
         )
         transport = RecordingTransport(HttpResponse(status=201, headers={}, body=b"{}"))

@@ -8,7 +8,7 @@ package httpapi
 import (
 	"context"
 	"encoding/json"
-	"github.com/fluffyTighnari/middleware/internal/contract"
+	"github.com/fluffyTighnari/levier/internal/contract"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -17,8 +17,8 @@ import (
 
 	"golang.org/x/net/websocket"
 
-	"github.com/fluffyTighnari/middleware/internal/connection"
-	"github.com/fluffyTighnari/middleware/internal/runstore"
+	"github.com/fluffyTighnari/levier/internal/connection"
+	"github.com/fluffyTighnari/levier/internal/runstore"
 )
 
 func TestWSTokenExpiryAndReissue(t *testing.T) {

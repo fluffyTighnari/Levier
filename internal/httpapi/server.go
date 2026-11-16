@@ -12,18 +12,18 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/fluffyTighnari/middleware/internal/errs"
+	"github.com/fluffyTighnari/levier/internal/errs"
 	"io"
 	"log/slog"
 	"net/http"
 	"strconv"
 	"time"
 
-	"github.com/fluffyTighnari/middleware/internal/connection"
-	"github.com/fluffyTighnari/middleware/internal/observe"
-	"github.com/fluffyTighnari/middleware/internal/register"
-	"github.com/fluffyTighnari/middleware/internal/runstore"
-	"github.com/fluffyTighnari/middleware/internal/workflow"
+	"github.com/fluffyTighnari/levier/internal/connection"
+	"github.com/fluffyTighnari/levier/internal/observe"
+	"github.com/fluffyTighnari/levier/internal/register"
+	"github.com/fluffyTighnari/levier/internal/runstore"
+	"github.com/fluffyTighnari/levier/internal/workflow"
 )
 
 const defaultMaxBodyBytes = 1 << 20

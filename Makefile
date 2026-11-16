@@ -3,8 +3,8 @@
 
 SHELL := /bin/sh
 GO ?= go
-PYTHON ?= $(if $(wildcard harness/.venv/bin/python),harness/.venv/bin/python,python3)
-MCP_PYTHON ?= $(if $(wildcard mcp_runtime/.venv/bin/python),mcp_runtime/.venv/bin/python,python3)
+PYTHON ?= $(if $(wildcard execution/harness/.venv/bin/python),execution/harness/.venv/bin/python,python3)
+MCP_PYTHON ?= $(if $(wildcard execution/mcp_runtime/.venv/bin/python),execution/mcp_runtime/.venv/bin/python,python3)
 BUF ?= $(HOME)/go/bin/buf
 PROTOC_BIN ?= $(HOME)/go/bin
 
@@ -13,19 +13,25 @@ PROTOC_BIN ?= $(HOME)/go/bin
 export
 BIN_DIR := bin
 GO_FILES := $(shell find . -name '*.go' -not -path './workflow_engine/*' -not -path './vendor/*')
+VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo dev)
+COMMIT ?= $(shell git rev-parse --short HEAD 2>/dev/null || echo unknown)
+BUILD_TIME ?= $(shell date -u +%Y-%m-%dT%H:%M:%SZ)
+LDFLAGS := -X github.com/fluffyTighnari/levier/internal/version.Version=$(VERSION) \
+	-X github.com/fluffyTighnari/levier/internal/version.Commit=$(COMMIT) \
+	-X github.com/fluffyTighnari/levier/internal/version.Built=$(BUILD_TIME)
 
-.PHONY: all build test lint fmt fmt-check vet run clean dev-up dev-down migrate proto proto-check proto-lint contract-check harness-test mcp-runtime-test image-harness image-mcp-runtime counter-agent counter-agent-test http-smoke retrofit-e2e mcp-e2e deps-check size-report daemon-check agent-core-test mvp-demo mvp-demo-react fault-matrix secrets-check docker-up docker-down docker-smoke docker-logs docker-reset
+.PHONY: all build test lint fmt fmt-check vet run clean dev-up dev-down migrate proto proto-check proto-lint contract-check harness-test mcp-runtime-test image-harness image-mcp-runtime counter-agent counter-agent-test http-smoke retrofit-e2e mcp-e2e deps-check structure-check size-report daemon-check agent-core-test mvp-demo mvp-demo-react fault-matrix secrets-check docker-up docker-down docker-smoke docker-logs docker-reset
 
 all: build
 
 build:
 	@mkdir -p $(BIN_DIR)
-	$(GO) build -o $(BIN_DIR)/middleware ./cmd/middleware
+	$(GO) build -trimpath -ldflags "$(LDFLAGS)" -o $(BIN_DIR)/levier ./cmd/levier
 
 test:
 	$(GO) test ./...
 
-lint: fmt-check vet secrets-check
+lint: fmt-check vet secrets-check structure-check
 
 fmt-check:
 	@files="$$(gofmt -l $(GO_FILES))"; \
@@ -40,10 +46,10 @@ fmt:
 	gofmt -w $(GO_FILES)
 
 run:
-	$(GO) run ./cmd/middleware
+	$(GO) run ./cmd/levier
 
 migrate:
-	$(GO) run ./cmd/migrate -config config.example.yaml
+	$(GO) run ./cmd/migrate -config levier.example.yaml
 
 clean:
 	rm -rf $(BIN_DIR)
@@ -59,7 +65,7 @@ proto:
 	PATH="$(PROTOC_BIN):$$PATH" $(BUF) generate
 
 proto-check: proto
-	@git diff --exit-code -- gen harness/src/gen
+	@git diff --exit-code -- gen execution/harness/src/gen
 
 proto-lint:
 	$(BUF) lint
@@ -68,19 +74,19 @@ proto-lint:
 
 contract-check: proto-lint
 	$(GO) test ./internal/protocol -run TestContractGolden -v
-	PYTHONPATH=agent_core/src:harness/src/gen:harness/src $(PYTHON) tests/contract/test_contract.py -v
+	PYTHONPATH=execution/agent_core/src:execution/harness/src/gen:execution/harness/src $(PYTHON) tests/contract/test_contract.py -v
 
 harness-test:
-	PYTHONPATH=agent_core/src:harness/src/gen:harness/src $(PYTHON) -m unittest discover -s harness/tests -v
+	PYTHONPATH=execution/agent_core/src:execution/harness/src/gen:execution/harness/src $(PYTHON) -m unittest discover -s execution/harness/tests -v
 
 mcp-runtime-test:
-	PYTHONPATH=mcp_runtime/src $(MCP_PYTHON) -m unittest discover -s mcp_runtime/tests -v
+	PYTHONPATH=execution/mcp_runtime/src $(MCP_PYTHON) -m unittest discover -s execution/mcp_runtime/tests -v
 
 image-harness:
-	docker build -f deploy/harness.Dockerfile -t middleware-harness:dev .
+	docker build -f deploy/harness.Dockerfile -t levier-harness:dev .
 
 image-mcp-runtime:
-	docker build -f deploy/mcp-runtime.Dockerfile -t middleware-mcp-runtime:dev .
+	docker build -f deploy/mcp-runtime.Dockerfile -t levier-mcp-runtime:dev .
 
 counter-agent:
 	$(PYTHON) examples/counter_agent/main.py
@@ -97,6 +103,9 @@ mcp-e2e:
 deps-check:
 	./tests/checks/check_deps.sh
 
+structure-check:
+	bash tests/checks/check_structure.sh
+
 size-report:
 	./tests/checks/size_report.sh
 
@@ -104,7 +113,7 @@ daemon-check:
 	go run ./cmd/mw-daemon-check
 
 agent-core-test:
-	PYTHONPATH=agent_core/src python3 -m unittest discover -s agent_core/tests -v
+	PYTHONPATH=execution/agent_core/src python3 -m unittest discover -s execution/agent_core/tests -v
 
 mvp-demo:
 	./tests/e2e/mvp_demo.sh echo

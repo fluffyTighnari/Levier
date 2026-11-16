@@ -9,7 +9,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"github.com/fluffyTighnari/middleware/internal/contract"
+	"github.com/fluffyTighnari/levier/internal/contract"
 	"net/http/httptest"
 	"strings"
 	"testing"
@@ -17,8 +17,8 @@ import (
 
 	"golang.org/x/net/websocket"
 
-	"github.com/fluffyTighnari/middleware/internal/connection"
-	"github.com/fluffyTighnari/middleware/internal/runstore"
+	"github.com/fluffyTighnari/levier/internal/connection"
+	"github.com/fluffyTighnari/levier/internal/runstore"
 )
 
 func TestWebSocketSubscribeAndPublish(t *testing.T) {

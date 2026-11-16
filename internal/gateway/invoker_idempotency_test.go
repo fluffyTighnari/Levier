@@ -12,9 +12,9 @@ import (
 	"testing"
 	"time"
 
-	runtimev1 "github.com/fluffyTighnari/middleware/gen/middleware/runtime/v1"
-	"github.com/fluffyTighnari/middleware/internal/connection"
-	"github.com/fluffyTighnari/middleware/internal/register"
+	runtimev1 "github.com/fluffyTighnari/levier/gen/middleware/runtime/v1"
+	"github.com/fluffyTighnari/levier/internal/connection"
+	"github.com/fluffyTighnari/levier/internal/register"
 )
 
 // storedInvocation is one fake store row.

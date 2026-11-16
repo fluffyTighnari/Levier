@@ -455,13 +455,13 @@ Run 进入 `completed/failed/cancelled/timeout` 后：
 
 | 指标 | 类型 | 标签 |
 |---|---|---|
-| `mw_workflow_tasks` | gauge | type, status |
-| `mw_workflow_task_age_seconds` | gauge | type（最老 PENDING 年龄） |
-| `mw_workflow_claim_duration_seconds` | histogram | type |
-| `mw_workflow_task_attempts_total` | counter | type, outcome |
-| `mw_workflow_tasks_dead_total` | counter | type, reason |
-| `mw_workflow_lease_lost_total` | counter | type |
-| `mw_workflow_handler_duration_seconds` | histogram | type |
+| `levier_workflow_tasks` | gauge | type, status |
+| `levier_workflow_task_age_seconds` | gauge | type（最老 PENDING 年龄） |
+| `levier_workflow_claim_duration_seconds` | histogram | type |
+| `levier_workflow_task_attempts_total` | counter | type, outcome |
+| `levier_workflow_tasks_dead_total` | counter | type, reason |
+| `levier_workflow_lease_lost_total` | counter | type |
+| `levier_workflow_handler_duration_seconds` | histogram | type |
 
 ### 10.2 Logs / Trace
 

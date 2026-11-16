@@ -20,8 +20,8 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"github.com/fluffyTighnari/middleware/internal/db"
-	"github.com/fluffyTighnari/middleware/internal/id"
+	"github.com/fluffyTighnari/levier/internal/db"
+	"github.com/fluffyTighnari/levier/internal/id"
 )
 
 func testPool(t *testing.T) *pgxpool.Pool {

@@ -2,6 +2,17 @@
 
 # 契约文件
 
+## 单元卡
+
+| 项 | 内容 |
+|---|---|
+| 职责 | App 侧 HTTP / WebSocket 机器可读契约 |
+| 入口 | `contracts/app-ws.schema.json`、`docs/api/openapi.yaml` |
+| 输入 / 输出 | 协议定义；供客户端、测试、生成物使用 |
+| 依赖 | 无运行时依赖 |
+| 不负责 | 实现、部署、示例 |
+| 测试 | `make contract-check` |
+
 | 文件 | 覆盖 |
 |---|---|
 | `docs/api/openapi.yaml` | App/Admin HTTP API（OpenAPI 3.1） |

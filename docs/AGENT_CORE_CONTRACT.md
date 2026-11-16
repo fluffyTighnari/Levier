@@ -247,7 +247,7 @@ Python 与未来 TS 实现都必须跑通同一组 fixture。
 
 ```text
 contract: 1
-python package: middleware-agent-core 0.1.0
+python package: levier-agent-core 0.1.0
 ```
 
 变更规则：

@@ -2,10 +2,10 @@
 # Middleware — Counter Agent container entrypoint.
 set -eu
 
-MW_URL="${MW_URL:-http://middleware:8080}"
+LEVIER_URL="${LEVIER_URL:-${MW_URL:-http://levier:8080}}"
 CREDENTIALS="${COUNTER_APP_CREDENTIALS:-/data/credentials.json}"
 
-python3 - "$MW_URL" <<'PY'
+python3 - "$LEVIER_URL" <<'PY'
 import sys
 import time
 import urllib.request
@@ -30,5 +30,5 @@ fi
 
 exec python3 /app/examples/counter_agent/serve.py \
   --credentials "$CREDENTIALS" \
-  --mw-url "$MW_URL" \
+  --mw-url "$LEVIER_URL" \
   --timeout 86400

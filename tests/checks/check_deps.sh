@@ -6,6 +6,9 @@ set -euo pipefail
 
 cd "$(dirname "$0")/../.."
 
+# go list should use the host toolchain, not an inherited cross-compile target.
+unset GOOS GOARCH
+
 if [ -x /usr/local/go/bin/go ]; then
   export PATH="/usr/local/go/bin:$PATH"
 fi
@@ -17,7 +20,7 @@ go list -f '{{.ImportPath}}|{{join .Imports " "}}' ./internal/... >"$TMP"
 python3 - "$TMP" <<'PY'
 import sys
 
-MODULE = "github.com/fluffyTighnari/middleware/"
+MODULE = "github.com/fluffyTighnari/levier/"
 
 # package -> prefixes it must not import
 DENY = {

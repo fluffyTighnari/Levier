@@ -1,5 +1,7 @@
 # ADR-0002：精简 Python Harness（v1）
 
+> 路径说明：`agent_core/`、`harness/`、`mcp_runtime/` 已迁移到 `execution/`；本文保留历史路径。
+
 | 项目 | 内容 |
 |---|---|
 | 状态 | 提议（P0-03；MCP 章节按 ADR-0004 修订） |
@@ -110,7 +112,7 @@ middleware 不执行 Agent 的推理循环。它把 Run 分配给一个 Python H
 ```text
 harness/
 ├── pyproject.toml
-├── src/middleware_harness/
+├── src/levier_harness/
 │   ├── __main__.py
 │   ├── config.py
 │   ├── logging.py

@@ -7,7 +7,7 @@ package httpapi
 
 import (
 	"encoding/json"
-	"github.com/fluffyTighnari/middleware/internal/contract"
+	"github.com/fluffyTighnari/levier/internal/contract"
 	"strings"
 	"testing"
 )

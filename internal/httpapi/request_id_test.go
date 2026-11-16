@@ -12,7 +12,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/fluffyTighnari/middleware/internal/runstore"
+	"github.com/fluffyTighnari/levier/internal/runstore"
 )
 
 func TestRequestIDEchoAndGenerate(t *testing.T) {

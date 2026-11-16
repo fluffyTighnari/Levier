@@ -1997,7 +1997,7 @@ const file_middleware_runtime_v1_runtime_proto_rawDesc = "" +
 	"\x05ERROR\x10\a\x12\x14\n" +
 	"\x10CHECKPOINT_SAVED\x10\b2a\n" +
 	"\x0eRuntimeService\x12O\n" +
-	"\aChannel\x12\x1f.middleware.runtime.v1.Envelope\x1a\x1f.middleware.runtime.v1.Envelope(\x010\x01BJZHgithub.com/fluffyTighnari/middleware/gen/middleware/runtime/v1;runtimev1b\x06proto3"
+	"\aChannel\x12\x1f.middleware.runtime.v1.Envelope\x1a\x1f.middleware.runtime.v1.Envelope(\x010\x01BFZDgithub.com/fluffyTighnari/levier/gen/middleware/runtime/v1;runtimev1b\x06proto3"
 
 var (
 	file_middleware_runtime_v1_runtime_proto_rawDescOnce sync.Once

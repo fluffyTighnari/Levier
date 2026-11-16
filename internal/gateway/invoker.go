@@ -10,16 +10,16 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/fluffyTighnari/middleware/internal/errs"
+	"github.com/fluffyTighnari/levier/internal/errs"
 	"log/slog"
 	"runtime/debug"
 	"strings"
 	"time"
 
-	runtimev1 "github.com/fluffyTighnari/middleware/gen/middleware/runtime/v1"
-	"github.com/fluffyTighnari/middleware/internal/connection"
-	"github.com/fluffyTighnari/middleware/internal/observe"
-	"github.com/fluffyTighnari/middleware/internal/register"
+	runtimev1 "github.com/fluffyTighnari/levier/gen/middleware/runtime/v1"
+	"github.com/fluffyTighnari/levier/internal/connection"
+	"github.com/fluffyTighnari/levier/internal/observe"
+	"github.com/fluffyTighnari/levier/internal/register"
 )
 
 const (

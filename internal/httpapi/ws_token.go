@@ -5,7 +5,7 @@
 package httpapi
 
 import (
-	"github.com/fluffyTighnari/middleware/internal/errs"
+	"github.com/fluffyTighnari/levier/internal/errs"
 	"net/http"
 )
 

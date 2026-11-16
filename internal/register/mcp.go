@@ -16,7 +16,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
-	"github.com/fluffyTighnari/middleware/internal/id"
+	"github.com/fluffyTighnari/levier/internal/id"
 )
 
 // MCPServerInput is one registered MCP server definition.

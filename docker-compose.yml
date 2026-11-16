@@ -2,7 +2,7 @@
 #
 # Core services:
 #   postgres      PostgreSQL 16
-#   middleware    Go control plane
+#   levier        Go control plane
 #   mcp-runtime   independent MCP runtime (runtime 1)
 #   harness       Python Agent runtime (runtime 2)
 #   agent         counter_agent App
@@ -12,17 +12,17 @@
 #
 # Copyright 2026 The Middleware Authors.
 
-name: middleware-mvp
+name: levier-mvp
 
 services:
   postgres:
     image: postgres:16-alpine
     environment:
-      POSTGRES_USER: middleware
+      POSTGRES_USER: levier
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-change-me}
-      POSTGRES_DB: middleware
+      POSTGRES_DB: levier
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U middleware -d middleware"]
+      test: ["CMD-SHELL", "pg_isready -U levier -d levier"]
       interval: 3s
       timeout: 3s
       retries: 30
@@ -30,15 +30,20 @@ services:
       - pgdata:/var/lib/postgresql/data
     restart: unless-stopped
 
-  middleware:
+  levier:
     build:
       context: .
-      dockerfile: deploy/middleware.Dockerfile
+      dockerfile: deploy/levier.Dockerfile
+      args:
+        GOPROXY: ${GOPROXY:-https://proxy.golang.org,direct}
+        VERSION: ${LEVIER_VERSION:-dev}
+        COMMIT: ${LEVIER_COMMIT:-unknown}
+        BUILD_TIME: ${LEVIER_BUILD_TIME:-unknown}
     environment:
-      MIDDLEWARE_DATABASE_URL: postgres://middleware:${POSTGRES_PASSWORD:-change-me}@postgres:5432/middleware?sslmode=disable
-      MIDDLEWARE_HTTP_ADMIN_TOKEN: ${MW_ADMIN_TOKEN:-admin-change-me}
-      MIDDLEWARE_LOG_LEVEL: ${MW_LOG_LEVEL:-info}
-      MIDDLEWARE_LOG_FORMAT: json
+      LEVIER_DATABASE_URL: postgres://levier:${POSTGRES_PASSWORD:-change-me}@postgres:5432/levier?sslmode=disable
+      LEVIER_HTTP_ADMIN_TOKEN: ${LEVIER_ADMIN_TOKEN:-${MW_ADMIN_TOKEN:-admin-change-me}}
+      LEVIER_LOG_LEVEL: ${LEVIER_LOG_LEVEL:-${MW_LOG_LEVEL:-info}}
+      LEVIER_LOG_FORMAT: json
     ports:
       - "8080:8080"
       - "9090:9090"
@@ -56,13 +61,13 @@ services:
     build:
       context: .
       dockerfile: deploy/mcp-runtime.Dockerfile
-    command: ["--socket", "/run/middleware/mcp.sock"]
+    command: ["--socket", "/run/levier/mcp.sock"]
     environment:
-      MIDDLEWARE_SECRET_E2E_TOKEN: ${MCP_E2E_TOKEN:-mcp-e2e-secret}
+      LEVIER_SECRET_E2E_TOKEN: ${MCP_E2E_TOKEN:-mcp-e2e-secret}
     volumes:
-      - mcp_socket:/run/middleware
+      - mcp_socket:/run/levier
     healthcheck:
-      test: ["CMD-SHELL", "test -e /run/middleware/mcp.sock"]
+      test: ["CMD-SHELL", "test -e /run/levier/mcp.sock"]
       interval: 3s
       timeout: 3s
       retries: 30
@@ -73,18 +78,18 @@ services:
       context: .
       dockerfile: deploy/harness.Dockerfile
     environment:
-      HARNESS_MIDDLEWARE_ADDRESS: middleware:9090
+      HARNESS_LEVIER_ADDRESS: levier:9090
       HARNESS_DAEMON_ID: daemon-local-1
       HARNESS_DAEMON_AUTH_TOKEN: change-me
-      HARNESS_MCP_RUNTIME_SOCKET: /run/middleware/mcp.sock
+      HARNESS_MCP_RUNTIME_SOCKET: /run/levier/mcp.sock
       HARNESS_LOGGING_FORMAT: json
       DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY:-}
       DEEPSEEK_BASE_URL: ${DEEPSEEK_BASE_URL:-https://api.deepseek.com}
       DEEPSEEK_MODEL: ${DEEPSEEK_MODEL:-deepseek-flash}
     volumes:
-      - mcp_socket:/run/middleware
+      - mcp_socket:/run/levier
     depends_on:
-      middleware:
+      levier:
         condition: service_healthy
       mcp-runtime:
         condition: service_healthy
@@ -95,14 +100,14 @@ services:
       context: .
       dockerfile: deploy/agent.Dockerfile
     environment:
-      MW_URL: http://middleware:8080
-      MW_ADMIN_TOKEN: ${MW_ADMIN_TOKEN:-admin-change-me}
-      MW_APP_NAME: ${MW_APP_NAME:-counter-agent}
+      LEVIER_URL: http://levier:8080
+      LEVIER_ADMIN_TOKEN: ${LEVIER_ADMIN_TOKEN:-${MW_ADMIN_TOKEN:-admin-change-me}}
+      LEVIER_APP_NAME: ${LEVIER_APP_NAME:-${MW_APP_NAME:-counter-agent}}
       COUNTER_APP_CREDENTIALS: /data/credentials.json
     volumes:
       - agent_data:/data
     depends_on:
-      middleware:
+      levier:
         condition: service_healthy
     restart: unless-stopped
 
@@ -110,16 +115,16 @@ services:
     image: python:3.12-slim
     command: ["python", "/app/smoke.py"]
     environment:
-      MW_URL: http://middleware:8080
-      MCP_SOCKET: /run/middleware/mcp.sock
+      LEVIER_URL: http://levier:8080
+      MCP_SOCKET: /run/levier/mcp.sock
       CREDENTIALS: /data/credentials.json
       DAEMON_ID: daemon-local-1
     volumes:
       - ./deploy/smoke.py:/app/smoke.py:ro
-      - mcp_socket:/run/middleware
+      - mcp_socket:/run/levier
       - agent_data:/data
     depends_on:
-      middleware:
+      levier:
         condition: service_healthy
       mcp-runtime:
         condition: service_healthy

@@ -7,7 +7,6 @@ package gateway
 
 import (
 	"context"
-	"os"
 	"strings"
 	"testing"
 	"time"
@@ -15,19 +14,20 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	runtimev1 "github.com/fluffyTighnari/middleware/gen/middleware/runtime/v1"
-	"github.com/fluffyTighnari/middleware/internal/db"
-	"github.com/fluffyTighnari/middleware/internal/id"
+	runtimev1 "github.com/fluffyTighnari/levier/gen/middleware/runtime/v1"
+	"github.com/fluffyTighnari/levier/internal/db"
+	"github.com/fluffyTighnari/levier/internal/id"
+	"github.com/fluffyTighnari/levier/internal/testutil"
 )
 
 func testGatewayPool(t testing.TB) *pgxpool.Pool {
 	t.Helper()
-	if os.Getenv("MIDDLEWARE_TEST_POSTGRES") != "1" {
-		t.Skip("MIDDLEWARE_TEST_POSTGRES is not set to 1")
+	if testutil.EnvOrLegacy("LEVIER_TEST_POSTGRES", "MIDDLEWARE_TEST_POSTGRES") != "1" {
+		t.Skip("LEVIER_TEST_POSTGRES is not set to 1")
 	}
-	dsn := os.Getenv("MIDDLEWARE_TEST_DATABASE_URL")
+	dsn := testutil.EnvOrLegacy("LEVIER_TEST_DATABASE_URL", "MIDDLEWARE_TEST_DATABASE_URL")
 	if dsn == "" {
-		t.Skip("MIDDLEWARE_TEST_DATABASE_URL is not set")
+		t.Skip("LEVIER_TEST_DATABASE_URL is not set")
 	}
 	ctx := context.Background()
 	schema := strings.ToLower("mw_test_" + id.New())

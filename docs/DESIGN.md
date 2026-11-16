@@ -380,13 +380,13 @@ trace_id = Run 的关联 ID
 关键指标：
 
 ```text
-mw_runs_total{status,runtime}
-mw_events_total{type}
-mw_events_dropped_total{reason}
-mw_event_append_duration_seconds
-mw_tool_invocations_total{tool,scope,status}
-mw_workflow_*（claim/lease/reaper）
-mw_daemon_capacity
+levier_runs_total{status,runtime}
+levier_events_total{type}
+levier_events_dropped_total{reason}
+levier_event_append_duration_seconds
+levier_tool_invocations_total{tool,scope,status}
+levier_workflow_*（claim/lease/reaper）
+levier_daemon_capacity
 ```
 
 ---
@@ -394,8 +394,8 @@ mw_daemon_capacity
 ## 11. Agent Core
 
 ```text
-agent_core/  语言无关的循环、工具编排、事件、取消
-harness/     适配层：TaskAssign ↔ RunSpec、CoreEvent ↔ MW Event、工具桥
+execution/agent_core/  语言无关的循环、工具编排、事件、取消
+execution/harness/     适配层：TaskAssign ↔ RunSpec、CoreEvent ↔ MW Event、工具桥
 ```
 
 规则：
@@ -407,7 +407,7 @@ checkpoint 由 MW/adapter 持有
 core 不 import Middleware/Harness/MCP/protobuf
 ```
 
-Conformance fixtures：`agent_core/conformance/fixtures/*.json`。
+Conformance fixtures：`execution/agent_core/conformance/fixtures/*.json`。
 
 ---
 
@@ -453,8 +453,8 @@ make harness-test
 make mcp-runtime-test
 make counter-agent-test
 
-MIDDLEWARE_TEST_POSTGRES=1 go test -count=1 ./...
-MIDDLEWARE_TEST_POSTGRES=1 go test -race -count=1 ./...
+LEVIER_TEST_POSTGRES=1 go test -count=1 ./...
+LEVIER_TEST_POSTGRES=1 go test -race -count=1 ./...
 ```
 
 目录：

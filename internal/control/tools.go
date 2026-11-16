@@ -7,11 +7,11 @@ package control
 import (
 	"context"
 	"fmt"
-	"github.com/fluffyTighnari/middleware/internal/errs"
+	"github.com/fluffyTighnari/levier/internal/errs"
 
-	runtimev1 "github.com/fluffyTighnari/middleware/gen/middleware/runtime/v1"
-	"github.com/fluffyTighnari/middleware/internal/observe"
-	"github.com/fluffyTighnari/middleware/internal/protocol"
+	runtimev1 "github.com/fluffyTighnari/levier/gen/middleware/runtime/v1"
+	"github.com/fluffyTighnari/levier/internal/observe"
+	"github.com/fluffyTighnari/levier/internal/protocol"
 )
 
 // HandleToolCall executes one daemon ToolCallRequest through the gateway.

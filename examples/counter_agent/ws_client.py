@@ -26,7 +26,7 @@ class WebSocketError(RuntimeError):
 
 
 def websocket_url(base_url: str, ws_path: str, app_id: str, token: str) -> str:
-    """Build a ws/wss URL from MW_URL, ws_url, app_id, and token."""
+    """Build a ws/wss URL from LEVIER_URL, ws_url, app_id, and token."""
     parts = urlsplit(base_url)
     scheme = "wss" if parts.scheme == "https" else "ws"
     if ws_path.startswith("ws://") or ws_path.startswith("wss://"):

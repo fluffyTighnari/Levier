@@ -10,7 +10,7 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/fluffyTighnari/middleware/internal/id"
+	"github.com/fluffyTighnari/levier/internal/id"
 )
 
 const (

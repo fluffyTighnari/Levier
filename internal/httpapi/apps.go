@@ -6,11 +6,11 @@ package httpapi
 
 import (
 	"errors"
-	"github.com/fluffyTighnari/middleware/internal/errs"
+	"github.com/fluffyTighnari/levier/internal/errs"
 	"net/http"
 
-	"github.com/fluffyTighnari/middleware/internal/register"
-	"github.com/fluffyTighnari/middleware/internal/runstore"
+	"github.com/fluffyTighnari/levier/internal/register"
+	"github.com/fluffyTighnari/levier/internal/runstore"
 )
 
 func (s *Server) handleAdminCreateApp(w http.ResponseWriter, r *http.Request) {

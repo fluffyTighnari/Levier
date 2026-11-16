@@ -2,11 +2,22 @@
 
 # Container Deployment
 
+## 单元卡
+
+| 项 | 内容 |
+|---|---|
+| 职责 | 镜像、Compose、入口脚本、smoke |
+| 入口 | `docker-compose.yml`、`deploy/*.Dockerfile` |
+| 输入 / 输出 | 源码与配置；可运行容器栈 |
+| 依赖 | 各组件源码、PostgreSQL、Docker |
+| 不负责 | 业务逻辑、协议定义、控制面实现 |
+| 测试 | `docker compose config`、`docker compose --profile smoke run --rm smoke` |
+
 一套 Compose 启动：
 
 ```text
 postgres      PostgreSQL 16
-middleware    Go 控制面
+levier        Go 控制面
 mcp-runtime   runtime 1：MCP 连接/会话/凭据
 harness       runtime 2：Agent 循环
 agent         counter_agent App
@@ -22,9 +33,9 @@ docker compose ps
 首次启动会：
 
 ```text
-middleware 等 PostgreSQL → 迁移 → 启动
-mcp-runtime 创建 /run/middleware/mcp.sock
-harness 连接 middleware，注册 daemon-local-1
+levier 等 PostgreSQL → 迁移 → 启动
+mcp-runtime 创建 /run/levier/mcp.sock
+harness 连接 levier，注册 daemon-local-1
 agent 等 /readyz → bootstrap App → 注册工具 → 连 WebSocket
 ```
 
@@ -63,7 +74,7 @@ DEEPSEEK_API_KEY=... docker compose up --build -d
 ```sh
 docker compose exec agent python3 /app/examples/counter_agent/submit_run.py \
   --credentials /data/credentials.json \
-  --mw-url http://middleware:8080 \
+  --mw-url http://levier:8080 \
   --strategy react \
   --provider deepseek \
   --model deepseek-flash \
@@ -84,19 +95,29 @@ Compose 默认值足够本地 smoke：
 
 ```text
 POSTGRES_PASSWORD   change-me
-MW_ADMIN_TOKEN      admin-change-me
-MW_APP_NAME         counter-agent
+LEVIER_ADMIN_TOKEN      admin-change-me
+LEVIER_APP_NAME         counter-agent
 MCP_E2E_TOKEN       mcp-e2e-secret
 ```
 
-daemon token 当前固定为 `change-me`，与 `config.example.yaml` 的
+daemon token 当前固定为 `change-me`，与 `levier.example.yaml` 的
 `daemon-local-1` 一致；这是本地 demo 配置，生产需要改成独立凭据。
 
 ## 6. 单独构建镜像
 
 ```sh
-docker build -f deploy/middleware.Dockerfile -t middleware:dev .
-docker build -f deploy/harness.Dockerfile -t middleware-harness:dev .
-docker build -f deploy/mcp-runtime.Dockerfile -t middleware-mcp-runtime:dev .
-docker build -f deploy/agent.Dockerfile -t middleware-agent:dev .
+docker build -f deploy/levier.Dockerfile -t levier:dev .
+docker build -f deploy/harness.Dockerfile -t levier-harness:dev .
+docker build -f deploy/mcp-runtime.Dockerfile -t levier-mcp-runtime:dev .
+docker build -f deploy/agent.Dockerfile -t levier-agent:dev .
+```
+
+如果 Docker 内访问 `proxy.golang.org` 失败，可以用模块代理构建：
+
+```sh
+GOPROXY=https://goproxy.cn,direct docker compose build levier
+# 或
+docker build -f deploy/levier.Dockerfile \
+  --build-arg GOPROXY=https://goproxy.cn,direct \
+  -t levier:dev .
 ```

@@ -13,10 +13,10 @@ import (
 	"testing"
 	"time"
 
-	runtimev1 "github.com/fluffyTighnari/middleware/gen/middleware/runtime/v1"
-	"github.com/fluffyTighnari/middleware/internal/connection"
-	"github.com/fluffyTighnari/middleware/internal/observe"
-	"github.com/fluffyTighnari/middleware/internal/register"
+	runtimev1 "github.com/fluffyTighnari/levier/gen/middleware/runtime/v1"
+	"github.com/fluffyTighnari/levier/internal/connection"
+	"github.com/fluffyTighnari/levier/internal/observe"
+	"github.com/fluffyTighnari/levier/internal/register"
 )
 
 type fakeResolver struct {
@@ -187,8 +187,8 @@ func TestInvokerRecordsMetrics(t *testing.T) {
 	}
 	output := buf.String()
 	for _, want := range []string{
-		`mw_tool_invocations_total{scope="local",status="ok",tool="search"} 1`,
-		`mw_tool_duration_seconds_count{scope="local",tool="search"} 1`,
+		`levier_tool_invocations_total{scope="local",status="ok",tool="search"} 1`,
+		`levier_tool_duration_seconds_count{scope="local",tool="search"} 1`,
 	} {
 		if !strings.Contains(output, want) {
 			t.Fatalf("metrics do not contain %q:\n%s", want, output)

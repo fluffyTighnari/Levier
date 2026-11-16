@@ -8,8 +8,8 @@ import (
 	"fmt"
 	"time"
 
-	runtimev1 "github.com/fluffyTighnari/middleware/gen/middleware/runtime/v1"
-	"github.com/fluffyTighnari/middleware/internal/protocol"
+	runtimev1 "github.com/fluffyTighnari/levier/gen/middleware/runtime/v1"
+	"github.com/fluffyTighnari/levier/internal/protocol"
 )
 
 // Send queues one envelope to a daemon.

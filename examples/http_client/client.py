@@ -100,9 +100,9 @@ def assert_error_envelope(payload: dict[str, Any], code: str) -> None:
 
 
 def main() -> int:
-    base_url = os.environ.get("MW_URL", DEFAULT_URL).rstrip("/")
-    admin_token = os.environ.get("MW_ADMIN_TOKEN", DEFAULT_ADMIN_TOKEN)
-    app_name = os.environ.get("MW_APP_NAME", DEFAULT_APP_NAME)
+    base_url = (os.environ.get("LEVIER_URL") or os.environ.get("MW_URL") or DEFAULT_URL).rstrip("/")
+    admin_token = os.environ.get("LEVIER_ADMIN_TOKEN") or os.environ.get("MW_ADMIN_TOKEN") or DEFAULT_ADMIN_TOKEN
+    app_name = os.environ.get("LEVIER_APP_NAME") or os.environ.get("MW_APP_NAME") or DEFAULT_APP_NAME
 
     _, health, health_headers = request("GET", base_url + "/healthz", expected=200)
     print(f"health: {health.get('status')} request_id={header(health_headers, 'X-Request-ID')}")

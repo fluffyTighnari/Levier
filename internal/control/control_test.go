@@ -18,14 +18,14 @@ import (
 
 	"google.golang.org/protobuf/types/known/structpb"
 
-	runtimev1 "github.com/fluffyTighnari/middleware/gen/middleware/runtime/v1"
-	"github.com/fluffyTighnari/middleware/internal/connection"
-	"github.com/fluffyTighnari/middleware/internal/id"
-	"github.com/fluffyTighnari/middleware/internal/observe"
-	"github.com/fluffyTighnari/middleware/internal/protocol"
-	"github.com/fluffyTighnari/middleware/internal/register"
-	"github.com/fluffyTighnari/middleware/internal/runstore"
-	"github.com/fluffyTighnari/middleware/internal/workflow"
+	runtimev1 "github.com/fluffyTighnari/levier/gen/middleware/runtime/v1"
+	"github.com/fluffyTighnari/levier/internal/connection"
+	"github.com/fluffyTighnari/levier/internal/id"
+	"github.com/fluffyTighnari/levier/internal/observe"
+	"github.com/fluffyTighnari/levier/internal/protocol"
+	"github.com/fluffyTighnari/levier/internal/register"
+	"github.com/fluffyTighnari/levier/internal/runstore"
+	"github.com/fluffyTighnari/levier/internal/workflow"
 )
 
 type fakeRuns struct {
@@ -1123,10 +1123,10 @@ func TestControlRecordsMetrics(t *testing.T) {
 	}
 	output := buf.String()
 	for _, want := range []string{
-		`mw_runs_total{runtime="normal",status="completed"} 1`,
-		`mw_events_total{type="RUN_STATUS"} 1`,
-		`mw_events_total{type="USAGE"} 1`,
-		`mw_token_usage_total{app="app-1",model="claude-test"} 15`,
+		`levier_runs_total{runtime="normal",status="completed"} 1`,
+		`levier_events_total{type="RUN_STATUS"} 1`,
+		`levier_events_total{type="USAGE"} 1`,
+		`levier_token_usage_total{app="app-1",model="claude-test"} 15`,
 	} {
 		if !strings.Contains(output, want) {
 			t.Fatalf("metrics do not contain %q:\n%s", want, output)

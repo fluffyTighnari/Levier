@@ -11,13 +11,13 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/fluffyTighnari/middleware/internal/errs"
+	"github.com/fluffyTighnari/levier/internal/errs"
 	"io"
 	"net/http"
 	"strconv"
 	"strings"
 
-	"github.com/fluffyTighnari/middleware/internal/gateway"
+	"github.com/fluffyTighnari/levier/internal/gateway"
 )
 
 // WebhookConfig is the tool-specific configuration for builtin:webhook.

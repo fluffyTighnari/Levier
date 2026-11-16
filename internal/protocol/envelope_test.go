@@ -9,9 +9,9 @@ import (
 	"strings"
 	"testing"
 
-	runtimev1 "github.com/fluffyTighnari/middleware/gen/middleware/runtime/v1"
-	"github.com/fluffyTighnari/middleware/internal/errs"
-	"github.com/fluffyTighnari/middleware/internal/id"
+	runtimev1 "github.com/fluffyTighnari/levier/gen/middleware/runtime/v1"
+	"github.com/fluffyTighnari/levier/internal/errs"
+	"github.com/fluffyTighnari/levier/internal/id"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/structpb"
 )

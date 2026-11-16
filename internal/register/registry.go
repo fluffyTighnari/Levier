@@ -19,8 +19,8 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"github.com/fluffyTighnari/middleware/internal/id"
-	"github.com/fluffyTighnari/middleware/internal/runstore"
+	"github.com/fluffyTighnari/levier/internal/id"
+	"github.com/fluffyTighnari/levier/internal/runstore"
 )
 
 const apiKeyPrefix = "mw_"

@@ -1,4 +1,4 @@
-// Middleware — daemon protocol conformance check.
+// Levier — daemon protocol conformance check.
 //
 // Connects as a RuntimeChannel daemon, accepts one TaskAssign, emits events,
 // then verifies cancel handling against a real Middleware instance.
@@ -21,10 +21,10 @@ import (
 	"strings"
 	"time"
 
-	runtimev1 "github.com/fluffyTighnari/middleware/gen/middleware/runtime/v1"
-	"github.com/fluffyTighnari/middleware/internal/id"
-	"github.com/fluffyTighnari/middleware/internal/protocol"
-	"github.com/fluffyTighnari/middleware/internal/testutil/fakedaemon"
+	runtimev1 "github.com/fluffyTighnari/levier/gen/middleware/runtime/v1"
+	"github.com/fluffyTighnari/levier/internal/id"
+	"github.com/fluffyTighnari/levier/internal/protocol"
+	"github.com/fluffyTighnari/levier/internal/testutil/fakedaemon"
 )
 
 type config struct {

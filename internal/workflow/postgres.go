@@ -16,7 +16,7 @@ import (
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"github.com/fluffyTighnari/middleware/internal/id"
+	"github.com/fluffyTighnari/levier/internal/id"
 )
 
 const taskColumns = `

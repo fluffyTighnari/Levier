@@ -27,7 +27,7 @@ gateway         工具路由与幂等：local / global
 connection      daemon/app 在线状态与收发接口
 httpapi         HTTP + WebSocket 适配
 observe         指标与日志字段
-cmd/middleware  进程入口与 wiring
+cmd/levier  进程入口与 wiring
 ```
 
 依赖方向：
@@ -84,13 +84,13 @@ MCP      Harness → mcp_runtime（本地 JSON-RPC）→ MCP server
 | 新 HTTP 路由 | `httpapi/` 对应文件 + `openapi.yaml` |
 | 新事件字段 | `internal/contract/events.go`（Go）并与 Harness 对齐 |
 | 新错误码 | `internal/errs/errors.go` |
-| 新 MCP transport | `mcp_runtime/sessions.py` + 测试 |
+| 新 MCP transport | `execution/mcp_runtime/` + 测试 |
 | 新存储查询 | 对应 `runstore/*.go` |
 
 ## 6. Agent Core
 
 ```text
-agent_core/          循环、工具编排、CoreEvent、取消（无 MW 依赖）
+execution/agent_core/  循环、工具编排、CoreEvent、取消（无 MW 依赖）
 harness adapter      TaskAssign ↔ RunSpec、CoreEvent ↔ MW Event、工具桥
 ```
 

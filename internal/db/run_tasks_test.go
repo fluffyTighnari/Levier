@@ -12,7 +12,7 @@ import (
 
 	"github.com/jackc/pgx/v5/pgconn"
 
-	"github.com/fluffyTighnari/middleware/internal/id"
+	"github.com/fluffyTighnari/levier/internal/id"
 )
 
 func TestRunTaskConstraints(t *testing.T) {

@@ -10,7 +10,7 @@ import (
 	"fmt"
 	"testing"
 
-	runtimev1 "github.com/fluffyTighnari/middleware/gen/middleware/runtime/v1"
+	runtimev1 "github.com/fluffyTighnari/levier/gen/middleware/runtime/v1"
 )
 
 // BenchmarkInvocationStoreRoundTrip measures the two writes the gateway does

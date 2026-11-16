@@ -93,8 +93,8 @@ Authorization: Bearer {APP_KEY}
 启动：
 
 ```sh
-PYTHONPATH=mcp_runtime/src mcp_runtime/.venv/bin/python -m mcp_runtime \
-  --socket /tmp/middleware-mcp.sock \
+PYTHONPATH=execution/mcp_runtime/src execution/mcp_runtime/.venv/bin/python -m levier_mcp_runtime \
+  --socket /tmp/levier-mcp.sock \
   --secrets-file /path/to/secrets.json \
   --log-level info
 ```
@@ -102,7 +102,7 @@ PYTHONPATH=mcp_runtime/src mcp_runtime/.venv/bin/python -m mcp_runtime \
 凭据来源：
 
 ```text
-MIDDLEWARE_SECRET_<NAME>     环境变量
+LEVIER_SECRET_<NAME>     环境变量（旧名 MIDDLEWARE_SECRET_ 仍兼容）
 --secrets-file               0600 JSON，{"name":"value"}
 ```
 
@@ -115,7 +115,7 @@ socket 文件 0600
 日志只记录 server / session / 工具数 / 耗时
 ```
 
-Harness 必须指向同一个 socket（`harness/config.example.yaml` 的 `mcp_runtime.socket`）。
+Harness 必须指向同一个 socket（`execution/harness/levier.example.yaml` 的 `mcp_runtime.socket`）。
 
 ## 5. 工具命名与过滤
 

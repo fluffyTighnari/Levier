@@ -9,13 +9,13 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 WORKDIR /app
 
-COPY agent_core/pyproject.toml agent_core/README.md /app/agent_core/
-COPY agent_core/src /app/agent_core/src
-COPY harness/pyproject.toml harness/README.md /app/harness/
-COPY harness/src /app/harness/src
-COPY harness/config.example.yaml /app/harness/config.example.yaml
+COPY execution/agent_core/pyproject.toml execution/agent_core/README.md /app/agent_core/
+COPY execution/agent_core/src /app/agent_core/src
+COPY execution/harness/pyproject.toml execution/harness/README.md /app/harness/
+COPY execution/harness/src /app/harness/src
+COPY execution/harness/levier.example.yaml /app/harness/levier.example.yaml
 
-# middleware-agent-core is a local path dependency. Install it explicitly and
+# levier-agent-core is a local path dependency. Install it explicitly and
 # keep pip from trying to resolve it from PyPI.
 RUN pip install --no-cache-dir --no-deps -e /app/agent_core -e /app/harness \
  && pip install --no-cache-dir \
@@ -23,7 +23,7 @@ RUN pip install --no-cache-dir --no-deps -e /app/agent_core -e /app/harness \
 
 # Fail the image build if generated protobuf modules or the adapter cannot import.
 RUN PYTHONPATH=/app/harness/src:/app/harness/src/gen \
-    python -m middleware_harness --config /app/harness/config.example.yaml --check
+    python -m levier_harness --config /app/harness/levier.example.yaml --check
 
-ENTRYPOINT ["python", "-m", "middleware_harness"]
-CMD ["--config", "/app/harness/config.example.yaml"]
+ENTRYPOINT ["python", "-m", "levier_harness"]
+CMD ["--config", "/app/harness/levier.example.yaml"]

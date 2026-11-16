@@ -10,7 +10,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/fluffyTighnari/middleware/internal/id"
+	"github.com/fluffyTighnari/levier/internal/id"
 )
 
 func TestNewTaskDefaults(t *testing.T) {

@@ -6,9 +6,9 @@
 # call through the model.
 #
 # Requirements:
-#   - PostgreSQL reachable via MIDDLEWARE_DATABASE_URL
+#   - PostgreSQL reachable via LEVIER_DATABASE_URL
 #   - DEEPSEEK_API_KEY in the environment
-#   - bin/middleware built, harness/.venv and mcp_runtime/.venv present
+#   - bin/levier built, execution/harness/.venv and execution/mcp_runtime/.venv present
 set -euo pipefail
 
 cd "$(dirname "$0")/../.."
@@ -25,35 +25,35 @@ for env_file in .env.local .env; do
   fi
 done
 
-MIDDLEWARE_BIN="${MIDDLEWARE_BIN:-bin/middleware}"
-MIDDLEWARE_CONFIG="${MIDDLEWARE_CONFIG:-config.example.yaml}"
-HARNESS_CONFIG="${HARNESS_CONFIG:-harness/config.example.yaml}"
-HARNESS_PYTHON="${HARNESS_PYTHON:-harness/.venv/bin/python}"
-RUNTIME_PYTHON="${RUNTIME_PYTHON:-mcp_runtime/.venv/bin/python}"
-MCP_SOCKET="${MCP_SOCKET:-/tmp/middleware-mcp.sock}"
-MW_URL="${MW_URL:-http://127.0.0.1:8080}"
-ADMIN_TOKEN="${MW_ADMIN_TOKEN:-admin-change-me}"
-DATABASE_URL="${MIDDLEWARE_DATABASE_URL:-}"
+LEVIER_BIN="${LEVIER_BIN:-${MIDDLEWARE_BIN:-bin/levier}}"
+LEVIER_CONFIG="${LEVIER_CONFIG:-${MIDDLEWARE_CONFIG:-levier.example.yaml}}"
+HARNESS_CONFIG="${HARNESS_CONFIG:-execution/harness/levier.example.yaml}"
+HARNESS_PYTHON="${HARNESS_PYTHON:-execution/harness/.venv/bin/python}"
+RUNTIME_PYTHON="${RUNTIME_PYTHON:-execution/mcp_runtime/.venv/bin/python}"
+MCP_SOCKET="${MCP_SOCKET:-/tmp/levier-mcp.sock}"
+LEVIER_URL="${LEVIER_URL:-${MW_URL:-http://127.0.0.1:8080}}"
+ADMIN_TOKEN="${LEVIER_ADMIN_TOKEN:-${MW_ADMIN_TOKEN:-admin-change-me}}"
+DATABASE_URL="${LEVIER_DATABASE_URL:-${MIDDLEWARE_DATABASE_URL:-}}"
 STAMP="$(date -u +%Y%m%dT%H%M%SZ)"
 OUT="${MCP_E2E_OUT:-docs/reports/artifacts/mcp/M6/run-$STAMP}"
 SECRET_VALUE="mcp-e2e-secret"
 SERVER_NAME="e2e-echo"
 TOOL_NAME="mcp__e2e_echo__echo_token"
-FIXTURE="mcp_runtime/tests/secret_echo_server.py"
+FIXTURE="execution/mcp_runtime/tests/secret_echo_server.py"
 
 fail() {
   echo "mcp-e2e: $*" >&2
   exit 1
 }
 
-[ -n "$DATABASE_URL" ] || fail "MIDDLEWARE_DATABASE_URL is required"
+[ -n "$DATABASE_URL" ] || fail "LEVIER_DATABASE_URL is required"
 command -v psql >/dev/null 2>&1 || fail "psql is required"
 command -v curl >/dev/null 2>&1 || fail "curl is required"
 command -v python3 >/dev/null 2>&1 || fail "python3 is required"
 [ -x "$HARNESS_PYTHON" ] || fail "harness Python not found: $HARNESS_PYTHON"
 [ -x "$RUNTIME_PYTHON" ] || fail "mcp_runtime Python not found: $RUNTIME_PYTHON"
 [ -f "$FIXTURE" ] || fail "MCP fixture not found: $FIXTURE"
-if [ ! -x "$MIDDLEWARE_BIN" ]; then
+if [ ! -x "$LEVIER_BIN" ]; then
   make build
 fi
 
@@ -80,25 +80,25 @@ psql_run() {
 }
 
 echo "== preflight =="
-go run ./cmd/migrate -config "$MIDDLEWARE_CONFIG" >"$OUT/migrate.log" 2>&1 \
+go run ./cmd/migrate -config "$LEVIER_CONFIG" >"$OUT/migrate.log" 2>&1 \
   || fail "migration failed; is PostgreSQL running?"
-if curl -fsS "$MW_URL/healthz" >/dev/null 2>&1; then
-  fail "$MW_URL is already serving; stop it first"
+if curl -fsS "$LEVIER_URL/healthz" >/dev/null 2>&1; then
+  fail "$LEVIER_URL is already serving; stop it first"
 fi
 rm -f "$MCP_SOCKET"
 
 echo "== start Middleware =="
-"$MIDDLEWARE_BIN" -config "$MIDDLEWARE_CONFIG" >"$OUT/middleware.log" 2>&1 &
+"$LEVIER_BIN" -config "$LEVIER_CONFIG" >"$OUT/middleware.log" 2>&1 &
 MW_PID=$!
 for _ in $(seq 1 100); do
-  curl -fsS "$MW_URL/healthz" >/dev/null 2>&1 && break
+  curl -fsS "$LEVIER_URL/healthz" >/dev/null 2>&1 && break
   sleep 0.1
 done
-curl -fsS "$MW_URL/healthz" >/dev/null 2>&1 || fail "Middleware did not become healthy"
+curl -fsS "$LEVIER_URL/healthz" >/dev/null 2>&1 || fail "Middleware did not become healthy"
 
 echo "== start MCP runtime =="
-MIDDLEWARE_SECRET_E2E_TOKEN="$SECRET_VALUE" PYTHONPATH=mcp_runtime/src \
-  "$RUNTIME_PYTHON" -m mcp_runtime --socket "$MCP_SOCKET" --log-level info \
+LEVIER_SECRET_E2E_TOKEN="$SECRET_VALUE" PYTHONPATH=execution/mcp_runtime/src \
+  "$RUNTIME_PYTHON" -m levier_mcp_runtime --socket "$MCP_SOCKET" --log-level info \
   >"$OUT/runtime.log" 2>&1 &
 RUNTIME_PID=$!
 for _ in $(seq 1 100); do
@@ -108,7 +108,7 @@ done
 [ -S "$MCP_SOCKET" ] || fail "MCP runtime did not listen"
 
 echo "== start Harness =="
-PYTHONPATH="agent_core/src:harness/src/gen:harness/src" "$HARNESS_PYTHON" -m middleware_harness \
+PYTHONPATH="execution/agent_core/src:execution/harness/src/gen:execution/harness/src" "$HARNESS_PYTHON" -m levier_harness \
   --config "$HARNESS_CONFIG" >"$OUT/harness.log" 2>&1 &
 HARNESS_PID=$!
 sleep 2
@@ -128,12 +128,12 @@ print(json.dumps({
     "allowed_tools": ["echo_token"],
 }, separators=(",", ":")))
 PY
-curl -fsS -X POST "$MW_URL/admin/mcp" \
+curl -fsS -X POST "$LEVIER_URL/admin/mcp" \
   -H "Authorization: Bearer $ADMIN_TOKEN" \
   -H "Content-Type: application/json" \
   --data-binary "@$OUT/catalog_request.json" >"$OUT/catalog.json" || fail "catalog registration failed"
 
-MW_URL="$MW_URL" MW_ADMIN_TOKEN="$ADMIN_TOKEN" MW_APP_NAME="mcp-e2e-$STAMP" \
+LEVIER_URL="$LEVIER_URL" LEVIER_ADMIN_TOKEN="$ADMIN_TOKEN" LEVIER_APP_NAME="mcp-e2e-$STAMP" \
   python3 examples/counter_agent/bootstrap_app.py --credentials-out "$CREDENTIALS" \
   >"$OUT/bootstrap.json" 2>"$OUT/bootstrap.err" || fail "bootstrap failed"
 
@@ -143,7 +143,7 @@ python3 - "$APP_NAME" >"$OUT/app_request.json" <<'PY'
 import json, sys
 print(json.dumps({"name": sys.argv[1], "mcp_refs": ["e2e-echo"]}, separators=(",", ":")))
 PY
-curl -fsS -X POST "$MW_URL/api/v1/apps" \
+curl -fsS -X POST "$LEVIER_URL/api/v1/apps" \
   -H "Authorization: Bearer $APP_KEY" \
   -H "Content-Type: application/json" \
   --data-binary "@$OUT/app_request.json" >"$OUT/app.json" || fail "app mcp_refs update failed"
@@ -151,7 +151,7 @@ curl -fsS -X POST "$MW_URL/api/v1/apps" \
 echo "== run =="
 python3 examples/counter_agent/submit_run.py \
   --credentials "$CREDENTIALS" \
-  --mw-url "$MW_URL" \
+  --mw-url "$LEVIER_URL" \
   --strategy react \
   --prompt "Call the tool named $TOOL_NAME exactly once, then report the exact string it returns." \
   --provider deepseek \

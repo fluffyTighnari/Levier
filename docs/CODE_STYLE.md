@@ -37,7 +37,7 @@ package workflow
 规则：
 
 - `doc.go` 的第一句必须是 `Package <name> ...`。
-- 路径使用仓库相对路径，例如 `internal/workflow`、`cmd/middleware`。
+- 路径使用仓库相对路径，例如 `internal/workflow`、`cmd/levier`。
 - 不在头部写作者个人姓名或邮箱。
 
 ## 3. Python
@@ -88,3 +88,26 @@ Copyright 2026 The Middleware Authors.
 
 JSON 不支持注释。JSON fixture/数据文件不强制顶部注释，但必须有相邻 README 说明用途与来源。
 测试黄金样本属于此类例外。
+
+## 8. 目录与结构护栏
+
+`make structure-check` 检查以下规则：
+
+```text
+顶层目录必须存在；agent_core/、harness/、mcp_runtime/ 不能回到根目录
+每个顶层单元必须有 README.md
+internal / cmd / execution 不能引用 examples/
+agent_core 不能 import harness / MCP / protobuf
+cmd/* 只放 package main
+gen/*.go 必须标记为生成代码
+operational 文件不能引用搬迁前的旧路径
+```
+
+Go internal 包依赖方向由 `make deps-check` 检查。
+
+新增顶层目录、移动单元或改变 import 方向时，先跑：
+
+```sh
+make structure-check
+make deps-check
+```

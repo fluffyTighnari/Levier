@@ -9,8 +9,8 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"github.com/fluffyTighnari/middleware/internal/contract"
-	"github.com/fluffyTighnari/middleware/internal/errs"
+	"github.com/fluffyTighnari/levier/internal/contract"
+	"github.com/fluffyTighnari/levier/internal/errs"
 	"log/slog"
 	"net/http"
 	"sync"
@@ -18,8 +18,8 @@ import (
 
 	"golang.org/x/net/websocket"
 
-	"github.com/fluffyTighnari/middleware/internal/connection"
-	"github.com/fluffyTighnari/middleware/internal/observe"
+	"github.com/fluffyTighnari/levier/internal/connection"
+	"github.com/fluffyTighnari/levier/internal/observe"
 )
 
 const (

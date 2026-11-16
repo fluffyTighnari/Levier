@@ -7,7 +7,7 @@ package middleware.runtime.v1;
 
 import "google/protobuf/struct.proto";
 
-option go_package = "github.com/fluffyTighnari/middleware/gen/middleware/runtime/v1;runtimev1";
+option go_package = "github.com/fluffyTighnari/levier/gen/middleware/runtime/v1;runtimev1";
 
 // RuntimeService carries all daemon control and data messages over one
 // bidirectional stream.

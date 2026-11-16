@@ -37,9 +37,9 @@ Harness：ReAct 循环 + 模型调用
 需要 MW 地址与 Admin token：
 
 ```sh
-MW_URL=http://127.0.0.1:8080 \
-MW_ADMIN_TOKEN=... \
-MW_APP_NAME=counter-app \
+LEVIER_URL=http://127.0.0.1:8080 \
+LEVIER_ADMIN_TOKEN=... \
+LEVIER_APP_NAME=counter-app \
 python3 examples/counter_agent/bootstrap_app.py --credentials-out ~/.config/middleware/counter.json
 ```
 

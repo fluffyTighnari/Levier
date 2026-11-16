@@ -5,9 +5,9 @@
 # P0.1 prompt; then validates the run against the database and metrics.
 #
 # Requirements:
-#   - PostgreSQL reachable via MIDDLEWARE_DATABASE_URL (see .env.local)
+#   - PostgreSQL reachable via LEVIER_DATABASE_URL (see .env.local)
 #   - DEEPSEEK_API_KEY in the environment (.env)
-#   - bin/middleware built, harness/.venv present
+#   - bin/levier built, execution/harness/.venv present
 #
 # Usage:
 #   make retrofit-e2e
@@ -28,13 +28,13 @@ for env_file in .env.local .env; do
   fi
 done
 
-MIDDLEWARE_BIN="${MIDDLEWARE_BIN:-bin/middleware}"
-MIDDLEWARE_CONFIG="${MIDDLEWARE_CONFIG:-config.example.yaml}"
-HARNESS_CONFIG="${HARNESS_CONFIG:-harness/config.example.yaml}"
-HARNESS_PYTHON="${HARNESS_PYTHON:-harness/.venv/bin/python}"
-MW_URL="${MW_URL:-http://127.0.0.1:8080}"
-ADMIN_TOKEN="${MW_ADMIN_TOKEN:-admin-change-me}"
-DATABASE_URL="${MIDDLEWARE_DATABASE_URL:-}"
+LEVIER_BIN="${LEVIER_BIN:-${MIDDLEWARE_BIN:-bin/levier}}"
+LEVIER_CONFIG="${LEVIER_CONFIG:-${MIDDLEWARE_CONFIG:-levier.example.yaml}}"
+HARNESS_CONFIG="${HARNESS_CONFIG:-execution/harness/levier.example.yaml}"
+HARNESS_PYTHON="${HARNESS_PYTHON:-execution/harness/.venv/bin/python}"
+LEVIER_URL="${LEVIER_URL:-${MW_URL:-http://127.0.0.1:8080}}"
+ADMIN_TOKEN="${LEVIER_ADMIN_TOKEN:-${MW_ADMIN_TOKEN:-admin-change-me}}"
+DATABASE_URL="${LEVIER_DATABASE_URL:-${MIDDLEWARE_DATABASE_URL:-}}"
 STAMP="$(date -u +%Y%m%dT%H%M%SZ)"
 OUT="${RETROFIT_E2E_OUT:-docs/reports/artifacts/retrofit/P10/run-$STAMP}"
 PROMPT="Add 2, then add 3, then read the counter and tell me the final value. Use the counter tools; do not calculate it yourself."
@@ -46,13 +46,13 @@ fail() {
 }
 
 if [ -z "$DATABASE_URL" ]; then
-  fail "MIDDLEWARE_DATABASE_URL is required (source .env.local)"
+  fail "LEVIER_DATABASE_URL is required (source .env.local)"
 fi
 command -v psql >/dev/null 2>&1 || fail "psql is required for database assertions"
 command -v curl >/dev/null 2>&1 || fail "curl is required"
 command -v python3 >/dev/null 2>&1 || fail "python3 is required"
 [ -x "$HARNESS_PYTHON" ] || fail "harness Python not found: $HARNESS_PYTHON"
-if [ ! -x "$MIDDLEWARE_BIN" ]; then
+if [ ! -x "$LEVIER_BIN" ]; then
   make build
 fi
 
@@ -79,37 +79,37 @@ run_psql() {
 }
 
 echo "== preflight =="
-go run ./cmd/migrate -config "$MIDDLEWARE_CONFIG" >"$OUT/migrate.log" 2>&1 \
+go run ./cmd/migrate -config "$LEVIER_CONFIG" >"$OUT/migrate.log" 2>&1 \
   || fail "migration failed; is PostgreSQL running? see $OUT/migrate.log"
 
-if curl -fsS "$MW_URL/healthz" >/dev/null 2>&1; then
-  fail "$MW_URL is already serving; stop it before running this script"
+if curl -fsS "$LEVIER_URL/healthz" >/dev/null 2>&1; then
+  fail "$LEVIER_URL is already serving; stop it before running this script"
 fi
 
 echo "== start Middleware =="
-"$MIDDLEWARE_BIN" -config "$MIDDLEWARE_CONFIG" >"$OUT/middleware.log" 2>&1 &
+"$LEVIER_BIN" -config "$LEVIER_CONFIG" >"$OUT/middleware.log" 2>&1 &
 MW_PID=$!
 for _ in $(seq 1 100); do
-  curl -fsS "$MW_URL/healthz" >/dev/null 2>&1 && break
+  curl -fsS "$LEVIER_URL/healthz" >/dev/null 2>&1 && break
   sleep 0.1
 done
-curl -fsS "$MW_URL/healthz" >/dev/null 2>&1 || fail "Middleware did not become healthy"
+curl -fsS "$LEVIER_URL/healthz" >/dev/null 2>&1 || fail "Middleware did not become healthy"
 
 echo "== start Harness =="
-PYTHONPATH="agent_core/src:harness/src/gen:harness/src" "$HARNESS_PYTHON" -m middleware_harness \
+PYTHONPATH="execution/agent_core/src:execution/harness/src/gen:execution/harness/src" "$HARNESS_PYTHON" -m levier_harness \
   --config "$HARNESS_CONFIG" >"$OUT/harness.log" 2>&1 &
 HARNESS_PID=$!
 sleep 2
 
 echo "== bootstrap App =="
-MW_URL="$MW_URL" MW_ADMIN_TOKEN="$ADMIN_TOKEN" MW_APP_NAME="retrofit-e2e-$STAMP" \
+LEVIER_URL="$LEVIER_URL" LEVIER_ADMIN_TOKEN="$ADMIN_TOKEN" LEVIER_APP_NAME="retrofit-e2e-$STAMP" \
   python3 examples/counter_agent/bootstrap_app.py --credentials-out "$CREDENTIALS" \
   >"$OUT/bootstrap.json" 2>"$OUT/bootstrap.err" || fail "bootstrap failed"
 
 echo "== start App =="
 python3 examples/counter_agent/serve.py \
   --credentials "$CREDENTIALS" \
-  --mw-url "$MW_URL" \
+  --mw-url "$LEVIER_URL" \
   --timeout 60 \
   >"$OUT/serve.log" 2>"$OUT/serve.err" &
 SERVE_PID=$!
@@ -120,10 +120,10 @@ done
 grep -q '"serving": true' "$OUT/serve.log" || fail "App did not start serving"
 
 echo "== submit run =="
-curl -fsS "$MW_URL/metrics" >"$OUT/metrics_before.txt"
+curl -fsS "$LEVIER_URL/metrics" >"$OUT/metrics_before.txt"
 python3 examples/counter_agent/submit_run.py \
   --credentials "$CREDENTIALS" \
-  --mw-url "$MW_URL" \
+  --mw-url "$LEVIER_URL" \
   --strategy react \
   --prompt "$PROMPT" \
   --provider deepseek \
@@ -165,14 +165,14 @@ IFS='/' read -r EVENT_COUNT MAX_SEQ EXPECTED_SEQ <<<"$SEQ_STATS"
   || fail "event seq gap: $SEQ_STATS"
 
 echo "== validate metrics =="
-curl -fsS "$MW_URL/metrics" >"$OUT/metrics_after.txt"
-grep -q '^mw_runs_total{runtime="normal",status="completed"} 1$' "$OUT/metrics_after.txt" \
-  || fail "mw_runs_total{completed} != 1"
-grep -q '^mw_tool_invocations_total{scope="local",status="ok",tool="counter_add"} 2$' "$OUT/metrics_after.txt" \
+curl -fsS "$LEVIER_URL/metrics" >"$OUT/metrics_after.txt"
+grep -q '^levier_runs_total{runtime="normal",status="completed"} 1$' "$OUT/metrics_after.txt" \
+  || fail "levier_runs_total{completed} != 1"
+grep -q '^levier_tool_invocations_total{scope="local",status="ok",tool="counter_add"} 2$' "$OUT/metrics_after.txt" \
   || fail "counter_add ok count != 2"
-grep -q '^mw_tool_invocations_total{scope="local",status="ok",tool="counter_get"} 1$' "$OUT/metrics_after.txt" \
+grep -q '^levier_tool_invocations_total{scope="local",status="ok",tool="counter_get"} 1$' "$OUT/metrics_after.txt" \
   || fail "counter_get ok count != 1"
-grep -q '^mw_events_total{type="TOOL_CALL_BEGIN"} 3$' "$OUT/metrics_after.txt" \
+grep -q '^levier_events_total{type="TOOL_CALL_BEGIN"} 3$' "$OUT/metrics_after.txt" \
   || fail "event metric TOOL_CALL_BEGIN != 3"
 
 echo "== write evidence =="

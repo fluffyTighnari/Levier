@@ -1,5 +1,7 @@
 # ADR-0004：MCP Runtime 独立进程与连接归属
 
+> 路径说明：`agent_core/`、`harness/`、`mcp_runtime/` 已迁移到 `execution/`；本文保留历史路径。
+
 | 项目 | 内容 |
 |---|---|
 | 状态 | 提议（P3-29 设计修订） |

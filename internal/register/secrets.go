@@ -19,7 +19,8 @@ type SecretResolver interface {
 	Resolve(ctx context.Context, ref string) (string, error)
 }
 
-// EnvSecretResolver reads MIDDLEWARE_SECRET_<REF> environment variables.
+// EnvSecretResolver reads LEVIER_SECRET_<REF> environment variables, with
+// MIDDLEWARE_SECRET_<REF> as a legacy fallback.
 type EnvSecretResolver struct {
 	Prefix string
 }

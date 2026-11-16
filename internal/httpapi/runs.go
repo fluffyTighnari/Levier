@@ -15,10 +15,10 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
-	"github.com/fluffyTighnari/middleware/internal/errs"
-	"github.com/fluffyTighnari/middleware/internal/id"
-	"github.com/fluffyTighnari/middleware/internal/runstore"
-	"github.com/fluffyTighnari/middleware/internal/workflow"
+	"github.com/fluffyTighnari/levier/internal/errs"
+	"github.com/fluffyTighnari/levier/internal/id"
+	"github.com/fluffyTighnari/levier/internal/runstore"
+	"github.com/fluffyTighnari/levier/internal/workflow"
 )
 
 var errQueueUnavailable = errors.New("queue unavailable")

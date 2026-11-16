@@ -9,8 +9,8 @@ import (
 	"fmt"
 	"time"
 
-	runtimev1 "github.com/fluffyTighnari/middleware/gen/middleware/runtime/v1"
-	"github.com/fluffyTighnari/middleware/internal/id"
+	runtimev1 "github.com/fluffyTighnari/levier/gen/middleware/runtime/v1"
+	"github.com/fluffyTighnari/levier/internal/id"
 )
 
 // DefaultMaxEnvelopeBytes is the default gRPC envelope size limit.

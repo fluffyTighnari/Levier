@@ -42,7 +42,7 @@ const TOOLS = [
 function parseArgs(argv) {
   const args = {
     credentials: "",
-    mwUrl: process.env.MW_URL || "http://127.0.0.1:8080",
+    mwUrl: process.env.LEVIER_URL || process.env.MW_URL || "http://127.0.0.1:8080",
     calls: 0,
     idleSeconds: 30,
   };

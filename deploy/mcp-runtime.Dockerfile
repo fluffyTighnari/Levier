@@ -9,10 +9,10 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 WORKDIR /app
 
-COPY mcp_runtime/pyproject.toml mcp_runtime/README.md /app/mcp_runtime/
-COPY mcp_runtime/src /app/mcp_runtime/src
+COPY execution/mcp_runtime/pyproject.toml execution/mcp_runtime/README.md /app/mcp_runtime/
+COPY execution/mcp_runtime/src /app/mcp_runtime/src
 
 RUN pip install --no-cache-dir -e /app/mcp_runtime
 
-ENTRYPOINT ["python", "-m", "mcp_runtime"]
-CMD ["--socket", "/tmp/middleware-mcp.sock"]
+ENTRYPOINT ["python", "-m", "levier_mcp_runtime"]
+CMD ["--socket", "/tmp/levier-mcp.sock"]

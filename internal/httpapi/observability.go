@@ -16,8 +16,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/fluffyTighnari/middleware/internal/id"
-	"github.com/fluffyTighnari/middleware/internal/observe"
+	"github.com/fluffyTighnari/levier/internal/id"
+	"github.com/fluffyTighnari/levier/internal/observe"
 )
 
 func (s *Server) instrumentHandler(next http.Handler) http.Handler {

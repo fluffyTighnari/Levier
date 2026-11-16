@@ -13,7 +13,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/fluffyTighnari/middleware/internal/runstore"
+	"github.com/fluffyTighnari/levier/internal/runstore"
 )
 
 func TestSessionRESTAndAppScope(t *testing.T) {

@@ -8,7 +8,7 @@ package control
 import (
 	"testing"
 
-	runtimev1 "github.com/fluffyTighnari/middleware/gen/middleware/runtime/v1"
+	runtimev1 "github.com/fluffyTighnari/levier/gen/middleware/runtime/v1"
 )
 
 func candidate(id string, runtimeType runtimev1.RuntimeType, running, max int32, labels map[string]string, strategies ...string) Candidate {

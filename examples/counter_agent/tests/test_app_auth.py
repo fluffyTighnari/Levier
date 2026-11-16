@@ -25,7 +25,7 @@ class AppAuthTest(unittest.TestCase):
     def test_p3_3_rotate_key_request(self) -> None:
         from config import from_env
 
-        config = from_env({"MW_ADMIN_TOKEN": "admin-secret"})
+        config = from_env({"LEVIER_ADMIN_TOKEN": "admin-secret"})
         transport = RecordingTransport(HttpResponse(200, {}, b'{"api_key":"mw_new"}'))
         client = HttpClient(config, transport)
 

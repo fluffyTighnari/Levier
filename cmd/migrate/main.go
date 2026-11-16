@@ -1,6 +1,6 @@
 // Command migrate applies the embedded PostgreSQL migrations.
 //
-// Middleware — cmd/migrate
+// Levier — cmd/migrate
 // Copyright 2026 The Middleware Authors.
 package main
 
@@ -10,12 +10,12 @@ import (
 	"log/slog"
 	"os"
 
-	"github.com/fluffyTighnari/middleware/internal/config"
-	"github.com/fluffyTighnari/middleware/internal/db"
+	"github.com/fluffyTighnari/levier/internal/config"
+	"github.com/fluffyTighnari/levier/internal/db"
 )
 
 func main() {
-	configPath := flag.String("config", "config.example.yaml", "path to YAML configuration")
+	configPath := flag.String("config", "levier.example.yaml", "path to YAML configuration")
 	flag.Parse()
 
 	cfg, err := config.Load(*configPath)
