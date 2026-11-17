@@ -7,8 +7,8 @@ import (
 )
 
 func TestRedactDatabaseURL(t *testing.T) {
-	got := redactDatabaseURL("postgres://user:secret@localhost:5432/levier?sslmode=disable")
-	if strings.Contains(got, "secret") {
+	got := redactDatabaseURL("postgres://user:change-me@localhost:5432/levier?sslmode=disable")
+	if strings.Contains(got, "change-me") {
 		t.Fatalf("redacted URL still contains password: %s", got)
 	}
 	if !strings.Contains(got, "user:") || !strings.Contains(got, "localhost:5432/levier") {

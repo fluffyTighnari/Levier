@@ -718,7 +718,7 @@ levier migrate status [--config path] [--json]
 只读。输出：
 
 ```text
-database: postgres://user:xxxxx@host:5432/levier?sslmode=disable
+database: postgres://user:change-me@host:5432/levier?sslmode=disable
 current: 9
 applied: 9
 pending: 0
@@ -728,7 +728,7 @@ JSON：
 
 ```json
 {
-  "database": "postgres://user:xxxxx@host:5432/levier?sslmode=disable",
+  "database": "postgres://user:change-me@host:5432/levier?sslmode=disable",
   "current": 9,
   "applied": 9,
   "pending": []
@@ -775,7 +775,7 @@ JSON：
 
 ```json
 {
-  "database": "postgres://user:xxxxx@host:5432/levier?sslmode=disable",
+  "database": "postgres://user:change-me@host:5432/levier?sslmode=disable",
   "before": 9,
   "after": 10,
   "applied": 1,
