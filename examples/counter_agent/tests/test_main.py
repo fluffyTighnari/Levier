@@ -1,6 +1,6 @@
-"""Middleware — Counter App main wiring tests (P1.8).
+"""Levier — Counter App main wiring tests (P1.8).
 
-Copyright 2026 The Middleware Authors.
+Copyright 2026 The Levier Authors.
 """
 
 from __future__ import annotations

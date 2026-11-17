@@ -1,9 +1,9 @@
-"""Middleware — ReAct strategy adapter.
+"""Levier — ReAct strategy adapter.
 
 The loop lives in `levier_agent_core`; this module only translates between
-Middleware/TaskAssign types and the core contract.
+Levier/TaskAssign types and the core contract.
 
-Copyright 2026 The Middleware Authors.
+Copyright 2026 The Levier Authors.
 """
 
 from __future__ import annotations

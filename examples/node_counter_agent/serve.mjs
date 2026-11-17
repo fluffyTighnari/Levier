@@ -1,7 +1,7 @@
 #!/usr/bin/env node
-// Middleware — Counter App in Node.js (P8).
+// Levier — Counter App in Node.js (P8).
 //
-// Standard library only: no npm packages, no Middleware SDK, no generated code.
+// Standard library only: no npm packages, no Levier SDK, no generated code.
 // It verifies the App key, registers tools, opens the App WebSocket, and serves
 // local_tool_call messages using the documented JSON contract.
 //

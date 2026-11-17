@@ -1,5 +1,5 @@
-# Middleware — independent MCP runtime package metadata.
-# Copyright 2026 The Middleware Authors.
+# Levier — independent MCP runtime package metadata.
+# Copyright 2026 The Levier Authors.
 
 [build-system]
 requires = ["setuptools>=68"]

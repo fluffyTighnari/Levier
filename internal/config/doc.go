@@ -1,5 +1,5 @@
 // Package config loads and validates middleware runtime configuration.
 //
-// Middleware — internal/config
-// Copyright 2026 The Middleware Authors.
+// Levier — internal/config
+// Copyright 2026 The Levier Authors.
 package config

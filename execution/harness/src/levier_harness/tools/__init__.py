@@ -1,6 +1,6 @@
-"""Middleware — tool execution package.
+"""Levier — tool execution package.
 
-Copyright 2026 The Middleware Authors.
+Copyright 2026 The Levier Authors.
 """
 
 from levier_harness.tools.base import (

@@ -1,8 +1,8 @@
-// Middleware — internal/db
+// Levier — internal/db
 //
 // P5-37 schema and index tests.
 //
-// Copyright 2026 The Middleware Authors.
+// Copyright 2026 The Levier Authors.
 package db
 
 import (

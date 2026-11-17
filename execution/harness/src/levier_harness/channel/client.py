@@ -1,9 +1,9 @@
-"""Middleware — RuntimeChannel gRPC client.
+"""Levier — RuntimeChannel gRPC client.
 
 Maintains one bidirectional stream, sends Hello/heartbeats, dispatches
 inbound envelopes, and reconnects with exponential backoff.
 
-Copyright 2026 The Middleware Authors.
+Copyright 2026 The Levier Authors.
 """
 
 from __future__ import annotations

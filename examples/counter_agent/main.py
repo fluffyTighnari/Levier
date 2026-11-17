@@ -1,10 +1,10 @@
-"""Middleware — zero-dependency counter agent baseline.
+"""Levier — zero-dependency counter agent baseline.
 
 A standalone ReAct loop with hardcoded counter tools and an
-OpenAI-compatible chat-completions client. No Middleware imports, no HTTP
+OpenAI-compatible chat-completions client. No Levier imports, no HTTP
 server, and no third-party Python packages.
 
-Copyright 2026 The Middleware Authors.
+Copyright 2026 The Levier Authors.
 """
 
 from __future__ import annotations

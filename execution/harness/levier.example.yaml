@@ -1,5 +1,5 @@
-# Middleware — harness example configuration.
-# Copyright 2026 The Middleware Authors.
+# Levier — harness example configuration.
+# Copyright 2026 The Levier Authors.
 
 middleware:
   address: "127.0.0.1:9090"

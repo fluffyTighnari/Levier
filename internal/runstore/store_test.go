@@ -1,8 +1,8 @@
-// Middleware — internal/runstore
+// Levier — internal/runstore
 //
 // PostgreSQL RunStore integration tests.
 //
-// Copyright 2026 The Middleware Authors.
+// Copyright 2026 The Levier Authors.
 package runstore
 
 import (

@@ -1,8 +1,8 @@
-// Middleware — internal/gateway/executor
+// Levier — internal/gateway/executor
 //
 // builtin:webhook executor tests.
 //
-// Copyright 2026 The Middleware Authors.
+// Copyright 2026 The Levier Authors.
 package executor
 
 import (

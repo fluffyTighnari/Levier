@@ -1,5 +1,5 @@
-# Middleware — Python Harness package metadata.
-# Copyright 2026 The Middleware Authors.
+# Levier — Python Harness package metadata.
+# Copyright 2026 The Levier Authors.
 
 [build-system]
 requires = ["setuptools>=68"]

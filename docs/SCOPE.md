@@ -139,7 +139,7 @@ MCP Server 实现
 接入新的 App
 接入新的 Harness
 Adapter / Sidecar SDK（已立项，见 docs/ADAPTER_ROADMAP.md）
-多 Daemon / 多 Middleware / HA
+多 Daemon / 多 Levier / HA
 sandbox runtime
 longterm checkpoint 续跑
 性能与压测优化

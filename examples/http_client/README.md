@@ -1,8 +1,8 @@
-<!-- Middleware — language-agnostic HTTP client verification. -->
+<!-- Levier — language-agnostic HTTP client verification. -->
 
 # 语言无关 HTTP 验证
 
-`client.py` 只用 Python 标准库（`json`、`os`、`urllib`），不导入 Middleware
+`client.py` 只用 Python 标准库（`json`、`os`、`urllib`），不导入 Levier
 代码、不使用生成代码、不依赖第三方包。
 
 它验证的是“语言无关”的实际含义：
@@ -15,7 +15,7 @@
 
 ## 运行
 
-先启动 Middleware：
+先启动 Levier：
 
 ```sh
 make m1-e2e   # 或单独启动 bin/levier
@@ -64,7 +64,7 @@ HTTP 通过不代表 WebSocket 也语言无关。WS 还需要额外验证：
 - `local_tool_call` / `local_tool_result`。
 
 最小方案是使用 Node 内置 `WebSocket`，或 Python 标准库手写最小的
-WebSocket 握手与帧编解码（约 80–120 行）。该客户端不应导入 Middleware 代码。
+WebSocket 握手与帧编解码（约 80–120 行）。该客户端不应导入 Levier 代码。
 
 ## 边界
 

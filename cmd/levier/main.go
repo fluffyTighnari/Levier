@@ -5,7 +5,7 @@
 // Loads configuration and starts the daemon-facing gRPC RuntimeService.
 // Scheduling, HTTP, and control-plane wiring land in later V2 steps.
 //
-// Copyright 2026 The Middleware Authors.
+// Copyright 2026 The Levier Authors.
 package main
 
 import (
@@ -79,6 +79,21 @@ func runServer(args []string) {
 		os.Exit(1)
 	}
 	defer pool.Close()
+
+	migrationCtx, cancelMigrations := context.WithTimeout(ctx, cfg.Database.HealthTimeout.Std())
+	migrations, err := db.Status(migrationCtx, pool)
+	cancelMigrations()
+	if err != nil {
+		logger.Error("check database migrations failed", "err", err)
+		os.Exit(1)
+	}
+	if len(migrations.Pending) > 0 {
+		logger.Error("database schema is behind",
+			"current", migrations.Current,
+			"pending", len(migrations.Pending),
+			"fix", "run levier migrate up")
+		os.Exit(1)
+	}
 
 	hub := connection.New(connection.Config{
 		Authenticate: daemonAuthenticator(cfg.GRPC.DaemonTokens),

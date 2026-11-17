@@ -1,9 +1,9 @@
-"""Middleware — longterm checkpoint encoding.
+"""Levier — longterm checkpoint encoding.
 
 Checkpoint payloads are opaque to middleware. The Harness owns the schema,
 versioning, and restore compatibility checks.
 
-Copyright 2026 The Middleware Authors.
+Copyright 2026 The Levier Authors.
 """
 
 from __future__ import annotations

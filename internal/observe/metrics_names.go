@@ -1,8 +1,8 @@
-// Middleware — internal/observe
+// Levier — internal/observe
 //
 // Canonical metric names used by the middleware.
 //
-// Copyright 2026 The Middleware Authors.
+// Copyright 2026 The Levier Authors.
 package observe
 
 const (

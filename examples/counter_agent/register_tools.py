@@ -1,9 +1,9 @@
-"""Middleware — register Counter App local tools (P3.4).
+"""Levier — register Counter App local tools (P3.4).
 
 Uses the App API key from the 0600 credential file and sends the full local
 tool list to POST /api/v1/apps. The key is never printed.
 
-Copyright 2026 The Middleware Authors.
+Copyright 2026 The Levier Authors.
 """
 
 from __future__ import annotations

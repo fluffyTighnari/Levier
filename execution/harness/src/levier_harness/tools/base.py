@@ -1,9 +1,9 @@
-"""Middleware — tool execution interfaces.
+"""Levier — tool execution interfaces.
 
 The ReAct loop depends on a ToolProvider so local/global tools and MCP tools
 can share one dispatch path. Concrete bridges live in sibling modules.
 
-Copyright 2026 The Middleware Authors.
+Copyright 2026 The Levier Authors.
 """
 
 from __future__ import annotations

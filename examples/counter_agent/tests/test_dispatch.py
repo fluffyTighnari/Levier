@@ -1,6 +1,6 @@
-"""Middleware — Counter App dispatcher tests (P1.2).
+"""Levier — Counter App dispatcher tests (P1.2).
 
-Copyright 2026 The Middleware Authors.
+Copyright 2026 The Levier Authors.
 """
 
 from __future__ import annotations

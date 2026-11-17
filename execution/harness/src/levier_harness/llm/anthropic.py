@@ -1,9 +1,9 @@
-"""Middleware — Anthropic Messages API provider.
+"""Levier — Anthropic Messages API provider.
 
 Builds Anthropic requests from the provider-neutral message model, parses
 server-sent events, streams text deltas, and normalizes errors.
 
-Copyright 2026 The Middleware Authors.
+Copyright 2026 The Levier Authors.
 """
 
 from __future__ import annotations

@@ -1,5 +1,5 @@
--- Middleware — P5-42 App MCP references.
--- Copyright 2026 The Middleware Authors.
+-- Levier — P5-42 App MCP references.
+-- Copyright 2026 The Levier Authors.
 
 CREATE TABLE IF NOT EXISTS app_mcp_refs (
   app_id TEXT NOT NULL REFERENCES apps(app_id) ON DELETE CASCADE,

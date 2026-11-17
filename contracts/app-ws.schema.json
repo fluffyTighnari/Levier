@@ -1,8 +1,8 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://middleware.local/contracts/app-ws.schema.json",
-  "title": "Middleware App WebSocket messages (v1)",
-  "description": "App<->Middleware WebSocket contract. arguments_json and result_json are strings containing JSON text.",
+  "title": "Levier App WebSocket messages (v1)",
+  "description": "App<->Levier WebSocket contract. arguments_json and result_json are strings containing JSON text.",
   "oneOf": [
     { "$ref": "#/$defs/hello" },
     { "$ref": "#/$defs/subscribe" },

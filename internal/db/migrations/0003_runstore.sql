@@ -1,5 +1,5 @@
--- Middleware — P4-31 minimal RunStore schema.
--- Copyright 2026 The Middleware Authors.
+-- Levier — P4-31 minimal RunStore schema.
+-- Copyright 2026 The Levier Authors.
 
 CREATE TABLE IF NOT EXISTS apps (
   app_id        TEXT PRIMARY KEY,

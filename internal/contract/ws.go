@@ -2,8 +2,8 @@
 //
 // It must not import any other internal package.
 //
-// Middleware — internal/contract
-// Copyright 2026 The Middleware Authors.
+// Levier — internal/contract
+// Copyright 2026 The Levier Authors.
 package contract
 
 const (

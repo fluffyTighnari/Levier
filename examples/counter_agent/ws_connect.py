@@ -1,6 +1,6 @@
-"""Middleware — connect to App WebSocket with a ws_token (P5.2).
+"""Levier — connect to App WebSocket with a ws_token (P5.2).
 
-Copyright 2026 The Middleware Authors.
+Copyright 2026 The Levier Authors.
 """
 
 from __future__ import annotations

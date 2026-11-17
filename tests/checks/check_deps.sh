@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Middleware — package dependency guard.
+# Levier — package dependency guard.
 #
 # Enforces the P8R layering rules. Run after moving files or adding packages.
 set -euo pipefail

@@ -1,9 +1,9 @@
-"""Middleware — verify App runtime credentials (P3.3).
+"""Levier — verify App runtime credentials (P3.3).
 
 Loads the 0600 credential file and calls GET /api/v1/apps/{app_id} with the
 App API key. The key is never printed.
 
-Copyright 2026 The Middleware Authors.
+Copyright 2026 The Levier Authors.
 """
 
 from __future__ import annotations

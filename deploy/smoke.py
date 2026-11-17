@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
-"""Middleware — Docker Compose smoke check.
+"""Levier — Docker Compose smoke check.
 
-Waits for Middleware readiness, Harness registration, App WebSocket, MCP
+Waits for Levier readiness, Harness registration, App WebSocket, MCP
 runtime health, then submits one echo run and verifies it completes.
 
 Uses only the Python standard library.
 
-Copyright 2026 The Middleware Authors.
+Copyright 2026 The Levier Authors.
 """
 
 from __future__ import annotations

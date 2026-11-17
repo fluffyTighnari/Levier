@@ -1,8 +1,8 @@
-// Middleware — internal/workflow
+// Levier — internal/workflow
 //
 // Task handler contract and retry classification.
 //
-// Copyright 2026 The Middleware Authors.
+// Copyright 2026 The Levier Authors.
 package workflow
 
 import "context"

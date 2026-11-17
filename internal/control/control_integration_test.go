@@ -1,8 +1,8 @@
-// Middleware — internal/control
+// Levier — internal/control
 //
 // Control + DaemonHub + RunStore + workflow integration test.
 //
-// Copyright 2026 The Middleware Authors.
+// Copyright 2026 The Levier Authors.
 package control
 
 import (

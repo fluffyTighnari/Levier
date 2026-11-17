@@ -1,5 +1,5 @@
-# Middleware — repository ignore rules.
-# Copyright 2026 The Middleware Authors.
+# Levier — repository ignore rules.
+# Copyright 2026 The Levier Authors.
 
 # OS / IDE / sync metadata
 .DS_Store

@@ -1,4 +1,4 @@
-"""Middleware — reusable App bootstrap.
+"""Levier — reusable App bootstrap.
 
 Creates (or rotates) an App API key with the Admin token and stores the
 runtime credentials in a 0600 file. The plaintext key is never printed.
@@ -7,7 +7,7 @@ Design references:
 - DESIGN §4.2: Admin app bootstrap and App authentication.
 - DESIGN §13.1/§13.2: admin token vs App key, secret handling.
 
-Copyright 2026 The Middleware Authors.
+Copyright 2026 The Levier Authors.
 """
 
 from __future__ import annotations
@@ -39,7 +39,7 @@ def default_credentials_path() -> Path:
 
 
 def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(description="Bootstrap a Middleware App")
+    parser = argparse.ArgumentParser(description="Bootstrap a Levier App")
     parser.add_argument("--name", default="", help="App name; defaults to LEVIER_APP_NAME")
     parser.add_argument("--credentials-out", default="", help="0600 credential file path")
     parser.add_argument("--rotate", action="store_true", help="always rotate the API key")

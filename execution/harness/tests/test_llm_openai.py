@@ -1,6 +1,6 @@
-"""Middleware — OpenAI-compatible provider tests (P6A.1).
+"""Levier — OpenAI-compatible provider tests (P6A.1).
 
-Copyright 2026 The Middleware Authors.
+Copyright 2026 The Levier Authors.
 """
 
 from __future__ import annotations

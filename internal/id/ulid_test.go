@@ -1,8 +1,8 @@
-// Middleware — internal/id
+// Levier — internal/id
 //
 // ULID generation and parsing tests.
 //
-// Copyright 2026 The Middleware Authors.
+// Copyright 2026 The Levier Authors.
 package id
 
 import (

@@ -1,4 +1,4 @@
-<!-- Middleware — one-page architecture map. -->
+<!-- Levier — one-page architecture map. -->
 
 # 架构地图
 
@@ -9,7 +9,7 @@
 
 ```text
 App           业务函数 + 工具元数据 + WebSocket
-Middleware    注册、调度、路由、事件、持久化
+Levier    注册、调度、路由、事件、持久化
 Harness       单次 Run 的 Agent 循环（当前 Python）
 MCP Runtime   独立进程：MCP 连接、会话、凭据解析
 PostgreSQL    目录、运行、事件、任务、调用记录
@@ -102,7 +102,7 @@ harness 只保留 TaskAssign/事件/工具适配。
 ```text
 不引入 DI / 六边形 / 通用领域层
 不为行数强制拆函数
-不让 Middleware 代理 MCP 调用
+不让 Levier 代理 MCP 调用
 不让 Harness 见 MCP 凭据
 不新增第二套事件/错误模型
 ```

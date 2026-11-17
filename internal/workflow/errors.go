@@ -1,8 +1,8 @@
-// Middleware — internal/workflow
+// Levier — internal/workflow
 //
 // RunTaskQueue sentinel and classification errors.
 //
-// Copyright 2026 The Middleware Authors.
+// Copyright 2026 The Levier Authors.
 package workflow
 
 import (

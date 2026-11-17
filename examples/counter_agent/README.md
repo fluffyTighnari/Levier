@@ -1,12 +1,12 @@
-<!-- Middleware — counter agent: baseline + Middleware runtime. -->
+<!-- Levier — counter agent: baseline + Levier runtime. -->
 
 # Counter Agent（参考接入实现）
 
 这个目录同时承载两件事：
 
 ```text
-main.py    接入前的基线 App（进程内 ReAct，不连 Middleware）
-serve.py   接入后的 App 运行时（Middleware 托管模型循环，App 只执行本地工具）
+main.py    接入前的基线 App（进程内 ReAct，不连 Levier）
+serve.py   接入后的 App 运行时（Levier 托管模型循环，App 只执行本地工具）
 ```
 
 两者共用 `tools.py` / `dispatch.py` 的计数器语义，因此可以直接对照行为。
@@ -15,14 +15,14 @@ serve.py   接入后的 App 运行时（Middleware 托管模型循环，App 只�
 
 | | 基线 `main.py` | 接入 `serve.py` |
 |---|---|---|
-| 谁跑 ReAct 循环 | App 自己 | Middleware Harness |
+| 谁跑 ReAct 循环 | App 自己 | Levier Harness |
 | 谁调模型 | App 自己 | Harness（DeepSeek） |
 | 工具在哪执行 | App 进程内 | App 进程内，经 WS 触发 |
 | 是否需要 MW | 否 | 是 |
 | 用途 | P0.1 基线、P6C 对照 | 真实接入 |
 
 `main.py` 保持冻结是刻意的：P0.1 与 P6.9–P6.11 的行为对照依赖它。
-接入没有“把 main 搬进 Middleware”，而是拆成两条职责：
+接入没有“把 main 搬进 Levier”，而是拆成两条职责：
 
 ```text
 App：业务函数 + 工具元数据 + WebSocket 通道

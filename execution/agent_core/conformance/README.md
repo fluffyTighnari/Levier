@@ -1,4 +1,4 @@
-<!-- Middleware — language-neutral agent core conformance fixtures. -->
+<!-- Levier — language-neutral agent core conformance fixtures. -->
 
 # Agent Core Conformance
 

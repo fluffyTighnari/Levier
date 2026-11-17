@@ -1,14 +1,14 @@
-<!-- Middleware — daemon protocol contract. -->
+<!-- Levier — daemon protocol contract. -->
 
 # Daemon 接入契约
 
-面向任何要接入 Middleware 的执行侧 daemon（Harness 或自定义 runtime）。
+面向任何要接入 Levier 的执行侧 daemon（Harness 或自定义 runtime）。
 
 ## 1. 传输与身份
 
 ```text
 gRPC  RuntimeService.Channel（双向流）
-认证  daemon_id + auth_token，由 Middleware 配置预分配
+认证  daemon_id + auth_token，由 Levier 配置预分配
 ```
 
 连接后第一条消息必须是 `Hello`。
@@ -43,7 +43,7 @@ running_runs          重连时仍在执行的 Run
 ```
 
 `running_runs[]` 包含 `run_id` 与 `lease_epoch`。
-Middleware 会用它做对账，并下发 `Reconcile`。
+Levier 会用它做对账，并下发 `Reconcile`。
 
 ## 4. TaskAssign
 
@@ -79,7 +79,7 @@ accepted = false
 reason = "capacity" / "unsupported strategy" / ...
 ```
 
-Middleware 会换 daemon 或重试。
+Levier 会换 daemon 或重试。
 
 ## 5. 事件
 
@@ -117,7 +117,7 @@ ToolCallRequest
   timeout_ms
 ```
 
-Middleware 返回：
+Levier 返回：
 
 ```text
 ToolCallResult
@@ -126,7 +126,7 @@ ToolCallResult
   result_json / error{code,message,retryable}
 ```
 
-`correlation_id` 由 Middleware 回填请求的 `msg_id`。
+`correlation_id` 由 Levier 回填请求的 `msg_id`。
 超时或 App 不可达会返回 `TOOL_TIMEOUT` / `APP_UNREACHABLE`。
 
 ## 7. Cancel
@@ -152,7 +152,7 @@ Reconcile.cancel_run_ids[]
 ```
 
 daemon 必须取消这些 Run。通常发生在重连后，
-Middleware 认为某些 Run 已经不属于它。
+Levier 认为某些 Run 已经不属于它。
 
 ## 9. Heartbeat
 
@@ -167,7 +167,7 @@ cpu_load / mem_mb（可选）
 ## 10. 容量与策略
 
 ```text
-max_concurrent_runs  超过时 Middleware 不会继续分配
+max_concurrent_runs  超过时 Levier 不会继续分配
 supported_strategies 未声明的策略不会分配
 labels               参与 placement
 ```
@@ -178,7 +178,7 @@ labels               参与 placement
 Ack 拒绝            → 换 daemon / 重试
 事件 epoch 过期      → 丢弃
 工具调用失败         → 以 ToolCallResult.error 返回
-流断开              → Middleware 按 daemon 下线处理
+流断开              → Levier 按 daemon 下线处理
 ```
 
 ## 12. 参考实现与自检
@@ -194,7 +194,7 @@ internal/testutil/fakedaemon
 ```sh
 make daemon-check
 # 或
-go run ./cmd/mw-daemon-check --grpc 127.0.0.1:9090 --http http://127.0.0.1:8080
+levier daemon check --grpc 127.0.0.1:9090 --server http://127.0.0.1:8080
 ```
 
 它会：
@@ -204,14 +204,14 @@ Hello
 接受 TaskAssign + Ack
 发 running/completed 事件
 创建第二个 Run 并验证 Cancel
-输出 PASS/FAIL JSON
+输出 PASS/FAIL（--json 为 JSON）
 ```
 
 前提：
 
 ```text
-daemon_id 已在 MW 配置中预分配
-没有其他 daemon 使用同一 daemon_id
+daemon_id 已在 Levier 配置中预分配
+该 daemon_id 当前空闲；真实 Harness 占用的 id 会返回 AlreadyExists
 ```
 
 ## 13. 常见错误

@@ -1,9 +1,9 @@
-"""Middleware — harness health state.
+"""Levier — harness health state.
 
 The health object is intentionally independent of gRPC/HTTP so the
 skeleton can start before the RuntimeChannel exists.
 
-Copyright 2026 The Middleware Authors.
+Copyright 2026 The Levier Authors.
 """
 
 from __future__ import annotations

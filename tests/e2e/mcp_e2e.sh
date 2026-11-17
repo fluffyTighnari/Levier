@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# Middleware — MCP end-to-end regression (catalog → TaskAssign → runtime).
+# Levier — MCP end-to-end regression (catalog → TaskAssign → runtime).
 #
-# Starts Middleware, the MCP runtime, the Harness and an App, registers a
+# Starts Levier, the MCP runtime, the Harness and an App, registers a
 # stdio MCP server with a ${secret:...} placeholder, and runs one real tool
 # call through the model.
 #
@@ -87,14 +87,14 @@ if curl -fsS "$LEVIER_URL/healthz" >/dev/null 2>&1; then
 fi
 rm -f "$MCP_SOCKET"
 
-echo "== start Middleware =="
+echo "== start Levier =="
 "$LEVIER_BIN" -config "$LEVIER_CONFIG" >"$OUT/middleware.log" 2>&1 &
 MW_PID=$!
 for _ in $(seq 1 100); do
   curl -fsS "$LEVIER_URL/healthz" >/dev/null 2>&1 && break
   sleep 0.1
 done
-curl -fsS "$LEVIER_URL/healthz" >/dev/null 2>&1 || fail "Middleware did not become healthy"
+curl -fsS "$LEVIER_URL/healthz" >/dev/null 2>&1 || fail "Levier did not become healthy"
 
 echo "== start MCP runtime =="
 LEVIER_SECRET_E2E_TOKEN="$SECRET_VALUE" PYTHONPATH=execution/mcp_runtime/src \

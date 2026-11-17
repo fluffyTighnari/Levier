@@ -1,9 +1,9 @@
-"""Middleware — Harness-side client for the independent MCP runtime.
+"""Levier — Harness-side client for the independent MCP runtime.
 
 The client speaks newline-delimited JSON-RPC over a Unix domain socket. It
 never imports the MCP SDK and never holds an MCP connection itself.
 
-Copyright 2026 The Middleware Authors.
+Copyright 2026 The Levier Authors.
 """
 
 from __future__ import annotations

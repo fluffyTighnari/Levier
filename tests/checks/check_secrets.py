@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
-"""Middleware — scan tracked files for accidental secrets.
+"""Levier — scan tracked files for accidental secrets.
 
 Only git-tracked files are scanned, so local .env files and untracked evidence
 cannot be committed by this check. Generated code and recorded artifacts are
 excluded because they are not source.
 
-Copyright 2026 The Middleware Authors.
+Copyright 2026 The Levier Authors.
 """
 
 from __future__ import annotations

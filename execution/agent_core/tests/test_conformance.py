@@ -1,4 +1,4 @@
-"""Middleware — language-neutral agent core conformance runner (P8C.4)."""
+"""Levier — language-neutral agent core conformance runner (P8C.4)."""
 
 from __future__ import annotations
 

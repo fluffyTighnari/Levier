@@ -1,4 +1,4 @@
-"""Middleware — MCP runtime secret resolution tests (P11)."""
+"""Levier — MCP runtime secret resolution tests (P11)."""
 
 from __future__ import annotations
 

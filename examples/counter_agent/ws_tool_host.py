@@ -1,13 +1,13 @@
-"""Middleware — App WebSocket local tool host (P6.3–P6.4).
+"""Levier — App WebSocket local tool host (P6.3–P6.4).
 
-Hosts the App's local tools over the Middleware WebSocket: receive
+Hosts the App's local tools over the Levier WebSocket: receive
 `local_tool_call`, execute the App function, return `local_tool_result`
 correlated by `msg_id`.
 
 This module is also the shared serving loop used by `serve.py`, the App
 runtime entrypoint. It is not the standalone baseline (`main.py`).
 
-Copyright 2026 The Middleware Authors.
+Copyright 2026 The Levier Authors.
 """
 
 from __future__ import annotations

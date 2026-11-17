@@ -1,7 +1,8 @@
-# Middleware — docker build context exclusions.
-# Copyright 2026 The Middleware Authors.
+# Levier — docker build context exclusions.
+# Copyright 2026 The Levier Authors.
 
 .git
+.DS_Store
 .idea
 .venv
 .venv*
@@ -19,6 +20,9 @@ data
 *.sqlite3
 .env
 .env.*
+.qta
+.stfolder
+.stignore
 
 # Documentation and tests are not needed in image builds
 docs

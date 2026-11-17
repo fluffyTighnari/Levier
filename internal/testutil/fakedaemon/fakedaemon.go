@@ -1,8 +1,8 @@
-// Middleware — internal/testutil/fakedaemon
+// Levier — internal/testutil/fakedaemon
 //
 // Scriptable in-process daemon client used by middleware tests.
 //
-// Copyright 2026 The Middleware Authors.
+// Copyright 2026 The Levier Authors.
 package fakedaemon
 
 import (
@@ -178,6 +178,21 @@ func (d *Daemon) Close() error {
 		return d.conn.Close()
 	}
 	return nil
+}
+
+// WaitReady gives the server a short grace period to reject the hello.
+//
+// The RuntimeChannel protocol has no explicit hello acknowledgement, so a
+// successful channel is observed by the absence of an early stream error.
+func (d *Daemon) WaitReady(grace time.Duration) error {
+	timer := time.NewTimer(grace)
+	defer timer.Stop()
+	select {
+	case err := <-d.errCh:
+		return err
+	case <-timer.C:
+		return nil
+	}
 }
 
 // RequestTool sends a ToolCallRequest and waits for the matching result.

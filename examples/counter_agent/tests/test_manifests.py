@@ -1,6 +1,6 @@
-"""Middleware — Counter App manifest shape tests (P1.7).
+"""Levier — Counter App manifest shape tests (P1.7).
 
-Copyright 2026 The Middleware Authors.
+Copyright 2026 The Levier Authors.
 """
 
 from __future__ import annotations

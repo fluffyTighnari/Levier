@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# Middleware — retrofit one-click end-to-end regression.
+# Levier — retrofit one-click end-to-end regression.
 #
-# Starts Middleware, the real Harness, and the Counter App; submits the frozen
+# Starts Levier, the real Harness, and the Counter App; submits the frozen
 # P0.1 prompt; then validates the run against the database and metrics.
 #
 # Requirements:
@@ -86,14 +86,14 @@ if curl -fsS "$LEVIER_URL/healthz" >/dev/null 2>&1; then
   fail "$LEVIER_URL is already serving; stop it before running this script"
 fi
 
-echo "== start Middleware =="
+echo "== start Levier =="
 "$LEVIER_BIN" -config "$LEVIER_CONFIG" >"$OUT/middleware.log" 2>&1 &
 MW_PID=$!
 for _ in $(seq 1 100); do
   curl -fsS "$LEVIER_URL/healthz" >/dev/null 2>&1 && break
   sleep 0.1
 done
-curl -fsS "$LEVIER_URL/healthz" >/dev/null 2>&1 || fail "Middleware did not become healthy"
+curl -fsS "$LEVIER_URL/healthz" >/dev/null 2>&1 || fail "Levier did not become healthy"
 
 echo "== start Harness =="
 PYTHONPATH="execution/agent_core/src:execution/harness/src/gen:execution/harness/src" "$HARNESS_PYTHON" -m levier_harness \

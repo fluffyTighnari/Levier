@@ -1,10 +1,10 @@
-"""Middleware — minimal streaming HTTP transport for LLM providers.
+"""Levier — minimal streaming HTTP transport for LLM providers.
 
 The harness has no third-party HTTP client dependency. This transport uses
 the standard library in a helper thread and exposes an async byte stream so
 the provider can parse server-sent events incrementally.
 
-Copyright 2026 The Middleware Authors.
+Copyright 2026 The Levier Authors.
 """
 
 from __future__ import annotations

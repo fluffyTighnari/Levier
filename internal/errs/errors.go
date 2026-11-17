@@ -1,7 +1,7 @@
 // Package errs defines the middleware error model and retry classification.
 //
-// Middleware — internal/errs
-// Copyright 2026 The Middleware Authors.
+// Levier — internal/errs
+// Copyright 2026 The Levier Authors.
 package errs
 
 import (

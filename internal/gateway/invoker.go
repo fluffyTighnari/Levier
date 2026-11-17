@@ -1,9 +1,9 @@
-// Middleware — internal/gateway
+// Levier — internal/gateway
 //
 // ToolInvoker resolves ToolDefs, deduplicates invocations, and routes
 // local/global calls.
 //
-// Copyright 2026 The Middleware Authors.
+// Copyright 2026 The Levier Authors.
 package gateway
 
 import (

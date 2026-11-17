@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""Middleware — single-node MVP fault matrix.
+"""Levier — single-node MVP fault matrix.
 
-Runs real Middleware, real Harness, and the Counter App, then injects:
+Runs real Levier, real Harness, and the Counter App, then injects:
 
   1. Harness kill -9 mid-run
-  2. Middleware restart mid-run
+  2. Levier restart mid-run
   3. App WebSocket unavailable, then recover
   4. Cancel
   5. Run timeout
@@ -12,7 +12,7 @@ Runs real Middleware, real Harness, and the Counter App, then injects:
 All evidence stays under data/fault-matrix/<timestamp>/.
 Secrets are never printed and the credential file is removed on exit.
 
-Copyright 2026 The Middleware Authors.
+Copyright 2026 The Levier Authors.
 """
 
 from __future__ import annotations

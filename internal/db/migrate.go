@@ -1,8 +1,8 @@
-// Middleware — internal/db
+// Levier — internal/db
 //
 // Versioned SQL migration runner.
 //
-// Copyright 2026 The Middleware Authors.
+// Copyright 2026 The Levier Authors.
 package db
 
 import (

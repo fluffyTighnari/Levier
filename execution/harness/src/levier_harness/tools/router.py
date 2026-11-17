@@ -1,9 +1,9 @@
-"""Middleware — tool source router.
+"""Levier — tool source router.
 
 Routes MCP tool names to the MCP runtime and other tools to the middleware
 tool bridge.
 
-Copyright 2026 The Middleware Authors.
+Copyright 2026 The Levier Authors.
 """
 
 from __future__ import annotations

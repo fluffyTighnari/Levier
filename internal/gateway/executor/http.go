@@ -1,8 +1,8 @@
-// Middleware — internal/gateway/executor
+// Levier — internal/gateway/executor
 //
 // Shared HTTP request execution plus the builtin:http executor.
 //
-// Copyright 2026 The Middleware Authors.
+// Copyright 2026 The Levier Authors.
 package executor
 
 import (

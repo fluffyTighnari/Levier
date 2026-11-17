@@ -1,4 +1,4 @@
-"""Middleware — agent core type and event tests (P8C.1)."""
+"""Levier — agent core type and event tests (P8C.1)."""
 
 from __future__ import annotations
 

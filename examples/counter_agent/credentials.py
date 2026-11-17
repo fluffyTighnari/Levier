@@ -1,4 +1,4 @@
-"""Middleware — Counter App runtime credentials.
+"""Levier — Counter App runtime credentials.
 
 The bootstrap tool saves the one-time App API key to a 0600 file. The runtime
 loads it without needing the Admin token.
@@ -8,7 +8,7 @@ Design references:
 - docs/DESIGN.md §13.1/§13.2: App keys and secret handling.
 - docs/APP_RETROFIT_PLAN.md P3.3.
 
-Copyright 2026 The Middleware Authors.
+Copyright 2026 The Levier Authors.
 """
 
 from __future__ import annotations

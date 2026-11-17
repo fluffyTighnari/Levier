@@ -1,5 +1,5 @@
-# Middleware — example runtime configuration.
-# Copyright 2026 The Middleware Authors.
+# Levier — example runtime configuration.
+# Copyright 2026 The Levier Authors.
 
 http:
   addr: ":8080"

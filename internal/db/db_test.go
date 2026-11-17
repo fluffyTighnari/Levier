@@ -1,8 +1,8 @@
-// Middleware — internal/db
+// Levier — internal/db
 //
 // PostgreSQL integration tests. Set MIDDLEWARE_TEST_DATABASE_URL to run.
 //
-// Copyright 2026 The Middleware Authors.
+// Copyright 2026 The Levier Authors.
 package db
 
 import (

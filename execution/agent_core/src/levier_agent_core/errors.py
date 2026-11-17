@@ -1,4 +1,4 @@
-"""Middleware — agent core errors raised by adapters."""
+"""Levier — agent core errors raised by adapters."""
 
 from __future__ import annotations
 

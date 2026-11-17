@@ -1,4 +1,4 @@
-<!-- Middleware — Agent Core contract v1. -->
+<!-- Levier — Agent Core contract v1. -->
 
 # Agent Core 契约（v1）
 

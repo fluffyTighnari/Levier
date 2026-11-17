@@ -1,4 +1,4 @@
-<!-- Middleware — independent MCP runtime process. -->
+<!-- Levier — independent MCP runtime process. -->
 
 # MCP Runtime
 
@@ -24,7 +24,7 @@ the middleware only stores MCP catalog/ACL/bindings.
 
 ```text
 Harness McpRuntimeClient  ── local JSON-RPC ──►  mcp_runtime  ──► MCP servers
-Middleware Register/Control  ── TaskAssign.mcp_bindings ──► Harness
+Levier Register/Control  ── TaskAssign.mcp_bindings ──► Harness
 ```
 
 - The middleware never opens MCP connections.

@@ -1,8 +1,8 @@
-// Middleware — internal/control
+// Levier — internal/control
 //
 // Run placement scheduler.
 //
-// Copyright 2026 The Middleware Authors.
+// Copyright 2026 The Levier Authors.
 package control
 
 import (

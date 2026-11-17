@@ -1,6 +1,6 @@
-"""Middleware — submit one App run for retrofit verification (P4.1).
+"""Levier — submit one App run for retrofit verification (P4.1).
 
-Copyright 2026 The Middleware Authors.
+Copyright 2026 The Levier Authors.
 """
 
 from __future__ import annotations

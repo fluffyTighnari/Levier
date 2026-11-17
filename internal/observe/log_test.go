@@ -1,8 +1,8 @@
-// Middleware — internal/observe
+// Levier — internal/observe
 //
 // Structured logging tests.
 //
-// Copyright 2026 The Middleware Authors.
+// Copyright 2026 The Levier Authors.
 package observe
 
 import (

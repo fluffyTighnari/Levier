@@ -1,5 +1,5 @@
 #!/bin/sh
-# Middleware — Counter Agent container entrypoint.
+# Levier — Counter Agent container entrypoint.
 set -eu
 
 LEVIER_URL="${LEVIER_URL:-${MW_URL:-http://levier:8080}}"

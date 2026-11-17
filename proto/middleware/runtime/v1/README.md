@@ -1,4 +1,4 @@
-<!-- Middleware — RuntimeChannel v1 contract. -->
+<!-- Levier — RuntimeChannel v1 contract. -->
 
 # RuntimeChannel v1
 

@@ -1,8 +1,8 @@
-// Middleware — internal/config
+// Levier — internal/config
 //
 // Duration parsing for human-readable YAML configuration.
 //
-// Copyright 2026 The Middleware Authors.
+// Copyright 2026 The Levier Authors.
 package config
 
 import (

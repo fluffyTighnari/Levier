@@ -1,8 +1,8 @@
-// Middleware — internal/runstore
+// Levier — internal/runstore
 //
 // Run status constants and legal transitions.
 //
-// Copyright 2026 The Middleware Authors.
+// Copyright 2026 The Levier Authors.
 package runstore
 
 const (

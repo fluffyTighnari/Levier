@@ -1,5 +1,5 @@
 // Package observe initializes logging, metrics, and tracing.
 //
-// Middleware — internal/observe
-// Copyright 2026 The Middleware Authors.
+// Levier — internal/observe
+// Copyright 2026 The Levier Authors.
 package observe

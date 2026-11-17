@@ -1,9 +1,9 @@
--- Middleware — middleware-generated event sequence.
+-- Levier — middleware-generated event sequence.
 --
 -- seq for source='mw' events lives in [2^62, 2^63). A database sequence keeps
 -- allocation monotonic and unique without touching the daemon watermark.
 --
--- Copyright 2026 The Middleware Authors.
+-- Copyright 2026 The Levier Authors.
 
 CREATE SEQUENCE IF NOT EXISTS run_event_mw_seq
   AS BIGINT

@@ -1,6 +1,6 @@
-<!-- Middleware — standardized file header convention. -->
+<!-- Levier — standardized file header convention. -->
 
-# Middleware 文件头规范
+# Levier 文件头规范
 
 | 项目 | 内容 |
 |---|---|
@@ -18,19 +18,19 @@
 ```go
 // Package workflow implements the PostgreSQL-backed RunTaskQueue.
 //
-// Middleware — internal/workflow
-// Copyright 2026 The Middleware Authors.
+// Levier — internal/workflow
+// Copyright 2026 The Levier Authors.
 package workflow
 ```
 
 实现文件（非 `doc.go`）：
 
 ```go
-// Middleware — internal/workflow
+// Levier — internal/workflow
 //
 // Claim and lease semantics for run tasks.
 //
-// Copyright 2026 The Middleware Authors.
+// Copyright 2026 The Levier Authors.
 package workflow
 ```
 
@@ -43,11 +43,11 @@ package workflow
 ## 3. Python
 
 ```python
-"""Middleware — harness RuntimeChannel client.
+"""Levier — harness RuntimeChannel client.
 
 Owns the gRPC stream, Hello/Heartbeat, and reconnect loop.
 
-Copyright 2026 The Middleware Authors.
+Copyright 2026 The Levier Authors.
 """
 ```
 
@@ -56,18 +56,18 @@ Copyright 2026 The Middleware Authors.
 使用对应语言的注释符：
 
 ```yaml
-# Middleware — CI workflow.
-# Copyright 2026 The Middleware Authors.
+# Levier — CI workflow.
+# Copyright 2026 The Levier Authors.
 ```
 
 ```sql
--- Middleware — RunTaskQueue schema.
--- Copyright 2026 The Middleware Authors.
+-- Levier — RunTaskQueue schema.
+-- Copyright 2026 The Levier Authors.
 ```
 
 ```proto
-// Middleware — RuntimeChannel v1 contract.
-// Copyright 2026 The Middleware Authors.
+// Levier — RuntimeChannel v1 contract.
+// Copyright 2026 The Levier Authors.
 ```
 
 ## 5. Markdown
@@ -75,7 +75,7 @@ Copyright 2026 The Middleware Authors.
 文档使用标题 + 元数据表；可选的 HTML 顶部注释用于说明文件归属：
 
 ```markdown
-<!-- Middleware — implementation plan. -->
+<!-- Levier — implementation plan. -->
 
 # ...
 ```

@@ -1,4 +1,4 @@
-"""Middleware — agent core adapter protocols."""
+"""Levier — agent core adapter protocols."""
 
 from __future__ import annotations
 

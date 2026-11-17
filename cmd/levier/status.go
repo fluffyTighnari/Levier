@@ -43,8 +43,8 @@ func runStatus(args []string, stdout, stderr io.Writer) int {
 	server := flags.String("server", envOr("LEVIER_SERVER", "http://127.0.0.1:8080"), "Levier HTTP address")
 	asJSON := flags.Bool("json", false, "print JSON")
 	timeout := flags.Duration("timeout", 5*time.Second, "per-request timeout")
-	if err := flags.Parse(args); err != nil {
-		return 2
+	if ok, code := parseFlagSet(flags, args, stdout, stderr); !ok {
+		return code
 	}
 
 	ctx := context.Background()

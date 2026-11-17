@@ -1,8 +1,8 @@
-"""Middleware — run event writer.
+"""Levier — run event writer.
 
 Assigns per-run sequence numbers and sends events through the channel.
 
-Copyright 2026 The Middleware Authors.
+Copyright 2026 The Levier Authors.
 """
 
 from __future__ import annotations

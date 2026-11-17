@@ -1,7 +1,7 @@
 // Package id generates ULIDs and other middleware identifiers.
 //
-// Middleware — internal/id
-// Copyright 2026 The Middleware Authors.
+// Levier — internal/id
+// Copyright 2026 The Levier Authors.
 package id
 
 import (

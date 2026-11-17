@@ -1,4 +1,4 @@
-# Middleware — Docker Compose single-node MVP.
+# Levier — Docker Compose single-node MVP.
 #
 # Core services:
 #   postgres      PostgreSQL 16
@@ -10,7 +10,7 @@
 # Smoke profile:
 #   docker compose --profile smoke run --rm smoke
 #
-# Copyright 2026 The Middleware Authors.
+# Copyright 2026 The Levier Authors.
 
 name: levier-mvp
 

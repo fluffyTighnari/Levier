@@ -1,8 +1,8 @@
-// Middleware — internal/httpapi
+// Levier — internal/httpapi
 //
 // Request ID propagation for the App HTTP API.
 //
-// Copyright 2026 The Middleware Authors.
+// Copyright 2026 The Levier Authors.
 package httpapi
 
 import (

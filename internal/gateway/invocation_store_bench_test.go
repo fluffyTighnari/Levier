@@ -1,8 +1,8 @@
-// Middleware — internal/gateway
+// Levier — internal/gateway
 //
 // PostgreSQL invocation store latency benchmark.
 //
-// Copyright 2026 The Middleware Authors.
+// Copyright 2026 The Levier Authors.
 package gateway
 
 import (

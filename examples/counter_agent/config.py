@@ -1,4 +1,4 @@
-"""Middleware — Counter App HTTP configuration (P2.1).
+"""Levier — Counter App HTTP configuration (P2.1).
 
 Reads only environment values. No network calls and no secret printing.
 
@@ -7,7 +7,7 @@ Design references:
 - docs/DESIGN.md §13.1: Admin token is separate from App API keys.
 - docs/APP_RETROFIT_PLAN.md P2.1.
 
-Copyright 2026 The Middleware Authors.
+Copyright 2026 The Levier Authors.
 """
 
 from __future__ import annotations

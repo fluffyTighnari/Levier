@@ -1,5 +1,5 @@
 // Levier — Go module.
-// Copyright 2026 The Middleware Authors.
+// Copyright 2026 The Levier Authors.
 module github.com/fluffyTighnari/levier
 
 go 1.26.0

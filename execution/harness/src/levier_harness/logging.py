@@ -1,8 +1,8 @@
-"""Middleware — harness structured logging.
+"""Levier — harness structured logging.
 
 Provides JSON and text logging without exposing the daemon token.
 
-Copyright 2026 The Middleware Authors.
+Copyright 2026 The Levier Authors.
 """
 
 from __future__ import annotations

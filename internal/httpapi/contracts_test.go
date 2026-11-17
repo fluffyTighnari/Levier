@@ -1,8 +1,8 @@
-// Middleware — internal/httpapi
+// Levier — internal/httpapi
 //
 // App HTTP/WS contract and golden JSON tests.
 //
-// Copyright 2026 The Middleware Authors.
+// Copyright 2026 The Levier Authors.
 package httpapi
 
 import (

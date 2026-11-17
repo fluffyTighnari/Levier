@@ -1,9 +1,9 @@
-"""Middleware — zero-dependency HTTP client smoke test.
+"""Levier — zero-dependency HTTP client smoke test.
 
-Uses only the Python standard library and no generated Middleware code. It
+Uses only the Python standard library and no generated Levier code. It
 verifies the App/admin REST contract from a non-Go process.
 
-Copyright 2026 The Middleware Authors.
+Copyright 2026 The Levier Authors.
 """
 
 from __future__ import annotations

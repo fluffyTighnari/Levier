@@ -56,15 +56,15 @@ func runAppInit(args []string, stdout, stderr io.Writer) int {
 	nameFlag := flags.String("name", os.Getenv("LEVIER_APP_NAME"), "App name")
 	credentialsFlag := flags.String("credentials-out", "", "credentials output path")
 	server := flags.String("server", envOr("LEVIER_SERVER", "http://127.0.0.1:8080"), "Levier HTTP address")
-	adminToken := flags.String("admin-token", os.Getenv("LEVIER_ADMIN_TOKEN"), "Admin token")
+	adminToken := flags.String("admin-token", "", "Admin token (or LEVIER_ADMIN_TOKEN)")
 	rotate := flags.Bool("rotate", false, "rotate key if the App already exists")
 	yes := flags.Bool("yes", false, "confirm rotation")
 	force := flags.Bool("force", false, "overwrite an existing credentials file")
 	dryRun := flags.Bool("dry-run", false, "show what would happen")
 	asJSON := flags.Bool("json", false, "print JSON")
 	timeout := flags.Duration("timeout", 10*time.Second, "per-request timeout")
-	if err := flags.Parse(args); err != nil {
-		return 2
+	if ok, code := parseFlagSet(flags, args, stdout, stderr); !ok {
+		return code
 	}
 
 	name := *nameFlag
@@ -85,7 +85,11 @@ func runAppInit(args []string, stdout, stderr io.Writer) int {
 		result := appInitResult{AppName: name, Server: serverBase(*server), Credentials: credentialsPath}
 		return writeAppInitResult(stdout, result, *asJSON, true)
 	}
-	if *adminToken == "" {
+	admin := *adminToken
+	if admin == "" {
+		admin = os.Getenv("LEVIER_ADMIN_TOKEN")
+	}
+	if admin == "" {
 		fmt.Fprintln(stderr, "admin token is required: --admin-token or LEVIER_ADMIN_TOKEN")
 		return 2
 	}
@@ -96,7 +100,7 @@ func runAppInit(args []string, stdout, stderr io.Writer) int {
 	}
 
 	ctx := context.Background()
-	client := newAPIClient(*server, *adminToken, *timeout)
+	client := newAPIClient(*server, admin, *timeout)
 	app, key, err := client.createApp(ctx, name, false)
 	if err != nil {
 		return reportAPIError(err, stderr)
@@ -189,8 +193,8 @@ func runAppShow(args []string, stdout, stderr io.Writer) int {
 	server := flags.String("server", envOr("LEVIER_SERVER", "http://127.0.0.1:8080"), "Levier HTTP address")
 	asJSON := flags.Bool("json", false, "print JSON")
 	timeout := flags.Duration("timeout", 10*time.Second, "per-request timeout")
-	if err := flags.Parse(args); err != nil {
-		return 2
+	if ok, code := parseFlagSet(flags, args, stdout, stderr); !ok {
+		return code
 	}
 	if *credentialsPath == "" {
 		fmt.Fprintln(stderr, "credentials path is required: --credentials or LEVIER_CREDENTIALS")
@@ -234,18 +238,22 @@ func runAppRotateKey(args []string, stdout, stderr io.Writer) int {
 	flags.SetOutput(stderr)
 	credentialsPath := flags.String("credentials", os.Getenv("LEVIER_CREDENTIALS"), "credentials file")
 	server := flags.String("server", envOr("LEVIER_SERVER", "http://127.0.0.1:8080"), "Levier HTTP address")
-	adminToken := flags.String("admin-token", os.Getenv("LEVIER_ADMIN_TOKEN"), "Admin token")
+	adminToken := flags.String("admin-token", "", "Admin token (or LEVIER_ADMIN_TOKEN)")
 	yes := flags.Bool("yes", false, "confirm rotation")
 	asJSON := flags.Bool("json", false, "print JSON")
 	timeout := flags.Duration("timeout", 10*time.Second, "per-request timeout")
-	if err := flags.Parse(args); err != nil {
-		return 2
+	if ok, code := parseFlagSet(flags, args, stdout, stderr); !ok {
+		return code
 	}
 	if *credentialsPath == "" {
 		fmt.Fprintln(stderr, "credentials path is required: --credentials or LEVIER_CREDENTIALS")
 		return 2
 	}
-	if *adminToken == "" {
+	admin := *adminToken
+	if admin == "" {
+		admin = os.Getenv("LEVIER_ADMIN_TOKEN")
+	}
+	if admin == "" {
 		fmt.Fprintln(stderr, "admin token is required: --admin-token or LEVIER_ADMIN_TOKEN")
 		return 2
 	}
@@ -258,7 +266,7 @@ func runAppRotateKey(args []string, stdout, stderr io.Writer) int {
 		return 5
 	}
 
-	client := newAPIClient(*server, *adminToken, *timeout)
+	client := newAPIClient(*server, admin, *timeout)
 	key, err := client.rotateAppKey(context.Background(), credentials.AppID)
 	if err != nil {
 		return reportAPIError(err, stderr)

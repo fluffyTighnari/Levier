@@ -1,6 +1,6 @@
-<!-- Middleware — App onboarding, current runtime contract. -->
+<!-- Levier — App onboarding, current runtime contract. -->
 
-# App 接入 Middleware
+# App 接入 Levier
 
 这份文档描述**当前可用**的接入方式，对应 P6B 已闭环的实现。
 它以 Counter Agent 为参考，但内容不绑定语言、SDK 或文件布局。
@@ -18,11 +18,11 @@
 App      ：业务函数 + 工具元数据 + 一条 WebSocket 通道
           （没有模型循环，也不直接决定什么时候调用工具）
 
-Middleware：注册表、调度、工具路由、幂等、事件流
+Levier：注册表、调度、工具路由、幂等、事件流
           （不执行你的业务代码）
 
 Harness  ：ReAct 循环 + 模型调用
-          （只通过 Middleware 请求工具）
+          （只通过 Levier 请求工具）
 ```
 
 一次带工具调用的 Run：
@@ -54,7 +54,7 @@ App 需要实现的只有：
 ## 2. 接入前需要什么
 
 ```text
-LEVIER_URL          Middleware HTTP 地址（非秘密）
+LEVIER_URL          Levier HTTP 地址（非秘密）
 LEVIER_ADMIN_TOKEN  管理凭据，只用于创建/轮换 App
 APP_NAME        App 自己选定的全局唯一名称
 ```

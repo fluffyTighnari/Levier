@@ -1,4 +1,4 @@
-<!-- Middleware — Node.js counter App (language independence). -->
+<!-- Levier — Node.js counter App (language independence). -->
 
 # Node Counter App（P8）
 
@@ -16,7 +16,7 @@ Node.js >= 22（使用内置全局 WebSocket）
 不需要：
 
 ```text
-Middleware SDK
+Levier SDK
 生成的 protobuf 代码
 任何 npm 包
 ```

@@ -1,5 +1,5 @@
-# Middleware — buf module and lint policy.
-# Copyright 2026 The Middleware Authors.
+# Levier — buf module and lint policy.
+# Copyright 2026 The Levier Authors.
 
 version: v2
 modules:

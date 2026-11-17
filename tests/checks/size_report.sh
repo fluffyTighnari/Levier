@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Middleware — file and function size baseline report.
+# Levier — file and function size baseline report.
 #
 # Advisory: files >450 are split candidates; functions >80 are review-only.
 # Do not split a cohesive function just to satisfy the line limit.

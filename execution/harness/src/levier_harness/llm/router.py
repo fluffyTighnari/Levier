@@ -1,8 +1,8 @@
-"""Middleware — LLM provider routing.
+"""Levier — LLM provider routing.
 
 Dispatches one completion by the provider named in ModelConfig.
 
-Copyright 2026 The Middleware Authors.
+Copyright 2026 The Levier Authors.
 """
 
 from __future__ import annotations

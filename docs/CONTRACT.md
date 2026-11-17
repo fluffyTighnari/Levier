@@ -1,4 +1,4 @@
-<!-- Middleware — RuntimeChannel contract compatibility rules. -->
+<!-- Levier — RuntimeChannel contract compatibility rules. -->
 
 # RuntimeChannel 契约冻结规则
 

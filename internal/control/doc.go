@@ -1,5 +1,5 @@
 // Package control schedules runs and drives the run lifecycle.
 //
-// Middleware — internal/control
-// Copyright 2026 The Middleware Authors.
+// Levier — internal/control
+// Copyright 2026 The Levier Authors.
 package control

@@ -1,6 +1,6 @@
-"""Middleware — Counter App local tool dispatcher (P1.2–P1.6).
+"""Levier — Counter App local tool dispatcher (P1.2–P1.6).
 
-The dispatcher accepts the two fields Middleware sends to a local tool:
+The dispatcher accepts the two fields Levier sends to a local tool:
 `tool_name` and `arguments_json`. It returns the success/error shape used by
 WebSocket `local_tool_result`; the WS layer adds correlation/invocation IDs.
 
@@ -9,7 +9,7 @@ Design references:
 - docs/DESIGN.md §4.5: tool error codes.
 - proto/middleware/runtime/v1/runtime.proto ToolCallResult / ErrorInfo.
 
-Copyright 2026 The Middleware Authors.
+Copyright 2026 The Levier Authors.
 """
 
 from __future__ import annotations

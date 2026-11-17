@@ -1,7 +1,7 @@
 // Command migrate applies the embedded PostgreSQL migrations.
 //
 // Levier — cmd/migrate
-// Copyright 2026 The Middleware Authors.
+// Copyright 2026 The Levier Authors.
 package main
 
 import (

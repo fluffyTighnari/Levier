@@ -1,10 +1,10 @@
-"""Middleware — LLM provider interface.
+"""Levier — LLM provider interface.
 
 Defines the provider contract consumed by the ReAct strategy, including
 per-run model configuration, streaming deltas, and normalized provider
 errors.
 
-Copyright 2026 The Middleware Authors.
+Copyright 2026 The Levier Authors.
 """
 
 from __future__ import annotations

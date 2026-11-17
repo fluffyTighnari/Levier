@@ -1,6 +1,6 @@
-// Middleware — HTTP API + PostgreSQL transaction tests.
+// Levier — HTTP API + PostgreSQL transaction tests.
 //
-// Copyright 2026 The Middleware Authors.
+// Copyright 2026 The Levier Authors.
 package httpapi
 
 import (

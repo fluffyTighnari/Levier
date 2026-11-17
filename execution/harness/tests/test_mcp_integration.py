@@ -1,9 +1,9 @@
-"""Middleware — end-to-end Harness/MCP runtime integration test.
+"""Levier — end-to-end Harness/MCP runtime integration test.
 
 Starts the independent MCP runtime process with a real stdio MCP server and
 drives it through the Harness client.
 
-Copyright 2026 The Middleware Authors.
+Copyright 2026 The Levier Authors.
 """
 
 from __future__ import annotations

@@ -1,6 +1,6 @@
-"""Middleware — App key request/response tests (P3.3).
+"""Levier — App key request/response tests (P3.3).
 
-Copyright 2026 The Middleware Authors.
+Copyright 2026 The Levier Authors.
 """
 
 from __future__ import annotations

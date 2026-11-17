@@ -1,8 +1,8 @@
-// Middleware — internal/gateway
+// Levier — internal/gateway
 //
 // PostgreSQL tool invocation idempotency store.
 //
-// Copyright 2026 The Middleware Authors.
+// Copyright 2026 The Levier Authors.
 package gateway
 
 import (

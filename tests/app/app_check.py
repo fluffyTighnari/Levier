@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Middleware — App onboarding conformance check (P8R.5).
+"""Levier — App onboarding conformance check (P8R.5).
 
 Two modes:
 

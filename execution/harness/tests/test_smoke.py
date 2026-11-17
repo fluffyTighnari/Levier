@@ -1,6 +1,6 @@
-"""Middleware — harness skeleton smoke test.
+"""Levier — harness skeleton smoke test.
 
-Copyright 2026 The Middleware Authors.
+Copyright 2026 The Levier Authors.
 """
 
 import unittest

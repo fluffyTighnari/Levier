@@ -1,9 +1,9 @@
-"""Middleware — RuntimeChannel client tests.
+"""Levier — RuntimeChannel client tests.
 
 Uses an in-process grpc.aio server to verify Hello, outbound messages,
 inbound dispatch, heartbeat, and reconnect behavior.
 
-Copyright 2026 The Middleware Authors.
+Copyright 2026 The Levier Authors.
 """
 
 from __future__ import annotations

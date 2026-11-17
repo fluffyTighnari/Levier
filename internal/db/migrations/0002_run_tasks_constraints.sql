@@ -1,5 +1,5 @@
--- Middleware — P2-15 run_tasks constraints and indexes.
--- Copyright 2026 The Middleware Authors.
+-- Levier — P2-15 run_tasks constraints and indexes.
+-- Copyright 2026 The Levier Authors.
 
 ALTER TABLE run_tasks
   ADD CONSTRAINT run_tasks_attempt_check

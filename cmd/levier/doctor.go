@@ -37,8 +37,8 @@ func runDoctor(args []string, stdout, stderr io.Writer) int {
 	credentials := flags.String("credentials", os.Getenv("LEVIER_CREDENTIALS"), "optional App credentials file")
 	asJSON := flags.Bool("json", false, "print JSON")
 	timeout := flags.Duration("timeout", 5*time.Second, "per-request timeout")
-	if err := flags.Parse(args); err != nil {
-		return 2
+	if ok, code := parseFlagSet(flags, args, stdout, stderr); !ok {
+		return code
 	}
 
 	report := doctorReport{Config: *configPath, Server: serverBase(*server)}
@@ -67,15 +67,17 @@ func runDoctor(args []string, stdout, stderr io.Writer) int {
 			report.add("database connect", "ok", "connected", "")
 			defer pool.Close()
 
-			var version int64
-			var count int
 			queryCtx, cancel := context.WithTimeout(ctx, *timeout)
-			err := pool.QueryRow(queryCtx, "SELECT COALESCE(max(version),0), count(*) FROM schema_migrations").Scan(&version, &count)
+			state, err := db.Status(queryCtx, pool)
 			cancel()
 			if err != nil {
 				report.add("migrations", "fail", err.Error(), "run levier migrate up")
+			} else if len(state.Pending) > 0 {
+				report.add("migrations", "fail",
+					fmt.Sprintf("current %d, pending %d", state.Current, len(state.Pending)),
+					"run levier migrate up")
 			} else {
-				report.add("migrations", "ok", fmt.Sprintf("version %d (%d applied)", version, count), "")
+				report.add("migrations", "ok", fmt.Sprintf("version %d (%d applied)", state.Current, len(state.Applied)), "")
 			}
 		}
 	} else {

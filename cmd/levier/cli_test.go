@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"encoding/json"
+	"io"
 	"strings"
 	"testing"
 )
@@ -54,5 +55,74 @@ func TestRunCLIHelp(t *testing.T) {
 	}
 	if !strings.Contains(stdout.String(), "levier serve") {
 		t.Fatalf("usage = %s", stdout.String())
+	}
+}
+
+func TestSubcommandHelp(t *testing.T) {
+	tests := []struct {
+		name string
+		run  func([]string, io.Writer, io.Writer) int
+	}{
+		{name: "doctor", run: runDoctor},
+		{name: "status", run: runStatus},
+		{name: "app init", run: runAppInit},
+		{name: "app show", run: runAppShow},
+		{name: "app rotate-key", run: runAppRotateKey},
+		{name: "run submit", run: runRunSubmit},
+		{name: "run watch", run: runRunWatch},
+		{name: "run cancel", run: runRunCancel},
+		{name: "migrate status", run: runMigrateStatus},
+		{name: "migrate up", run: runMigrateUp},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			var stdout, stderr bytes.Buffer
+			code := test.run([]string{"--help"}, &stdout, &stderr)
+			if code != 0 {
+				t.Fatalf("%s --help = %d, stderr = %s", test.name, code, stderr.String())
+			}
+			if !strings.Contains(stdout.String(), "usage: levier "+test.name) {
+				t.Fatalf("%s --help stdout = %s", test.name, stdout.String())
+			}
+			if stderr.Len() != 0 {
+				t.Fatalf("%s --help stderr = %s", test.name, stderr.String())
+			}
+		})
+	}
+}
+
+func TestSubcommandBadFlag(t *testing.T) {
+	var stdout, stderr bytes.Buffer
+	code := runDoctor([]string{"--nope"}, &stdout, &stderr)
+	if code != 2 {
+		t.Fatalf("doctor --nope = %d, want 2", code)
+	}
+	if !strings.Contains(stderr.String(), "flag provided but not defined") {
+		t.Fatalf("stderr = %s", stderr.String())
+	}
+	if !strings.Contains(stderr.String(), "usage: levier doctor") {
+		t.Fatalf("stderr usage = %s", stderr.String())
+	}
+}
+
+func TestHelpDoesNotLeakTokenDefaults(t *testing.T) {
+	t.Setenv("LEVIER_ADMIN_TOKEN", "admin-super-secret")
+	t.Setenv("LEVIER_DAEMON_TOKEN", "daemon-super-secret")
+
+	var stdout, stderr bytes.Buffer
+	if code := runAppInit([]string{"--help"}, &stdout, &stderr); code != 0 {
+		t.Fatalf("app init --help = %d", code)
+	}
+	if strings.Contains(stdout.String(), "admin-super-secret") {
+		t.Fatalf("app init help leaked admin token: %s", stdout.String())
+	}
+
+	stdout.Reset()
+	stderr.Reset()
+	if code := runDaemonCheck([]string{"--help"}, &stdout, &stderr); code != 0 {
+		t.Fatalf("daemon check --help = %d", code)
+	}
+	if strings.Contains(stdout.String(), "daemon-super-secret") || strings.Contains(stdout.String(), "admin-super-secret") {
+		t.Fatalf("daemon check help leaked token: %s", stdout.String())
 	}
 }

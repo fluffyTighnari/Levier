@@ -1,9 +1,9 @@
-"""Middleware — harness command entry point.
+"""Levier — harness command entry point.
 
 P3-23 provides configuration, logging, health state, and a process
 lifecycle skeleton. RuntimeChannel/ReAct start in later steps.
 
-Copyright 2026 The Middleware Authors.
+Copyright 2026 The Levier Authors.
 """
 
 from __future__ import annotations

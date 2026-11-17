@@ -1,8 +1,8 @@
-// Middleware — internal/db
+// Levier — internal/db
 //
 // RunTaskQueue schema constraint tests.
 //
-// Copyright 2026 The Middleware Authors.
+// Copyright 2026 The Levier Authors.
 package db
 
 import (

@@ -1,8 +1,8 @@
-// Middleware — internal/contract
+// Levier — internal/contract
 //
 // Wire constants must not drift: clients and docs pin these strings.
 //
-// Copyright 2026 The Middleware Authors.
+// Copyright 2026 The Levier Authors.
 package contract
 
 import "testing"

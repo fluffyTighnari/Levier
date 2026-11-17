@@ -125,9 +125,10 @@ docker compose ps
 
 ```text
 postgres 就绪
-→ middleware 迁移数据库并启动
+→ levier 执行 migrate up，然后 serve
+  （serve 启动时检查 pending migration）
 → mcp-runtime 创建 /run/levier/mcp.sock
-→ harness 连接 middleware，注册为 daemon-local-1
+→ harness 连接 levier，注册为 daemon-local-1
 → agent 等待 /readyz，bootstrap App，注册工具，建立 WebSocket
 ```
 
@@ -229,10 +230,10 @@ set -a; . ./.env; set +a
 
 ```sh
 # 1. 迁移数据库
-go run ./cmd/migrate -config levier.example.yaml
+go run ./cmd/levier migrate up -config levier.example.yaml
 
 # 2. 启动 Levier（HTTP :8080，gRPC :9090）
-bin/levier -config levier.example.yaml
+bin/levier serve -config levier.example.yaml
 
 # 3. 启动 Harness
 (cd execution/harness && PYTHONPATH=src:src/gen .venv/bin/python -m levier_harness \
@@ -274,6 +275,23 @@ levier_ws_connections{app="app_..."} 1
 ```
 
 前者说明 Harness 已注册，后者说明 App 的长连接在线。
+
+### 3.5 日常 CLI
+
+常用命令：
+
+```sh
+levier status
+levier doctor --credentials /path/to/app.json
+levier app show --credentials /path/to/app.json
+levier run submit --credentials /path/to/app.json --strategy echo --prompt "hello" --watch
+```
+
+完整命令、参数、环境变量、JSON 字段和退出码见
+[`docs/CLI_REFERENCE.md`](docs/CLI_REFERENCE.md)。
+
+从 release 安装 CLI 见
+[`docs/INSTALL.md`](docs/INSTALL.md)。
 
 ---
 
@@ -1120,6 +1138,14 @@ make retrofit-e2e    # 真实 Harness + DeepSeek + local tools
 make mcp-e2e         # MCP runtime + 凭据解析
 ```
 
+Daemon 协议自检（会创建临时 App / Run，使用空闲 daemon id）：
+
+```sh
+make daemon-check
+# 或
+levier daemon check --daemon-id <id> --token <token>
+```
+
 App 接入自检：
 
 ```sh
@@ -1135,7 +1161,7 @@ python3 tests/app/app_check.py --credentials /path/to/app.json \
 ## 11. 目录与文档
 
 ```text
-cmd/              levier / migrate / daemon-check 入口
+cmd/              levier（serve / app / run / migrate / daemon check）/ migrate
 internal/         控制面、存储、调度、网关、HTTP/WS
 contracts/        HTTP / WS 机器可读契约
 proto/            gRPC 契约
@@ -1145,6 +1171,7 @@ execution/harness/          Python Harness
 execution/mcp_runtime/      独立 MCP 连接进程
 examples/         counter_agent、HTTP/Node 接入示例
 tests/            单元/契约/E2E 与检查脚本
+scripts/          发布构建与校验脚本
 docs/             设计、契约、接入、迁移文档
 deploy/           容器镜像与 Compose
 ```
@@ -1158,6 +1185,9 @@ deploy/           容器镜像与 Compose
 | `docs/APP_ONBOARDING.md` | App 接入流程与协议细节 |
 | `docs/DESIGN.md` | 核心设计（当前实现） |
 | `docs/MVP.md` | 单机 MVP 的边界、启动、验收与限制 |
+| `docs/CLI_REFERENCE.md` | CLI 命令、参数、环境变量、JSON、退出码 |
+| `docs/INSTALL.md` | CLI 安装、checksum、镜像/离线安装 |
+| `docs/RELEASE.md` | release 构建、checksums 与发布流程 |
 | `docs/ARCHITECTURE.md` | 一页架构与依赖方向 |
 | `docs/DAEMON_CONTRACT.md` | Daemon / Harness 协议 |
 | `docs/MCP.md` | MCP 接入与运行 |

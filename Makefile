@@ -1,5 +1,5 @@
-# Middleware — build, test, and lint entry points.
-# Copyright 2026 The Middleware Authors.
+# Levier — build, test, and lint entry points.
+# Copyright 2026 The Levier Authors.
 
 SHELL := /bin/sh
 GO ?= go
@@ -20,13 +20,16 @@ LDFLAGS := -X github.com/fluffyTighnari/levier/internal/version.Version=$(VERSIO
 	-X github.com/fluffyTighnari/levier/internal/version.Commit=$(COMMIT) \
 	-X github.com/fluffyTighnari/levier/internal/version.Built=$(BUILD_TIME)
 
-.PHONY: all build test lint fmt fmt-check vet run clean dev-up dev-down migrate proto proto-check proto-lint contract-check harness-test mcp-runtime-test image-harness image-mcp-runtime counter-agent counter-agent-test http-smoke retrofit-e2e mcp-e2e deps-check structure-check size-report daemon-check agent-core-test mvp-demo mvp-demo-react fault-matrix secrets-check docker-up docker-down docker-smoke docker-logs docker-reset
+.PHONY: all build test lint fmt fmt-check vet run clean dev-up dev-down migrate proto proto-check proto-lint contract-check harness-test mcp-runtime-test image-harness image-mcp-runtime counter-agent counter-agent-test http-smoke retrofit-e2e mcp-e2e deps-check structure-check size-report daemon-check agent-core-test mvp-demo mvp-demo-react fault-matrix secrets-check docker-up docker-down docker-smoke docker-logs docker-reset release-dist
 
 all: build
 
 build:
 	@mkdir -p $(BIN_DIR)
 	$(GO) build -trimpath -ldflags "$(LDFLAGS)" -o $(BIN_DIR)/levier ./cmd/levier
+
+release-dist:
+	VERSION="$(VERSION)" COMMIT="$(COMMIT)" BUILT="$(BUILD_TIME)" sh scripts/build-release.sh
 
 test:
 	$(GO) test ./...
@@ -110,7 +113,7 @@ size-report:
 	./tests/checks/size_report.sh
 
 daemon-check:
-	go run ./cmd/mw-daemon-check
+	go run ./cmd/levier daemon check
 
 agent-core-test:
 	PYTHONPATH=execution/agent_core/src python3 -m unittest discover -s execution/agent_core/tests -v

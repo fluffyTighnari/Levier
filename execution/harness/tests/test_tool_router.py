@@ -1,6 +1,6 @@
-"""Middleware — tool source router tests.
+"""Levier — tool source router tests.
 
-Copyright 2026 The Middleware Authors.
+Copyright 2026 The Levier Authors.
 """
 
 from __future__ import annotations

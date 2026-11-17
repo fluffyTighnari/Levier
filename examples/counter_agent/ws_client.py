@@ -1,9 +1,9 @@
-"""Middleware — minimal stdlib WebSocket client.
+"""Levier — minimal stdlib WebSocket client.
 
 Implements only what the App retrofit needs: HTTP Upgrade, masked client
 text frames, unmasked server text frames, ping/pong, and close.
 
-Copyright 2026 The Middleware Authors.
+Copyright 2026 The Levier Authors.
 """
 
 from __future__ import annotations

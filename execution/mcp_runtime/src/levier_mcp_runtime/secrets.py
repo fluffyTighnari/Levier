@@ -1,10 +1,10 @@
-"""Middleware — MCP runtime secret resolution.
+"""Levier — MCP runtime secret resolution.
 
 Bindings travel from the control plane with ${secret:name} placeholders.
 Only the runtime resolves them, so TaskAssign and the Harness never see
 plaintext credentials.
 
-Copyright 2026 The Middleware Authors.
+Copyright 2026 The Levier Authors.
 """
 
 from __future__ import annotations

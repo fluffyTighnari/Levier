@@ -1,9 +1,9 @@
-"""Middleware — register the Counter App through real HTTP (P3.1).
+"""Levier — register the Counter App through real HTTP (P3.1).
 
-Reads env, sends POST /admin/apps to a running Middleware, and prints a
+Reads env, sends POST /admin/apps to a running Levier, and prints a
 sanitized response. The one-time API key is never printed or persisted here.
 
-Copyright 2026 The Middleware Authors.
+Copyright 2026 The Levier Authors.
 """
 
 from __future__ import annotations

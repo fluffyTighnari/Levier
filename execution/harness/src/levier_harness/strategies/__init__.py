@@ -1,6 +1,6 @@
-"""Middleware — strategy implementations.
+"""Levier — strategy implementations.
 
-Copyright 2026 The Middleware Authors.
+Copyright 2026 The Levier Authors.
 """
 
 from levier_harness.strategies.base import Strategy

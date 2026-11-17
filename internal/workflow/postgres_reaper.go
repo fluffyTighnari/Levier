@@ -1,8 +1,8 @@
-// Middleware — internal/workflow
+// Levier — internal/workflow
 //
 // PostgreSQL expired-lease reaper and dead-letter queries.
 //
-// Copyright 2026 The Middleware Authors.
+// Copyright 2026 The Levier Authors.
 package workflow
 
 import (

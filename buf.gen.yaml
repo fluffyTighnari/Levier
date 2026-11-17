@@ -1,5 +1,5 @@
-# Middleware — buf code generation.
-# Copyright 2026 The Middleware Authors.
+# Levier — buf code generation.
+# Copyright 2026 The Levier Authors.
 
 version: v2
 plugins:

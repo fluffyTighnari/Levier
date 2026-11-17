@@ -1,5 +1,5 @@
 // Package gateway routes local and global tool invocations.
 //
-// Middleware — internal/gateway
-// Copyright 2026 The Middleware Authors.
+// Levier — internal/gateway
+// Copyright 2026 The Levier Authors.
 package gateway

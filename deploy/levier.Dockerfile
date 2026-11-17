@@ -1,5 +1,5 @@
-# Middleware — control-plane image.
-# Copyright 2026 The Middleware Authors.
+# Levier — control-plane image.
+# Copyright 2026 The Levier Authors.
 
 FROM golang:1.26-alpine AS build
 

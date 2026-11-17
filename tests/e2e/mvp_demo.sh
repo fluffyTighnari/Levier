@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# Middleware — one-command single-node MVP demo.
+# Levier — one-command single-node MVP demo.
 #
-# Starts PostgreSQL-backed Middleware, the real Harness, and the Counter App;
+# Starts PostgreSQL-backed Levier, the real Harness, and the Counter App;
 # submits one run; waits for a terminal status; prints a redacted summary.
 #
 # Modes:
@@ -94,7 +94,7 @@ echo "== migrate =="
 go run ./cmd/migrate -config "$LEVIER_CONFIG" >"$OUT/migrate.log" 2>&1 \
   || fail "migration failed; is PostgreSQL running? see $OUT/migrate.log"
 
-echo "== start Middleware =="
+echo "== start Levier =="
 "$LEVIER_BIN" -config "$LEVIER_CONFIG" >"$OUT/middleware.log" 2>&1 &
 MW_PID=$!
 ready=""
@@ -105,7 +105,7 @@ for _ in $(seq 1 100); do
   fi
   sleep 0.1
 done
-[ -n "$ready" ] || fail "Middleware did not become healthy; see $OUT/middleware.log"
+[ -n "$ready" ] || fail "Levier did not become healthy; see $OUT/middleware.log"
 
 echo "== start Harness =="
 PYTHONPATH="execution/agent_core/src:execution/harness/src/gen:execution/harness/src" "$HARNESS_PYTHON" -m levier_harness \

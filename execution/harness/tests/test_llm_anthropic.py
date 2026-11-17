@@ -1,6 +1,6 @@
-"""Middleware — Anthropic provider tests.
+"""Levier — Anthropic provider tests.
 
-Copyright 2026 The Middleware Authors.
+Copyright 2026 The Levier Authors.
 """
 
 from __future__ import annotations

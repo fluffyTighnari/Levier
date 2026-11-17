@@ -1,4 +1,4 @@
-"""Middleware — agent core loop tests (P8C.2)."""
+"""Levier — agent core loop tests (P8C.2)."""
 
 from __future__ import annotations
 

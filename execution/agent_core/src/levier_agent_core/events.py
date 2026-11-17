@@ -1,9 +1,9 @@
-"""Middleware — agent core event vocabulary.
+"""Levier — agent core event vocabulary.
 
-Adapters map these events to Middleware events; the core never emits MW types.
+Adapters map these events to Levier events; the core never emits MW types.
 Every event is a dataclass with a stable `type` string and `to_dict()`.
 
-Copyright 2026 The Middleware Authors.
+Copyright 2026 The Levier Authors.
 """
 
 from __future__ import annotations

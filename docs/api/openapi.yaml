@@ -1,9 +1,9 @@
-# Middleware — App HTTP API v1 (OpenAPI 3.1 skeleton).
-# Copyright 2026 The Middleware Authors.
+# Levier — App HTTP API v1 (OpenAPI 3.1 skeleton).
+# Copyright 2026 The Levier Authors.
 
 openapi: 3.1.0
 info:
-  title: Middleware App API
+  title: Levier App API
   version: "1.0.0"
   description: |
     App-facing HTTP API for run submission, event replay, cancellation,
@@ -22,7 +22,7 @@ paths:
       security: []
       responses:
         "200":
-          description: Middleware is running
+          description: Levier is running
           content:
             application/json:
               schema:
@@ -34,7 +34,7 @@ paths:
       security: []
       responses:
         "200":
-          description: Middleware and database are ready
+          description: Levier and database are ready
           content:
             application/json:
               schema:

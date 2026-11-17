@@ -1,6 +1,6 @@
-"""Middleware — RuntimeChannel client package.
+"""Levier — RuntimeChannel client package.
 
-Copyright 2026 The Middleware Authors.
+Copyright 2026 The Levier Authors.
 """
 
 from levier_harness.channel.client import ChannelClient, ChannelConfig

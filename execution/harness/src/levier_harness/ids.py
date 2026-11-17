@@ -1,9 +1,9 @@
-"""Middleware — harness identifier helpers.
+"""Levier — harness identifier helpers.
 
 Generates ULIDs locally so the harness can create valid message IDs
 without an extra dependency.
 
-Copyright 2026 The Middleware Authors.
+Copyright 2026 The Levier Authors.
 """
 
 from __future__ import annotations

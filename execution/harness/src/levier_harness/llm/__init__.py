@@ -1,6 +1,6 @@
-"""Middleware — LLM provider abstractions.
+"""Levier — LLM provider abstractions.
 
-Copyright 2026 The Middleware Authors.
+Copyright 2026 The Levier Authors.
 """
 
 from levier_harness.llm.anthropic import AnthropicProvider

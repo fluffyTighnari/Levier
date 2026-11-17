@@ -2,9 +2,12 @@
 
 # CLI 动作命令设计
 
+> 本文是设计与执行记录，不是用户手册。
+> 当前命令参考见 [`CLI_REFERENCE.md`](CLI_REFERENCE.md)；分发路线见 [`CLI_DISTRIBUTION_PLAN.md`](CLI_DISTRIBUTION_PLAN.md)。
+
 | 项目 | 内容 |
 |---|---|
-| 状态 | 5A-3a 已完成；5A-3b/c/d 未开始 |
+| 状态 | 5A-3a/5A-3b/5A-3c/5A-3d 已完成；5A-4 文档收敛完成 |
 | 范围 | `app`、`run`、`migrate`、`daemon` |
 | 原则 | 只读操作安全；变更操作可确认、可回滚、可脚本化 |
 
@@ -20,6 +23,11 @@ levier status
 levier doctor
 levier app show
 levier migrate status
+```
+
+诊断（会创建临时 App / Run）：
+
+```text
 levier daemon check
 ```
 
@@ -48,7 +56,7 @@ levier migrate up
 | `run watch` | App key |
 | `run cancel` | App key |
 | `migrate status/up` | 数据库 DSN |
-| `daemon check` | Daemon token |
+| `daemon check` | Admin token + Daemon token |
 
 规则：
 
@@ -145,6 +153,9 @@ run watch:
 
 migrate status:
   {"version":9,"applied":9,"pending":0}
+
+daemon check:
+  {"ok":true,"checks":{"hello":"ok","task_assign":"01...","ack":"accepted"}}
 ```
 
 退出码：
@@ -313,7 +324,83 @@ POST /api/v1/runs/{id}/cancel
 
 ### 6.8 `levier daemon check`
 
-第一阶段可以复用 `mw-daemon-check` 的逻辑；需要时把共用的自检代码抽成包。
+```text
+--grpc <addr>
+--server <url>
+--daemon-id <id>
+--token <token>
+--admin-token <token>
+--strategy <name>
+--timeout <duration>
+--json
+```
+
+实现：
+
+```text
+cmd/levier/daemon.go
+internal/daemoncheck/daemoncheck.go
+cmd/mw-daemon-check/main.go   兼容旧入口，薄封装
+```
+
+行为：
+
+```text
+创建临时 App
+连接 RuntimeChannel，检查 hello / task_assign / ack / events / completed
+创建第二个 Run，检查 cancel / cancelled
+--json 输出 {ok, checks, error}
+退出码：0 成功；1 检查失败；2 用法错误；3 认证失败；4 网络失败；5 daemon id 冲突
+```
+
+默认值来源：
+
+```text
+LEVIER_GRPC
+LEVIER_SERVER
+LEVIER_DAEMON_ID
+LEVIER_DAEMON_TOKEN
+LEVIER_ADMIN_TOKEN
+```
+
+注意：
+
+```text
+这是诊断命令，不是只读命令：会创建临时 App 和 Run。
+必须使用预先分配且空闲的 daemon id/token。
+如果同一个 daemon id 已有真实 Harness 连接，服务端会拒绝重复连接。
+```
+
+### 6.9 启动与迁移策略
+
+统一行为：
+
+```text
+levier serve
+  连接数据库
+  检查 pending migration
+  pending > 0 -> 报错并退出 1
+  不自动执行 DDL
+
+levier migrate up
+  显式执行迁移
+```
+
+Compose entrypoint：
+
+```sh
+/app/levier migrate up -config "$CONFIG"
+exec /app/levier serve -config "$CONFIG"
+```
+
+生产：
+
+```text
+migration Job -> levier migrate up
+             -> levier serve
+```
+
+`serve --auto-migrate` 只作为后续的开发/单机选项，不作为默认行为。
 
 ---
 
@@ -326,10 +413,13 @@ cmd/levier/migrate.go     migrate 子命令
 cmd/levier/daemon.go      daemon 子命令
 cmd/levier/apiclient.go   App/Admin HTTP 客户端
 cmd/levier/credentials.go 凭据读写
+cmd/levier/flags.go       --help / 参数错误统一处理
+internal/daemoncheck/     Daemon 协议自检（CLI 与旧入口共用）
 cmd/levier/confirm.go     交互确认
 ```
 
-CLI 只做参数解析、调用和输出；不复制控制面业务逻辑。
+CLI 只做参数解析、调用和输出；不复制控制面业务逻辑。用户参考见
+[`CLI_REFERENCE.md`](CLI_REFERENCE.md)。
 
 ---
 
@@ -341,6 +431,7 @@ httptest 覆盖 create / rotate / get / submit / cancel
 非 TTY 下缺少 --yes 失败
 --json 字段稳定
 退出码映射
+所有子命令 --help 退出 0，且不打印 token 默认值
 ```
 
 ---
@@ -352,6 +443,7 @@ httptest 覆盖 create / rotate / get / submit / cancel
 5A-3b  run submit / watch / cancel
 5A-3c  migrate status / up
 5A-3d  daemon check
+5A-4   CLI 文档收敛
 ```
 
 先做 5A-3a，因为它产出 `run` 命令需要的凭据文件。
@@ -399,4 +491,165 @@ go test ./cmd/levier                  PASS
 app init 创建新 App                   PASS
 app show 读取 App                     PASS
 app rotate-key 轮换并备份             PASS
+```
+
+### 2026-11-16：5A-3b 完成
+
+新增：
+
+```text
+cmd/levier/run.go
+cmd/levier/run_test.go
+```
+
+命令：
+
+```text
+levier run submit --prompt ... [--strategy react] [--watch]
+levier run watch --run-id ...
+levier run cancel --run-id ... --yes
+```
+
+行为：
+
+```text
+支持 Idempotency-Key
+轮询 GET /api/v1/runs/{id}
+终态读取 events 中的 MESSAGE_COMPLETED
+completed -> 0
+failed -> 1
+cancelled / timeout -> 5
+非 TTY cancel 需要 --yes
+```
+
+验证：
+
+```text
+go test ./cmd/levier                          PASS
+run submit（echo，真实容器）                   PASS
+run watch（真实容器）                          PASS
+run submit --watch --json（真实容器）           PASS
+cancel 单元测试                                PASS
+```
+
+### 2026-11-17：5A-3c 完成
+
+新增：
+
+```text
+internal/db/status.go
+cmd/levier/migrate.go
+cmd/levier/migrate_test.go
+```
+
+命令：
+
+```text
+levier migrate status [--config path] [--json]
+levier migrate up [--config path] [--json]
+```
+
+行为：
+
+```text
+只读 status：current / applied / pending
+up：显示目标库和 pending，再执行迁移
+数据库 URL 脱敏
+--json 输出稳定字段
+```
+
+验证：
+
+```text
+go test ./cmd/levier / internal/db             PASS
+migrate status（真实容器，version 9）           PASS
+migrate status --json（真实容器）               PASS
+migrate up（真实容器，already up to date）      PASS
+```
+
+### 2026-11-17：启动迁移策略统一
+
+```text
+serve 启动检查 pending migration
+pending > 0 -> 退出 1
+Compose entrypoint: migrate up -> serve
+```
+
+验证：
+
+```text
+空库 levier serve -> pending 9，退出 1          PASS
+docker compose smoke                            PASS
+```
+
+### 2026-11-17：5A-3d 完成
+
+新增：
+
+```text
+internal/daemoncheck/daemoncheck.go
+cmd/levier/daemon.go
+cmd/levier/daemon_test.go
+cmd/mw-daemon-check/main.go   改为薄封装
+```
+
+命令：
+
+```text
+levier daemon check [--grpc addr] [--server url] [--daemon-id id] [--json]
+```
+
+行为：
+
+```text
+复用原 mw-daemon-check 的协议一致性检查
+创建临时 App / Run
+检查 hello、task_assign、ack、completed、cancel、cancelled
+--json 输出 {ok, checks, error}
+退出码：0 成功；1 检查失败；2 用法错误；3 认证失败；4 网络失败；5 daemon id 冲突
+```
+
+验证：
+
+```text
+go test ./cmd/levier / internal/daemoncheck       PASS
+daemon check --help                              PASS（退出 0）
+daemon check 未知参数                            PASS（退出 2）
+daemon check 错误 Admin token                    PASS（退出 3）
+daemon check 不可达 server                       PASS（退出 4）
+daemon check 重复 daemon id                      PASS（退出 5）
+真实 stack 协议一致性检查                        PASS
+临时停止 harness 以释放 daemon-local-1；检查后已恢复
+```
+
+### 2026-11-17：5A-4 完成（CLI 文档收敛）
+
+新增：
+
+```text
+docs/CLI_REFERENCE.md
+cmd/levier/flags.go
+```
+
+变更：
+
+```text
+所有子命令 --help 输出到 stdout，退出 0
+未知参数仍退出 2，并输出用法到 stderr
+--help 不打印 Admin / daemon token 的环境变量默认值
+doctor 增加 pending migration 检查
+docs/README.md / README.md / docs/MAP.md 指向 CLI_REFERENCE.md
+CLI_ACTIONS.md / CLI_DISTRIBUTION_PLAN.md 顶部标注为设计/路线，指向用户参考
+未实现的 config check/print、--quiet 明确标为计划项
+```
+
+验证：
+
+```text
+go test ./cmd/levier                            PASS
+所有子命令 --help                               PASS（退出 0）
+doctor --help                                   PASS
+CLI_REFERENCE.md 与 --help / JSON 字段核对       PASS
+doctor 正常 stack                               PASS（7/7，退出 0）
+doctor 空库 / pending migration                 PASS（migrations fail，退出 1）
 ```

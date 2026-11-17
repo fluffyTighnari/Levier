@@ -1,5 +1,5 @@
--- Middleware — P0-07 initial PostgreSQL schema.
--- Copyright 2026 The Middleware Authors.
+-- Levier — P0-07 initial PostgreSQL schema.
+-- Copyright 2026 The Levier Authors.
 
 CREATE TABLE IF NOT EXISTS runs (
   run_id      TEXT PRIMARY KEY,

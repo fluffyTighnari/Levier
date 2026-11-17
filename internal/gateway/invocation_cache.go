@@ -1,8 +1,8 @@
-// Middleware — internal/gateway
+// Levier — internal/gateway
 //
 // In-process single-flight and terminal-result cache for tool invocations.
 //
-// Copyright 2026 The Middleware Authors.
+// Copyright 2026 The Levier Authors.
 package gateway
 
 import (

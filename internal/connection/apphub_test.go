@@ -1,8 +1,8 @@
-// Middleware — internal/connection
+// Levier — internal/connection
 //
 // AppHub fanout and subscription tests.
 //
-// Copyright 2026 The Middleware Authors.
+// Copyright 2026 The Levier Authors.
 package connection
 
 import (

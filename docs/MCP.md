@@ -1,4 +1,4 @@
-<!-- Middleware — MCP operational guide. -->
+<!-- Levier — MCP operational guide. -->
 
 # MCP 接入与运行
 

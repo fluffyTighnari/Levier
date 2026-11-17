@@ -1,8 +1,8 @@
-// Middleware — internal/protocol
+// Levier — internal/protocol
 //
 // Envelope construction and correlation helpers.
 //
-// Copyright 2026 The Middleware Authors.
+// Copyright 2026 The Levier Authors.
 package protocol
 
 import (

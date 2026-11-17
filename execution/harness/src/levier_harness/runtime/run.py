@@ -1,6 +1,6 @@
-"""Middleware — one active run context.
+"""Levier — one active run context.
 
-Copyright 2026 The Middleware Authors.
+Copyright 2026 The Levier Authors.
 """
 
 from __future__ import annotations

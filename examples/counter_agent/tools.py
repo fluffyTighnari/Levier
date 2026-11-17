@@ -1,15 +1,15 @@
-"""Middleware — Counter App local functions and registration metadata.
+"""Levier — Counter App local functions and registration metadata.
 
 This is the first small retrofit step: the existing counter state stays local,
 but its functions and registration shape become explicit.
 
 Design references:
-- docs/DESIGN.md §5.3: local tools are executed by the App; Middleware only routes.
+- docs/DESIGN.md §5.3: local tools are executed by the App; Levier only routes.
 - docs/DESIGN.md §4.2: App HTTP registration body uses tools[].schema.
 - proto/middleware/runtime/v1/runtime.proto ToolManifest:
   name / description / input_schema_json.
 
-Copyright 2026 The Middleware Authors.
+Copyright 2026 The Levier Authors.
 """
 
 from __future__ import annotations
@@ -41,7 +41,7 @@ class Counter:
 
 
 # Shape: POST /api/v1/apps { "tools": [ ... ] }
-# Middleware converts schema -> TaskAssign ToolManifest.input_schema_json.
+# Levier converts schema -> TaskAssign ToolManifest.input_schema_json.
 TOOL_DEFINITIONS: list[dict[str, Any]] = [
     {
         "name": "counter_add",
@@ -80,7 +80,7 @@ TOOL_DEFINITIONS: list[dict[str, Any]] = [
 def tool_manifests() -> list[dict[str, str]]:
     """Return the TaskAssign ToolManifest shape.
 
-    Middleware stores registration `schema` as `schema_json`, then emits it
+    Levier stores registration `schema` as `schema_json`, then emits it
     to Harness as `ToolManifest.input_schema_json`.
     """
     return [

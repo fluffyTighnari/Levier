@@ -1,4 +1,4 @@
-<!-- Middleware — container deployment. -->
+<!-- Levier — container deployment. -->
 
 # Container Deployment
 
@@ -33,7 +33,8 @@ docker compose ps
 首次启动会：
 
 ```text
-levier 等 PostgreSQL → 迁移 → 启动
+levier 等 PostgreSQL → migrate up → serve
+  （serve 启动时检查 pending migration）
 mcp-runtime 创建 /run/levier/mcp.sock
 harness 连接 levier，注册 daemon-local-1
 agent 等 /readyz → bootstrap App → 注册工具 → 连 WebSocket

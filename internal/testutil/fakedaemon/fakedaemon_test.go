@@ -1,8 +1,8 @@
-// Middleware — internal/testutil/fakedaemon
+// Levier — internal/testutil/fakedaemon
 //
 // Fake daemon behavior tests over an in-memory gRPC connection.
 //
-// Copyright 2026 The Middleware Authors.
+// Copyright 2026 The Levier Authors.
 package fakedaemon
 
 import (

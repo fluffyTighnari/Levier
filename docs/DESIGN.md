@@ -1,11 +1,11 @@
-<!-- Middleware — core design, current single-node MVP. -->
+<!-- Levier — core design, current single-node MVP. -->
 
-# Middleware 核心设计
+# Levier 核心设计
 
 | 项目 | 内容 |
 |---|---|
 | 状态 | 单机 MVP 实现基线 |
-| 范围 | 单 Middleware、单 PostgreSQL、单 Harness、单 App |
+| 范围 | 单 Levier、单 PostgreSQL、单 Harness、单 App |
 | Runtime | `normal` |
 | 语义 | Run 调度 at-least-once；工具可能重复执行 |
 | 详细契约 | `CONTRACT.md`、`DAEMON_CONTRACT.md`、`APP_ONBOARDING.md`、`MCP.md`、`AGENT_CORE_CONTRACT.md` |
@@ -20,7 +20,7 @@
 
 ```text
 App 通过 HTTP/WS 接入，不需要自己写 Agent 循环
-Middleware 负责注册、调度、租约、工具路由、事件持久化
+Levier 负责注册、调度、租约、工具路由、事件持久化
 Harness 负责单次 Run 的模型/工具循环
 MCP 连接与凭据由独立 runtime 进程负责
 Run 能排队、执行、取消、超时、恢复
@@ -29,7 +29,7 @@ Run 能排队、执行、取消、超时、恢复
 ### 1.2 非目标
 
 ```text
-多 Middleware / 多 PostgreSQL / HA
+多 Levier / 多 PostgreSQL / HA
 sandbox 隔离与预热池
 longterm checkpoint 续跑
 工具 exactly-once
@@ -53,7 +53,7 @@ Harness 中途死亡 → Run 重新排队 → 新 attempt 从头执行
 
 ```text
 App          业务函数 + 工具元数据 + 一条 WebSocket
-Middleware   控制面：注册、调度、租约、事件、工具路由
+Levier   控制面：注册、调度、租约、事件、工具路由
 Harness      单次 Run 的 Agent 循环（当前 Python）
 MCP Runtime  独立进程：MCP 连接、session、凭据解析
 PostgreSQL   目录、Run、事件、任务、调用记录
@@ -62,11 +62,11 @@ PostgreSQL   目录、Run、事件、任务、调用记录
 边界纪律：
 
 ```text
-Middleware 不执行 App 业务代码
-Middleware 不代理 MCP 工具调用
+Levier 不执行 App 业务代码
+Levier 不代理 MCP 工具调用
 Harness 不见 MCP 明文凭据
 App 不见模型凭据
-Agent Core 不依赖 Middleware/Harness/MCP/protobuf
+Agent Core 不依赖 Levier/Harness/MCP/protobuf
 ```
 
 ---
@@ -404,7 +404,7 @@ execution/harness/     适配层：TaskAssign ↔ RunSpec、CoreEvent ↔ MW Eve
 core 默认工具串行
 core 不做重试
 checkpoint 由 MW/adapter 持有
-core 不 import Middleware/Harness/MCP/protobuf
+core 不 import Levier/Harness/MCP/protobuf
 ```
 
 Conformance fixtures：`execution/agent_core/conformance/fixtures/*.json`。

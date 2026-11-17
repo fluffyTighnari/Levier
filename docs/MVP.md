@@ -1,4 +1,4 @@
-<!-- Middleware — single-node MVP guide. -->
+<!-- Levier — single-node MVP guide. -->
 
 # 单机 MVP 指南
 
@@ -8,7 +8,7 @@
 ## 1. 范围
 
 ```text
-一个 Middleware 进程
+一个 Levier 进程
 一个 PostgreSQL
 一个 Harness 进程
 一个 App 进程
@@ -173,8 +173,8 @@ mvp-demo: PASS
 ```text
 1. 读取 .env.local / .env
 2. make build
-3. go run ./cmd/migrate
-4. 启动 bin/levier
+3. levier migrate up
+4. levier serve（启动时检查 pending migration）
 5. 等 /healthz
 6. 启动 harness
 7. 用 Admin token bootstrap 一个唯一 App

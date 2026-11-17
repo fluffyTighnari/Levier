@@ -1,4 +1,4 @@
-"""Middleware — Counter App HTTP request construction (P2.2).
+"""Levier — Counter App HTTP request construction (P2.2).
 
 Builds the `/admin/apps` request and sends it through an injected transport.
 No real network client is used in this step.
@@ -9,7 +9,7 @@ Design references:
 - internal/httpapi/server.go: POST /admin/apps.
 - internal/httpapi/contracts.go: AppUpsertRequest.
 
-Copyright 2026 The Middleware Authors.
+Copyright 2026 The Levier Authors.
 """
 
 from __future__ import annotations
@@ -154,7 +154,7 @@ class HttpTransportError(RuntimeError):
 
 
 class UrllibTransport:
-    """Stdlib HTTP transport for real Middleware calls."""
+    """Stdlib HTTP transport for real Levier calls."""
 
     def __init__(self, timeout: float = 15.0) -> None:
         self.timeout = timeout

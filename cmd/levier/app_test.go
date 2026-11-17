@@ -108,6 +108,31 @@ func TestRunAppInitShowRotate(t *testing.T) {
 	}
 }
 
+func TestRunAppInitUsesAdminTokenEnv(t *testing.T) {
+	server := newAppTestServer(t)
+	defer server.Close()
+	path := filepath.Join(t.TempDir(), "credentials.json")
+	t.Setenv("LEVIER_ADMIN_TOKEN", "admin")
+
+	var stdout, stderr bytes.Buffer
+	code := runAppInit([]string{
+		"--name", "demo",
+		"--credentials-out", path,
+		"--server", server.URL,
+		"--json",
+	}, &stdout, &stderr)
+	if code != 0 {
+		t.Fatalf("app init = %d, stderr = %s", code, stderr.String())
+	}
+	credentials, err := readCredentials(path)
+	if err != nil {
+		t.Fatalf("read credentials: %v", err)
+	}
+	if credentials.APIKey != "secret-key" {
+		t.Fatalf("api key = %q", credentials.APIKey)
+	}
+}
+
 func TestRunAppInitDryRunNeedsNoToken(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "credentials.json")
 	var stdout, stderr bytes.Buffer

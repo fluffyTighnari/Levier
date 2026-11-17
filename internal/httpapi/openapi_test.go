@@ -1,8 +1,8 @@
-// Middleware — internal/httpapi
+// Levier — internal/httpapi
 //
 // OpenAPI syntax and HTTP route consistency test.
 //
-// Copyright 2026 The Middleware Authors.
+// Copyright 2026 The Levier Authors.
 package httpapi
 
 import (

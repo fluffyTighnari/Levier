@@ -1,6 +1,6 @@
-"""Middleware — Counter App runtime entrypoint (Middleware mode).
+"""Levier — Counter App runtime entrypoint (Levier mode).
 
-This is the App as Middleware sees it:
+This is the App as Levier sees it:
 
     verify App key
       → register local tools
@@ -10,7 +10,7 @@ This is the App as Middleware sees it:
 The standalone baseline lives in `main.py` and is intentionally untouched.
 See `docs/APP_ONBOARDING.md` for the procedure this file implements.
 
-Copyright 2026 The Middleware Authors.
+Copyright 2026 The Levier Authors.
 """
 
 from __future__ import annotations
@@ -38,7 +38,7 @@ from ws_tool_host import default_credentials_path, serve_calls
 
 
 def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(description="Serve the Counter App to Middleware")
+    parser = argparse.ArgumentParser(description="Serve the Counter App to Levier")
     parser.add_argument("--credentials", default="", help="0600 credential file path")
     parser.add_argument("--mw-url", default=os.environ.get("LEVIER_URL") or os.environ.get("MW_URL") or "http://127.0.0.1:8080")
     parser.add_argument("--tools-file", default="", help="optional JSON tool list")

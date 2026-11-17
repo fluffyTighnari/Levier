@@ -1,6 +1,6 @@
-"""Middleware — MCP runtime process entry point.
+"""Levier — MCP runtime process entry point.
 
-Copyright 2026 The Middleware Authors.
+Copyright 2026 The Levier Authors.
 """
 
 from __future__ import annotations

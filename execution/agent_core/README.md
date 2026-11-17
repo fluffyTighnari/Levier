@@ -1,4 +1,4 @@
-<!-- Middleware — language-neutral agent core. -->
+<!-- Levier — language-neutral agent core. -->
 
 # Agent Core
 
@@ -9,14 +9,14 @@
 | 职责 | 语言无关的 Agent 循环、工具编排、事件、取消 |
 | 入口 | `levier_agent_core` |
 | 输入 / 输出 | 模型响应 / 工具结果；循环事件与终态 |
-| 依赖 | 无 Middleware / Harness / MCP / protobuf 依赖 |
+| 依赖 | 无 Levier / Harness / MCP / protobuf 依赖 |
 | 不负责 | 传输、持久化、模型供应商适配、工具真实实现 |
 | 测试 | `make agent-core-test` |
 
 Loop, tool orchestration, events, and cancellation shared by daemons.
 
 - Contract: `docs/AGENT_CORE_CONTRACT.md`
-- No Middleware / Harness / MCP / protobuf imports.
+- No Levier / Harness / MCP / protobuf imports.
 - Adapters own transport, MW event mapping, tool bridges, and persistence.
 
 ## Conformance

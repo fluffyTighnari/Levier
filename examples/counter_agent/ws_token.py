@@ -1,6 +1,6 @@
-"""Middleware — obtain an App ws_token (P5.1).
+"""Levier — obtain an App ws_token (P5.1).
 
-Copyright 2026 The Middleware Authors.
+Copyright 2026 The Levier Authors.
 """
 
 from __future__ import annotations

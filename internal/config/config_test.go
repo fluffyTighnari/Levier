@@ -1,8 +1,8 @@
-// Middleware — internal/config
+// Levier — internal/config
 //
 // Configuration loading and validation tests.
 //
-// Copyright 2026 The Middleware Authors.
+// Copyright 2026 The Levier Authors.
 package config
 
 import (

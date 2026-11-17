@@ -1,5 +1,5 @@
-# Middleware — Counter Agent image.
-# Copyright 2026 The Middleware Authors.
+# Levier — Counter Agent image.
+# Copyright 2026 The Levier Authors.
 
 FROM python:3.12-slim
 

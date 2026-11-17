@@ -1,9 +1,9 @@
-"""Middleware — agent core data types.
+"""Levier — agent core data types.
 
 These are the only structures shared with adapters. They must not import
-Middleware, Harness, or MCP runtime code.
+Levier, Harness, or MCP runtime code.
 
-Copyright 2026 The Middleware Authors.
+Copyright 2026 The Levier Authors.
 """
 
 from __future__ import annotations

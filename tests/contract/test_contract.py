@@ -1,9 +1,9 @@
-"""Middleware — RuntimeChannel cross-language golden test.
+"""Levier — RuntimeChannel cross-language golden test.
 
 Parses the shared contract fixtures with the generated Python stubs and
 checks that the canonical proto JSON round-trips without loss.
 
-Copyright 2026 The Middleware Authors.
+Copyright 2026 The Levier Authors.
 """
 
 import json

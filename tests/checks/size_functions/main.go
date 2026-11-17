@@ -1,4 +1,4 @@
-// Middleware — report long Go functions using go/ast (P8R.1).
+// Levier — report long Go functions using go/ast (P8R.1).
 package main
 
 import (

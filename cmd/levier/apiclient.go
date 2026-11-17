@@ -8,6 +8,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -28,6 +29,76 @@ type createAppResponse struct {
 
 type rotateKeyResponse struct {
 	APIKey string `json:"api_key"`
+}
+
+type strategyRequest struct {
+	Name   string         `json:"name"`
+	Params map[string]any `json:"params,omitempty"`
+}
+
+type chatMessage struct {
+	Role    string `json:"role"`
+	Content string `json:"content"`
+}
+
+type modelRequest struct {
+	Provider string `json:"provider"`
+	Model    string `json:"model"`
+}
+
+type timeoutRequest struct {
+	RunMS  int64 `json:"run_ms,omitempty"`
+	ToolMS int64 `json:"tool_ms,omitempty"`
+}
+
+type createRunRequest struct {
+	Runtime  string          `json:"runtime"`
+	Strategy strategyRequest `json:"strategy"`
+	Input    []chatMessage   `json:"input"`
+	Model    modelRequest    `json:"model"`
+	Timeouts timeoutRequest  `json:"timeouts,omitempty"`
+}
+
+type createRunResponse struct {
+	RunID   string `json:"run_id"`
+	Status  string `json:"status"`
+	WSURL   string `json:"ws_url"`
+	WSToken string `json:"ws_token"`
+}
+
+type runView struct {
+	RunID     string          `json:"run_id"`
+	AppID     string          `json:"app_id"`
+	Runtime   string          `json:"runtime"`
+	Strategy  strategyRequest `json:"strategy"`
+	Status    string          `json:"status"`
+	Attempt   int             `json:"attempt"`
+	SessionID string          `json:"session_id,omitempty"`
+	TraceID   string          `json:"trace_id,omitempty"`
+	CreatedAt string          `json:"created_at"`
+	UpdatedAt string          `json:"updated_at"`
+}
+
+type runEvent struct {
+	RunID     string         `json:"run_id"`
+	Attempt   int            `json:"attempt"`
+	Seq       int64          `json:"seq"`
+	Source    string         `json:"source"`
+	EventType string         `json:"event_type"`
+	Data      map[string]any `json:"data"`
+	TsMS      int64          `json:"ts_ms"`
+}
+
+type eventListResponse struct {
+	Events      []runEvent `json:"events"`
+	CaughtUp    bool       `json:"caught_up"`
+	NextAttempt int        `json:"next_attempt"`
+	NextSeq     int64      `json:"next_seq"`
+}
+
+type cancelRunResponse struct {
+	RunID  string `json:"run_id"`
+	Status string `json:"status"`
 }
 
 type apiError struct {
@@ -60,6 +131,10 @@ func newAPIClient(base, token string, timeout time.Duration) *apiClient {
 }
 
 func (c *apiClient) do(ctx context.Context, method, path string, body, out any) error {
+	return c.doWithHeaders(ctx, method, path, body, out, nil)
+}
+
+func (c *apiClient) doWithHeaders(ctx context.Context, method, path string, body, out any, headers map[string]string) error {
 	var reader io.Reader
 	if body != nil {
 		encoded, err := json.Marshal(body)
@@ -79,6 +154,9 @@ func (c *apiClient) do(ctx context.Context, method, path string, body, out any) 
 	}
 	if c.token != "" {
 		request.Header.Set("Authorization", "Bearer "+c.token)
+	}
+	for key, value := range headers {
+		request.Header.Set(key, value)
 	}
 
 	response, err := c.client.Do(request)
@@ -143,5 +221,37 @@ func (c *apiClient) rotateAppKey(ctx context.Context, appID string) (string, err
 func (c *apiClient) getApp(ctx context.Context, appID string) (appView, error) {
 	var response appView
 	err := c.do(ctx, http.MethodGet, "/api/v1/apps/"+url.PathEscape(appID), nil, &response)
+	return response, err
+}
+
+func (c *apiClient) createRun(ctx context.Context, request createRunRequest, idempotencyKey string) (createRunResponse, error) {
+	var response createRunResponse
+	headers := map[string]string{}
+	if idempotencyKey != "" {
+		headers["Idempotency-Key"] = idempotencyKey
+	}
+	err := c.doWithHeaders(ctx, http.MethodPost, "/api/v1/runs", request, &response, headers)
+	return response, err
+}
+
+func (c *apiClient) getRun(ctx context.Context, runID string) (runView, error) {
+	var response runView
+	err := c.do(ctx, http.MethodGet, "/api/v1/runs/"+url.PathEscape(runID), nil, &response)
+	return response, err
+}
+
+func (c *apiClient) listRunEvents(ctx context.Context, runID string, afterAttempt int, afterSeq int64, limit int) (eventListResponse, error) {
+	query := url.Values{}
+	query.Set("after_attempt", strconv.Itoa(afterAttempt))
+	query.Set("after_seq", strconv.FormatInt(afterSeq, 10))
+	query.Set("limit", strconv.Itoa(limit))
+	var response eventListResponse
+	err := c.do(ctx, http.MethodGet, "/api/v1/runs/"+url.PathEscape(runID)+"/events?"+query.Encode(), nil, &response)
+	return response, err
+}
+
+func (c *apiClient) cancelRun(ctx context.Context, runID string) (cancelRunResponse, error) {
+	var response cancelRunResponse
+	err := c.do(ctx, http.MethodPost, "/api/v1/runs/"+url.PathEscape(runID)+"/cancel", nil, &response)
 	return response, err
 }

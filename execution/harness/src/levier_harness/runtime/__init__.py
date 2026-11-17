@@ -1,6 +1,6 @@
-"""Middleware — run lifecycle package.
+"""Levier — run lifecycle package.
 
-Copyright 2026 The Middleware Authors.
+Copyright 2026 The Levier Authors.
 """
 
 from levier_harness.runtime.checkpoint import CheckpointError, CheckpointState, capture

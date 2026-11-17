@@ -1,5 +1,5 @@
-# Middleware — independent MCP runtime image.
-# Copyright 2026 The Middleware Authors.
+# Levier — independent MCP runtime image.
+# Copyright 2026 The Levier Authors.
 
 FROM python:3.12-slim
 

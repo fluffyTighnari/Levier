@@ -1,9 +1,9 @@
-"""Middleware — OpenAI-compatible chat-completions provider (P6A).
+"""Levier — OpenAI-compatible chat-completions provider (P6A).
 
 The first step supports non-streaming JSON responses. SSE/tool-call streaming
 and production credential injection are added in later P6A steps.
 
-Copyright 2026 The Middleware Authors.
+Copyright 2026 The Levier Authors.
 """
 
 from __future__ import annotations

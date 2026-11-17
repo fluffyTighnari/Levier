@@ -1,9 +1,9 @@
-// Middleware — event payload field names used by Control.
+// Levier — event payload field names used by Control.
 //
 // The harness emits these keys; Control reads them when projecting metrics
 // and terminal state. Keeping them here avoids string drift on the Go side.
 //
-// Copyright 2026 The Middleware Authors.
+// Copyright 2026 The Levier Authors.
 package contract
 
 const (

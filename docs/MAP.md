@@ -2,7 +2,7 @@
 
 # 仓库地图
 
-> 只做导航，不重复设计。最后更新：2026-11-15。
+> 只做导航，不重复设计。最后更新：2026-11-17。
 
 ## 1. 五层
 
@@ -43,6 +43,7 @@
 | `execution/mcp_runtime/` | 默认 MCP 连接进程 | `python -m levier_mcp_runtime` | `make mcp-runtime-test` |
 | `examples/` | 参考 App / 客户端 | `counter_agent`、`http_client`、`node_counter_agent` | `make counter-agent-test` |
 | `deploy/` | 镜像、Compose、smoke | `docker-compose.yml`、`deploy/*.Dockerfile` | `docker compose config`、smoke |
+| `scripts/` | 发布与安装脚本 | `scripts/build-release.sh`、`scripts/install.sh`、`scripts/install.ps1` | `make release-dist`、本地安装 smoke |
 | `tests/` | 跨单元测试与检查 | `tests/contract`、`tests/e2e`、`tests/app`、`tests/checks` | 对应 make target |
 | `docs/` | 设计、范围、迁移、接入 | `docs/SCOPE.md`、`docs/MAP.md` | 链接检查 |
 | `bin/` | 本地构建产物 | `bin/levier` | 不提交 |
@@ -58,9 +59,13 @@
 | 持久化 / 查询 / 迁移 | `internal/runstore/` + `internal/db/migrations/` |
 | 事件模型 / 错误码 | `internal/contract/`、`internal/errs/` |
 | App 接入流程 | `docs/APP_ONBOARDING.md` |
+| CLI 使用 / 参数 / 退出码 | `docs/CLI_REFERENCE.md` |
+| Release 构建 / checksums | `scripts/build-release.sh` + `docs/RELEASE.md` |
+| CLI 安装 / 校验 / 镜像 | `scripts/install.sh`、`scripts/install.ps1` + `docs/INSTALL.md` |
 | Harness / Agent 循环 | `execution/harness/` |
 | Agent Core 契约 | `execution/agent_core/` + `docs/AGENT_CORE_CONTRACT.md` |
 | MCP 连接 / 会话 | `execution/mcp_runtime/` + `docs/MCP.md` |
+| Daemon 协议自检 | `internal/daemoncheck/` + `cmd/levier/daemon.go` |
 | 镜像 / Compose / smoke | `deploy/` + `docker-compose.yml` |
 | CI | `.github/workflows/ci.yml` |
 | 单元 / 契约 / E2E 测试 | `tests/` + 各组件 `tests/` |

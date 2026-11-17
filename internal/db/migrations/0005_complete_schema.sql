@@ -1,5 +1,5 @@
--- Middleware — P5-37 complete RunStore, registry, and session schema.
--- Copyright 2026 The Middleware Authors.
+-- Levier — P5-37 complete RunStore, registry, and session schema.
+-- Copyright 2026 The Levier Authors.
 
 CREATE TABLE IF NOT EXISTS tool_defs (
   tool_id      TEXT PRIMARY KEY,

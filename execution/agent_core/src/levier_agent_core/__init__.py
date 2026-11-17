@@ -1,9 +1,9 @@
-"""Middleware — language-neutral agent core.
+"""Levier — language-neutral agent core.
 
 The core owns the loop, tool orchestration, events, and cancellation.
 Transport, MW event mapping, tool bridges, and persistence live in adapters.
 
-Copyright 2026 The Middleware Authors.
+Copyright 2026 The Levier Authors.
 """
 
 from levier_agent_core.events import (
