@@ -38,6 +38,10 @@ jobs:
           go install github.com/bufbuild/buf/cmd/buf@v1.75.0
           go install google.golang.org/protobuf/cmd/protoc-gen-go@v1.36.12
           go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.6.2
+      - name: Ensure main branch for buf breaking
+        run: |
+          git fetch origin main
+          git branch --force main origin/main
       - run: make proto-lint
       - run: make proto-check
 
