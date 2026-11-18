@@ -376,7 +376,35 @@ public/     对外契约和示例
 
 ---
 
-## 6. 执行顺序与门禁
+## 6. 下一阶段：10 生命周期（进程与数据）
+
+计划文档：`docs/LIFECYCLE_PLAN.md`
+
+- [x] 计划落盘
+- [ ] 进程状态与启动/停止顺序
+- [ ] SIGTERM / SIGINT 优雅停止
+- [ ] 停止总超时与强制退出
+- [ ] Compose `stop_grace_period`
+- [ ] `internal/maintenance`
+- [ ] `levier maintenance status`
+- [ ] `maintenance prune --dry-run`
+- [ ] retention 默认关闭
+- [ ] session / terminal task 清理
+- [ ] 备份 / 恢复流程
+- [ ] Admin / daemon / App key / DB password 轮换
+- [ ] Docker volume 生命周期说明
+
+### 6.1 生命周期边界
+
+```text
+进程    由 Docker / systemd 负责外部重启
+Levier  负责启动、就绪、优雅停止和恢复语义
+数据    默认不自动删除；维护操作需显式 --yes
+```
+
+---
+
+## 7. 执行顺序与门禁
 
 ```text
 当前
@@ -442,6 +470,21 @@ public/     对外契约和示例
 9E 验收
   └─ 门禁：全量测试和 CI 绿
 
+10A 生命周期契约
+  └─ 门禁：进程状态、退出码、数据保留规则冻结
+
+10B 进程优雅停止
+  └─ 门禁：SIGTERM / worker / HTTP / gRPC / 子进程清理通过
+
+10C 数据维护
+  └─ 门禁：maintenance status / prune dry-run / 终态清理测试通过
+
+10D 备份与轮换
+  └─ 门禁：备份恢复和 secret 轮换步骤可执行
+
+10E 验收
+  └─ 门禁：smoke、selfcheck、文档、CI 全绿
+
 公开前最终验收
   └─ 执行本文件第 1.2 节
   └─ 通过后才考虑 public + v0.1.0
@@ -449,7 +492,7 @@ public/     对外契约和示例
 
 ---
 
-## 7. 相关文档
+## 8. 相关文档
 
 ```text
 docs/CLI_REFERENCE.md
@@ -461,4 +504,5 @@ docs/MAP.md
 docs/SELF_DESCRIPTION_PLAN.md
 docs/STATUS_OVERVIEW_PLAN.md
 docs/HOP_CHECK_PLAN.md
+docs/LIFECYCLE_PLAN.md
 ```
