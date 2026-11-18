@@ -317,17 +317,22 @@ func runServer(args []string) {
 		}
 	}()
 
-	logger.Info("levier starting",
+	logger.Info("levier ready",
 		"config", *configPath,
-		"database", "connected",
 		"grpc_addr", cfg.GRPC.Addr,
 		"http_addr", cfg.HTTP.Addr,
 	)
 	<-ctx.Done()
 
+	shutdownStarted := time.Now()
+	forcedShutdown := false
+	logger.Info("levier stopping")
 	workers.Stop()
+	logger.Info("workflow workers stopped")
 	controller.Close()
+	logger.Info("control stopped")
 	hub.Close()
+	logger.Info("daemon hub stopped")
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), cfg.HTTP.ShutdownTimeout.Std())
 	_ = httpServer.Shutdown(shutdownCtx)
 	cancel()
@@ -340,12 +345,17 @@ func runServer(args []string) {
 	select {
 	case <-stopped:
 	case <-time.After(cfg.GRPC.ShutdownTimeout.Std()):
+		forcedShutdown = true
+		logger.Warn("grpc graceful shutdown timed out; forcing stop")
 		grpcServer.Stop()
 	}
 	_ = listener.Close()
 	<-recoveryDone
 	<-reaperDone
-	logger.Info("levier stopped")
+	logger.Info("levier stopped",
+		"forced", forcedShutdown,
+		"duration_ms", time.Since(shutdownStarted).Milliseconds(),
+	)
 }
 
 func daemonAuthenticator(tokens map[string]string) connection.Authenticator {

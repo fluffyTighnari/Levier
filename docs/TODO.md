@@ -381,10 +381,10 @@ public/     对外契约和示例
 计划文档：`docs/LIFECYCLE_PLAN.md`
 
 - [x] 计划落盘
-- [ ] 进程状态与启动/停止顺序
-- [ ] SIGTERM / SIGINT 优雅停止
-- [ ] 停止总超时与强制退出
-- [ ] Compose `stop_grace_period`
+- [x] 进程状态与启动/停止顺序
+- [x] SIGTERM / SIGINT 优雅停止
+- [x] 停止总超时与强制退出
+- [x] Compose `stop_grace_period`
 - [ ] `internal/maintenance`
 - [ ] `levier maintenance status`
 - [ ] `maintenance prune --dry-run`

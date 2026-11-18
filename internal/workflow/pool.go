@@ -107,7 +107,18 @@ func (p *Pool) Stop() {
 	p.started = false
 	p.mu.Unlock()
 
-	for _, worker := range p.workers {
-		worker.Stop()
+	// Stop workers concurrently so the total shutdown time is bounded by the
+	// slowest worker, not by workers multiplied by their individual timeout.
+	workers := make([]*Worker, len(p.workers))
+	copy(workers, p.workers)
+	done := make(chan struct{}, len(workers))
+	for _, worker := range workers {
+		go func(worker *Worker) {
+			worker.Stop()
+			done <- struct{}{}
+		}(worker)
+	}
+	for range workers {
+		<-done
 	}
 }

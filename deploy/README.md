@@ -109,6 +109,37 @@ docker compose down
 docker compose down -v   # 同时删除 PostgreSQL/凭据/socket 卷
 ```
 
+### 优雅停止
+
+Compose 配置了：
+
+```text
+levier / postgres   stop_grace_period: 30s
+harness / mcp / agent stop_grace_period: 20s
+```
+
+停止 Levier 并查看生命周期日志：
+
+```sh
+docker compose stop levier
+docker compose logs --tail=40 levier
+docker compose start levier
+```
+
+日志应包含：
+
+```text
+levier ready
+levier stopping
+workflow workers stopped
+control stopped
+daemon hub stopped
+levier stopped
+```
+
+如果超过停止宽限期，Docker 会发送 SIGKILL；这只应出现在异常进程或未响应的子进程。
+`mcp-runtime`、`harness`、`agent` 使用 `init: true`，由容器 init 回收子进程。
+
 ## 5. 开发默认值
 
 `docker compose up` 是本地开发配置，默认值足够跑 smoke：

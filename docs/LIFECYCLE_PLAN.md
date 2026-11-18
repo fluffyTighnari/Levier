@@ -2,7 +2,7 @@
 
 # 10. 生命周期（进程与数据）
 
-> 状态：计划阶段，尚未改代码。
+> 状态：10B 进程优雅停止已实现；10C 数据维护、10D 备份/轮换待开始。
 > 本文位于 `docs/`，属于内部开发文档，不进入镜像、release、HTTP 响应或对外分发。
 > 计划新增的运行状态或维护命令契约放在 `public/service-lifecycle/v1/`（如最终需要对外暴露）。
 
@@ -498,10 +498,10 @@ selfcheck
 ## 10. 完成标准
 
 ```text
-[ ] 启动顺序和失败退出码有文档
-[ ] SIGTERM/SIGINT 优雅停止有测试
-[ ] stop 超时后强制退出并记录
-[ ] Compose stop_grace_period 配置
+[x] 启动顺序和失败退出码有文档
+[x] SIGTERM/SIGINT 优雅停止有测试
+[x] stop 超时后强制退出并记录
+[x] Compose stop_grace_period 配置
 [ ] retention 默认关闭
 [ ] maintenance status 可用
 [ ] maintenance prune 默认 dry-run

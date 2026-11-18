@@ -28,6 +28,7 @@ services:
       retries: 30
     volumes:
       - pgdata:/var/lib/postgresql/data
+    stop_grace_period: 30s
     restart: unless-stopped
 
   levier:
@@ -55,6 +56,7 @@ services:
       interval: 3s
       timeout: 3s
       retries: 30
+    stop_grace_period: 30s
     restart: unless-stopped
 
   mcp-runtime:
@@ -62,6 +64,7 @@ services:
       context: .
       dockerfile: deploy/mcp-runtime.Dockerfile
     command: ["--socket", "/run/levier/mcp.sock"]
+    init: true
     volumes:
       - mcp_socket:/run/levier
     healthcheck:
@@ -69,12 +72,14 @@ services:
       interval: 3s
       timeout: 3s
       retries: 30
+    stop_grace_period: 20s
     restart: unless-stopped
 
   harness:
     build:
       context: .
       dockerfile: deploy/harness.Dockerfile
+    init: true
     environment:
       LEVIER_HARNESS_ADDRESS: levier:9090
       LEVIER_HARNESS_DAEMON_ID: daemon-local-1
@@ -91,12 +96,14 @@ services:
         condition: service_healthy
       mcp-runtime:
         condition: service_healthy
+    stop_grace_period: 20s
     restart: unless-stopped
 
   agent:
     build:
       context: .
       dockerfile: deploy/agent.Dockerfile
+    init: true
     environment:
       LEVIER_APP_URL: http://levier:8080
       LEVIER_APP_ADMIN_TOKEN: ${LEVIER_APP_ADMIN_TOKEN:-${LEVIER_ADMIN_TOKEN:-${MW_ADMIN_TOKEN:-admin-change-me}}}
@@ -107,6 +114,7 @@ services:
     depends_on:
       levier:
         condition: service_healthy
+    stop_grace_period: 20s
     restart: unless-stopped
 
   smoke:
