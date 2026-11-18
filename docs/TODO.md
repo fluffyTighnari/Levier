@@ -343,7 +343,38 @@ GET /status 动态运行状态总览
 
 ---
 
-## 5. 执行顺序与门禁
+## 5. 下一阶段：9 逐跳自检
+
+计划文档：`docs/HOP_CHECK_PLAN.md`
+
+- [x] 计划落盘
+- [ ] `internal/selfcheck`
+- [ ] `levier selfcheck` 只读模式
+- [ ] `--deep` 主动链路检查
+- [ ] hop 依赖和 skip 规则
+- [ ] JSON / 人类可读输出
+- [ ] secret 脱敏测试
+- [ ] CLI / smoke / 文档
+- [ ] 复用 daemoncheck / app_check 能力
+
+### 5.1 自检分层
+
+```text
+默认     只读检查：config / HTTP / DB / migration / meta / status / admin / daemon / app
+--deep   主动检查：临时 App / Run / TaskAssign / events / WS / tool / MCP
+```
+
+### 5.2 公开边界
+
+```text
+docs/       内部开发文档
+public/     对外契约和示例
+/selfcheck  第一版不提供公共 HTTP 接口
+```
+
+---
+
+## 6. 执行顺序与门禁
 
 ```text
 当前
@@ -394,6 +425,21 @@ GET /status 动态运行状态总览
 8E smoke / 文档
   └─ 门禁：Compose smoke 出现 status: ok，文档闭环
 
+9A 自检契约
+  └─ 门禁：hop 顺序、状态、退出码确认
+
+9B 只读自检
+  └─ 门禁：config / HTTP / DB / meta / status / admin 可诊断
+
+9C 主动自检
+  └─ 门禁：--deep 可验证 daemon / Run / WS / tool / MCP
+
+9D 文档与 smoke
+  └─ 门禁：selfcheck 文档、JSON、smoke 闭环
+
+9E 验收
+  └─ 门禁：全量测试和 CI 绿
+
 公开前最终验收
   └─ 执行本文件第 1.2 节
   └─ 通过后才考虑 public + v0.1.0
@@ -401,7 +447,7 @@ GET /status 动态运行状态总览
 
 ---
 
-## 6. 相关文档
+## 7. 相关文档
 
 ```text
 docs/CLI_REFERENCE.md
@@ -412,4 +458,5 @@ docs/CLI_DISTRIBUTION_PLAN.md
 docs/MAP.md
 docs/SELF_DESCRIPTION_PLAN.md
 docs/STATUS_OVERVIEW_PLAN.md
+docs/HOP_CHECK_PLAN.md
 ```
