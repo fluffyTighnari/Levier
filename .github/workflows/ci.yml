@@ -41,7 +41,9 @@ jobs:
       - name: Ensure main branch for buf breaking
         run: |
           git fetch origin main
-          git branch --force main origin/main
+          if ! git show-ref --verify --quiet refs/heads/main; then
+            git branch main origin/main
+          fi
       - run: make proto-lint
       - run: make proto-check
 
