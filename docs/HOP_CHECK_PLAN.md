@@ -437,7 +437,7 @@ docker compose --profile smoke run --rm smoke
 [ ] smoke 覆盖 selfcheck
 [x] go test ./... 通过
 [x] make lint 通过
-[ ] GitHub Actions CI 绿
+[x] GitHub Actions CI 绿
 ```
 
 ---
