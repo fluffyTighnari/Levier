@@ -83,6 +83,18 @@ def mcp_health() -> dict:
 def main() -> int:
     wait_for("middleware /healthz", lambda: (http("GET", "/healthz")[0] == 200, ""))
     wait_for("middleware /readyz", lambda: (http("GET", "/readyz")[0] == 200, ""))
+
+    def meta_ok():
+        status, data = http("GET", "/meta")
+        return (
+            status == 200
+            and data.get("service") == "levier"
+            and data.get("meta_version") == 1
+            and data.get("api", {}).get("http_version") == "v1",
+            data,
+        )
+
+    wait_for("service /meta", meta_ok)
     wait_for(
         "harness registered",
         lambda: ('daemon="' + DAEMON_ID + '"' in metrics(), ""),

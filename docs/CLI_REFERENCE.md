@@ -278,6 +278,7 @@ database connect
 migrations（可读 schema_migrations，且 pending = 0）
 HTTP /healthz
 HTTP /readyz
+HTTP /meta
 admin auth
 app credentials（提供 --credentials 时）
 ```
@@ -439,6 +440,57 @@ levier config print [--config path] [--json]
 1  配置无法加载或校验
 2  参数错误
 ```
+
+---
+
+### 5.7 `levier describe`
+
+```sh
+levier describe [--server url] [--json] [--timeout 5s]
+```
+
+行为：
+
+```text
+GET /meta
+不读取配置文件
+不需要 Admin token 或 App key
+输出版本、协议、能力、限制、认证方式和主要接口
+```
+
+参数：
+
+| 参数 | 默认 | 说明 |
+|---|---|---|
+| `--server` | `LEVIER_SERVER` 或 `http://127.0.0.1:8080` | Levier HTTP 地址 |
+| `--json` | `false` | 输出原始 `/meta` JSON |
+| `--timeout` | `5s` | 请求超时 |
+
+普通输出示例：
+
+```text
+service      levier
+version      0.1.0-rc.5
+commit       2ce014d
+api          v1
+ws protocol  1
+runtime      normal
+strategies   react, echo
+limits       body=1048576 run=1800000ms tool=60000ms ws_token=600s
+endpoints    health, ready, metrics, runs, apps, websocket
+```
+
+退出码：
+
+```text
+0  成功
+1  服务不可达、HTTP 非 200、JSON 非法或协议版本不支持
+2  参数错误
+```
+
+> `describe` 只访问公开的 `/meta`；`doctor` 也会检查同一接口。
+> 公共 schema 位于 `public/service-meta/v1/schema.json`，示例见
+> `public/service-meta/v1/example.json`。
 
 ---
 

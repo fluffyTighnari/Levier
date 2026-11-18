@@ -292,7 +292,32 @@ GUI 配置编辑
 
 ---
 
-## 3. 执行顺序与门禁
+## 3. 下一阶段：7 服务自描述
+
+计划文档：`docs/SELF_DESCRIPTION_PLAN.md`
+
+- [x] 计划落盘
+- [x] `public/service-meta/v1/schema.json`
+- [x] `public/service-meta/v1/example.json`
+- [x] `internal/selfdesc`
+- [x] `GET /meta`
+- [x] `levier describe`
+- [x] `doctor` 检查 `/meta`
+- [x] HTTP / CLI / 契约测试
+- [x] Compose smoke 检查 `/meta`
+- [x] CLI_REFERENCE / README / 公开契约说明
+
+### 3.1 公开边界
+
+```text
+docs/       内部开发文档，不进入镜像 / release / HTTP
+public/     对外暴露的契约和示例
+GET /meta   运行时自描述内容
+```
+
+---
+
+## 4. 执行顺序与门禁
 
 ```text
 当前
@@ -313,6 +338,21 @@ GUI 配置编辑
 6E 测试与文档
   └─ 门禁：测试、文档、lint、structure-check 全绿
 
+7A 自描述契约
+  └─ 门禁：public schema / example 冻结
+
+7B 自描述核心
+  └─ 门禁：selfdesc 单元测试通过
+
+7C HTTP /meta
+  └─ 门禁：无认证可读，且不泄露 secret
+
+7D CLI / doctor
+  └─ 门禁：describe / doctor 可用，JSON 可解析
+
+7E smoke / 文档
+  └─ 门禁：Compose smoke 出现 meta: ok，文档闭环
+
 公开前最终验收
   └─ 执行本文件第 1.2 节
   └─ 通过后才考虑 public + v0.1.0
@@ -320,7 +360,7 @@ GUI 配置编辑
 
 ---
 
-## 4. 相关文档
+## 5. 相关文档
 
 ```text
 docs/CLI_REFERENCE.md
@@ -329,4 +369,5 @@ docs/RELEASE.md
 docs/CONFIG.md
 docs/CLI_DISTRIBUTION_PLAN.md
 docs/MAP.md
+docs/SELF_DESCRIPTION_PLAN.md
 ```

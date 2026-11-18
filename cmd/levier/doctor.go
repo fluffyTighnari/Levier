@@ -13,6 +13,7 @@ import (
 
 	"github.com/fluffyTighnari/levier/internal/config"
 	"github.com/fluffyTighnari/levier/internal/db"
+	"github.com/fluffyTighnari/levier/internal/selfdesc"
 )
 
 type doctorCheck struct {
@@ -101,6 +102,9 @@ func runDoctor(args []string, stdout, stderr io.Writer) int {
 		report.add("HTTP /readyz", "ok", "200", "")
 	}
 
+	metaCheck := checkMeta(ctx, client, report.Server)
+	report.add(metaCheck.Name, metaCheck.Status, metaCheck.Message, metaCheck.Fix)
+
 	adminToken := os.Getenv("LEVIER_ADMIN_TOKEN")
 	if adminToken == "" && cfgErr == nil {
 		adminToken = cfg.HTTP.AdminToken
@@ -164,4 +168,29 @@ func runDoctor(args []string, stdout, stderr io.Writer) int {
 
 func (r *doctorReport) add(name, status, message, fix string) {
 	r.Checks = append(r.Checks, doctorCheck{Name: name, Status: status, Message: message, Fix: fix})
+}
+
+func checkMeta(ctx context.Context, client *http.Client, server string) doctorCheck {
+	code, body, err := httpGet(ctx, client, server+"/meta", "")
+	if err != nil {
+		return doctorCheck{Name: "HTTP /meta", Status: "fail", Message: err.Error(), Fix: "upgrade server or check --server"}
+	}
+	if code != http.StatusOK {
+		return doctorCheck{Name: "HTTP /meta", Status: "fail", Message: fmt.Sprintf("status %d", code), Fix: "upgrade server or check --server"}
+	}
+	var meta selfdesc.Document
+	if err := json.Unmarshal(body, &meta); err != nil {
+		return doctorCheck{Name: "HTTP /meta", Status: "fail", Message: "invalid JSON: " + err.Error(), Fix: "upgrade server or check --server"}
+	}
+	if meta.Service != selfdesc.ServiceName {
+		return doctorCheck{Name: "HTTP /meta", Status: "fail", Message: fmt.Sprintf("unexpected service %q", meta.Service), Fix: "upgrade server"}
+	}
+	if meta.MetaVersion != selfdesc.MetaVersion {
+		return doctorCheck{Name: "HTTP /meta", Status: "fail", Message: fmt.Sprintf("unsupported meta_version %d", meta.MetaVersion), Fix: "upgrade server"}
+	}
+	if meta.API.HTTPVersion != "v1" || meta.API.WSProtocol != 1 {
+		return doctorCheck{Name: "HTTP /meta", Status: "fail",
+			Message: fmt.Sprintf("unsupported API %s/ws%d", meta.API.HTTPVersion, meta.API.WSProtocol), Fix: "upgrade server"}
+	}
+	return doctorCheck{Name: "HTTP /meta", Status: "ok", Message: fmt.Sprintf("v%d", meta.MetaVersion)}
 }

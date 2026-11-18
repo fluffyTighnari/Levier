@@ -32,6 +32,8 @@ func runCLI(args []string, stdout, stderr io.Writer) int {
 	switch args[0] {
 	case "version":
 		return printVersion(args[1:], stdout, stderr)
+	case "describe":
+		return runDescribe(args[1:], stdout, stderr)
 	case "doctor":
 		return runDoctor(args[1:], stdout, stderr)
 	case "status":
@@ -111,6 +113,7 @@ func printUsage(out io.Writer) {
 	fmt.Fprintln(out, "Usage:")
 	fmt.Fprintln(out, "  levier serve [-config path]")
 	fmt.Fprintln(out, "  levier version [--json]")
+	fmt.Fprintln(out, "  levier describe [--server url] [--json]")
 	fmt.Fprintln(out, "  levier doctor [--config path] [--server url] [--credentials path] [--json]")
 	fmt.Fprintln(out, "  levier status [--server url] [--json]")
 	fmt.Fprintln(out, "  levier app init|show|rotate-key")

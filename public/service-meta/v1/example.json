@@ -1,0 +1,61 @@
+{
+  "meta_version": 1,
+  "service": "levier",
+  "build": {
+    "version": "v0.1.0",
+    "commit": "abc1234",
+    "built": "2026-11-18T00:00:00Z",
+    "go": "go1.26",
+    "platform": "linux/amd64"
+  },
+  "api": {
+    "http_version": "v1",
+    "http_base_path": "/api/v1",
+    "ws_path": "/api/v1/ws",
+    "ws_protocol": 1
+  },
+  "capabilities": {
+    "runtime_types": ["normal"],
+    "builtin_strategies": ["react", "echo"],
+    "tool_scopes": ["local", "global"],
+    "mcp_transports": ["stdio", "sse", "streamable_http"],
+    "features": [
+      "run_submit",
+      "run_cancel",
+      "event_replay",
+      "app_registration",
+      "mcp_management",
+      "websocket",
+      "local_tools",
+      "global_tools",
+      "mcp_tools"
+    ]
+  },
+  "limits": {
+    "max_body_bytes": 1048576,
+    "default_run_timeout_ms": 1800000,
+    "default_tool_timeout_ms": 60000,
+    "max_tool_timeout_ms": 240000,
+    "ws_token_ttl_seconds": 600
+  },
+  "auth": {
+    "app": {"scheme": "bearer", "header": "Authorization"},
+    "admin": {"scheme": "bearer", "header": "Authorization"},
+    "websocket": {"scheme": "query", "parameter": "token"}
+  },
+  "endpoints": {
+    "health": "/healthz",
+    "ready": "/readyz",
+    "metrics": "/metrics",
+    "apps": "/api/v1/apps",
+    "app": "/api/v1/apps/{app_id}",
+    "runs": "/api/v1/runs",
+    "run": "/api/v1/runs/{run_id}",
+    "run_events": "/api/v1/runs/{run_id}/events",
+    "run_cancel": "/api/v1/runs/{run_id}/cancel",
+    "ws_token": "/api/v1/ws-token",
+    "websocket": "/api/v1/ws",
+    "admin_apps": "/admin/apps",
+    "admin_mcp": "/admin/mcp"
+  }
+}

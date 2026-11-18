@@ -15,6 +15,21 @@ servers:
 security:
   - bearerAuth: []
 paths:
+  /meta:
+    servers:
+      - url: /
+    get:
+      summary: Service self-description
+      operationId: meta
+      security: []
+      responses:
+        "200":
+          description: Public service identity, protocol versions, capabilities, limits, auth schemes, and endpoints
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
   /healthz:
     get:
       summary: Liveness check

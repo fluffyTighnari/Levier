@@ -33,6 +33,8 @@ import (
 	"github.com/fluffyTighnari/levier/internal/observe"
 	"github.com/fluffyTighnari/levier/internal/register"
 	"github.com/fluffyTighnari/levier/internal/runstore"
+	"github.com/fluffyTighnari/levier/internal/selfdesc"
+	"github.com/fluffyTighnari/levier/internal/version"
 	"github.com/fluffyTighnari/levier/internal/workflow"
 )
 
@@ -263,9 +265,18 @@ func runServer(args []string) {
 		AdminToken:           cfg.HTTP.AdminToken,
 		AllowLegacyBearer:    cfg.HTTP.AllowLegacyBearer,
 		WSTokenTTL:           cfg.HTTP.WSTokenTTL.Std(),
-		DefaultRunTimeoutMS:  1_800_000,
-		DefaultToolTimeoutMS: 60_000,
-		AppHub:               appHub,
+		DefaultRunTimeoutMS:  selfdesc.DefaultRunTimeoutMS,
+		DefaultToolTimeoutMS: selfdesc.DefaultToolTimeoutMS,
+		Meta: selfdesc.New(selfdesc.Options{
+			Version:              version.Version,
+			Commit:               version.Commit,
+			Built:                version.Built,
+			DefaultRunTimeoutMS:  selfdesc.DefaultRunTimeoutMS,
+			DefaultToolTimeoutMS: selfdesc.DefaultToolTimeoutMS,
+			MaxToolTimeoutMS:     selfdesc.DefaultMaxToolTimeoutMS,
+			WSTokenTTL:           cfg.HTTP.WSTokenTTL.Std(),
+		}),
+		AppHub: appHub,
 		ReadinessCheck: func(ctx context.Context) error {
 			return db.Health(ctx, pool, cfg.Database.HealthTimeout.Std())
 		},

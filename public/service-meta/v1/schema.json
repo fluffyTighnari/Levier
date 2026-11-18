@@ -1,0 +1,128 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://levier.dev/service-meta/v1/schema.json",
+  "title": "Levier service self-description v1",
+  "description": "Public metadata returned by GET /meta. Fields are additive within meta_version 1.",
+  "type": "object",
+  "required": [
+    "meta_version",
+    "service",
+    "build",
+    "api",
+    "capabilities",
+    "limits",
+    "auth",
+    "endpoints"
+  ],
+  "properties": {
+    "meta_version": {
+      "const": 1
+    },
+    "service": {
+      "const": "levier"
+    },
+    "build": {
+      "type": "object",
+      "required": ["version", "commit", "built", "go", "platform"],
+      "properties": {
+        "version": {"type": "string"},
+        "commit": {"type": "string"},
+        "built": {"type": "string"},
+        "go": {"type": "string"},
+        "platform": {"type": "string"}
+      }
+    },
+    "api": {
+      "type": "object",
+      "required": ["http_version", "http_base_path", "ws_path", "ws_protocol"],
+      "properties": {
+        "http_version": {"const": "v1"},
+        "http_base_path": {"type": "string"},
+        "ws_path": {"type": "string"},
+        "ws_protocol": {"const": 1}
+      }
+    },
+    "capabilities": {
+      "type": "object",
+      "required": ["runtime_types", "builtin_strategies", "tool_scopes", "mcp_transports", "features"],
+      "properties": {
+        "runtime_types": {
+          "type": "array",
+          "items": {"type": "string"}
+        },
+        "builtin_strategies": {
+          "type": "array",
+          "items": {"type": "string"}
+        },
+        "tool_scopes": {
+          "type": "array",
+          "items": {"type": "string"}
+        },
+        "mcp_transports": {
+          "type": "array",
+          "items": {"type": "string"}
+        },
+        "features": {
+          "type": "array",
+          "items": {"type": "string"}
+        }
+      }
+    },
+    "limits": {
+      "type": "object",
+      "required": [
+        "max_body_bytes",
+        "default_run_timeout_ms",
+        "default_tool_timeout_ms",
+        "max_tool_timeout_ms",
+        "ws_token_ttl_seconds"
+      ],
+      "properties": {
+        "max_body_bytes": {"type": "integer", "minimum": 1},
+        "default_run_timeout_ms": {"type": "integer", "minimum": 1},
+        "default_tool_timeout_ms": {"type": "integer", "minimum": 1},
+        "max_tool_timeout_ms": {"type": "integer", "minimum": 1},
+        "ws_token_ttl_seconds": {"type": "integer", "minimum": 1}
+      }
+    },
+    "auth": {
+      "type": "object",
+      "required": ["app", "admin", "websocket"],
+      "properties": {
+        "app": {"$ref": "#/$defs/authScheme"},
+        "admin": {"$ref": "#/$defs/authScheme"},
+        "websocket": {"$ref": "#/$defs/authScheme"}
+      }
+    },
+    "endpoints": {
+      "type": "object",
+      "additionalProperties": {"type": "string"},
+      "required": [
+        "health",
+        "ready",
+        "metrics",
+        "apps",
+        "app",
+        "runs",
+        "run",
+        "run_events",
+        "run_cancel",
+        "ws_token",
+        "websocket",
+        "admin_apps",
+        "admin_mcp"
+      ]
+    }
+  },
+  "$defs": {
+    "authScheme": {
+      "type": "object",
+      "required": ["scheme"],
+      "properties": {
+        "scheme": {"type": "string"},
+        "header": {"type": "string"},
+        "parameter": {"type": "string"}
+      }
+    }
+  }
+}

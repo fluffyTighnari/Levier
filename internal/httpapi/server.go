@@ -23,6 +23,7 @@ import (
 	"github.com/fluffyTighnari/levier/internal/observe"
 	"github.com/fluffyTighnari/levier/internal/register"
 	"github.com/fluffyTighnari/levier/internal/runstore"
+	"github.com/fluffyTighnari/levier/internal/selfdesc"
 	"github.com/fluffyTighnari/levier/internal/workflow"
 )
 
@@ -81,6 +82,7 @@ type Config struct {
 	Metrics              *observe.Registry
 	MetricsCollector     func(context.Context)
 	Logger               *slog.Logger
+	Meta                 selfdesc.Document
 }
 
 // Server implements the minimal App HTTP API.
@@ -107,6 +109,14 @@ func NewServer(runs RunStore, queue TaskQueue, cfg Config, registries ...AppRegi
 	}
 	if cfg.MaxBodyBytes <= 0 {
 		cfg.MaxBodyBytes = defaultMaxBodyBytes
+	}
+	if cfg.Meta.MetaVersion == 0 {
+		cfg.Meta = selfdesc.New(selfdesc.Options{
+			MaxBodyBytes:         cfg.MaxBodyBytes,
+			DefaultRunTimeoutMS:  cfg.DefaultRunTimeoutMS,
+			DefaultToolTimeoutMS: cfg.DefaultToolTimeoutMS,
+			WSTokenTTL:           cfg.WSTokenTTL,
+		})
 	}
 	appHub := cfg.AppHub
 	if appHub == nil {
@@ -143,6 +153,7 @@ func (s *Server) Handler() http.Handler {
 func (s *Server) routes() {
 	s.mux.HandleFunc("GET /healthz", s.handleHealth)
 	s.mux.HandleFunc("GET /readyz", s.handleReady)
+	s.mux.HandleFunc("GET /meta", s.handleMeta)
 	if s.cfg.Metrics != nil {
 		s.mux.HandleFunc("GET /metrics", s.handleMetrics)
 	}

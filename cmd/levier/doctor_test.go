@@ -1,9 +1,15 @@
 package main
 
 import (
+	"context"
+	"encoding/json"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/fluffyTighnari/levier/internal/selfdesc"
 )
 
 func TestReadAppCredentials(t *testing.T) {
@@ -28,5 +34,39 @@ func TestReadAppCredentialsRejectsIncomplete(t *testing.T) {
 	}
 	if _, err := readCredentials(path); err == nil {
 		t.Fatal("readCredentials() error = nil, want error")
+	}
+}
+
+func TestCheckMeta(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		_ = json.NewEncoder(w).Encode(selfdesc.New(selfdesc.Options{Version: "v-test"}))
+	}))
+	defer server.Close()
+	check := checkMeta(context.Background(), server.Client(), server.URL)
+	if check.Status != "ok" {
+		t.Fatalf("checkMeta = %+v", check)
+	}
+}
+
+func TestCheckMetaRejectsMissingEndpoint(t *testing.T) {
+	server := httptest.NewServer(http.NotFoundHandler())
+	defer server.Close()
+	check := checkMeta(context.Background(), server.Client(), server.URL)
+	if check.Status != "fail" {
+		t.Fatalf("checkMeta = %+v", check)
+	}
+}
+
+func TestCheckMetaRejectsUnsupportedVersion(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		_ = json.NewEncoder(w).Encode(map[string]any{
+			"meta_version": 2,
+			"service":      "levier",
+		})
+	}))
+	defer server.Close()
+	check := checkMeta(context.Background(), server.Client(), server.URL)
+	if check.Status != "fail" || check.Message == "" {
+		t.Fatalf("checkMeta = %+v", check)
 	}
 }

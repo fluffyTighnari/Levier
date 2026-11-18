@@ -64,6 +64,7 @@ func TestSubcommandHelp(t *testing.T) {
 		run  func([]string, io.Writer, io.Writer) int
 	}{
 		{name: "doctor", run: runDoctor},
+		{name: "describe", run: runDescribe},
 		{name: "status", run: runStatus},
 		{name: "app init", run: runAppInit},
 		{name: "app show", run: runAppShow},
