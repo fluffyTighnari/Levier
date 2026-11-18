@@ -2,7 +2,7 @@
 
 # 配置盘点与外部化契约（6A）
 
-> 状态：6A 盘点完成；6B 控制面配置已实现；6C 执行侧配置已实现；6D 部署配置已实现；6E 测试与文档已完成，Compose smoke 待 Docker 恢复。
+> 状态：6A 盘点完成；6B 控制面配置已实现；6C 执行侧配置已实现；6D 部署配置已实现；6E 测试与文档已完成，Compose smoke 已通过。
 > 目标：先明确“现在有哪些配置、从哪里来、哪些是秘密、哪些还缺失”，再进入 6B 改代码。
 > 相关：`TODO.md`、`CLI_REFERENCE.md`、`deploy/README.md`。
 
@@ -427,7 +427,7 @@ admin token 由控制面与 Agent 共用同一文件
 internal/config：解析、未知字段、非法类型、环境变量优先级、secret 文件测试
 cmd/levier：config check、config check --json、config print --json、脱敏测试
 docs：CONFIG / CLI_REFERENCE / INSTALL / 迁移说明
-Compose 启动 smoke 待 Docker Desktop 恢复
+Compose smoke：本地开发栈已通过
 ```
 
 ### 11.1 从旧配置迁移

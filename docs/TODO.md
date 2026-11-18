@@ -248,7 +248,7 @@ docs/CONFIG.md
 - [x] 明确 MCP secret 的注入方式
 - [x] 记录 `migrate up -> serve` 启动顺序
 
-> Docker Desktop 未启动，6D 的 Compose 启动 smoke 尚未执行；待 Docker 恢复后补验证。
+> 本地 Compose smoke 已通过：`docker compose up -d --no-build` + `docker compose --profile smoke run --rm smoke`。
 
 ### 2.7 6E：测试与文档
 
@@ -259,13 +259,13 @@ docs/CONFIG.md
 - [x] secret 脱敏测试
 - [x] `config check` 测试
 - [x] `config print` JSON 测试
-- [ ] Compose 启动 smoke
+- [x] Compose 启动 smoke
 - [x] `docs/CONFIG.md`
 - [x] `docs/CLI_REFERENCE.md` 增加 config 命令
 - [x] `docs/INSTALL.md` 增加配置说明入口
 - [x] 配置迁移说明
 
-> Compose 启动 smoke 仍受 Docker Desktop 未启动阻塞；其余 6E 项已完成。
+> 本地 Compose smoke 已通过；生产式 overlay 的配置检查已通过，容器 smoke 仍使用开发栈。
 
 ### 2.8 6 阶段验收
 
