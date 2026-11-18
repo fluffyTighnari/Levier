@@ -7,7 +7,7 @@
 
 | 项目 | 内容 |
 |---|---|
-| 状态 | 5A-1/5A-2/5A-3a/5A-3b/5A-3c/5A-3d/5A-4 已完成；5B-1/5B-2/5B-3 已完成；5B-4/5B-5 未开始 |
+| 状态 | 5A-1/5A-2/5A-3a/5A-3b/5A-3c/5A-3d/5A-4 已完成；5B-1/5B-2/5B-3/5B-4 已完成；5B-5 未开始 |
 | 目标 | 一个 `levier` 二进制既能服务，也能管理；用户不需要 git clone |
 | 范围 | 5A CLI 操作面；5B 分发与安装面 |
 | 不包含 | TUI、GUI、自动更新、brew/scoop/apt（后续） |
@@ -458,6 +458,7 @@ checksum 校验
 [x] release workflow + 本地 5 平台产物/checksums
 [x] install.sh / install.ps1 本地安装与 checksum 校验
 [x] GHCR image workflow + 本地四镜像构建
+[x] go install @v0.1.0-rc.5（私有认证）
 [ ] git tag v0.1.0 触发 release
 [ ] Release 有 5 个平台产物 + checksums
 [ ] install.sh 在干净机器安装成功
@@ -893,4 +894,48 @@ release.yml YAML 解析                                     PASS
 
 ```text
 实际 GHCR push（本地无发布凭据）
+```
+
+### 2026-11-18：5B-4 完成（go install 验证）
+
+新增：
+
+```text
+internal/version/version.go        debug.BuildInfo fallback
+internal/version/version_test.go
+docs/INSTALL.md                    go install 章节
+.github/workflows/release.yml      public-only go-install job
+```
+
+验证方式：
+
+```text
+私有仓库 + 临时 Git URL rewrite
+干净 GOPATH / GOMODCACHE / GOBIN
+GOPRIVATE=github.com/fluffyTighnari/*
+使用 v0.1.0-rc.5 tag
+```
+
+结果：
+
+```text
+go install github.com/fluffyTighnari/levier/cmd/levier@v0.1.0-rc.5  PASS
+安装后 levier version -> v0.1.0-rc.5                              PASS
+platform -> windows/amd64                                          PASS
+```
+
+说明：
+
+```text
+go install 不传 ldflags
+新增 debug.BuildInfo fallback 后版本号正确
+commit / built 在 go install 模式下仍可能为 unknown
+公开匿名 go install 仍需仓库公开后补测
+```
+
+补充修复：
+
+```text
+tag 构建时 CI 需要本地 main 分支供 buf breaking 使用
+main 构建时不能强制更新已检出的 main 分支
 ```

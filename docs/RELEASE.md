@@ -128,6 +128,7 @@ tag 必须形如 `vMAJOR.MINOR.PATCH`；预发布可用 `v0.1.0-rc.1`。
 3. 生成 checksums.txt
 4. gh release create 或 gh release upload --clobber
 5. images job：构建并推送 4 个 GHCR 镜像
+6. go-install job（仅公开仓库）：从 tag 执行 go install 并验证版本
 ```
 
 tag 含 `-`（例如 `v0.1.0-rc.1`）时自动标记为 prerelease。
@@ -173,6 +174,34 @@ docker/build-push-action -> push
 packages: write
 GITHUB_TOKEN 登录 ghcr.io
 ```
+
+### 4.2 go install
+
+公开仓库发布后，验证：
+
+```sh
+go install github.com/fluffyTighnari/levier/cmd/levier@v0.1.0
+$(go env GOPATH)/bin/levier version
+```
+
+`go install` 不会传入本项目 Makefile 的 ldflags。
+`internal/version` 会从 `debug.BuildInfo` 读取模块版本，因此：
+
+```text
+version 正确
+commit / built 可能为 unknown
+```
+
+私有仓库验证需要：
+
+```text
+GOPRIVATE
+内部 Go proxy
+或 release 二进制安装
+```
+
+release workflow 的 `go-install` job 只在仓库公开时运行：
+它会在 release 完成后执行同一条 `go install` 并检查版本。
 
 ---
 
