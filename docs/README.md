@@ -18,6 +18,7 @@ MAP.md          仓库地图
 | `ARCHITECTURE.md` | 一页架构与依赖方向 |
 | `DESIGN.md` | 控制面核心设计 |
 | `CONTRACT.md` | 事件、错误码、契约索引 |
+| `CONFIG.md` | 配置盘点、环境变量矩阵与外部化契约 |
 | `CODE_STYLE.md` | 代码组织与评审约定 |
 
 ## 接入与运行
@@ -55,6 +56,7 @@ SCOPE → MAP → 你的任务对应文档
 发布          → RELEASE.md
 待办 / 配置   → TODO.md
 改控制面      → DESIGN.md + ARCHITECTURE.md
+改配置        → CONFIG.md
 改 Harness    → AGENT_CORE_CONTRACT.md + execution/harness/README.md
 改 MCP        → MCP.md
 部署          → deploy/README.md

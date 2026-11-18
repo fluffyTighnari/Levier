@@ -189,16 +189,24 @@ config check / config print 还没有实现
 
 ### 2.3 6A：配置盘点与契约
 
-- [ ] 列出所有配置项
-- [ ] 按组件分组：control plane / harness / MCP / agent
-- [ ] 标记类型、默认值、是否必填
-- [ ] 标记是否敏感
-- [ ] 标记是否支持环境变量
-- [ ] 定义统一命名规则
-- [ ] 定义 duration / size / URL / token 的格式
+- [x] 列出所有配置项
+- [x] 按组件分组：control plane / harness / MCP / agent
+- [x] 标记类型、默认值、是否必填
+- [x] 标记是否敏感
+- [x] 标记是否支持环境变量
+- [ ] 定义统一命名规则（已有建议，待评审）
+- [x] 定义 duration / size / URL / token 的格式
 - [ ] 决定是否引入配置版本号，例如 `config_version: 1`
-- [ ] 输出 `docs/CONFIG.md` 初版
-- [ ] 输出完整环境变量矩阵
+- [x] 输出 `docs/CONFIG.md` 初版
+- [x] 输出完整环境变量矩阵
+
+产出：
+
+```text
+docs/CONFIG.md
+```
+
+下一步：评审第 11 节“建议的契约”，冻结后再进入 6B。
 
 ### 2.4 6B：控制面配置
 
@@ -314,6 +322,7 @@ GUI 配置编辑
 docs/CLI_REFERENCE.md
 docs/INSTALL.md
 docs/RELEASE.md
+docs/CONFIG.md
 docs/CLI_DISTRIBUTION_PLAN.md
 docs/MAP.md
 ```

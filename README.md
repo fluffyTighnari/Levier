@@ -1184,6 +1184,7 @@ deploy/           容器镜像与 Compose
 | `docs/MIGRATION-1D.md` | Compose / 数据库 / 指标迁移 |
 | `docs/APP_ONBOARDING.md` | App 接入流程与协议细节 |
 | `docs/DESIGN.md` | 核心设计（当前实现） |
+| `docs/CONFIG.md` | 配置盘点、环境变量矩阵与外部化契约 |
 | `docs/MVP.md` | 单机 MVP 的边界、启动、验收与限制 |
 | `docs/CLI_REFERENCE.md` | CLI 命令、参数、环境变量、JSON、退出码 |
 | `docs/INSTALL.md` | CLI 安装、升级、卸载、checksum、镜像/离线 |
