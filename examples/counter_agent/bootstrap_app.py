@@ -32,7 +32,7 @@ from http_client import (
 
 
 def default_credentials_path() -> Path:
-    value = os.environ.get("COUNTER_APP_CREDENTIALS", "")
+    value = os.environ.get("LEVIER_APP_CREDENTIALS") or os.environ.get("COUNTER_APP_CREDENTIALS", "")
     if value:
         return Path(value).expanduser()
     return Path.home() / ".config" / "middleware" / "counter-app.json"

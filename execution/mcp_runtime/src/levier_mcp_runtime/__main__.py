@@ -20,12 +20,20 @@ from levier_mcp_runtime.sessions import SessionManager
 _DEFAULT_SOCKET = "/tmp/levier-mcp.sock"
 
 
+def _first_env(*names: str) -> str | None:
+    for name in names:
+        value = os.environ.get(name)
+        if value:
+            return value
+    return None
+
+
 def build_parser() -> argparse.ArgumentParser:
     """Build the CLI parser."""
     parser = argparse.ArgumentParser(prog="levier-mcp-runtime")
     parser.add_argument(
         "--socket",
-        default=os.environ.get("MCP_RUNTIME_SOCKET", _DEFAULT_SOCKET),
+        default=_first_env("LEVIER_MCP_SOCKET", "MCP_RUNTIME_SOCKET") or _DEFAULT_SOCKET,
         help="Unix domain socket path",
     )
     parser.add_argument(
@@ -35,12 +43,12 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument(
         "--secrets-file",
-        default=os.environ.get("MCP_RUNTIME_SECRETS_FILE", ""),
+        default=_first_env("LEVIER_MCP_SECRETS_FILE", "MCP_RUNTIME_SECRETS_FILE") or "",
         help="optional 0600 JSON file of secret name -> value",
     )
     parser.add_argument(
         "--log-level",
-        default=os.environ.get("MCP_RUNTIME_LOG_LEVEL", "info"),
+        default=_first_env("LEVIER_MCP_LOG_LEVEL", "MCP_RUNTIME_LOG_LEVEL") or "info",
         help="debug, info, warning, or error",
     )
     return parser

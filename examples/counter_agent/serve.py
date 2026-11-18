@@ -40,7 +40,7 @@ from ws_tool_host import default_credentials_path, serve_calls
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Serve the Counter App to Levier")
     parser.add_argument("--credentials", default="", help="0600 credential file path")
-    parser.add_argument("--mw-url", default=os.environ.get("LEVIER_URL") or os.environ.get("MW_URL") or "http://127.0.0.1:8080")
+    parser.add_argument("--mw-url", default=os.environ.get("LEVIER_APP_URL") or os.environ.get("LEVIER_URL") or os.environ.get("MW_URL") or "http://127.0.0.1:8080")
     parser.add_argument("--tools-file", default="", help="optional JSON tool list")
     parser.add_argument(
         "--skip-register",

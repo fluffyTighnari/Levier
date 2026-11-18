@@ -34,7 +34,7 @@ from ws_client import WebSocketClient, WebSocketError, websocket_url
 
 
 def default_credentials_path() -> Path:
-    value = os.environ.get("COUNTER_APP_CREDENTIALS", "")
+    value = os.environ.get("LEVIER_APP_CREDENTIALS") or os.environ.get("COUNTER_APP_CREDENTIALS", "")
     if value:
         return Path(value).expanduser()
     return Path.home() / ".config" / "middleware" / "counter-app.json"
@@ -43,7 +43,7 @@ def default_credentials_path() -> Path:
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Serve App local tool calls over WebSocket")
     parser.add_argument("--credentials", default="", help="0600 credential file path")
-    parser.add_argument("--mw-url", default=os.environ.get("LEVIER_URL") or os.environ.get("MW_URL") or "http://127.0.0.1:8080")
+    parser.add_argument("--mw-url", default=os.environ.get("LEVIER_APP_URL") or os.environ.get("LEVIER_URL") or os.environ.get("MW_URL") or "http://127.0.0.1:8080")
     parser.add_argument(
         "--receive-count",
         type=int,

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 import tempfile
 import unittest
 from pathlib import Path
@@ -57,6 +58,8 @@ class ResolveStringTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "secrets.json"
             path.write_text('{"token":"file-value"}', encoding="utf-8")
+            if os.name != "nt":
+                path.chmod(0o600)
             resolver = FileSecretResolver.load(str(path))
             self.assertEqual(resolver.resolve("token"), "file-value")
 

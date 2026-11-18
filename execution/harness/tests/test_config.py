@@ -3,6 +3,7 @@
 Copyright 2026 The Levier Authors.
 """
 
+import os
 import tempfile
 import unittest
 from pathlib import Path
@@ -55,6 +56,45 @@ class ConfigTest(unittest.TestCase):
         self.assertEqual(settings.daemon.strategies, ["react", "echo"])
         self.assertEqual(settings.daemon.labels["region"], "cn1")
         self.assertEqual(settings.logging.level, "debug")
+
+    def test_new_env_names(self) -> None:
+        settings = load_settings(
+            self.write_config(VALID_YAML),
+            environ={
+                "LEVIER_HARNESS_ADDRESS": "levier:9443",
+                "LEVIER_HARNESS_DAEMON_ID": "daemon-new",
+                "LEVIER_HARNESS_DAEMON_MAX_CONCURRENT_RUNS": "6",
+                "LEVIER_HARNESS_DAEMON_STRATEGIES": "echo",
+                "LEVIER_HARNESS_LOG_LEVEL": "debug",
+            },
+        )
+        self.assertEqual(settings.middleware.address, "levier:9443")
+        self.assertEqual(settings.daemon.id, "daemon-new")
+        self.assertEqual(settings.daemon.max_concurrent_runs, 6)
+        self.assertEqual(settings.daemon.strategies, ["echo"])
+        self.assertEqual(settings.logging.level, "debug")
+
+    def test_auth_token_file(self) -> None:
+        token_path = Path(self.write_config("token-file-placeholder")).with_name("daemon-token")
+        token_path.write_text("token-from-file", encoding="utf-8")
+        if os.name != "nt":
+            token_path.chmod(0o600)
+        config = VALID_YAML.replace('auth_token: "secret-token"', f'auth_token_file: "{token_path.as_posix()}"')
+        settings = load_settings(self.write_config(config), environ={})
+        self.assertEqual(settings.daemon.auth_token.get_secret_value(), "token-from-file")
+        self.assertEqual(settings.daemon.auth_token_file, token_path.as_posix())
+
+    def test_new_env_token_file(self) -> None:
+        token_path = Path(self.write_config("token-file-placeholder")).with_name("daemon-token-env")
+        token_path.write_text("token-from-env-file", encoding="utf-8")
+        if os.name != "nt":
+            token_path.chmod(0o600)
+        config = VALID_YAML.replace('auth_token: "secret-token"', 'auth_token: ""')
+        settings = load_settings(
+            self.write_config(config),
+            environ={"LEVIER_HARNESS_DAEMON_AUTH_TOKEN_FILE": str(token_path)},
+        )
+        self.assertEqual(settings.daemon.auth_token.get_secret_value(), "token-from-env-file")
 
     def test_legacy_env_names(self) -> None:
         settings = load_settings(

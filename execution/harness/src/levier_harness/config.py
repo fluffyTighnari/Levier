@@ -9,6 +9,7 @@ Copyright 2026 The Levier Authors.
 from __future__ import annotations
 
 import os
+import stat
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Mapping
@@ -55,6 +56,7 @@ class DaemonSettings:
 
     id: str
     auth_token: SecretToken
+    auth_token_file: str = ""
     runtime_type: str = "normal"
     max_concurrent_runs: int = 4
     strategies: list[str] = field(default_factory=lambda: ["react", "echo"])
@@ -93,6 +95,7 @@ class Settings:
             "middleware_address": self.middleware.address,
             "middleware_tls": self.middleware.tls,
             "daemon_id": self.daemon.id,
+            "daemon_auth_token_file": self.daemon.auth_token_file,
             "runtime_type": self.daemon.runtime_type,
             "max_concurrent_runs": self.daemon.max_concurrent_runs,
             "strategies": list(self.daemon.strategies),
@@ -122,6 +125,7 @@ def load_settings(path: str | Path, environ: Mapping[str, str] | None = None) ->
 
     data: dict[str, Any] = _deep_copy(raw)
     _apply_env(data, env)
+    _resolve_secret_files(data, env)
 
     try:
         return _parse_settings(data)
@@ -137,9 +141,16 @@ def _parse_settings(data: dict[str, Any]) -> Settings:
     )
 
     daemon_data = _section(data, "daemon", required=True)
+    auth_token = _string(daemon_data, "daemon.auth_token", "", required=False)
+    auth_token_file = _string(daemon_data, "daemon.auth_token_file", "", required=False)
+    if not auth_token and auth_token_file:
+        auth_token = _read_secret_file(auth_token_file, "daemon.auth_token_file")
+    if not auth_token:
+        raise ConfigError("daemon.auth_token or daemon.auth_token_file is required")
     daemon = DaemonSettings(
         id=_string(daemon_data, "daemon.id", "", required=True),
-        auth_token=SecretToken(_string(daemon_data, "daemon.auth_token", "", required=True)),
+        auth_token=SecretToken(auth_token),
+        auth_token_file=auth_token_file,
         runtime_type=_runtime_type(daemon_data),
         max_concurrent_runs=_positive_int(daemon_data, "daemon.max_concurrent_runs", 4),
         strategies=_string_list(daemon_data, "daemon.strategies", ["react", "echo"]),
@@ -256,31 +267,129 @@ def _apply_env(data: dict[str, Any], env: Mapping[str, str]) -> None:
         data,
         "middleware",
         "address",
-        env.get("HARNESS_LEVIER_ADDRESS") or env.get("HARNESS_MIDDLEWARE_ADDRESS"),
+        _first_env(
+            env,
+            "LEVIER_HARNESS_ADDRESS",
+            "HARNESS_LEVIER_ADDRESS",
+            "HARNESS_MIDDLEWARE_ADDRESS",
+        ),
     )
     _set_bool(
         data,
         "middleware",
         "tls",
-        env.get("HARNESS_LEVIER_TLS") or env.get("HARNESS_MIDDLEWARE_TLS"),
+        _first_env(
+            env,
+            "LEVIER_HARNESS_TLS",
+            "HARNESS_LEVIER_TLS",
+            "HARNESS_MIDDLEWARE_TLS",
+        ),
     )
 
-    _set(data, "daemon", "id", env.get("HARNESS_DAEMON_ID"))
-    _set(data, "daemon", "auth_token", env.get("HARNESS_DAEMON_AUTH_TOKEN"))
-    _set(data, "daemon", "runtime_type", env.get("HARNESS_DAEMON_RUNTIME_TYPE"))
+    _set(data, "daemon", "id", _first_env(env, "LEVIER_HARNESS_DAEMON_ID", "HARNESS_DAEMON_ID"))
+    _set(
+        data,
+        "daemon",
+        "auth_token",
+        _first_env(env, "LEVIER_HARNESS_DAEMON_AUTH_TOKEN", "HARNESS_DAEMON_AUTH_TOKEN"),
+    )
+    _set(
+        data,
+        "daemon",
+        "auth_token_file",
+        _first_env(
+            env,
+            "LEVIER_HARNESS_DAEMON_AUTH_TOKEN_FILE",
+            "HARNESS_DAEMON_AUTH_TOKEN_FILE",
+        ),
+    )
+    _set(
+        data,
+        "daemon",
+        "runtime_type",
+        _first_env(env, "LEVIER_HARNESS_DAEMON_RUNTIME_TYPE", "HARNESS_DAEMON_RUNTIME_TYPE"),
+    )
     _set_int(
         data,
         "daemon",
         "max_concurrent_runs",
-        env.get("HARNESS_DAEMON_MAX_CONCURRENT_RUNS"),
+        _first_env(
+            env,
+            "LEVIER_HARNESS_DAEMON_MAX_CONCURRENT_RUNS",
+            "HARNESS_DAEMON_MAX_CONCURRENT_RUNS",
+        ),
     )
-    _set_list(data, "daemon", "strategies", env.get("HARNESS_DAEMON_STRATEGIES"))
-    _set_map(data, "daemon", "labels", env.get("HARNESS_DAEMON_LABELS"))
+    _set_list(
+        data,
+        "daemon",
+        "strategies",
+        _first_env(env, "LEVIER_HARNESS_DAEMON_STRATEGIES", "HARNESS_DAEMON_STRATEGIES"),
+    )
+    _set_map(
+        data,
+        "daemon",
+        "labels",
+        _first_env(env, "LEVIER_HARNESS_DAEMON_LABELS", "HARNESS_DAEMON_LABELS"),
+    )
 
-    _set(data, "mcp_runtime", "socket", env.get("HARNESS_MCP_RUNTIME_SOCKET"))
+    _set(
+        data,
+        "mcp_runtime",
+        "socket",
+        _first_env(env, "LEVIER_HARNESS_MCP_RUNTIME_SOCKET", "HARNESS_MCP_RUNTIME_SOCKET"),
+    )
 
-    _set(data, "logging", "level", env.get("HARNESS_LOGGING_LEVEL"))
-    _set(data, "logging", "format", env.get("HARNESS_LOGGING_FORMAT"))
+    _set(
+        data,
+        "logging",
+        "level",
+        _first_env(env, "LEVIER_HARNESS_LOG_LEVEL", "HARNESS_LOGGING_LEVEL"),
+    )
+    _set(
+        data,
+        "logging",
+        "format",
+        _first_env(env, "LEVIER_HARNESS_LOG_FORMAT", "HARNESS_LOGGING_FORMAT"),
+    )
+
+
+def _resolve_secret_files(data: dict[str, Any], env: Mapping[str, str]) -> None:
+    daemon = data.get("daemon")
+    if not isinstance(daemon, dict):
+        return
+    path = daemon.get("auth_token_file")
+    if not isinstance(path, str) or not path:
+        return
+    if _first_env(
+        env,
+        "LEVIER_HARNESS_DAEMON_AUTH_TOKEN",
+        "HARNESS_DAEMON_AUTH_TOKEN",
+    ):
+        return
+    daemon["auth_token"] = _read_secret_file(path, "daemon.auth_token_file")
+
+
+def _read_secret_file(path: str, name: str) -> str:
+    target = Path(path).expanduser()
+    try:
+        if os.name != "nt":
+            mode = stat.S_IMODE(target.stat().st_mode)
+            if mode & 0o077:
+                raise ConfigError(f"{name} must be 0600: {target}")
+        value = target.read_text(encoding="utf-8").strip()
+    except OSError as exc:
+        raise ConfigError(f"read {name} {target}: {exc}") from exc
+    if not value:
+        raise ConfigError(f"{name} is empty: {target}")
+    return value
+
+
+def _first_env(env: Mapping[str, str], *names: str) -> str | None:
+    for name in names:
+        value = env.get(name)
+        if value is not None and value != "":
+            return value
+    return None
 
 
 def _env_section(data: dict[str, Any], section: str) -> dict[str, Any]:

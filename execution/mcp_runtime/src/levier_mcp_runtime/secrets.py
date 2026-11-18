@@ -12,6 +12,7 @@ from __future__ import annotations
 import json
 import os
 import re
+import stat
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Protocol
@@ -68,7 +69,12 @@ class FileSecretResolver:
 
     @classmethod
     def load(cls, path: str) -> "FileSecretResolver":
-        payload = json.loads(Path(path).read_text(encoding="utf-8"))
+        target = Path(path)
+        if os.name != "nt":
+            mode = stat.S_IMODE(target.stat().st_mode)
+            if mode & 0o077:
+                raise ValueError(f"secrets file must be 0600: {target}")
+        payload = json.loads(target.read_text(encoding="utf-8"))
         if not isinstance(payload, dict):
             raise ValueError("secret file must contain a JSON object")
         return cls(values={str(key): str(value) for key, value in payload.items()})

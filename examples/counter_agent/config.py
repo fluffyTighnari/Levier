@@ -60,21 +60,24 @@ class AppConfig:
         }
 
 
-def _required(environ: Mapping[str, str], key: str, legacy: str = "") -> str:
-    value = environ.get(key, "").strip()
-    if not value and legacy:
-        value = environ.get(legacy, "").strip()
-    if not value:
-        raise ConfigError(f"{key} is required")
-    return value
+def _required(environ: Mapping[str, str], *keys: str) -> str:
+    for key in keys:
+        value = environ.get(key, "").strip()
+        if value:
+            return value
+    raise ConfigError(f"{keys[0]} is required")
 
 
-def _env_value(environ: Mapping[str, str], key: str, legacy: str, default: str = "") -> str:
-    value = environ.get(key, "").strip()
-    if value:
-        return value
-    value = environ.get(legacy, "").strip()
-    return value or default
+def _env_value(
+    environ: Mapping[str, str],
+    *keys: str,
+    default: str = "",
+) -> str:
+    for key in keys:
+        value = environ.get(key, "").strip()
+        if value:
+            return value
+    return default
 
 
 def _validate_url(value: str) -> str:
@@ -103,9 +106,27 @@ def load_dotenv(path: Path | None = None) -> None:
 def from_env(environ: Mapping[str, str] | None = None) -> AppConfig:
     """Load and validate App configuration from environment variables."""
     env = os.environ if environ is None else environ
-    mw_url = _validate_url(_env_value(env, "LEVIER_URL", "MW_URL", DEFAULT_MW_URL))
-    admin_token = _required(env, "LEVIER_ADMIN_TOKEN", "MW_ADMIN_TOKEN")
-    app_name = _env_value(env, "LEVIER_APP_NAME", "MW_APP_NAME", DEFAULT_APP_NAME) or DEFAULT_APP_NAME
+    mw_url = _validate_url(
+        _env_value(
+            env,
+            "LEVIER_APP_URL",
+            "LEVIER_URL",
+            "MW_URL",
+            default=DEFAULT_MW_URL,
+        )
+    )
+    admin_token = _required(
+        env,
+        "LEVIER_APP_ADMIN_TOKEN",
+        "LEVIER_ADMIN_TOKEN",
+        "MW_ADMIN_TOKEN",
+    )
+    app_name = _env_value(
+        env,
+        "LEVIER_APP_NAME",
+        "MW_APP_NAME",
+        default=DEFAULT_APP_NAME,
+    ) or DEFAULT_APP_NAME
     return AppConfig(
         mw_url=mw_url,
         admin_token=Secret(admin_token),

@@ -52,6 +52,18 @@ class ConfigTest(unittest.TestCase):
         self.assertEqual(config.app_name, "legacy-app")
         self.assertEqual(config.admin_token.reveal(), "legacy-secret")
 
+    def test_app_prefixed_env_names(self) -> None:
+        config = from_env(
+            {
+                "LEVIER_APP_URL": "https://app.example.test/",
+                "LEVIER_APP_ADMIN_TOKEN": "app-admin-secret",
+                "LEVIER_APP_NAME": "app-prefixed",
+            }
+        )
+        self.assertEqual(config.mw_url, "https://app.example.test")
+        self.assertEqual(config.app_name, "app-prefixed")
+        self.assertEqual(config.admin_token.reveal(), "app-admin-secret")
+
     def test_p2_1_secret_not_printed(self) -> None:
         secret = Secret("super-secret")
         self.assertEqual(str(secret), "***")

@@ -227,14 +227,14 @@ docs/CONFIG.md
 
 ### 2.5 6C：执行侧配置
 
-- [ ] Harness 配置完整外部化
-- [ ] MCP Runtime 配置完整外部化
-- [ ] Agent 配置完整外部化
-- [ ] 统一 `LEVIER_*` 环境变量命名
-- [ ] secret 文件权限与路径约定
-- [ ] 日志中统一脱敏
-- [ ] Compose 中不再写死开发 token
-- [ ] 保留旧 `MIDDLEWARE_*` / `MW_*` 兼容窗口
+- [x] Harness 配置完整外部化
+- [x] MCP Runtime 配置完整外部化
+- [x] Agent 配置完整外部化
+- [x] 统一 `LEVIER_*` 环境变量命名
+- [x] secret 文件权限与路径约定
+- [x] 日志中统一脱敏
+- [ ] Compose 中不再写死开发 token（留到 6D）
+- [x] 保留旧 `MIDDLEWARE_*` / `MW_*` 兼容窗口
 
 ### 2.6 6D：部署配置
 

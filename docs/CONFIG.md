@@ -2,7 +2,7 @@
 
 # 配置盘点与外部化契约（6A）
 
-> 状态：6A 盘点完成；6B 控制面配置已实现；6C/6D/6E 未开始。
+> 状态：6A 盘点完成；6B 控制面配置已实现；6C 执行侧配置已实现；6D/6E 未开始。
 > 目标：先明确“现在有哪些配置、从哪里来、哪些是秘密、哪些还缺失”，再进入 6B 改代码。
 > 相关：`TODO.md`、`CLI_REFERENCE.md`、`deploy/README.md`。
 
@@ -159,21 +159,24 @@ Compose 默认 secret 清理
 
 | YAML / 参数 | 环境变量 | 类型 | 默认 | 必填 | 秘密 |
 |---|---|---|---|---|---|
-| CLI `--config` | `HARNESS_CONFIG` | path | 内置 example | 否 | 否 |
-| `middleware.address` | `HARNESS_LEVIER_ADDRESS` / 旧 `HARNESS_MIDDLEWARE_ADDRESS` | host:port | `127.0.0.1:9090` | 是 | 否 |
-| `middleware.tls` | `HARNESS_LEVIER_TLS` / 旧 `HARNESS_MIDDLEWARE_TLS` | bool | `false` | 否 | 否 |
-| `daemon.id` | `HARNESS_DAEMON_ID` | string | 空 | 是 | 否 |
-| `daemon.auth_token` | `HARNESS_DAEMON_AUTH_TOKEN` | string | 空 | 是 | **是** |
-| `daemon.runtime_type` | `HARNESS_DAEMON_RUNTIME_TYPE` | enum | `normal` | 是 | 否 |
-| `daemon.max_concurrent_runs` | `HARNESS_DAEMON_MAX_CONCURRENT_RUNS` | int | `4` | 是 | 否 |
-| `daemon.strategies` | `HARNESS_DAEMON_STRATEGIES` | list | `react,echo` | 是 | 否 |
-| `daemon.labels` | `HARNESS_DAEMON_LABELS` | map | 空 | 否 | 否 |
-| `mcp_runtime.socket` | `HARNESS_MCP_RUNTIME_SOCKET` | path | 空 | 否 | 否 |
-| `logging.level` | `HARNESS_LOGGING_LEVEL` | enum | `info` | 是 | 否 |
-| `logging.format` | `HARNESS_LOGGING_FORMAT` | enum | `json` | 是 | 否 |
+| CLI `--config` | `LEVIER_HARNESS_CONFIG` / 旧 `HARNESS_CONFIG` | path | 内置 example | 否 | 否 |
+| `middleware.address` | `LEVIER_HARNESS_ADDRESS` / 旧 `HARNESS_LEVIER_ADDRESS` / `HARNESS_MIDDLEWARE_ADDRESS` | host:port | `127.0.0.1:9090` | 是 | 否 |
+| `middleware.tls` | `LEVIER_HARNESS_TLS` / 旧 `HARNESS_LEVIER_TLS` / `HARNESS_MIDDLEWARE_TLS` | bool | `false` | 否 | 否 |
+| `daemon.id` | `LEVIER_HARNESS_DAEMON_ID` / 旧 `HARNESS_DAEMON_ID` | string | 空 | 是 | 否 |
+| `daemon.auth_token` | `LEVIER_HARNESS_DAEMON_AUTH_TOKEN` / 旧 `HARNESS_DAEMON_AUTH_TOKEN` | string | 空 | 是* | **是** |
+| `daemon.auth_token_file` | `LEVIER_HARNESS_DAEMON_AUTH_TOKEN_FILE` / 旧 `HARNESS_DAEMON_AUTH_TOKEN_FILE` | path | 空 | 否 | **是** |
+| `daemon.runtime_type` | `LEVIER_HARNESS_DAEMON_RUNTIME_TYPE` / 旧 `HARNESS_DAEMON_RUNTIME_TYPE` | enum | `normal` | 是 | 否 |
+| `daemon.max_concurrent_runs` | `LEVIER_HARNESS_DAEMON_MAX_CONCURRENT_RUNS` / 旧 `HARNESS_DAEMON_MAX_CONCURRENT_RUNS` | int | `4` | 是 | 否 |
+| `daemon.strategies` | `LEVIER_HARNESS_DAEMON_STRATEGIES` / 旧 `HARNESS_DAEMON_STRATEGIES` | list | `react,echo` | 是 | 否 |
+| `daemon.labels` | `LEVIER_HARNESS_DAEMON_LABELS` / 旧 `HARNESS_DAEMON_LABELS` | map | 空 | 否 | 否 |
+| `mcp_runtime.socket` | `LEVIER_HARNESS_MCP_RUNTIME_SOCKET` / 旧 `HARNESS_MCP_RUNTIME_SOCKET` | path | 空 | 否 | 否 |
+| `logging.level` | `LEVIER_HARNESS_LOG_LEVEL` / 旧 `HARNESS_LOGGING_LEVEL` | enum | `info` | 是 | 否 |
+| `logging.format` | `LEVIER_HARNESS_LOG_FORMAT` / 旧 `HARNESS_LOGGING_FORMAT` | enum | `json` | 是 | 否 |
 | 运行时模型 key | `DEEPSEEK_API_KEY` | string | 空 | react 时需要 | **是** |
 | 运行时模型地址 | `DEEPSEEK_BASE_URL` | URL | `https://api.deepseek.com` | 否 | 否 |
 | 运行时模型名 | `DEEPSEEK_MODEL` | string | `deepseek-flash` | 否 | 否 |
+
+`*` `auth_token` 与 `auth_token_file` 至少提供一个。
 
 注意：
 
@@ -190,10 +193,10 @@ DEEPSEEK_* 由 LLM provider 直接读取，不在 Harness YAML 中
 
 | 参数 | 环境变量 | 类型 | 默认 | 必填 | 秘密 |
 |---|---|---|---|---|---|
-| `--socket` | `MCP_RUNTIME_SOCKET` | path | `/tmp/levier-mcp.sock` | 否 | 否 |
+| `--socket` | `LEVIER_MCP_SOCKET` / 旧 `MCP_RUNTIME_SOCKET` | path | `/tmp/levier-mcp.sock` | 否 | 否 |
 | `--stdio` | 无 | bool | `false` | 否 | 否 |
-| `--secrets-file` | `MCP_RUNTIME_SECRETS_FILE` | path | 空 | 否 | 文件内容秘密 |
-| `--log-level` | `MCP_RUNTIME_LOG_LEVEL` | enum | `info` | 否 | 否 |
+| `--secrets-file` | `LEVIER_MCP_SECRETS_FILE` / 旧 `MCP_RUNTIME_SECRETS_FILE` | path | 空 | 否 | 文件内容秘密 |
+| `--log-level` | `LEVIER_MCP_LOG_LEVEL` / 旧 `MCP_RUNTIME_LOG_LEVEL` | enum | `info` | 否 | 否 |
 
 Secrets：
 
@@ -203,6 +206,7 @@ LEVIER_SECRET_<NAME>
 secrets-file JSON：secret name -> value
 ```
 
+`secrets-file` 在 Unix 上要求 0600 权限。
 `MCP_E2E_TOKEN` 是 Compose 回归环境变量，会注入为 `LEVIER_SECRET_E2E_TOKEN`。
 
 ---
@@ -214,10 +218,10 @@ secrets-file JSON：secret name -> value
 
 | 变量/参数 | 类型 | 默认 | 必填 | 秘密 |
 |---|---|---|---|---|
-| `LEVIER_URL` / 旧 `MW_URL` | URL | `http://127.0.0.1:8080` | 是 | 否 |
-| `LEVIER_ADMIN_TOKEN` / 旧 `MW_ADMIN_TOKEN` | string | 空 | bootstrap 时是 | **是** |
+| `LEVIER_APP_URL` / 旧 `LEVIER_URL` / `MW_URL` | URL | `http://127.0.0.1:8080` | 是 | 否 |
+| `LEVIER_APP_ADMIN_TOKEN` / 旧 `LEVIER_ADMIN_TOKEN` / `MW_ADMIN_TOKEN` | string | 空 | bootstrap 时是 | **是** |
 | `LEVIER_APP_NAME` / 旧 `MW_APP_NAME` | string | `retrofit-counter` | 否 | 否 |
-| `COUNTER_APP_CREDENTIALS` | path | 用户目录 | 运行时时是 | 文件内容秘密 |
+| `LEVIER_APP_CREDENTIALS` / 旧 `COUNTER_APP_CREDENTIALS` | path | 用户目录 | 运行时时是 | 文件内容秘密 |
 | `DEEPSEEK_API_KEY` | string | 空 | baseline 模式 | **是** |
 | `--credentials` / `--mw-url` / `--tools-file` | CLI flags | 见脚本 | 视命令 | 否 |
 
@@ -335,8 +339,8 @@ LEVIER_TEST_DATABASE_URL（测试）
 
 ### P1 应处理
 
-- [ ] `HARNESS_*`、`MCP_RUNTIME_*`、`DEEPSEEK_*`、`COUNTER_*` 命名不统一
-- [ ] `MW_*` / `MIDDLEWARE_*` 兼容策略不一致
+- [x] `HARNESS_*`、`MCP_RUNTIME_*`、`DEEPSEEK_*`、`COUNTER_*` 命名不统一
+- [x] `MW_*` / `MIDDLEWARE_*` 兼容策略不一致
 - [ ] Harness / MCP / Agent 配置校验风格不一致
 - [x] 缺少配置项总表
 
@@ -373,12 +377,23 @@ config check
 config print（脱敏）
 ```
 
+6C 已采用：
+
+```text
+Harness 支持 LEVIER_HARNESS_*，保留 HARNESS_* / HARNESS_MIDDLEWARE_* fallback
+Harness 支持 daemon.auth_token_file
+MCP 支持 LEVIER_MCP_*，保留 MCP_RUNTIME_* fallback
+MCP secrets-file 在 Unix 上检查 0600
+Agent 支持 LEVIER_APP_*，保留 LEVIER_* / MW_* fallback
+Agent 支持 LEVIER_APP_CREDENTIALS
+```
+
 仍待后续：
 
 ```text
 config print 是否输出来源（file/env/default）
 配置热更新（当前建议不做）
-Harness / MCP / Agent 命名统一
+Harness / MCP / Agent 内部校验代码风格进一步统一
 ```
 
 ---

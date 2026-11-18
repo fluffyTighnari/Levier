@@ -37,7 +37,9 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="levier-harness")
     parser.add_argument(
         "--config",
-        default=os.environ.get("HARNESS_CONFIG", str(_DEFAULT_CONFIG)),
+        default=os.environ.get("LEVIER_HARNESS_CONFIG")
+        or os.environ.get("HARNESS_CONFIG")
+        or str(_DEFAULT_CONFIG),
         help="path to harness YAML configuration",
     )
     parser.add_argument(
