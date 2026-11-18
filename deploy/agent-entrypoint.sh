@@ -2,8 +2,8 @@
 # Levier — Counter Agent container entrypoint.
 set -eu
 
-LEVIER_URL="${LEVIER_URL:-${MW_URL:-http://levier:8080}}"
-CREDENTIALS="${COUNTER_APP_CREDENTIALS:-/data/credentials.json}"
+LEVIER_URL="${LEVIER_APP_URL:-${LEVIER_URL:-${MW_URL:-http://levier:8080}}}"
+CREDENTIALS="${LEVIER_APP_CREDENTIALS:-${COUNTER_APP_CREDENTIALS:-/data/credentials.json}}"
 
 python3 - "$LEVIER_URL" <<'PY'
 import sys

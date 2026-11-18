@@ -2,7 +2,7 @@
 
 # 配置盘点与外部化契约（6A）
 
-> 状态：6A 盘点完成；6B 控制面配置已实现；6C 执行侧配置已实现；6D/6E 未开始。
+> 状态：6A 盘点完成；6B 控制面配置已实现；6C 执行侧配置已实现；6D 部署配置已实现；6E 测试与文档待收尾。
 > 目标：先明确“现在有哪些配置、从哪里来、哪些是秘密、哪些还缺失”，再进入 6B 改代码。
 > 相关：`TODO.md`、`CLI_REFERENCE.md`、`deploy/README.md`。
 
@@ -142,12 +142,18 @@ config_version / environment
 config check / config print
 ```
 
-仍需在 6C/6D 处理：
+6C/6D 已补齐：
 
 ```text
 Harness / MCP / Agent 配置命名统一
 Compose 默认 secret 清理
-外部 Secret Manager（后续）
+生产式 Compose secret 文件挂载
+```
+
+仍待后续：
+
+```text
+外部 Secret Manager
 ```
 
 ---
@@ -181,7 +187,7 @@ Compose 默认 secret 清理
 注意：
 
 ```text
-HARNESS_* 不是 LEVIER_HARNESS_*；命名待 6C 统一
+HARNESS_* 旧名仍兼容；新配置使用 LEVIER_HARNESS_*
 DEEPSEEK_* 由 LLM provider 直接读取，不在 Harness YAML 中
 ```
 
@@ -207,7 +213,7 @@ secrets-file JSON：secret name -> value
 ```
 
 `secrets-file` 在 Unix 上要求 0600 权限。
-`MCP_E2E_TOKEN` 是 Compose 回归环境变量，会注入为 `LEVIER_SECRET_E2E_TOKEN`。
+`MCP_E2E_TOKEN` 只用于本地 e2e 脚本；Compose 不再内置测试 secret。
 
 ---
 
@@ -220,6 +226,7 @@ secrets-file JSON：secret name -> value
 |---|---|---|---|---|
 | `LEVIER_APP_URL` / 旧 `LEVIER_URL` / `MW_URL` | URL | `http://127.0.0.1:8080` | 是 | 否 |
 | `LEVIER_APP_ADMIN_TOKEN` / 旧 `LEVIER_ADMIN_TOKEN` / `MW_ADMIN_TOKEN` | string | 空 | bootstrap 时是 | **是** |
+| `LEVIER_APP_ADMIN_TOKEN_FILE` / 旧 `LEVIER_ADMIN_TOKEN_FILE` | path | 空 | 与 token 二选一 | 文件内容秘密 |
 | `LEVIER_APP_NAME` / 旧 `MW_APP_NAME` | string | `retrofit-counter` | 否 | 否 |
 | `LEVIER_APP_CREDENTIALS` / 旧 `COUNTER_APP_CREDENTIALS` | path | 用户目录 | 运行时时是 | 文件内容秘密 |
 | `DEEPSEEK_API_KEY` | string | 空 | baseline 模式 | **是** |
@@ -237,36 +244,51 @@ api_key
 
 ## 7. Compose / 部署配置
 
-文件：`docker-compose.yml`、`.env.example`、`deploy/README.md`
+文件：`docker-compose.yml`、`docker-compose.prod.yml`、`.env.example`、`deploy/README.md`
+
+开发基础配置：
 
 | 变量 | 消费者 | 默认 | 秘密 | 说明 |
 |---|---|---|---|---|
-| `POSTGRES_PASSWORD` | postgres / levier | `change-me` | **是** | Compose 数据库密码 |
-| `LEVIER_DATABASE_URL` | 本地 CLI / 测试 | 示例 DSN | **是** | 包含密码 |
-| `LEVIER_HTTP_ADMIN_TOKEN` | levier | `admin-change-me` | **是** | 来自 `LEVIER_ADMIN_TOKEN` |
+| `POSTGRES_PASSWORD` | postgres / levier | `change-me` | **是** | 仅本地开发 |
+| `LEVIER_DATABASE_URL` | 本地 CLI / 测试 | 示例 DSN | **是** | 仅本地开发 |
+| `LEVIER_HTTP_ADMIN_TOKEN` | levier | `admin-change-me` | **是** | 来自 `LEVIER_ADMIN_TOKEN`，仅开发 |
 | `LEVIER_VERSION` / `LEVIER_COMMIT` / `LEVIER_BUILD_TIME` | levier build args | dev | 否 | 构建元数据 |
 | `LEVIER_LOG_LEVEL` / `LEVIER_LOG_FORMAT` | levier | info/json | 否 | 日志 |
-| `MCP_E2E_TOKEN` | mcp-runtime | `mcp-e2e-secret` | **是** | 测试 secret |
-| `HARNESS_LEVIER_ADDRESS` | harness | `levier:9090` | 否 | 连接地址 |
-| `HARNESS_DAEMON_ID` | harness | `daemon-local-1` | 否 | daemon 身份 |
-| `HARNESS_DAEMON_AUTH_TOKEN` | harness | `change-me` | **是** | daemon 认证 |
-| `HARNESS_MCP_RUNTIME_SOCKET` | harness | socket path | 否 | MCP socket |
-| `LEVIER_URL` | agent / smoke | `http://levier:8080` | 否 | HTTP 地址 |
-| `LEVIER_ADMIN_TOKEN` | agent | `admin-change-me` | **是** | bootstrap |
+| `LEVIER_HARNESS_ADDRESS` | harness | `levier:9090` | 否 | 连接地址 |
+| `LEVIER_HARNESS_DAEMON_ID` | harness | `daemon-local-1` | 否 | daemon 身份 |
+| `LEVIER_HARNESS_DAEMON_AUTH_TOKEN` | harness | `change-me` | **是** | 仅开发 |
+| `LEVIER_HARNESS_MCP_RUNTIME_SOCKET` | harness | socket path | 否 | MCP socket |
+| `LEVIER_APP_URL` | agent / smoke | `http://levier:8080` | 否 | HTTP 地址 |
+| `LEVIER_APP_ADMIN_TOKEN` | agent | `admin-change-me` | **是** | 仅开发 |
 | `LEVIER_APP_NAME` | agent | `counter-agent` | 否 | App 名称 |
-| `COUNTER_APP_CREDENTIALS` | agent | `/data/credentials.json` | 文件秘密 | 凭据文件 |
+| `LEVIER_APP_CREDENTIALS` | agent | `/data/credentials.json` | 文件秘密 | 凭据文件 |
 | `DEEPSEEK_API_KEY` | harness / baseline | 空 | **是** | 模型 key |
 | `DEEPSEEK_BASE_URL` / `DEEPSEEK_MODEL` | harness | DeepSeek 默认 | 否 | 模型配置 |
+
+生产式 overlay（`docker-compose.prod.yml`）：
+
+| secret 文件 | 消费者 |
+|---|---|
+| `deploy/secrets/levier_postgres_password` | PostgreSQL |
+| `deploy/secrets/levier_admin_token` | Levier HTTP admin + Counter Agent bootstrap |
+| `deploy/secrets/levier_daemon_tokens.json` | Levier gRPC daemon tokens |
+| `deploy/secrets/levier_database_url` | Levier 数据库 DSN |
+| `deploy/secrets/levier_harness_daemon_token` | Harness daemon token |
+| `deploy/secrets/levier_mcp_secrets.json` | MCP Runtime |
+
+`levier_admin_token` 同时供控制面与 Agent 使用；Harness 的 daemon token 必须与
+`levier_daemon_tokens.json` 中对应 daemon 的值一致；`levier_database_url` 中的密码
+必须与 `levier_postgres_password` 一致。
 
 开发默认值只适合本地：
 
 ```text
 change-me
 admin-change-me
-mcp-e2e-secret
 ```
 
-生产必须替换，6B/6D 要加启动检查。
+生产式 overlay 使用 secret 文件，不把真实值写入 Compose 或 YAML。
 
 ---
 
@@ -304,13 +326,13 @@ http.admin_token
 http.bearer_token
 grpc.daemon_tokens.*
 database.url（含密码）
-HARNESS_DAEMON_AUTH_TOKEN
+LEVIER_HARNESS_DAEMON_AUTH_TOKEN
 LEVIER_SECRET_* / MCP secrets file
 DEEPSEEK_API_KEY
-LEVIER_ADMIN_TOKEN
+LEVIER_ADMIN_TOKEN / LEVIER_APP_ADMIN_TOKEN
 App credentials 文件中的 api_key
 POSTGRES_PASSWORD
-MCP_E2E_TOKEN（测试）
+MCP_E2E_TOKEN（仅本地测试）
 LEVIER_TEST_DATABASE_URL（测试）
 ```
 
@@ -385,7 +407,18 @@ Harness 支持 daemon.auth_token_file
 MCP 支持 LEVIER_MCP_*，保留 MCP_RUNTIME_* fallback
 MCP secrets-file 在 Unix 上检查 0600
 Agent 支持 LEVIER_APP_*，保留 LEVIER_* / MW_* fallback
+Agent 支持 LEVIER_APP_ADMIN_TOKEN_FILE
 Agent 支持 LEVIER_APP_CREDENTIALS
+```
+
+6D 已采用：
+
+```text
+docker-compose.prod.yml 生产式 overlay
+deploy/config/levier.prod.yaml 只含非秘密配置
+deploy/secrets/* 宿主机 0600 secret 文件
+admin token 由控制面与 Agent 共用同一文件
+数据库 DSN / daemon tokens / MCP secrets 均通过 *_file 注入
 ```
 
 仍待后续：

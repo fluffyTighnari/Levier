@@ -20,6 +20,8 @@ data
 *.sqlite3
 .env
 .env.*
+# Host secret files must never enter the build context.
+deploy/secrets
 .qta
 .stfolder
 .stignore

@@ -5,7 +5,10 @@ Copyright 2026 The Levier Authors.
 
 from __future__ import annotations
 
+import os
+import tempfile
 import unittest
+from pathlib import Path
 
 from config import ConfigError, Secret, from_env
 
@@ -63,6 +66,15 @@ class ConfigTest(unittest.TestCase):
         self.assertEqual(config.mw_url, "https://app.example.test")
         self.assertEqual(config.app_name, "app-prefixed")
         self.assertEqual(config.admin_token.reveal(), "app-admin-secret")
+
+    def test_admin_token_file(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "admin-token"
+            path.write_text("token-from-file", encoding="utf-8")
+            if os.name != "nt":
+                path.chmod(0o600)
+            config = from_env({"LEVIER_APP_ADMIN_TOKEN_FILE": str(path)})
+            self.assertEqual(config.admin_token.reveal(), "token-from-file")
 
     def test_p2_1_secret_not_printed(self) -> None:
         secret = Secret("super-secret")

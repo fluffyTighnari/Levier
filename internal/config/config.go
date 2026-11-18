@@ -167,6 +167,9 @@ func ApplyEnv(cfg *Config, lookup func(string) (string, bool)) error {
 	}
 
 	stringOverride(lookup, "LEVIER_ENVIRONMENT", &cfg.Environment)
+	if !envPresent(lookup, "LEVIER_ENVIRONMENT") {
+		stringOverride(lookup, "LEVIER_ENV", &cfg.Environment)
+	}
 	stringOverride(lookup, "LEVIER_HTTP_ADDR", &cfg.HTTP.Addr)
 	stringOverride(lookup, "LEVIER_HTTP_BEARER_TOKEN", &cfg.HTTP.BearerToken)
 	stringOverride(lookup, "LEVIER_HTTP_BEARER_TOKEN_FILE", &cfg.HTTP.BearerTokenFile)

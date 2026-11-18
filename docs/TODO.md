@@ -233,20 +233,22 @@ docs/CONFIG.md
 - [x] 统一 `LEVIER_*` 环境变量命名
 - [x] secret 文件权限与路径约定
 - [x] 日志中统一脱敏
-- [ ] Compose 中不再写死开发 token（留到 6D）
+- [x] Compose 生产 overlay 不再写死开发 token（6D）
 - [x] 保留旧 `MIDDLEWARE_*` / `MW_*` 兼容窗口
 
 ### 2.6 6D：部署配置
 
-- [ ] `.env.example` 区分普通配置与 secret
-- [ ] Compose 使用外部配置 / secret 文件
-- [ ] 提供最小生产配置样例
-- [ ] 提供开发配置样例
-- [ ] 不把真实密钥写进镜像
-- [ ] 不把真实密钥写进 release
-- [ ] 明确数据库、Admin token、daemon token 的来源
-- [ ] 明确 MCP secret 的注入方式
-- [ ] 记录 `migrate up -> serve` 启动顺序
+- [x] `.env.example` 区分普通配置与 secret
+- [x] Compose 使用外部配置 / secret 文件
+- [x] 提供最小生产配置样例
+- [x] 提供开发配置样例
+- [x] 不把真实密钥写进镜像
+- [x] 不把真实密钥写进 release
+- [x] 明确数据库、Admin token、daemon token 的来源
+- [x] 明确 MCP secret 的注入方式
+- [x] 记录 `migrate up -> serve` 启动顺序
+
+> Docker Desktop 未启动，6D 的 Compose 启动 smoke 尚未执行；待 Docker 恢复后补验证。
 
 ### 2.7 6E：测试与文档
 

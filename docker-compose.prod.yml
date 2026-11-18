@@ -1,0 +1,50 @@
+# Levier — production-like Compose overlay.
+#
+# Usage:
+#   for f in deploy/secrets/*.example; do cp "$f" "${f%.example}"; done
+#   chmod 600 deploy/secrets/levier_*
+#   docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+#
+# This overlay keeps secrets out of environment variables and YAML:
+# host files are mounted read-only under /run/secrets and referenced by
+# *_file settings. Files must be readable only by the container user (0600).
+
+services:
+  postgres:
+    environment:
+      POSTGRES_PASSWORD: ""
+      POSTGRES_PASSWORD_FILE: /run/secrets/levier_postgres_password
+    volumes:
+      - ./deploy/secrets/levier_postgres_password:/run/secrets/levier_postgres_password:ro
+
+  levier:
+    environment:
+      LEVIER_CONFIG: /app/levier.yaml
+      LEVIER_ENV: production
+      LEVIER_DATABASE_URL: ""
+      LEVIER_HTTP_ADMIN_TOKEN: ""
+    volumes:
+      - ./deploy/config/levier.prod.yaml:/app/levier.yaml:ro
+      - ./deploy/secrets/levier_admin_token:/run/secrets/levier_admin_token:ro
+      - ./deploy/secrets/levier_daemon_tokens.json:/run/secrets/levier_daemon_tokens.json:ro
+      - ./deploy/secrets/levier_database_url:/run/secrets/levier_database_url:ro
+
+  harness:
+    environment:
+      LEVIER_HARNESS_DAEMON_AUTH_TOKEN: ""
+      LEVIER_HARNESS_DAEMON_AUTH_TOKEN_FILE: /run/secrets/levier_harness_daemon_token
+    volumes:
+      - ./deploy/secrets/levier_harness_daemon_token:/run/secrets/levier_harness_daemon_token:ro
+
+  mcp-runtime:
+    environment:
+      LEVIER_MCP_SECRETS_FILE: /run/secrets/levier_mcp_secrets
+    volumes:
+      - ./deploy/secrets/levier_mcp_secrets.json:/run/secrets/levier_mcp_secrets:ro
+
+  agent:
+    environment:
+      LEVIER_APP_ADMIN_TOKEN: ""
+      LEVIER_APP_ADMIN_TOKEN_FILE: /run/secrets/levier_admin_token
+    volumes:
+      - ./deploy/secrets/levier_admin_token:/run/secrets/levier_admin_token:ro

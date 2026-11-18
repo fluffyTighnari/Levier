@@ -62,8 +62,6 @@ services:
       context: .
       dockerfile: deploy/mcp-runtime.Dockerfile
     command: ["--socket", "/run/levier/mcp.sock"]
-    environment:
-      LEVIER_SECRET_E2E_TOKEN: ${MCP_E2E_TOKEN:-mcp-e2e-secret}
     volumes:
       - mcp_socket:/run/levier
     healthcheck:
@@ -78,11 +76,11 @@ services:
       context: .
       dockerfile: deploy/harness.Dockerfile
     environment:
-      HARNESS_LEVIER_ADDRESS: levier:9090
-      HARNESS_DAEMON_ID: daemon-local-1
-      HARNESS_DAEMON_AUTH_TOKEN: change-me
-      HARNESS_MCP_RUNTIME_SOCKET: /run/levier/mcp.sock
-      HARNESS_LOGGING_FORMAT: json
+      LEVIER_HARNESS_ADDRESS: levier:9090
+      LEVIER_HARNESS_DAEMON_ID: daemon-local-1
+      LEVIER_HARNESS_DAEMON_AUTH_TOKEN: ${LEVIER_HARNESS_DAEMON_AUTH_TOKEN:-${HARNESS_DAEMON_AUTH_TOKEN:-change-me}}
+      LEVIER_HARNESS_MCP_RUNTIME_SOCKET: /run/levier/mcp.sock
+      LEVIER_HARNESS_LOG_FORMAT: json
       DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY:-}
       DEEPSEEK_BASE_URL: ${DEEPSEEK_BASE_URL:-https://api.deepseek.com}
       DEEPSEEK_MODEL: ${DEEPSEEK_MODEL:-deepseek-flash}
@@ -100,10 +98,10 @@ services:
       context: .
       dockerfile: deploy/agent.Dockerfile
     environment:
-      LEVIER_URL: http://levier:8080
-      LEVIER_ADMIN_TOKEN: ${LEVIER_ADMIN_TOKEN:-${MW_ADMIN_TOKEN:-admin-change-me}}
+      LEVIER_APP_URL: http://levier:8080
+      LEVIER_APP_ADMIN_TOKEN: ${LEVIER_APP_ADMIN_TOKEN:-${LEVIER_ADMIN_TOKEN:-${MW_ADMIN_TOKEN:-admin-change-me}}}
       LEVIER_APP_NAME: ${LEVIER_APP_NAME:-${MW_APP_NAME:-counter-agent}}
-      COUNTER_APP_CREDENTIALS: /data/credentials.json
+      LEVIER_APP_CREDENTIALS: /data/credentials.json
     volumes:
       - agent_data:/data
     depends_on:

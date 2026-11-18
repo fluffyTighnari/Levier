@@ -69,6 +69,37 @@ database:
 	}
 }
 
+func TestApplyEnvEnvironmentAlias(t *testing.T) {
+	cfg := Default()
+	if err := ApplyEnv(&cfg, func(key string) (string, bool) {
+		if key == "LEVIER_ENV" {
+			return "production", true
+		}
+		return "", false
+	}); err != nil {
+		t.Fatalf("ApplyEnv() error = %v", err)
+	}
+	if cfg.Environment != "production" {
+		t.Fatalf("Environment = %q", cfg.Environment)
+	}
+
+	cfg = Default()
+	if err := ApplyEnv(&cfg, func(key string) (string, bool) {
+		switch key {
+		case "LEVIER_ENV":
+			return "development", true
+		case "LEVIER_ENVIRONMENT":
+			return "production", true
+		}
+		return "", false
+	}); err != nil {
+		t.Fatalf("ApplyEnv() error = %v", err)
+	}
+	if cfg.Environment != "production" {
+		t.Fatalf("canonical environment override = %q", cfg.Environment)
+	}
+}
+
 func TestApplyEnvCoversControlPlane(t *testing.T) {
 	cfg := Default()
 	cfg.Database.URL = "postgres://example-user:example-pass@localhost/levier"

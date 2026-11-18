@@ -1,0 +1,44 @@
+# Levier — production-like configuration with external secrets.
+#
+# Used by docker-compose.prod.yml.
+# Secret values live under /run/secrets, not in this file.
+
+config_version: 1
+environment: production
+
+http:
+  addr: ":8080"
+  read_timeout: "15s"
+  write_timeout: "30s"
+  shutdown_timeout: "10s"
+  admin_token_file: "/run/secrets/levier_admin_token"
+  allow_legacy_bearer: false
+  ws_token_ttl: "10m"
+
+grpc:
+  addr: ":9090"
+  max_recv_msg_bytes: 16777216
+  max_send_msg_bytes: 16777216
+  shutdown_timeout: "10s"
+  daemon_tokens_file: "/run/secrets/levier_daemon_tokens.json"
+
+database:
+  url_file: "/run/secrets/levier_database_url"
+  max_conns: 20
+  min_conns: 2
+  connect_timeout: "5s"
+  health_timeout: "2s"
+
+workflow:
+  workers: 4
+  lease_ttl: "30s"
+  poll_interval: "200ms"
+  max_attempts: 5
+  reap_interval: "10s"
+  reap_limit: 100
+  recovery_delay: "10s"
+  event_buffer: 256
+
+log:
+  level: "info"
+  format: "json"

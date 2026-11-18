@@ -7,7 +7,7 @@
 | 项 | 内容 |
 |---|---|
 | 职责 | 镜像、Compose、入口脚本、smoke |
-| 入口 | `docker-compose.yml`、`deploy/*.Dockerfile` |
+| 入口 | `docker-compose.yml`、`docker-compose.prod.yml`、`deploy/*.Dockerfile`、`deploy/secrets/` |
 | 输入 / 输出 | 源码与配置；可运行容器栈 |
 | 依赖 | 各组件源码、PostgreSQL、Docker |
 | 不负责 | 业务逻辑、协议定义、控制面实现 |
@@ -90,21 +90,85 @@ docker compose down
 docker compose down -v   # 同时删除 PostgreSQL/凭据/socket 卷
 ```
 
-## 5. 配置项
+## 5. 开发默认值
 
-Compose 默认值足够本地 smoke：
+`docker compose up` 是本地开发配置，默认值足够跑 smoke：
 
 ```text
-POSTGRES_PASSWORD   change-me
+POSTGRES_PASSWORD       change-me
 LEVIER_ADMIN_TOKEN      admin-change-me
 LEVIER_APP_NAME         counter-agent
-MCP_E2E_TOKEN       mcp-e2e-secret
+LEVIER_HARNESS_DAEMON_AUTH_TOKEN  change-me
 ```
 
-daemon token 当前固定为 `change-me`，与 `levier.example.yaml` 的
-`daemon-local-1` 一致；这是本地 demo 配置，生产需要改成独立凭据。
+开发配置样例是根目录 `levier.example.yaml`。
+daemon token 与 `levier.example.yaml` 的 `daemon-local-1` 一致。
+这些值只用于本地 demo，不要用于生产。
 
-## 6. 单独构建镜像
+## 6. 生产式部署：secret 文件
+
+生产式配置使用：
+
+```text
+docker-compose.prod.yml
+deploy/config/levier.prod.yaml
+deploy/secrets/*
+```
+
+准备 secret 文件：
+
+```sh
+for f in deploy/secrets/*.example; do
+  cp "$f" "${f%.example}"
+done
+chmod 600 deploy/secrets/levier_*
+```
+
+然后编辑这些文件：
+
+```text
+deploy/secrets/levier_postgres_password
+deploy/secrets/levier_admin_token
+deploy/secrets/levier_daemon_tokens.json
+deploy/secrets/levier_database_url
+deploy/secrets/levier_harness_daemon_token
+deploy/secrets/levier_mcp_secrets.json
+```
+
+`levier_admin_token` 同时供控制面与 Agent 使用，避免同一 Admin token 出现两份来源。
+Harness 的 daemon token 必须与 `levier_daemon_tokens.json` 中对应 daemon 的值一致。
+
+启动：
+
+```sh
+docker compose \
+  -f docker-compose.yml \
+  -f docker-compose.prod.yml \
+  up -d
+```
+
+生产式 overlay 的行为：
+
+```text
+levier 使用 LEVIER_ENV=production
+admin token 从 /run/secrets/levier_admin_token 读取
+daemon tokens 从 /run/secrets/levier_daemon_tokens.json 读取
+数据库 DSN 从 /run/secrets/levier_database_url 读取
+harness daemon token 从 secret 文件读取
+MCP secrets 从 secret 文件读取
+agent Admin token 复用同一个 admin secret
+PostgreSQL 密码从 secret 文件读取
+```
+
+`docker-compose.prod.yml` 不会把真实 secret 写进 Compose 文件或镜像。
+`.dockerignore` 排除了 `deploy/secrets`，避免 secret 进入 Docker build context。
+secret 文件必须是宿主机上的 `0600` 文件；生产目标为 Linux。Docker Desktop
+在 Windows 上可能不保留文件权限位，因此不适合作为生产式 overlay 的最终验证环境。
+
+从本地开发栈切换到生产式 overlay 时，如果 PostgreSQL 卷已存在，需要让
+`levier_database_url` 与卷内已有密码匹配，或使用新卷重新初始化。
+
+## 7. 单独构建镜像
 
 ```sh
 docker build -f deploy/levier.Dockerfile -t levier:dev .

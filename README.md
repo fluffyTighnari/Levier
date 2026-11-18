@@ -891,7 +891,8 @@ Run 终态会以 `run_completed` 推送，`status` 为 `completed / failed / can
 | `DEEPSEEK_BASE_URL` | 模型网关地址 |
 | `DEEPSEEK_MODEL` | 默认模型名 |
 | `POSTGRES_PASSWORD` | Compose 中 PostgreSQL 密码 |
-| `MCP_E2E_TOKEN` | MCP 回归用的 secret |
+
+> `MCP_E2E_TOKEN` 只用于本地 `tests/e2e/mcp_e2e.sh`，不由 Compose 注入。
 
 > 旧名 `MIDDLEWARE_*` / `MW_*` 在一个版本内仍兼容；新部署请使用 `LEVIER_*`。
 
@@ -960,10 +961,10 @@ logging:
 | `POSTGRES_PASSWORD` | `change-me` |
 | `LEVIER_ADMIN_TOKEN` | `admin-change-me` |
 | `LEVIER_APP_NAME` | `counter-agent` |
-| `MCP_E2E_TOKEN` | `mcp-e2e-secret` |
 | daemon token | `change-me`（本地 demo 固定值） |
 
 这些都是本地演示配置，共享主机或生产环境必须替换。
+生产式部署使用 `deploy/secrets/` 和 `docker-compose.prod.yml`，不要把真实 secret 写进本文示例。
 
 ---
 

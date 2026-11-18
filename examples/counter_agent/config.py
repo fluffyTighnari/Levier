@@ -13,6 +13,7 @@ Copyright 2026 The Levier Authors.
 from __future__ import annotations
 
 import os
+import stat
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Mapping
@@ -60,14 +61,6 @@ class AppConfig:
         }
 
 
-def _required(environ: Mapping[str, str], *keys: str) -> str:
-    for key in keys:
-        value = environ.get(key, "").strip()
-        if value:
-            return value
-    raise ConfigError(f"{keys[0]} is required")
-
-
 def _env_value(
     environ: Mapping[str, str],
     *keys: str,
@@ -78,6 +71,21 @@ def _env_value(
         if value:
             return value
     return default
+
+
+def _read_secret_file(path: str, name: str) -> str:
+    target = Path(path).expanduser()
+    try:
+        if os.name != "nt":
+            mode = stat.S_IMODE(target.stat().st_mode)
+            if mode & 0o077:
+                raise ConfigError(f"{name} file must be 0600: {target}")
+        value = target.read_text(encoding="utf-8").strip()
+    except OSError as exc:
+        raise ConfigError(f"read {name} file {target}: {exc}") from exc
+    if not value:
+        raise ConfigError(f"{name} file is empty: {target}")
+    return value
 
 
 def _validate_url(value: str) -> str:
@@ -115,12 +123,21 @@ def from_env(environ: Mapping[str, str] | None = None) -> AppConfig:
             default=DEFAULT_MW_URL,
         )
     )
-    admin_token = _required(
+    admin_token = _env_value(
         env,
         "LEVIER_APP_ADMIN_TOKEN",
         "LEVIER_ADMIN_TOKEN",
         "MW_ADMIN_TOKEN",
     )
+    admin_token_file = _env_value(
+        env,
+        "LEVIER_APP_ADMIN_TOKEN_FILE",
+        "LEVIER_ADMIN_TOKEN_FILE",
+    )
+    if not admin_token and admin_token_file:
+        admin_token = _read_secret_file(admin_token_file, "admin token")
+    if not admin_token:
+        raise ConfigError("LEVIER_APP_ADMIN_TOKEN is required")
     app_name = _env_value(
         env,
         "LEVIER_APP_NAME",
