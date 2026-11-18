@@ -317,7 +317,33 @@ GET /meta   运行时自描述内容
 
 ---
 
-## 4. 执行顺序与门禁
+## 4. 下一阶段：8 状态总览
+
+计划文档：`docs/STATUS_OVERVIEW_PLAN.md`
+
+- [x] 计划落盘
+- [ ] `public/service-status/v1/schema.json`
+- [ ] `public/service-status/v1/example.json`
+- [ ] `internal/status`
+- [ ] `GET /status`
+- [ ] `levier status` 使用 `/status`
+- [ ] 旧 metrics 回退
+- [ ] HTTP / CLI / 契约测试
+- [ ] Compose smoke 检查 `/status`
+- [ ] CLI_REFERENCE / README / 公开契约说明
+
+### 4.1 公开边界
+
+```text
+docs/       内部开发文档，不进入镜像 / release / HTTP
+public/     对外暴露的契约和示例
+GET /meta   静态能力自描述
+GET /status 动态运行状态总览
+```
+
+---
+
+## 5. 执行顺序与门禁
 
 ```text
 当前
@@ -353,6 +379,21 @@ GET /meta   运行时自描述内容
 7E smoke / 文档
   └─ 门禁：Compose smoke 出现 meta: ok，文档闭环
 
+8A 状态契约
+  └─ 门禁：public status schema / example 冻结
+
+8B 状态聚合核心
+  └─ 门禁：daemon / app / run / workflow 汇总测试通过
+
+8C HTTP /status
+  └─ 门禁：无认证可读，聚合快照不泄露标识
+
+8D CLI status
+  └─ 门禁：status / status --json 与 /status 一致
+
+8E smoke / 文档
+  └─ 门禁：Compose smoke 出现 status: ok，文档闭环
+
 公开前最终验收
   └─ 执行本文件第 1.2 节
   └─ 通过后才考虑 public + v0.1.0
@@ -360,7 +401,7 @@ GET /meta   运行时自描述内容
 
 ---
 
-## 5. 相关文档
+## 6. 相关文档
 
 ```text
 docs/CLI_REFERENCE.md
@@ -370,4 +411,5 @@ docs/CONFIG.md
 docs/CLI_DISTRIBUTION_PLAN.md
 docs/MAP.md
 docs/SELF_DESCRIPTION_PLAN.md
+docs/STATUS_OVERVIEW_PLAN.md
 ```
