@@ -2,7 +2,7 @@
 
 # 9. 逐跳自检改造计划
 
-> 状态：计划阶段，尚未改代码。
+> 状态：第一版已实现：只读 selfcheck + `--deep` daemon protocol / App WebSocket / MCP health。
 > 本文位于 `docs/`，属于内部开发文档，不进入镜像、release、HTTP 响应或对外分发。
 > 对外暴露的自检结果格式放在 `public/service-selfcheck/v1/`。
 
@@ -104,11 +104,11 @@ temp App
 
 ```text
 --credentials  → 验证真实 App WebSocket
---run-tool     → 验证真实 local tool
---mcp          → 验证 MCP runtime
+--mcp-socket   → 验证 MCP runtime health
+--daemon-token → 验证 daemon 协议链路
 ```
 
-`--deep` 会产生数据，但不会删除已有资源。计划使用唯一名称和短生命周期 Run。
+真实 local tool 调用继续使用 `tests/app/app_check.py --run-tool`。
 
 ---
 
@@ -136,8 +136,10 @@ temp App
 | 11 | `dispatch` | 创建临时 App 和 Run，观察 TaskAssign |
 | 12 | `events` | 收到 running / completed 事件 |
 | 13 | `ws` | 真实 App WebSocket hello + ping/pong（提供凭据时） |
-| 14 | `tool` | 真实 local tool 调用（`--run-tool`） |
-| 15 | `mcp` | MCP runtime health / MCP tool（`--mcp`） |
+| 14 | `mcp` | MCP runtime health（`--mcp-socket`） |
+| 15 | `app websocket` | 真实 App hello / pong（提供凭据时） |
+
+local tool 调用继续由 `tests/app/app_check.py --run-tool` 负责，不在第一版 selfcheck 中重复实现。
 
 each hop has:
 
@@ -168,10 +170,8 @@ levier selfcheck [options]
 | `--credentials` | `LEVIER_CREDENTIALS` | App 检查 |
 | `--daemon-id` | `LEVIER_DAEMON_ID` | 预期 daemon |
 | `--daemon-token` | `LEVIER_DAEMON_TOKEN` | deep 协议检查 |
-| `--deep` | `false` | 启用主动链路检查 |
-| `--run-tool` | `false` | 验证真实 local tool |
-| `--tool-name` | 空 | local tool 名称 |
 | `--mcp-socket` | 空 | MCP runtime socket |
+| `--deep` | `false` | 启用主动链路检查 |
 | `--timeout` | `5s` | 单 hop 超时 |
 | `--json` | `false` | JSON 输出 |
 
@@ -376,8 +376,8 @@ secret 文件内容
 - 临时 App / Run
 - TaskAssign / ack / events / completed
 - App WebSocket 检查（有 credentials 时）
-- local tool（`--run-tool`）
-- MCP（`--mcp-socket`）
+- MCP health（有 `--mcp-socket` 时）
+- local tool 继续使用 `tests/app/app_check.py --run-tool`
 
 ### 9D：文档与 smoke
 
@@ -426,17 +426,17 @@ docker compose --profile smoke run --rm smoke
 ## 12. 完成标准
 
 ```text
-[ ] levier selfcheck 可运行
-[ ] 默认只读，不创建资源
-[ ] --deep 可检查 daemon / Run / App / tool / MCP
-[ ] 失败能定位到具体 hop
-[ ] 缺失可选凭据时 skip，而不是 fail
-[ ] 输出不泄露 token / DSN / API key
-[ ] --json 稳定可解析
-[ ] daemon check / app_check.py 现有行为不破坏
+[x] levier selfcheck 可运行
+[x] 默认只读，不创建资源
+[x] --deep 可检查 daemon / Run / App WebSocket / MCP health
+[x] 失败能定位到具体 hop
+[x] 缺失可选凭据时 skip，而不是 fail
+[x] 输出不泄露 token / DSN / API key
+[x] --json 稳定可解析
+[x] daemon check / app_check.py 现有行为不破坏
 [ ] smoke 覆盖 selfcheck
-[ ] go test ./... 通过
-[ ] make lint 通过
+[x] go test ./... 通过
+[x] make lint 通过
 [ ] GitHub Actions CI 绿
 ```
 

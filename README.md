@@ -283,6 +283,7 @@ levier_ws_connections{app="app_..."} 1
 ```sh
 levier status
 levier describe
+levier selfcheck
 levier doctor --credentials /path/to/app.json
 levier app show --credentials /path/to/app.json
 levier run submit --credentials /path/to/app.json --strategy echo --prompt "hello" --watch

@@ -64,6 +64,23 @@ MCP runtime socket 可连接，mcp.health = ok
 docker-smoke: PASS
 ```
 
+运行中的容器内逐跳自检：
+
+```sh
+docker compose exec levier /app/levier selfcheck \
+  --server http://127.0.0.1:8080
+```
+
+需要主动 daemon 协议检查时，显式传入 daemon token：
+
+```sh
+docker compose exec levier /app/levier selfcheck --deep \
+  --admin-token "$LEVIER_ADMIN_TOKEN" \
+  --daemon-token "$LEVIER_DAEMON_TOKEN"
+```
+
+`selfcheck` 默认只读；`--deep` 会创建临时 App / Run，不删除已有资源。
+
 ## 3. 真实模型
 
 echo smoke 不需要模型 key。要跑真实 ReAct：

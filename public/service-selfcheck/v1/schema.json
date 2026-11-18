@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://levier.dev/service-selfcheck/v1/schema.json",
+  "title": "Levier hop-by-hop self-check result v1",
+  "description": "JSON output from `levier selfcheck --json`. It contains no credentials.",
+  "type": "object",
+  "required": ["ok", "server", "deep", "started_at", "finished_at", "hops"],
+  "properties": {
+    "ok": {"type": "boolean"},
+    "server": {"type": "string"},
+    "deep": {"type": "boolean"},
+    "started_at": {"type": "string", "format": "date-time"},
+    "finished_at": {"type": "string", "format": "date-time"},
+    "hops": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/hop"}
+    }
+  },
+  "$defs": {
+    "hop": {
+      "type": "object",
+      "required": ["name", "status", "duration_ms"],
+      "properties": {
+        "name": {"type": "string"},
+        "status": {"enum": ["ok", "fail", "skip"]},
+        "message": {"type": "string"},
+        "fix": {"type": "string"},
+        "duration_ms": {"type": "integer", "minimum": 0}
+      }
+    }
+  }
+}

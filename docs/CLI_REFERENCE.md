@@ -505,6 +505,73 @@ endpoints    health, ready, metrics, runs, apps, websocket
 
 ---
 
+### 5.8 `levier selfcheck`
+
+```sh
+levier selfcheck [options]
+```
+
+逐跳检查：
+
+```text
+config
+http /healthz
+database
+migrations
+http /readyz
+service /meta
+service /status
+admin auth
+daemon registered
+app credentials
+```
+
+默认是只读检查，不创建 App 或 Run。缺少可选凭据时显示 `skip`，不是 `fail`。
+
+主动检查（会创建临时 App / Run）：
+
+```sh
+levier selfcheck --deep \
+  --admin-token "$LEVIER_ADMIN_TOKEN" \
+  --daemon-token "$LEVIER_DAEMON_TOKEN"
+```
+
+`--deep` 复用 `daemon check` 的协议链路检查，并在提供凭据时检查真实 App WebSocket、在提供
+socket 时检查 MCP runtime health；真实 local tool 可继续使用 `tests/app/app_check.py`。
+
+参数：
+
+| 参数 | 默认 | 说明 |
+|---|---|---|
+| `--config` | `LEVIER_CONFIG` 或 `levier.example.yaml` | 本地配置 |
+| `--server` | `LEVIER_SERVER` 或 `http://127.0.0.1:8080` | HTTP 地址 |
+| `--grpc` | `LEVIER_GRPC` 或 `127.0.0.1:9090` | gRPC 地址 |
+| `--admin-token` | `LEVIER_ADMIN_TOKEN` | Admin 检查 |
+| `--credentials` | `LEVIER_CREDENTIALS` | App 凭据检查 |
+| `--daemon-id` | `LEVIER_DAEMON_ID` | deep 检查 daemon id |
+| `--daemon-token` | `LEVIER_DAEMON_TOKEN` | deep 检查 token |
+| `--mcp-socket` | `LEVIER_MCP_SOCKET` | deep 检查 MCP runtime socket |
+| `--strategy` | `echo` | deep 检查策略 |
+| `--timeout` | `5s` | 单 hop 超时 |
+| `--deep` | `false` | 启用主动 daemon 协议检查 |
+| `--json` | `false` | 输出结构化 JSON |
+
+退出码：
+
+```text
+0  没有 fail hop
+1  至少一个 hop fail
+2  参数错误
+```
+
+公开输出 schema：
+
+```text
+public/service-selfcheck/v1/schema.json
+```
+
+---
+
 ## 6. App 命令
 
 ### 6.1 `levier app init`

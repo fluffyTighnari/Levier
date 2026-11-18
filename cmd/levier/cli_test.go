@@ -65,6 +65,7 @@ func TestSubcommandHelp(t *testing.T) {
 	}{
 		{name: "doctor", run: runDoctor},
 		{name: "describe", run: runDescribe},
+		{name: "selfcheck", run: runSelfcheck},
 		{name: "status", run: runStatus},
 		{name: "app init", run: runAppInit},
 		{name: "app show", run: runAppShow},

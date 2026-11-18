@@ -348,14 +348,16 @@ GET /status 动态运行状态总览
 计划文档：`docs/HOP_CHECK_PLAN.md`
 
 - [x] 计划落盘
-- [ ] `internal/selfcheck`
-- [ ] `levier selfcheck` 只读模式
-- [ ] `--deep` 主动链路检查
-- [ ] hop 依赖和 skip 规则
-- [ ] JSON / 人类可读输出
-- [ ] secret 脱敏测试
-- [ ] CLI / smoke / 文档
-- [ ] 复用 daemoncheck / app_check 能力
+- [x] `internal/selfcheck`
+- [x] `levier selfcheck` 只读模式
+- [x] `--deep` 主动链路检查
+- [x] hop 依赖和 skip 规则
+- [x] JSON / 人类可读输出
+- [x] secret 脱敏测试
+- [x] CLI / 文档
+- [x] 复用 daemoncheck / app_check 能力
+
+> `--deep` 当前覆盖 daemon 协议、App WebSocket 和 MCP health；真实 local tool 走专用 `app_check.py`。
 
 ### 5.1 自检分层
 
