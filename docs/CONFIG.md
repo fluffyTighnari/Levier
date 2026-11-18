@@ -2,7 +2,7 @@
 
 # 配置盘点与外部化契约（6A）
 
-> 状态：**盘点稿**。这是 6A 的输入，不是已经实现的最终行为。
+> 状态：6A 盘点完成；6B 控制面配置已实现；6C/6D/6E 未开始。
 > 目标：先明确“现在有哪些配置、从哪里来、哪些是秘密、哪些还缺失”，再进入 6B 改代码。
 > 相关：`TODO.md`、`CLI_REFERENCE.md`、`deploy/README.md`。
 
@@ -61,16 +61,25 @@ CLI
 文件：`levier.example.yaml`
 代码：`internal/config/config.go`
 
+### 3.0 版本与环境
+
+| YAML | 环境变量 | 类型 | 默认 | 必填 | 秘密 | 现状 |
+|---|---|---|---|---|---|---|
+| `config_version` | 无 | int | `1` | 是 | 否 | 仅文件 |
+| `environment` | `LEVIER_ENV` | enum | `development` | 是 | 否 | 支持 env |
+
 ### 3.1 HTTP
 
 | YAML | 环境变量 | 类型 | 默认 | 必填 | 秘密 | 现状 |
 |---|---|---|---|---|---|---|
 | `http.addr` | `LEVIER_HTTP_ADDR` | host:port | `:8080` | 是 | 否 | 支持 env |
-| `http.read_timeout` | 无 | duration | `15s` | 是 | 否 | 仅文件 |
-| `http.write_timeout` | 无 | duration | `30s` | 是 | 否 | 仅文件 |
+| `http.read_timeout` | `LEVIER_HTTP_READ_TIMEOUT` | duration | `15s` | 是 | 否 | 支持 env |
+| `http.write_timeout` | `LEVIER_HTTP_WRITE_TIMEOUT` | duration | `30s` | 是 | 否 | 支持 env |
 | `http.shutdown_timeout` | `LEVIER_HTTP_SHUTDOWN_TIMEOUT` | duration | `10s` | 是 | 否 | 支持 env |
 | `http.bearer_token` | `LEVIER_HTTP_BEARER_TOKEN` | string | 空 | 否 | **是** | 兼容旧 Bearer |
+| `http.bearer_token_file` | `LEVIER_HTTP_BEARER_TOKEN_FILE` | path | 空 | 否 | **是** | 文件内容秘密 |
 | `http.admin_token` | `LEVIER_HTTP_ADMIN_TOKEN` | string | 空 | 生产必填 | **是** | 支持 env |
+| `http.admin_token_file` | `LEVIER_HTTP_ADMIN_TOKEN_FILE` | path | 空 | 生产推荐 | **是** | 文件内容秘密 |
 | `http.allow_legacy_bearer` | `LEVIER_HTTP_ALLOW_LEGACY_BEARER` | bool | `false` | 否 | 否 | 兼容开关 |
 | `http.ws_token_ttl` | `LEVIER_HTTP_WS_TOKEN_TTL` | duration | `10m` | 是 | 否 | 支持 env |
 
@@ -79,20 +88,22 @@ CLI
 | YAML | 环境变量 | 类型 | 默认 | 必填 | 秘密 | 现状 |
 |---|---|---|---|---|---|---|
 | `grpc.addr` | `LEVIER_GRPC_ADDR` | host:port | `:9090` | 是 | 否 | 支持 env |
-| `grpc.max_recv_msg_bytes` | 无 | int | `16777216` | 是 | 否 | 仅文件 |
-| `grpc.max_send_msg_bytes` | 无 | int | `16777216` | 是 | 否 | 仅文件 |
+| `grpc.max_recv_msg_bytes` | `LEVIER_GRPC_MAX_RECV_MSG_BYTES` | int | `16777216` | 是 | 否 | 支持 env |
+| `grpc.max_send_msg_bytes` | `LEVIER_GRPC_MAX_SEND_MSG_BYTES` | int | `16777216` | 是 | 否 | 支持 env |
 | `grpc.shutdown_timeout` | `LEVIER_GRPC_SHUTDOWN_TIMEOUT` | duration | `10s` | 是 | 否 | 支持 env |
-| `grpc.daemon_tokens` | 无 | map | 空 | 运行必需 | **是** | 仅文件 |
+| `grpc.daemon_tokens` | 无 | map | 空 | 运行必需 | **是** | 兼容旧文件 |
+| `grpc.daemon_tokens_file` | `LEVIER_GRPC_DAEMON_TOKENS_FILE` | path | 空 | 生产推荐 | **是** | JSON secret file |
 
 ### 3.3 Database
 
 | YAML | 环境变量 | 类型 | 默认 | 必填 | 秘密 | 现状 |
 |---|---|---|---|---|---|---|
 | `database.url` | `LEVIER_DATABASE_URL` | DSN | 空 | 是 | **是** | 支持 env |
-| `database.max_conns` | 无 | int | `20` | 是 | 否 | 仅文件 |
-| `database.min_conns` | 无 | int | `2` | 是 | 否 | 仅文件 |
-| `database.connect_timeout` | 无 | duration | `5s` | 是 | 否 | 仅文件 |
-| `database.health_timeout` | 无 | duration | `2s` | 是 | 否 | 仅文件 |
+| `database.url_file` | `LEVIER_DATABASE_URL_FILE` | path | 空 | 生产推荐 | **是** | 文件内容秘密 |
+| `database.max_conns` | `LEVIER_DATABASE_MAX_CONNS` | int | `20` | 是 | 否 | 支持 env |
+| `database.min_conns` | `LEVIER_DATABASE_MIN_CONNS` | int | `2` | 是 | 否 | 支持 env |
+| `database.connect_timeout` | `LEVIER_DATABASE_CONNECT_TIMEOUT` | duration | `5s` | 是 | 否 | 支持 env |
+| `database.health_timeout` | `LEVIER_DATABASE_HEALTH_TIMEOUT` | duration | `2s` | 是 | 否 | 支持 env |
 
 ### 3.4 Workflow
 
@@ -118,13 +129,25 @@ CLI
 
 当前 `MIDDLEWARE_*` 作为旧前缀，在一个版本内作为 `LEVIER_*` 的 fallback。
 
-当前缺口：
+6B 已补齐：
 
 ```text
-http.read_timeout / write_timeout 没有 env
-grpc.max_recv_msg_bytes / max_send_msg_bytes 没有 env
-database 连接池和超时没有 env
-grpc.daemon_tokens 没有 env 或 secret 文件入口
+http.read_timeout / write_timeout env
+grpc.max_recv_msg_bytes / max_send_msg_bytes env
+database 连接池和超时 env
+grpc.daemon_tokens_file
+http.admin_token_file / bearer_token_file
+database.url_file
+config_version / environment
+config check / config print
+```
+
+仍需在 6C/6D 处理：
+
+```text
+Harness / MCP / Agent 配置命名统一
+Compose 默认 secret 清理
+外部 Secret Manager（后续）
 ```
 
 ---
@@ -304,18 +327,18 @@ LEVIER_TEST_DATABASE_URL（测试）
 
 ### P0 必须处理
 
-- [ ] 控制面 env 覆盖不完整
-- [ ] `grpc.daemon_tokens` 没有安全注入入口
-- [ ] 示例默认 token 可能被直接用于生产
-- [ ] 秘密和普通配置混在 YAML
-- [ ] 缺少统一的配置检查命令
+- [x] 控制面 env 覆盖不完整
+- [x] `grpc.daemon_tokens` 没有安全注入入口
+- [x] 示例默认 token 可能被直接用于生产
+- [x] 秘密和普通配置混在 YAML
+- [x] 缺少统一的配置检查命令
 
 ### P1 应处理
 
 - [ ] `HARNESS_*`、`MCP_RUNTIME_*`、`DEEPSEEK_*`、`COUNTER_*` 命名不统一
 - [ ] `MW_*` / `MIDDLEWARE_*` 兼容策略不一致
 - [ ] Harness / MCP / Agent 配置校验风格不一致
-- [ ] 缺少配置项总表和变更说明
+- [x] 缺少配置项总表
 
 ### P2 后续
 
@@ -326,7 +349,7 @@ LEVIER_TEST_DATABASE_URL（测试）
 
 ---
 
-## 11. 建议的契约（待 6B 确认）
+## 11. 已采用的契约（6B）
 
 ```text
 Levier 产品命名空间：LEVIER_
@@ -336,13 +359,26 @@ MCP：目标 LEVIER_MCP_*，保留 MCP_RUNTIME_* fallback
 Agent：目标 LEVIER_APP_*，保留 LEVIER_* / MW_* fallback
 ```
 
-待确认：
+6B 已采用：
 
 ```text
-是否引入 config_version: 1
-秘密引用使用环境变量、文件，还是 ${secret:name}
-是否在 config print 中输出来源（file/env/default）
-是否允许配置热更新（当前建议不做）
+config_version: 1
+environment: development | production
+秘密通过环境变量或 0600 文件
+admin_token_file
+bearer_token_file
+daemon_tokens_file
+database.url_file
+config check
+config print（脱敏）
+```
+
+仍待后续：
+
+```text
+config print 是否输出来源（file/env/default）
+配置热更新（当前建议不做）
+Harness / MCP / Agent 命名统一
 ```
 
 ---
@@ -359,4 +395,4 @@ Agent：目标 LEVIER_APP_*，保留 LEVIER_* / MW_* fallback
 - [x] 环境变量覆盖缺口
 - [x] 命名冲突与兼容问题
 - [x] `docs/CONFIG.md` 初版
-- [ ] 配置契约评审并冻结（进入 6B）
+- [x] 配置契约冻结并进入 6B

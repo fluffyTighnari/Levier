@@ -41,6 +41,8 @@ levier version
 levier serve
 levier migrate status
 levier migrate up
+levier config check
+levier config print
 levier doctor
 levier status
 levier app init
@@ -55,8 +57,6 @@ levier daemon check
 计划中，当前未实现：
 
 ```text
-levier config check
-levier config print
 levier tui
 levier completion
 levier upgrade

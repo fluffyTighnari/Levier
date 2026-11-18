@@ -42,6 +42,8 @@ func runCLI(args []string, stdout, stderr io.Writer) int {
 		return runRun(args[1:], stdout, stderr)
 	case "migrate":
 		return runMigrate(args[1:], stdout, stderr)
+	case "config":
+		return runConfig(args[1:], stdout, stderr)
 	case "daemon":
 		return runDaemon(args[1:], stdout, stderr)
 	case "serve":
@@ -114,6 +116,7 @@ func printUsage(out io.Writer) {
 	fmt.Fprintln(out, "  levier app init|show|rotate-key")
 	fmt.Fprintln(out, "  levier run submit|watch|cancel")
 	fmt.Fprintln(out, "  levier migrate status|up")
+	fmt.Fprintln(out, "  levier config check|print")
 	fmt.Fprintln(out, "  levier daemon check")
 	fmt.Fprintln(out, "  levier help")
 	fmt.Fprintln(out)

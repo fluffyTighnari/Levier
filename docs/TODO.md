@@ -196,7 +196,7 @@ config check / config print 还没有实现
 - [x] 标记是否支持环境变量
 - [ ] 定义统一命名规则（已有建议，待评审）
 - [x] 定义 duration / size / URL / token 的格式
-- [ ] 决定是否引入配置版本号，例如 `config_version: 1`
+- [x] 决定引入配置版本号 `config_version: 1`
 - [x] 输出 `docs/CONFIG.md` 初版
 - [x] 输出完整环境变量矩阵
 
@@ -210,20 +210,20 @@ docs/CONFIG.md
 
 ### 2.4 6B：控制面配置
 
-- [ ] `internal/config` 支持完整外部化
-- [ ] 补齐缺失的环境变量覆盖
-- [ ] 未知字段继续拒绝
-- [ ] 启动时输出可读的配置错误
-- [ ] 生产模式拒绝示例默认 token
-- [ ] 配置文件权限检查提示
-- [ ] 数据库 URL 脱敏
-- [ ] `daemon_tokens` 支持安全注入
-- [ ] 明确 secret 与普通配置的边界
-- [ ] 增加 `levier config check`
-- [ ] 增加 `levier config print`
-- [ ] `config print` 默认脱敏
-- [ ] `config print --json` 稳定输出
-- [ ] `config check` 退出码稳定
+- [x] `internal/config` 支持完整外部化
+- [x] 补齐缺失的环境变量覆盖
+- [x] 未知字段继续拒绝
+- [x] 启动时输出可读的配置错误
+- [x] 生产模式拒绝示例默认 token
+- [x] 配置文件权限检查提示
+- [x] 数据库 URL 脱敏
+- [x] `daemon_tokens` 支持安全注入
+- [x] 明确 secret 与普通配置的边界
+- [x] 增加 `levier config check`
+- [x] 增加 `levier config print`
+- [x] `config print` 默认脱敏
+- [x] `config print --json` 稳定输出
+- [x] `config check` 退出码稳定
 
 ### 2.5 6C：执行侧配置
 

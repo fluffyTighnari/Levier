@@ -1,12 +1,17 @@
 # Levier — example runtime configuration.
 # Copyright 2026 The Levier Authors.
 
+config_version: 1
+environment: development
+
 http:
   addr: ":8080"
   read_timeout: "15s"
   write_timeout: "30s"
   shutdown_timeout: "10s"
   admin_token: "admin-change-me"
+  # Production: prefer admin_token_file or LEVIER_HTTP_ADMIN_TOKEN.
+  # admin_token_file: "/run/secrets/levier_admin_token"
   # Compatibility switch; keep false in production.
   allow_legacy_bearer: false
 
@@ -17,9 +22,13 @@ grpc:
   shutdown_timeout: "10s"
   daemon_tokens:
     daemon-local-1: "change-me"
+  # Production: prefer daemon_tokens_file or LEVIER_GRPC_DAEMON_TOKENS_FILE.
+  # daemon_tokens_file: "/run/secrets/levier_daemon_tokens.json"
 
 database:
   url: "postgres://change-me:change-me@localhost:5432/levier?sslmode=disable"
+  # Production: prefer url_file or LEVIER_DATABASE_URL.
+  # url_file: "/run/secrets/levier_database_url"
   max_conns: 20
   min_conns: 2
   connect_timeout: "5s"

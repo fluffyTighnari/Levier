@@ -8,7 +8,7 @@
 >
 > 安装见 [`INSTALL.md`](INSTALL.md)。
 >
-> 最后更新：2026-11-17。
+> 最后更新：2026-11-18。
 
 ---
 
@@ -120,7 +120,8 @@ LEVIER_CREDENTIALS
 
 | 变量 | 使用命令 | 说明 |
 |---|---|---|
-| `LEVIER_CONFIG` | `serve`、`doctor`、`migrate` | YAML 配置路径 |
+| `LEVIER_CONFIG` | `serve`、`doctor`、`migrate`、`config` | YAML 配置路径 |
+| `LEVIER_ENV` | `serve`、`config` | `development` 或 `production` |
 | `MIDDLEWARE_CONFIG` | `serve` | 旧名兼容；`LEVIER_CONFIG` 优先 |
 | `LEVIER_SERVER` | `doctor`、`status`、`app`、`run`、`daemon check` | HTTP 地址 |
 | `LEVIER_CREDENTIALS` | `app init/show/rotate-key`、`run`、`doctor` | 凭据文件路径 |
@@ -367,6 +368,76 @@ JSON 结构：
 ```text
 0  health、ready、metrics 都是 ok
 1  任意一项不是 ok
+2  参数错误
+```
+
+### 5.5 `levier config check`
+
+```sh
+levier config check [--config path] [--production] [--json]
+```
+
+行为：
+
+```text
+读取 YAML
+应用 LEVIER_* 环境变量
+读取 admin_token_file / daemon_tokens_file / url_file
+执行结构校验
+--production 额外拒绝示例默认值和过宽 secret 文件权限
+```
+
+参数：
+
+| 参数 | 默认 | 说明 |
+|---|---|---|
+| `--config` | `LEVIER_CONFIG` 或 `levier.example.yaml` | YAML 配置 |
+| `--production` | `false` | 生产秘密检查 |
+| `--json` | `false` | JSON 输出 |
+
+JSON：
+
+```json
+{
+  "ok": true,
+  "config": "levier.example.yaml",
+  "version": 1,
+  "environment": "development",
+  "warnings": []
+}
+```
+
+失败时包含 `error`，退出 `1`。参数错误退出 `2`。
+
+### 5.6 `levier config print`
+
+```sh
+levier config print [--config path] [--json]
+```
+
+行为：
+
+```text
+输出生效后的配置
+默认 YAML
+--json 输出稳定 JSON
+秘密字段显示 ***
+数据库 URL 只保留用户名和 host，密码变为 xxxxx
+不会读取或输出 secret 文件内容
+```
+
+参数：
+
+| 参数 | 默认 | 说明 |
+|---|---|---|
+| `--config` | `LEVIER_CONFIG` 或 `levier.example.yaml` | YAML 配置 |
+| `--json` | `false` | JSON 输出 |
+
+退出码：
+
+```text
+0  成功
+1  配置无法加载或校验
 2  参数错误
 ```
 
@@ -873,8 +944,6 @@ cmd/migrate                  旧迁移入口，保留兼容；新路径用 levie
 以下出现在路线图中，但当前版本**没有**实现：
 
 ```text
-levier config check
-levier config print
 --quiet（全局输出选项）
 levier completion
 levier tui
