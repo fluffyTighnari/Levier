@@ -29,7 +29,7 @@ MAP.md          仓库地图
 | `AGENT_CORE_CONTRACT.md` | Agent Core v1 契约 |
 | `MCP.md` | MCP 接入与运行 |
 | `CLI_REFERENCE.md` | 当前 CLI 命令、参数、环境变量、JSON、退出码 |
-| `INSTALL.md` | CLI 安装、checksum、镜像/离线安装 |
+| `INSTALL.md` | CLI 安装、升级、卸载、checksum、镜像/离线 |
 | `MVP.md` | 单机 MVP 启动、验收、限制 |
 | `MIGRATION-1D.md` | Compose / 数据库 / 指标改名迁移 |
 

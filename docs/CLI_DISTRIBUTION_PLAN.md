@@ -7,7 +7,7 @@
 
 | 项目 | 内容 |
 |---|---|
-| 状态 | 5A-1/5A-2/5A-3a/5A-3b/5A-3c/5A-3d/5A-4 已完成；5B-1/5B-2/5B-3/5B-4 已完成；5B-5 未开始 |
+| 状态 | 5A-1/5A-2/5A-3a/5A-3b/5A-3c/5A-3d/5A-4 已完成；5B-1/5B-2/5B-3/5B-4/5B-5 已完成 |
 | 目标 | 一个 `levier` 二进制既能服务，也能管理；用户不需要 git clone |
 | 范围 | 5A CLI 操作面；5B 分发与安装面 |
 | 不包含 | TUI、GUI、自动更新、brew/scoop/apt（后续） |
@@ -421,6 +421,37 @@ docs/INSTALL.md    5B-2 初版；5B-5 补支持矩阵、升级、卸载、离线
 checksum 校验
 ```
 
+#### 5B-5 实施范围
+
+把 `docs/INSTALL.md` 收敛为完整用户安装手册：
+
+```text
+发布状态与前提
+安装方式选择
+Linux / macOS 安装
+Windows 安装
+go install
+容器镜像
+手动下载
+版本与 latest 语义
+checksum 校验
+升级
+卸载
+离线 / 镜像
+故障排查
+退出码
+```
+
+验收：
+
+```text
+文档中的命令与脚本参数一致
+文档中的平台与 release workflow 一致
+不包含真实密钥
+公开仓库前的认证限制写清楚
+README / docs 索引链接有效
+```
+
 ```text
 发布 sha256 checksums
 生产环境不要无校验 curl | sh
@@ -459,6 +490,7 @@ checksum 校验
 [x] install.sh / install.ps1 本地安装与 checksum 校验
 [x] GHCR image workflow + 本地四镜像构建
 [x] go install @v0.1.0-rc.5（私有认证）
+[x] INSTALL.md 完整安装手册
 [ ] git tag v0.1.0 触发 release
 [ ] Release 有 5 个平台产物 + checksums
 [ ] install.sh 在干净机器安装成功
@@ -938,4 +970,44 @@ commit / built 在 go install 模式下仍可能为 unknown
 ```text
 tag 构建时 CI 需要本地 main 分支供 buf breaking 使用
 main 构建时不能强制更新已检出的 main 分支
+```
+
+### 2026-11-18：5B-5 完成（INSTALL 文档完善）
+
+变更：
+
+```text
+docs/INSTALL.md 重写为完整用户安装手册
+```
+
+覆盖：
+
+```text
+发布状态与前提
+安装方式选择
+支持矩阵
+版本与 latest 语义
+Linux / macOS install.sh
+Windows install.ps1
+go install
+手动下载
+GHCR 容器镜像
+checksum 校验
+升级
+卸载
+离线 / 镜像
+安装后验证
+退出码
+故障排查
+安全约定
+```
+
+验收：
+
+```text
+文档参数与 install.sh / install.ps1 一致
+平台矩阵与 release workflow 一致
+latest / prerelease 语义明确
+私有仓库认证限制写清楚
+README / docs 索引链接有效
 ```

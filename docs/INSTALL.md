@@ -2,11 +2,34 @@
 
 # 安装 Levier CLI
 
-> 适用：5B 初版安装器。容器安装见后续 5B-3，`go install` 见 5B-4。
+> 适用：5B 分发链路的用户安装手册。
+> 相关文档：[CLI 参考](CLI_REFERENCE.md)、[发布流程](RELEASE.md)、[文档索引](README.md)。
+
+> **当前项目仍处于私有内测阶段。**
+> 仓库公开前，默认的 GitHub Release、`raw.githubusercontent.com`、GHCR 和公开
+> `go install` 都需要认证；下面的匿名安装命令要等仓库公开后才真正可用。
 
 ---
 
-## 1. 支持矩阵
+## 1. 先选择安装方式
+
+| 方式 | 适合谁 | 命令 |
+|---|---|---|
+| `install.sh` | Linux / macOS 用户 | `sh install.sh` |
+| `install.ps1` | Windows 用户 | `powershell -File install.ps1` |
+| `go install` | 已安装 Go 的开发者 | `go install ...@version` |
+| 手动下载 | 需要审计、离线、特殊目录 | 下载 Release 压缩包 |
+| 容器镜像 | 运行整套服务 | `docker pull ghcr.io/...` |
+
+普通 CLI 用户优先使用安装器。
+Go 开发者可以使用 `go install`。
+需要运行 Levier + Harness + MCP Runtime 时使用容器。
+
+---
+
+## 2. 支持矩阵
+
+CLI 二进制：
 
 | OS | Arch | 格式 |
 |---|---|---|
@@ -23,11 +46,87 @@ Windows arm64
 32 位平台
 ```
 
+容器镜像：
+
+```text
+linux/amd64
+```
+
 ---
 
-## 2. Linux / macOS
+## 3. 安装前提
 
-### 2.1 下载安装脚本
+### Linux / macOS
+
+需要：
+
+```text
+curl 或 wget
+tar
+sha256sum 或 shasum
+```
+
+### Windows
+
+需要：
+
+```text
+Windows PowerShell 5.1+
+Expand-Archive
+Get-FileHash
+```
+
+### go install
+
+需要：
+
+```text
+Go 1.26+
+```
+
+### 容器
+
+需要：
+
+```text
+Docker
+可选：Docker Compose
+```
+
+---
+
+## 4. 版本与 latest
+
+Release 有两种类型：
+
+```text
+稳定版：v0.1.0
+预发布版：v0.1.0-rc.1
+```
+
+安装器默认使用 **latest stable**：
+
+```text
+最新稳定版
+不包括 prerelease
+```
+
+如果要安装预发布或固定版本，必须显式指定：
+
+```sh
+sh install.sh --version v0.1.0-rc.1
+```
+
+如果目前只有 prerelease、没有稳定版，默认 latest 查询会失败。
+这属于正常现象，请使用 `--version`。
+
+生产环境建议固定版本，不要长期依赖 `latest`。
+
+---
+
+## 5. Linux / macOS：install.sh
+
+### 5.1 下载脚本
 
 ```sh
 curl -fsSL \
@@ -35,22 +134,27 @@ curl -fsSL \
   -o /tmp/levier-install.sh
 ```
 
-建议先查看脚本再执行：
+建议先检查脚本：
 
 ```sh
 less /tmp/levier-install.sh
+```
+
+再执行：
+
+```sh
 sh /tmp/levier-install.sh
 ```
 
-不要使用未校验的 `curl | sh` 作为生产安装方式。
+不要使用未检查的 `curl | sh` 作为生产安装方式。
 
-### 2.2 固定版本
+### 5.2 固定版本
 
 ```sh
 sh /tmp/levier-install.sh --version v0.1.0
 ```
 
-### 2.3 指定目录
+### 5.3 自定义目录
 
 ```sh
 sh /tmp/levier-install.sh \
@@ -65,7 +169,7 @@ root 或 /usr/local/bin 可写 -> /usr/local/bin
 否则                         -> ~/.local/bin
 ```
 
-### 2.4 预览
+### 5.4 预览
 
 ```sh
 sh /tmp/levier-install.sh \
@@ -76,15 +180,15 @@ sh /tmp/levier-install.sh \
 
 `--dry-run` 只打印版本、平台、URL 和目标目录，不下载、不写入。
 
-### 2.5 PATH
+### 5.5 PATH
 
-安装器不会自动修改 shell 配置。如果目标目录不在 `PATH` 中，它会打印：
+安装器不会自动修改 shell 配置。如果目录不在 `PATH`，会打印：
 
 ```sh
 export PATH="$HOME/.local/bin:$PATH"
 ```
 
-需要持久化时写入：
+需要持久化时：
 
 ```sh
 # bash
@@ -96,15 +200,19 @@ echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.zshrc
 
 ---
 
-## 3. Windows
+## 6. Windows：install.ps1
 
-在 PowerShell 中：
+### 6.1 下载脚本
 
 ```powershell
 Invoke-WebRequest `
   -Uri https://raw.githubusercontent.com/fluffyTighnari/levier/main/scripts/install.ps1 `
   -OutFile "$env:TEMP\levier-install.ps1"
+```
 
+### 6.2 安装
+
+```powershell
 powershell -NoProfile -ExecutionPolicy Bypass `
   -File "$env:TEMP\levier-install.ps1"
 ```
@@ -132,7 +240,7 @@ powershell -NoProfile -ExecutionPolicy Bypass `
 %USERPROFILE%\.local\bin
 ```
 
-`-DryRun` 预览：
+预览：
 
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass `
@@ -145,7 +253,156 @@ powershell -NoProfile -ExecutionPolicy Bypass `
 
 ---
 
-## 4. 校验
+## 7. go install
+
+前提：
+
+```text
+仓库公开
+Go 1.26+
+存在 SemVer tag
+```
+
+安装：
+
+```sh
+go install github.com/fluffyTighnari/levier/cmd/levier@v0.1.0
+```
+
+安装位置：
+
+```text
+$GOBIN
+或 $(go env GOPATH)/bin
+```
+
+确认：
+
+```sh
+"$(go env GOPATH)/bin/levier" version
+```
+
+如果设置了 `GOBIN`：
+
+```sh
+"$GOBIN/levier" version
+```
+
+说明：
+
+```text
+go install 不经过 release 压缩包
+不需要 curl
+不会执行 install.sh
+GOBIN 目录需要自己加入 PATH
+```
+
+版本元数据：
+
+```text
+version 来自模块 tag
+commit / built 可能显示 unknown
+```
+
+因为 `go install` 不会传入本项目的 Makefile ldflags。
+
+私有仓库：
+
+```text
+使用 GOPRIVATE + 内部 Go proxy
+或改走 release 二进制
+```
+
+---
+
+## 8. 手动下载安装
+
+Release 资产：
+
+```text
+levier_v0.1.0_linux_amd64.tar.gz
+levier_v0.1.0_linux_arm64.tar.gz
+levier_v0.1.0_darwin_amd64.tar.gz
+levier_v0.1.0_darwin_arm64.tar.gz
+levier_v0.1.0_windows_amd64.zip
+checksums.txt
+```
+
+Linux / macOS：
+
+```sh
+tar -xzf levier_v0.1.0_linux_amd64.tar.gz
+mkdir -p "$HOME/.local/bin"
+install -m 0755 levier "$HOME/.local/bin/levier"
+```
+
+Windows：
+
+```powershell
+Expand-Archive .\levier_v0.1.0_windows_amd64.zip -DestinationPath .
+.\levier.exe version
+```
+
+手动安装也必须先校验 checksum。
+
+---
+
+## 9. 容器镜像
+
+发布镜像：
+
+```text
+ghcr.io/<owner>/levier:v0.1.0
+ghcr.io/<owner>/levier-harness:v0.1.0
+ghcr.io/<owner>/levier-mcp-runtime:v0.1.0
+ghcr.io/<owner>/levier-agent:v0.1.0
+```
+
+稳定版还会更新：
+
+```text
+ghcr.io/<owner>/levier:latest
+ghcr.io/<owner>/levier-harness:latest
+ghcr.io/<owner>/levier-mcp-runtime:latest
+ghcr.io/<owner>/levier-agent:latest
+```
+
+当前平台：
+
+```text
+linux/amd64
+```
+
+查看 CLI 版本：
+
+```sh
+docker run --rm \
+  --entrypoint /app/levier \
+  ghcr.io/<owner>/levier:v0.1.0 version
+```
+
+Compose 中使用镜像时，把对应服务的 `build:` 替换为 `image:`，并保留原有
+`environment`、`ports`、`depends_on` 和 volume 配置。
+
+服务端镜像启动顺序：
+
+```text
+migrate up -> serve
+```
+
+数据库和 Admin token 通过环境变量注入。
+
+私有 GHCR 需要登录：
+
+```sh
+docker login ghcr.io
+```
+
+仓库和 package 公开后可以匿名拉取。
+
+---
+
+## 10. 校验
 
 安装器始终：
 
@@ -158,23 +415,106 @@ powershell -NoProfile -ExecutionPolicy Bypass `
 
 没有跳过校验的开关。
 
-手动验证 release 归档：
+如果只下载了单个归档，手动校验：
+
+Linux：
 
 ```sh
-cd dist
-sha256sum -c checksums.txt
+grep 'levier_v0.1.0_linux_amd64.tar.gz' checksums.txt | sha256sum -c -
 ```
 
 macOS：
 
 ```sh
-cd dist
-shasum -a 256 -c checksums.txt
+grep 'levier_v0.1.0_linux_amd64.tar.gz' checksums.txt | shasum -a 256 -c -
+```
+
+注意：
+
+```text
+checksum 用于发现损坏或误替换
+它不是发布者签名
+后续可增加 cosign / sigstore
 ```
 
 ---
 
-## 5. 镜像 / 离线安装
+## 11. 升级
+
+### install.sh
+
+重新执行安装器并指定新版本：
+
+```sh
+sh install.sh --version v0.2.0 --prefix "$HOME/.local/bin"
+```
+
+安装器会原子替换目标二进制。
+
+### install.ps1
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass `
+  -File .\install.ps1 -Version v0.2.0
+```
+
+### go install
+
+```sh
+go install github.com/fluffyTighnari/levier/cmd/levier@v0.2.0
+```
+
+### 容器
+
+```sh
+docker pull ghcr.io/<owner>/levier:v0.2.0
+```
+
+生产环境使用不可变版本 tag，不建议长期使用 `latest`。
+
+升级后验证：
+
+```sh
+levier version
+```
+
+---
+
+## 12. 卸载
+
+### Linux / macOS
+
+```sh
+rm -f "$HOME/.local/bin/levier"
+```
+
+如果安装在 `/usr/local/bin`：
+
+```sh
+sudo rm -f /usr/local/bin/levier
+```
+
+### Windows
+
+```powershell
+Remove-Item "$env:USERPROFILE\.local\bin\levier.exe"
+```
+
+### go install
+
+```sh
+bin="$(go env GOBIN)"; [ -n "$bin" ] || bin="$(go env GOPATH)/bin"
+rm -f "$bin/levier"
+```
+
+### PATH
+
+安装器不会删除 PATH。
+如果手动添加过，需要自行编辑 shell / 用户环境变量。
+
+---
+
+## 13. 离线 / 镜像安装
 
 安装器支持从镜像目录读取 release 文件：
 
@@ -185,7 +525,7 @@ sh install.sh \
   --prefix "$HOME/.local/bin"
 ```
 
-目录布局必须与 GitHub Release 相同：
+镜像目录必须与 GitHub Release 布局相同：
 
 ```text
 levier_v0.1.0_linux_amd64.tar.gz
@@ -207,7 +547,7 @@ powershell -NoProfile -ExecutionPolicy Bypass `
   -BaseUrl https://mirror.example.com/levier/v0.1.0
 ```
 
-默认仓库是 `fluffyTighnari/levier`。Fork 或内部镜像可覆盖：
+Fork 或内部镜像可覆盖默认仓库：
 
 ```sh
 sh install.sh --repo <owner>/<repo>
@@ -221,7 +561,35 @@ sh install.sh --repo <owner>/<repo>
 
 ---
 
-## 6. 退出码
+## 14. 安装后验证
+
+```sh
+levier version
+levier help
+levier doctor
+```
+
+如果服务已经启动：
+
+```sh
+levier status
+```
+
+`doctor` 检查：
+
+```text
+配置
+数据库
+migration
+healthz
+readyz
+Admin token
+可选 App 凭据
+```
+
+---
+
+## 15. 退出码
 
 ```text
 0  安装成功或 dry-run 成功
@@ -231,44 +599,22 @@ sh install.sh --repo <owner>/<repo>
 
 ---
 
-## 7. 卸载
+## 16. 常见错误
 
-Linux / macOS：
-
-```sh
-rm -f "$HOME/.local/bin/levier"
-```
-
-Windows：
-
-```powershell
-Remove-Item "$env:USERPROFILE\.local\bin\levier.exe"
-```
-
-如果手动把目录加入了 PATH，需要自行移除对应 PATH 配置。
-
----
-
-## 8. 常见错误
-
-### `unsupported OS`
+### GitHub 返回 404 或 401
 
 ```text
-Linux / macOS 使用 install.sh
-Windows 使用 install.ps1
-Git Bash / MSYS 不是受支持的安装环境
+仓库仍是私有
+或该版本 / Release 不存在
 ```
 
-### `unsupported architecture`
+公开仓库后可以匿名下载；私有仓库需要认证或内部镜像。
 
-当前只发布：
+### `could not resolve latest release`
 
 ```text
-linux/amd64
-linux/arm64
-darwin/amd64
-darwin/arm64
-windows/amd64
+目前只有 prerelease，没有 stable release
+使用 --version / -Version 指定版本
 ```
 
 ### `checksum mismatch`
@@ -278,107 +624,52 @@ windows/amd64
 删除临时文件后重试；不要跳过校验
 ```
 
-### 安装成功但 `levier` 找不到
+### GHCR 返回 403
+
+```text
+package 仍是私有
+先 docker login ghcr.io
+或把 package 可见性改为 public
+```
+
+### `unsupported OS` / `unsupported architecture`
+
+```text
+Linux / macOS 使用 install.sh
+Windows 使用 install.ps1
+当前仅支持支持矩阵中的平台
+```
+
+### 安装成功但找不到 `levier`
 
 ```text
 目标目录不在 PATH
 按安装器输出的 PATH hint 操作
 ```
 
----
-
-## 9. 容器镜像
-
-5B-3 起，release tag 会发布 GHCR 镜像：
+### `go install` 无权限
 
 ```text
-ghcr.io/<owner>/levier:v0.1.0
-ghcr.io/<owner>/levier-harness:v0.1.0
-ghcr.io/<owner>/levier-mcp-runtime:v0.1.0
-ghcr.io/<owner>/levier-agent:v0.1.0
+私有仓库需要 GOPRIVATE / 内部 proxy
+公开仓库确认 tag 存在
 ```
-
-稳定版本同时更新：
-
-```text
-ghcr.io/<owner>/levier:latest
-ghcr.io/<owner>/levier-harness:latest
-ghcr.io/<owner>/levier-mcp-runtime:latest
-ghcr.io/<owner>/levier-agent:latest
-```
-
-当前发布平台：
-
-```text
-linux/amd64
-```
-
-镜像也可以在 Compose 中通过 `image:` 引用，替代本地 `build:`。
-
-查看 CLI 版本（覆盖 entrypoint）：
-
-```sh
-docker run --rm \
-  --entrypoint /app/levier \
-  ghcr.io/<owner>/levier:v0.1.0 version
-```
-
-服务端镜像仍然按：
-
-```text
-migrate up -> serve
-```
-
-启动，数据库和 Admin token 通过环境变量注入。
 
 ---
 
-## 10. go install
-
-前提：
+## 17. 安全约定
 
 ```text
-仓库公开
-module path = github.com/fluffyTighnari/levier
-存在 SemVer tag，例如 v0.1.0
+不跳过 checksum
+不把 token 写进下载 URL
+不在未检查脚本时直接 curl | sh
+生产使用不可变版本 tag
+私有镜像先 docker login
 ```
 
-安装：
-
-```sh
-go install github.com/fluffyTighnari/levier/cmd/levier@v0.1.0
-```
-
-安装位置：
+后续增强：
 
 ```text
-$GOBIN
-或 $(go env GOPATH)/bin
+checksums 签名
+cosign / sigstore
+SBOM
 ```
-
-确认：
-
-```sh
-$(go env GOPATH)/bin/levier version
-```
-
-说明：
-
-```text
-go install 不经过 release 压缩包，也不需要 curl
-不会执行 install.sh
-GOBIN 目录需要自己加入 PATH
-```
-
-私有仓库需要：
-
-```text
-GOPRIVATE=github.com/fluffyTighnari/*
-内部 Go proxy
-或直接使用 release 二进制
-```
-
-`go install` 的版本号来自模块 tag；`commit` / `built` 可能显示
-`unknown`，因为 `go install` 不会自动传入本项目的 ldflags。
-
-

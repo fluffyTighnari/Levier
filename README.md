@@ -1186,7 +1186,7 @@ deploy/           容器镜像与 Compose
 | `docs/DESIGN.md` | 核心设计（当前实现） |
 | `docs/MVP.md` | 单机 MVP 的边界、启动、验收与限制 |
 | `docs/CLI_REFERENCE.md` | CLI 命令、参数、环境变量、JSON、退出码 |
-| `docs/INSTALL.md` | CLI 安装、checksum、镜像/离线安装 |
+| `docs/INSTALL.md` | CLI 安装、升级、卸载、checksum、镜像/离线 |
 | `docs/RELEASE.md` | release 构建、checksums 与发布流程 |
 | `docs/ARCHITECTURE.md` | 一页架构与依赖方向 |
 | `docs/DAEMON_CONTRACT.md` | Daemon / Harness 协议 |
