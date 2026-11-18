@@ -462,7 +462,7 @@ public/service-status/v1/example.json
 [x] smoke 显示 status: ok
 [x] go test ./... 通过
 [x] make lint 通过
-[ ] GitHub Actions CI 绿
+[x] GitHub Actions CI 绿
 ```
 
 ---
