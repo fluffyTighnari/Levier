@@ -558,7 +558,7 @@ meta_version = 1
 [x] Compose smoke 增加 meta: ok
 [x] go test ./... 通过
 [x] make lint 通过
-[ ] GitHub Actions CI 绿
+[x] GitHub Actions CI 绿
 [x] docs/ 未进入镜像、release 或 HTTP 暴露面
 ```
 
