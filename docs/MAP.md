@@ -62,6 +62,7 @@
 | CLI 使用 / 参数 / 退出码 | `docs/CLI_REFERENCE.md` |
 | Release 构建 / checksums | `scripts/build-release.sh` + `docs/RELEASE.md` |
 | CLI 安装 / 校验 / 镜像 | `scripts/install.sh`、`scripts/install.ps1` + `docs/INSTALL.md` |
+| 公开前检查 / 下一阶段 | `docs/TODO.md` |
 | Harness / Agent 循环 | `execution/harness/` |
 | Agent Core 契约 | `execution/agent_core/` + `docs/AGENT_CORE_CONTRACT.md` |
 | MCP 连接 / 会话 | `execution/mcp_runtime/` + `docs/MCP.md` |

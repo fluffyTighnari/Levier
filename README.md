@@ -1188,6 +1188,7 @@ deploy/           容器镜像与 Compose
 | `docs/CLI_REFERENCE.md` | CLI 命令、参数、环境变量、JSON、退出码 |
 | `docs/INSTALL.md` | CLI 安装、升级、卸载、checksum、镜像/离线 |
 | `docs/RELEASE.md` | release 构建、checksums 与发布流程 |
+| `docs/TODO.md` | 公开前检查清单与 6 配置外部化计划 |
 | `docs/ARCHITECTURE.md` | 一页架构与依赖方向 |
 | `docs/DAEMON_CONTRACT.md` | Daemon / Harness 协议 |
 | `docs/MCP.md` | MCP 接入与运行 |

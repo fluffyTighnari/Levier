@@ -41,6 +41,7 @@ MAP.md          仓库地图
 | `CLI_DISTRIBUTION_PLAN.md` | CLI 操作面与分发安装计划 |
 | `CLI_ACTIONS.md` | 动作型 CLI：app / run / migrate / daemon 设计 |
 | `RELEASE.md` | release 构建、checksums、tag 与发布流程 |
+| `TODO.md` | 公开前最终检查清单 + 6 配置外部化计划 |
 | `adr/` | 历史架构决策记录 |
 | `api/openapi.yaml` | HTTP API 契约 |
 
@@ -52,6 +53,7 @@ SCOPE → MAP → 你的任务对应文档
 用 CLI        → CLI_REFERENCE.md
 安装 CLI      → INSTALL.md
 发布          → RELEASE.md
+待办 / 配置   → TODO.md
 改控制面      → DESIGN.md + ARCHITECTURE.md
 改 Harness    → AGENT_CORE_CONTRACT.md + execution/harness/README.md
 改 MCP        → MCP.md
