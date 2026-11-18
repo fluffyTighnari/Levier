@@ -402,8 +402,7 @@ JSON：
   "ok": true,
   "config": "levier.example.yaml",
   "version": 1,
-  "environment": "development",
-  "warnings": []
+  "environment": "development"
 }
 ```
 
@@ -423,7 +422,7 @@ levier config print [--config path] [--json]
 --json 输出稳定 JSON
 秘密字段显示 ***
 数据库 URL 只保留用户名和 host，密码变为 xxxxx
-不会读取或输出 secret 文件内容
+不会输出 secret 文件内容
 ```
 
 参数：

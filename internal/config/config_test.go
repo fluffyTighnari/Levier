@@ -74,6 +74,18 @@ func TestParseRejectsUnknownField(t *testing.T) {
 	}
 }
 
+func TestParseRejectsInvalidType(t *testing.T) {
+	_, err := Parse([]byte(`
+http:
+  addr: 123
+database:
+  url: "postgres://example-user:example-pass@localhost:5432/levier"
+`))
+	if err == nil {
+		t.Fatal("Parse() error = nil, want type error")
+	}
+}
+
 func TestApplyEnv(t *testing.T) {
 	cfg := Default()
 	cfg.Database.URL = "postgres://localhost/middleware"

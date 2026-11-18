@@ -3,7 +3,7 @@
 # 安装 Levier CLI
 
 > 适用：5B 分发链路的用户安装手册。
-> 相关文档：[CLI 参考](CLI_REFERENCE.md)、[发布流程](RELEASE.md)、[文档索引](README.md)。
+> 相关文档：[CLI 参考](CLI_REFERENCE.md)、[配置契约](CONFIG.md)、[发布流程](RELEASE.md)、[文档索引](README.md)。
 
 > **当前项目仍处于私有内测阶段。**
 > 仓库公开前，默认的 GitHub Release、`raw.githubusercontent.com`、GHCR 和公开
@@ -589,7 +589,38 @@ Admin token
 
 ---
 
-## 15. 退出码
+## 15. 配置入口
+
+安装后、启动服务前先检查配置：
+
+```sh
+levier config check
+levier config print
+```
+
+说明：
+
+```text
+config check  校验 YAML、环境变量和必填项
+config print  输出脱敏后的有效配置，不打印 secret
+```
+
+默认读取 `levier.example.yaml`；生产式部署使用
+`deploy/config/levier.prod.yaml` 和 `deploy/secrets/`。生产前可运行：
+
+```sh
+levier config check --config deploy/config/levier.prod.yaml --production
+```
+
+`--production` 会拒绝示例占位值，并检查 secret 文件权限。
+如果 secret 只在容器内的 `/run/secrets` 可见，请在容器或生产执行环境中运行
+`config check`；在宿主机预检时，可用 `LEVIER_*_FILE` 环境变量指向本地副本。
+完整配置项见 [配置契约](CONFIG.md)，容器部署见
+[容器部署说明](../deploy/README.md)。
+
+---
+
+## 16. 退出码
 
 ```text
 0  安装成功或 dry-run 成功
@@ -599,7 +630,7 @@ Admin token
 
 ---
 
-## 16. 常见错误
+## 17. 常见错误
 
 ### GitHub 返回 404 或 401
 
@@ -656,7 +687,7 @@ Windows 使用 install.ps1
 
 ---
 
-## 17. 安全约定
+## 18. 安全约定
 
 ```text
 不跳过 checksum

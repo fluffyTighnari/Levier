@@ -252,18 +252,20 @@ docs/CONFIG.md
 
 ### 2.7 6E：测试与文档
 
-- [ ] 配置解析单元测试
-- [ ] 环境变量优先级测试
-- [ ] 未知字段测试
-- [ ] 非法类型测试
-- [ ] secret 脱敏测试
-- [ ] `config check` 测试
-- [ ] `config print` JSON 测试
+- [x] 配置解析单元测试
+- [x] 环境变量优先级测试
+- [x] 未知字段测试
+- [x] 非法类型测试
+- [x] secret 脱敏测试
+- [x] `config check` 测试
+- [x] `config print` JSON 测试
 - [ ] Compose 启动 smoke
-- [ ] `docs/CONFIG.md`
-- [ ] `docs/CLI_REFERENCE.md` 增加 config 命令
-- [ ] `docs/INSTALL.md` 增加配置说明入口
-- [ ] 配置迁移说明
+- [x] `docs/CONFIG.md`
+- [x] `docs/CLI_REFERENCE.md` 增加 config 命令
+- [x] `docs/INSTALL.md` 增加配置说明入口
+- [x] 配置迁移说明
+
+> Compose 启动 smoke 仍受 Docker Desktop 未启动阻塞；其余 6E 项已完成。
 
 ### 2.8 6 阶段验收
 

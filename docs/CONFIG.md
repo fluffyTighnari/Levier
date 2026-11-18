@@ -2,7 +2,7 @@
 
 # 配置盘点与外部化契约（6A）
 
-> 状态：6A 盘点完成；6B 控制面配置已实现；6C 执行侧配置已实现；6D 部署配置已实现；6E 测试与文档待收尾。
+> 状态：6A 盘点完成；6B 控制面配置已实现；6C 执行侧配置已实现；6D 部署配置已实现；6E 测试与文档已完成，Compose smoke 待 Docker 恢复。
 > 目标：先明确“现在有哪些配置、从哪里来、哪些是秘密、哪些还缺失”，再进入 6B 改代码。
 > 相关：`TODO.md`、`CLI_REFERENCE.md`、`deploy/README.md`。
 
@@ -419,6 +419,41 @@ deploy/config/levier.prod.yaml 只含非秘密配置
 deploy/secrets/* 宿主机 0600 secret 文件
 admin token 由控制面与 Agent 共用同一文件
 数据库 DSN / daemon tokens / MCP secrets 均通过 *_file 注入
+```
+
+6E 已采用：
+
+```text
+internal/config：解析、未知字段、非法类型、环境变量优先级、secret 文件测试
+cmd/levier：config check、config check --json、config print --json、脱敏测试
+docs：CONFIG / CLI_REFERENCE / INSTALL / 迁移说明
+Compose 启动 smoke 待 Docker Desktop 恢复
+```
+
+### 11.1 从旧配置迁移
+
+```text
+1. 在 YAML 顶层加入 config_version: 1 和 environment
+2. 控制面环境变量改用 LEVIER_*；旧 MIDDLEWARE_* 仍兼容一个版本
+3. Harness / MCP / Agent 改用 LEVIER_HARNESS_* / LEVIER_MCP_* / LEVIER_APP_*
+4. 生产环境把 token / DSN 移到 0600 secret 文件，YAML 只保留 *_file 路径
+5. 启动前运行 config check；生产再加 --production
+```
+
+旧配置仍可直接用于本地开发；生产配置不要继续使用 `change-me` 或
+`admin-change-me`，否则 `config check --production` 会拒绝。
+
+最小生产配置结构：
+
+```yaml
+config_version: 1
+environment: production
+http:
+  admin_token_file: /run/secrets/levier_admin_token
+grpc:
+  daemon_tokens_file: /run/secrets/levier_daemon_tokens.json
+database:
+  url_file: /run/secrets/levier_database_url
 ```
 
 仍待后续：
