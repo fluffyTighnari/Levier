@@ -331,3 +331,54 @@ migrate up -> serve
 
 启动，数据库和 Admin token 通过环境变量注入。
 
+---
+
+## 10. go install
+
+前提：
+
+```text
+仓库公开
+module path = github.com/fluffyTighnari/levier
+存在 SemVer tag，例如 v0.1.0
+```
+
+安装：
+
+```sh
+go install github.com/fluffyTighnari/levier/cmd/levier@v0.1.0
+```
+
+安装位置：
+
+```text
+$GOBIN
+或 $(go env GOPATH)/bin
+```
+
+确认：
+
+```sh
+$(go env GOPATH)/bin/levier version
+```
+
+说明：
+
+```text
+go install 不经过 release 压缩包，也不需要 curl
+不会执行 install.sh
+GOBIN 目录需要自己加入 PATH
+```
+
+私有仓库需要：
+
+```text
+GOPRIVATE=github.com/fluffyTighnari/*
+内部 Go proxy
+或直接使用 release 二进制
+```
+
+`go install` 的版本号来自模块 tag；`commit` / `built` 可能显示
+`unknown`，因为 `go install` 不会自动传入本项目的 ldflags。
+
+

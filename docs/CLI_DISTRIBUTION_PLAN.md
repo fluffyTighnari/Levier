@@ -375,6 +375,42 @@ module path = github.com/<org>/levier
 
 私有仓库需要内部 Go proxy 或只走 release 二进制。
 
+#### 5B-4 实施范围
+
+不发布正式 `v0.1.0`，使用现有 prerelease tag 做验证。
+
+验证命令：
+
+```sh
+GOPRIVATE=github.com/fluffyTighnari/*
+GONOSUMDB=github.com/fluffyTighnari/*
+go install github.com/fluffyTighnari/levier/cmd/levier@<tag>
+```
+
+验收：
+
+```text
+干净 GOBIN / GOMODCACHE
+安装后的 levier version 正常
+输出版本与 tag 一致
+平台为当前机器
+```
+
+限制：
+
+```text
+仓库私有，公开匿名 go install 暂时无法验证
+需要临时 Git/Go 认证或内部 proxy
+仓库公开后再补一次无认证验证
+```
+
+文档：
+
+```text
+docs/INSTALL.md 增加 go install 章节
+docs/RELEASE.md 记录验证结果
+```
+
 ### 2.8 文档与安全
 
 ```text
