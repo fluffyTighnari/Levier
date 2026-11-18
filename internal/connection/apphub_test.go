@@ -359,3 +359,19 @@ func TestBroadcastRespectsClosedConnection(t *testing.T) {
 		t.Fatalf("closed sink received %d payloads", sink.count())
 	}
 }
+
+func TestAppHubStats(t *testing.T) {
+	hub := NewAppHub()
+	first := hub.Register("app-1", &recordingSink{})
+	second := hub.Register("app-1", &recordingSink{})
+	hub.Register("app-2", &recordingSink{})
+	stats := hub.Stats()
+	if stats.Apps != 2 || stats.Connections != 3 {
+		t.Fatalf("Stats() = %+v", stats)
+	}
+	hub.CloseConn(first)
+	hub.CloseConn(second)
+	if stats := hub.Stats(); stats.Apps != 1 || stats.Connections != 1 {
+		t.Fatalf("Stats() after close = %+v", stats)
+	}
+}

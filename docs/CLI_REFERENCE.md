@@ -321,7 +321,7 @@ JSON 结构：
 ### 5.4 `levier status`
 
 ```sh
-levier status [--server url] [--json]
+levier status [--server url] [--json] [--timeout 5s]
 ```
 
 参数：
@@ -330,9 +330,40 @@ levier status [--server url] [--json]
 |---|---|---|
 | `--server` | `LEVIER_SERVER` 或 `http://127.0.0.1:8080` | HTTP 地址 |
 | `--timeout` | `5s` | 单次请求超时 |
-| `--json` | `false` | JSON 输出 |
+| `--json` | `false` | 输出 `/status` 快照 |
 
-检查：
+首选接口：
+
+```text
+GET /status
+```
+
+`/status` 返回聚合状态：
+
+- 服务版本、运行时间、快照时间
+- 存活 / 就绪 / 数据库状态
+- daemon 数量、容量、使用量
+- App 注册数和 WebSocket 连接数
+- Run 总数、活跃数和各状态计数
+- workflow pending / leased / done / dead 统计
+
+普通输出示例：
+
+```text
+server      http://127.0.0.1:8080
+status      ok
+version     0.1.0-rc.5 (2ce014d)
+uptime      1h2m
+health      ok
+ready       ok
+database    up
+daemons     connected=1 healthy=1 capacity=4 used=1 available=3
+apps        registered=1 websocket=1
+runs        total=1 active=0 cancelled=0 completed=1 failed=0 queued=0 running=0 timeout=0
+workflow    total=1 pending=0 leased=0 dead=0 oldest_pending=0s
+```
+
+如果服务端是旧版本、没有 `/status`，`levier status` 会回退到旧方式：
 
 ```text
 /healthz
@@ -340,37 +371,17 @@ levier status [--server url] [--json]
 /metrics
 ```
 
-JSON 结构：
-
-```json
-{
-  "server": "http://127.0.0.1:8080",
-  "health": "ok",
-  "ready": "ok",
-  "metrics": "ok",
-  "daemons": {
-    "count": 1,
-    "capacity": 2,
-    "used": 0
-  },
-  "apps": {
-    "websockets": 1
-  },
-  "runs": {
-    "completed": 3,
-    "running": 1
-  },
-  "metrics_available": true
-}
-```
+回退时输出保持旧的 `health / ready / metrics / daemons / apps / runs` 结构。
 
 退出码：
 
 ```text
-0  health、ready、metrics 都是 ok
-1  任意一项不是 ok
+0  状态快照就绪（readiness = ok）
+1  服务不可达、协议版本不支持、readiness degraded，或旧 metrics 检查失败
 2  参数错误
 ```
+
+公开契约：`public/service-status/v1/schema.json`。
 
 ### 5.5 `levier config check`
 

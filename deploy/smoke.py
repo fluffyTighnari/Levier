@@ -95,6 +95,18 @@ def main() -> int:
         )
 
     wait_for("service /meta", meta_ok)
+
+    def status_ok():
+        status, data = http("GET", "/status")
+        return (
+            status == 200
+            and data.get("status_version") == 1
+            and data.get("service") == "levier"
+            and data.get("health", {}).get("liveness") == "ok",
+            data,
+        )
+
+    wait_for("service /status", status_ok)
     wait_for(
         "harness registered",
         lambda: ('daemon="' + DAEMON_ID + '"' in metrics(), ""),

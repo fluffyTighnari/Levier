@@ -322,15 +322,15 @@ GET /meta   运行时自描述内容
 计划文档：`docs/STATUS_OVERVIEW_PLAN.md`
 
 - [x] 计划落盘
-- [ ] `public/service-status/v1/schema.json`
-- [ ] `public/service-status/v1/example.json`
-- [ ] `internal/status`
-- [ ] `GET /status`
-- [ ] `levier status` 使用 `/status`
-- [ ] 旧 metrics 回退
-- [ ] HTTP / CLI / 契约测试
-- [ ] Compose smoke 检查 `/status`
-- [ ] CLI_REFERENCE / README / 公开契约说明
+- [x] `public/service-status/v1/schema.json`
+- [x] `public/service-status/v1/example.json`
+- [x] `internal/status`
+- [x] `GET /status`
+- [x] `levier status` 使用 `/status`
+- [x] 旧 metrics 回退
+- [x] HTTP / CLI / 契约测试
+- [x] Compose smoke 检查 `/status`
+- [x] CLI_REFERENCE / README / 公开契约说明
 
 ### 4.1 公开边界
 

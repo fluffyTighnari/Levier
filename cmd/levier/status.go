@@ -12,6 +12,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	statuspkg "github.com/fluffyTighnari/levier/internal/status"
 )
 
 type statusReport struct {
@@ -50,6 +52,20 @@ func runStatus(args []string, stdout, stderr io.Writer) int {
 	ctx := context.Background()
 	client := &http.Client{Timeout: *timeout}
 	base := serverBase(*server)
+
+	if code, body, err := httpGet(ctx, client, base+"/status", ""); err == nil && code == http.StatusOK {
+		var snapshot statuspkg.Snapshot
+		if err := json.Unmarshal(body, &snapshot); err != nil {
+			fmt.Fprintf(stderr, "status failed: invalid /status JSON: %v\n", err)
+			return 1
+		}
+		if snapshot.StatusVersion != statuspkg.Version {
+			fmt.Fprintf(stderr, "status failed: unsupported status_version %d (client supports %d)\n",
+				snapshot.StatusVersion, statuspkg.Version)
+			return 1
+		}
+		return printStatusOverview(base, snapshot, *asJSON, stdout, stderr)
+	}
 
 	report := statusReport{
 		Server:  base,

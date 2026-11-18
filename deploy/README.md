@@ -51,6 +51,7 @@ smoke 检查：
 ```text
 /healthz、/readyz
 /meta
+/status
 Harness 已注册
 App 已 bootstrap 并建立 WebSocket
 MCP runtime socket 可连接，mcp.health = ok

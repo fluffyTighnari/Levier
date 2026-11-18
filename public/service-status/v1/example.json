@@ -1,0 +1,61 @@
+{
+  "status_version": 1,
+  "service": "levier",
+  "as_of": "2026-11-18T12:34:56Z",
+  "uptime_seconds": 3600,
+  "build": {
+    "version": "v0.1.0",
+    "commit": "abc1234"
+  },
+  "health": {
+    "liveness": "ok",
+    "readiness": "ok",
+    "database": "up"
+  },
+  "daemons": {
+    "connected": 1,
+    "healthy": 1,
+    "capacity": 4,
+    "used": 1,
+    "available": 3,
+    "by_runtime": {
+      "normal": {
+        "connected": 1,
+        "healthy": 1,
+        "capacity": 4,
+        "used": 1,
+        "available": 3
+      }
+    },
+    "strategies": {
+      "react": 1,
+      "echo": 1
+    }
+  },
+  "apps": {
+    "registered": 1,
+    "websocket_connections": 1
+  },
+  "runs": {
+    "total": 1,
+    "active": 0,
+    "by_status": {
+      "queued": 0,
+      "assigned": 0,
+      "running": 0,
+      "completed": 1,
+      "failed": 0,
+      "cancelled": 0,
+      "timeout": 0
+    }
+  },
+  "workflow": {
+    "total": 1,
+    "pending": 0,
+    "leased": 0,
+    "done": 1,
+    "dead": 0,
+    "cancelled": 0,
+    "oldest_pending_seconds": 0
+  }
+}

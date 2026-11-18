@@ -163,9 +163,22 @@ func (h *AppHub) Close() {
 	}
 }
 
-// Count returns the number of App connections for one app.
+// Count returns the number of App WebSocket connections for one app.
 func (h *AppHub) Count(appID string) int {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
 	return len(h.apps[appID])
+}
+
+// AppStats is an aggregate connection snapshot.
+type AppStats struct {
+	Apps        int
+	Connections int
+}
+
+// Stats returns the number of distinct Apps and active connections.
+func (h *AppHub) Stats() AppStats {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
+	return AppStats{Apps: len(h.apps), Connections: len(h.conns)}
 }

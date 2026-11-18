@@ -34,6 +34,7 @@ func TestOpenAPIMatchesHTTPRoutes(t *testing.T) {
 
 	expected := map[string][]string{
 		"/meta":                           {"get"},
+		"/status":                         {"get"},
 		"/healthz":                        {"get"},
 		"/readyz":                         {"get"},
 		"/admin/apps":                     {"post"},

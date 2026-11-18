@@ -737,6 +737,7 @@ B. 接受重复，并提供人工或自动补偿
 | `GET` | `/healthz` | 无 | 存活检查 |
 | `GET` | `/readyz` | 无 | 就绪检查（含数据库） |
 | `GET` | `/meta` | 无 | 服务自描述（协议、能力、限制） |
+| `GET` | `/status` | 无 | 运行状态总览（daemon、App、Run、workflow） |
 | `POST` | `/admin/apps` | Admin token | 创建 App，返回一次性 key |
 | `POST` | `/admin/apps/{app_id}/rotate-key` | Admin token | 轮换 App key |
 | `GET` | `/api/v1/apps/{app_id}` | App key | 验证身份与状态 |

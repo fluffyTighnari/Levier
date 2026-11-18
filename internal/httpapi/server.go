@@ -24,6 +24,7 @@ import (
 	"github.com/fluffyTighnari/levier/internal/register"
 	"github.com/fluffyTighnari/levier/internal/runstore"
 	"github.com/fluffyTighnari/levier/internal/selfdesc"
+	statuspkg "github.com/fluffyTighnari/levier/internal/status"
 	"github.com/fluffyTighnari/levier/internal/workflow"
 )
 
@@ -57,6 +58,11 @@ type Canceller interface {
 	CancelRun(ctx context.Context, runID, reason string) (runstore.Run, error)
 }
 
+// StatusProvider supplies the runtime status overview.
+type StatusProvider interface {
+	Snapshot(ctx context.Context) statuspkg.Snapshot
+}
+
 type CatalogRegistry interface {
 	ReplaceLocalTools(ctx context.Context, appID string, tools []register.ToolInput) ([]register.ToolMaterial, error)
 	SetAppMCPRefs(ctx context.Context, appID string, names []string) error
@@ -83,6 +89,7 @@ type Config struct {
 	MetricsCollector     func(context.Context)
 	Logger               *slog.Logger
 	Meta                 selfdesc.Document
+	Status               StatusProvider
 }
 
 // Server implements the minimal App HTTP API.
@@ -154,6 +161,7 @@ func (s *Server) routes() {
 	s.mux.HandleFunc("GET /healthz", s.handleHealth)
 	s.mux.HandleFunc("GET /readyz", s.handleReady)
 	s.mux.HandleFunc("GET /meta", s.handleMeta)
+	s.mux.HandleFunc("GET /status", s.handleStatus)
 	if s.cfg.Metrics != nil {
 		s.mux.HandleFunc("GET /metrics", s.handleMetrics)
 	}

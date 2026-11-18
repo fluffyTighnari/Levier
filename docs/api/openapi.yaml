@@ -30,6 +30,21 @@ paths:
               schema:
                 type: object
                 additionalProperties: true
+  /status:
+    servers:
+      - url: /
+    get:
+      summary: Runtime status overview
+      operationId: status
+      security: []
+      responses:
+        "200":
+          description: Aggregate daemon, App, Run, workflow, and health status without resource identifiers or secrets
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
   /healthz:
     get:
       summary: Liveness check

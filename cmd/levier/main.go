@@ -34,6 +34,7 @@ import (
 	"github.com/fluffyTighnari/levier/internal/register"
 	"github.com/fluffyTighnari/levier/internal/runstore"
 	"github.com/fluffyTighnari/levier/internal/selfdesc"
+	statuspkg "github.com/fluffyTighnari/levier/internal/status"
 	"github.com/fluffyTighnari/levier/internal/version"
 	"github.com/fluffyTighnari/levier/internal/workflow"
 )
@@ -68,6 +69,7 @@ func runServer(args []string) {
 		syscall.SIGTERM,
 	)
 	defer stop()
+	startedAt := time.Now().UTC()
 
 	pool, err := db.Open(ctx, db.Config{
 		URL:            cfg.Database.URL,
@@ -260,6 +262,19 @@ func runServer(args []string) {
 		}
 	}()
 
+	statusService := statuspkg.New(statuspkg.Options{
+		Hub:      hub,
+		AppHub:   appHub,
+		Runs:     runs,
+		Workflow: queue,
+		Health: func(ctx context.Context) error {
+			return db.Health(ctx, pool, cfg.Database.HealthTimeout.Std())
+		},
+		Version:   version.Version,
+		Commit:    version.Commit,
+		StartedAt: startedAt,
+	})
+
 	api := httpapi.NewServer(runs, queue, httpapi.Config{
 		BearerToken:          cfg.HTTP.BearerToken,
 		AdminToken:           cfg.HTTP.AdminToken,
@@ -276,6 +291,7 @@ func runServer(args []string) {
 			MaxToolTimeoutMS:     selfdesc.DefaultMaxToolTimeoutMS,
 			WSTokenTTL:           cfg.HTTP.WSTokenTTL.Std(),
 		}),
+		Status: statusService,
 		AppHub: appHub,
 		ReadinessCheck: func(ctx context.Context) error {
 			return db.Health(ctx, pool, cfg.Database.HealthTimeout.Std())

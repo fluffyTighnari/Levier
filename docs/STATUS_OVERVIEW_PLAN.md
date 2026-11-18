@@ -2,7 +2,7 @@
 
 # 8. 状态总览改造计划
 
-> 状态：计划阶段，尚未改代码。
+> 状态：已实现 8A–8E，Compose smoke 已通过。
 > 本文位于 `docs/`，属于内部开发文档，不进入镜像、release、HTTP 响应或对外分发。
 > 对外暴露的状态契约放在 `public/service-status/v1/`。
 
@@ -451,17 +451,17 @@ public/service-status/v1/example.json
 ## 10. 完成标准
 
 ```text
-[ ] GET /status 无需认证即可访问
-[ ] 返回 daemon / app / run / workflow / health 聚合状态
-[ ] 不包含 daemon_id / app_id / run_id / secret / DSN
-[ ] 数据库不可用时返回 200 + degraded
-[ ] levier status 使用 /status
-[ ] levier status --json 输出快照
-[ ] 旧服务端 metrics 回退可用（迁移窗口）
-[ ] public/service-status/v1/schema.json 存在
-[ ] smoke 显示 status: ok
-[ ] go test ./... 通过
-[ ] make lint 通过
+[x] GET /status 无需认证即可访问
+[x] 返回 daemon / app / run / workflow / health 聚合状态
+[x] 不包含 daemon_id / app_id / run_id / secret / DSN
+[x] 数据库不可用时返回 200 + degraded
+[x] levier status 使用 /status
+[x] levier status --json 输出快照
+[x] 旧服务端 metrics 回退可用（迁移窗口）
+[x] public/service-status/v1/schema.json 存在
+[x] smoke 显示 status: ok
+[x] go test ./... 通过
+[x] make lint 通过
 [ ] GitHub Actions CI 绿
 ```
 
