@@ -94,22 +94,22 @@ export LEVIER_APP_MCP_REFS=e2e-echo
 
 ## 4. Submit a Run
 
-Use `LevierClient` with the same credentials file:
+Use `LevierApp` with the same credentials file:
 
 ```python
-from levier_app import LevierClient
+from levier_app import LevierApp
 
-client = LevierClient.from_credentials()
+app = LevierApp.from_credentials()
 
-providers = client.list_model_providers()
-run = client.submit_run(
+providers = app.list_model_providers()
+run = app.submit_run(
     "Add 2, then add 3, then read the counter.",
     runtime="react1",
     provider="deepseek",
     model="deepseek-flash",
 )
-result = client.wait_run(run["run_id"], timeout=120)
-events = client.get_events(run["run_id"])
+result = app.wait_run(run["run_id"], timeout=120)
+events = app.get_events(run["run_id"])
 ```
 
 Or use the CLI:

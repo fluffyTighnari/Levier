@@ -76,36 +76,36 @@ levier app init --name counter-agent --mcp-ref github,e2e-echo
 The Runtime resolves the referenced MCP servers into its per-run MCP bindings.
 The App does not need any MCP client code.
 
-## Client API
+## Run API
 
-`LevierClient` uses the same credentials file as `LevierApp`:
+`LevierApp` exposes the Run operations directly. The HTTP client used inside
+the SDK is not part of the App authoring surface.
 
 ```python
-from levier_app import LevierClient
+from levier_app import LevierApp
 
-client = LevierClient.from_credentials()
+app = LevierApp.from_credentials()
 
-providers = client.list_model_providers()
-run = client.submit_run(
+providers = app.list_model_providers()
+run = app.submit_run(
     "Add 2, then add 3.",
     runtime="react1",
     provider="deepseek",
     model="deepseek-flash",
 )
-result = client.wait_run(run["run_id"], timeout=120)
-events = client.get_events(run["run_id"])
+result = app.wait_run(run["run_id"], timeout=120)
+events = app.get_events(run["run_id"])
 ```
 
 Public methods:
 
 ```text
-LevierClient.from_credentials()
-LevierClient.list_model_providers()
-LevierClient.submit_run(prompt, runtime=..., provider=..., model=...)
-LevierClient.wait_run(run_id, timeout=...)
-LevierClient.get_run(run_id)
-LevierClient.get_events(run_id)
-LevierClient.cancel_run(run_id)
+LevierApp.list_model_providers()
+LevierApp.submit_run(prompt, runtime=..., provider=..., model=...)
+LevierApp.wait_run(run_id, timeout=...)
+LevierApp.get_run(run_id)
+LevierApp.get_events(run_id)
+LevierApp.cancel_run(run_id)
 ```
 
 `provider` and `model` are optional when the control plane has a default

@@ -84,14 +84,6 @@ The App connects to Levier, registers its tools and MCP refs, and waits for
 
 ## 5. Submit a Run
 
-Using the SDK client:
-
-```sh
-LEVIER_CREDENTIALS=./data/agent/credentials.json \
-  python3 examples/counter_agent/client.py \
-  --prompt "Add 2, then add 3, then read the counter."
-```
-
 Using the CLI:
 
 ```sh
@@ -119,7 +111,6 @@ levier run submit \
 
 ```text
 app.py       LevierApp, tool schemas, handlers, process entry point
-client.py    LevierClient: submit, wait, replay events
 tools.py     Counter business state (no transport/protocol code)
 tests/       Counter behavior and SDK dispatch tests
 ```

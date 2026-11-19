@@ -219,20 +219,20 @@ mcp__<server>__<tool>
 同一个凭据文件也可以作为 App 的客户端使用：
 
 ```python
-from levier_app import LevierClient
+from levier_app import LevierApp
 
-client = LevierClient.from_credentials()
+app = LevierApp.from_credentials()
 
-providers = client.list_model_providers()
+providers = app.list_model_providers()
 
-run = client.submit_run(
+run = app.submit_run(
     "Add 2, then add 3, then read the counter.",
     runtime="react1",
     provider="deepseek",
     model="deepseek-flash",
 )
-result = client.wait_run(run["run_id"], timeout=120)
-events = client.get_events(run["run_id"])
+result = app.wait_run(run["run_id"], timeout=120)
+events = app.get_events(run["run_id"])
 ```
 
 `provider` 和 `model` 都可以省略，此时使用控制面的默认 provider。
@@ -242,17 +242,16 @@ events = client.get_events(run["run_id"])
 ```text
 LevierApp.from_credentials(mcp_refs=[...])
 LevierApp.tool(...)
+LevierApp.run_cli(...)
 LevierApp.run()
-LevierApp.client
 LevierApp.mcp_refs
 
-LevierClient.from_credentials()
-LevierClient.list_model_providers()
-LevierClient.submit_run(...)
-LevierClient.wait_run(...)
-LevierClient.get_run(...)
-LevierClient.get_events(...)
-LevierClient.cancel_run(...)
+LevierApp.list_model_providers()
+LevierApp.submit_run(...)
+LevierApp.wait_run(...)
+LevierApp.get_run(...)
+LevierApp.get_events(...)
+LevierApp.cancel_run(...)
 ```
 
 App API key 只用于 Levier 鉴权，不等于模型服务商 key。

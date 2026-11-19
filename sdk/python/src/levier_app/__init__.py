@@ -13,8 +13,8 @@ A minimal App:
     app.run()
 
 The adapter owns authentication, tool registration, WebSocket lifecycle,
-reconnects, and the local_tool_call/local_tool_result contract. `LevierClient`
-also provides provider discovery, Run submission, waiting, events, and cancel.
+reconnects, and the local_tool_call/local_tool_result contract. Run submission,
+provider discovery, waiting, events, and cancel are methods on LevierApp.
 
 Copyright 2026 The Levier Authors.
 """
@@ -39,7 +39,7 @@ from .errors import (
     ToolExecutionError,
     TransportError,
 )
-from .http import LevierClient, WsToken
+from .http import WsToken
 
 __version__ = SDK_VERSION
 
@@ -49,7 +49,6 @@ __all__ = [
     "CredentialsError",
     "HTTPError",
     "LevierApp",
-    "LevierClient",
     "LevierError",
     "PROTOCOL_VERSION",
     "run_app",

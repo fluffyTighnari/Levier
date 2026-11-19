@@ -4,6 +4,8 @@ import json
 import unittest
 from pathlib import Path
 
+from levier_app.http import HttpResponse
+
 from contextlib import redirect_stdout
 from io import StringIO
 
@@ -19,6 +21,20 @@ class AdapterContractTest(unittest.TestCase):
         self.assertEqual(SDK_VERSION, "0.1.0")
         expected = json.loads((FIXTURES / "hello.json").read_text())
         self.assertEqual(hello_message(), expected)
+
+
+class FakeTransport:
+    def __init__(self, *responses: HttpResponse) -> None:
+        self.responses = list(responses)
+        self.requests = []
+
+    def send(self, request):
+        self.requests.append(request)
+        return self.responses.pop(0)
+
+
+def response(payload: dict, status: int = 200) -> HttpResponse:
+    return HttpResponse(status=status, headers={}, body=json.dumps(payload).encode())
 
 
 class AppToolTest(unittest.TestCase):
@@ -104,6 +120,25 @@ class AppToolTest(unittest.TestCase):
             code = LevierApp.run_cli(argv=["--version"])
         self.assertEqual(code, 0)
         self.assertIn("levier-app", output.getvalue())
+
+    def test_app_exposes_run_operations(self) -> None:
+        transport = FakeTransport(
+            response({"providers": [{"name": "deepseek"}]}),
+            response({"run_id": "run-1", "status": "queued", "ws_url": "/ws", "ws_token": "t"}, status=202),
+        )
+        app = LevierApp(
+            Credentials(
+                app_id="app-1",
+                app_name="demo",
+                api_key=Secret("mw_secret"),
+                server="http://127.0.0.1:8080",
+            ),
+            transport=transport,
+        )
+        self.assertEqual(app.list_model_providers()[0]["name"], "deepseek")
+        run = app.submit_run("hello", runtime="react1", provider="deepseek")
+        self.assertEqual(run["run_id"], "run-1")
+        self.assertEqual(transport.requests[1].url, "http://127.0.0.1:8080/api/v1/runs")
 
     def test_duplicate_tool_is_rejected(self) -> None:
         app = self.app()

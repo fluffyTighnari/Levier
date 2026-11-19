@@ -87,7 +87,7 @@ class LevierApp:
     ) -> None:
         self.credentials = credentials
         self.server = resolve_server(credentials, server)
-        self.client = LevierClient(
+        self._client = LevierClient(
             self.server,
             credentials.app_id,
             credentials.api_key.reveal(),
@@ -157,6 +157,50 @@ class LevierApp:
 
     def tools_manifest(self) -> list[dict[str, Any]]:
         return [spec.manifest() for spec in self._tools.values()]
+
+    def list_model_providers(self) -> list[dict[str, Any]]:
+        """Return the control-plane provider catalog for this App."""
+        return self._client.list_model_providers()
+
+    def submit_run(
+        self,
+        prompt: str,
+        *,
+        runtime: str,
+        provider: str = "",
+        model: str = "",
+        max_steps: int = 8,
+        run_ms: int = 60000,
+        tool_ms: int = 10000,
+        idempotency_key: str = "",
+    ) -> dict[str, Any]:
+        """Submit a Run using this App's credentials."""
+        return self._client.submit_run(
+            prompt,
+            runtime=runtime,
+            provider=provider,
+            model=model,
+            max_steps=max_steps,
+            run_ms=run_ms,
+            tool_ms=tool_ms,
+            idempotency_key=idempotency_key,
+        )
+
+    def wait_run(self, run_id: str, *, timeout: float = 300.0, interval: float = 0.5) -> dict[str, Any]:
+        """Wait for one of this App's Runs to reach a terminal status."""
+        return self._client.wait_run(run_id, timeout=timeout, interval=interval)
+
+    def get_run(self, run_id: str) -> dict[str, Any]:
+        """Return one of this App's Runs."""
+        return self._client.get_run(run_id)
+
+    def get_events(self, run_id: str, *, after_seq: int = 0, limit: int = 1000) -> list[dict[str, Any]]:
+        """Return events for one of this App's Runs."""
+        return self._client.get_events(run_id, after_seq=after_seq, limit=limit)
+
+    def cancel_run(self, run_id: str) -> dict[str, Any]:
+        """Cancel one of this App's Runs."""
+        return self._client.cancel_run(run_id)
 
     def stop(self) -> None:
         """Request a graceful stop; safe to call from a signal handler."""
@@ -280,16 +324,16 @@ class LevierApp:
                 signal.signal(signum, previous)
 
     def _connect(self) -> WebSocketClient:
-        app = self.client.get_app()
+        app = self._client.get_app()
         status = str(app.get("status") or "")
         if status != "active":
             raise AppInactiveError(f"app status is {status!r}, want active")
-        self.client.update_tools(
+        self._client.update_tools(
             self.credentials.app_name,
             self.tools_manifest(),
             mcp_refs=self.mcp_refs,
         )
-        token = self.client.create_ws_token()
+        token = self._client.create_ws_token()
         url = websocket_url(
             self.server,
             token.ws_url,

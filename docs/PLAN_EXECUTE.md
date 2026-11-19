@@ -112,18 +112,18 @@ RUN_STATUS
 ## 6. Submit from Python
 
 ```python
-from levier_app import LevierClient
+from levier_app import LevierApp
 
-client = LevierClient.from_credentials()
+app = LevierApp.from_credentials()
 
-providers = client.list_model_providers()
-run = client.submit_run(
+providers = app.list_model_providers()
+run = app.submit_run(
     "Add 2, then add 3, then read the counter.",
     runtime="react1",
     provider="deepseek",
     model="deepseek-flash",
 )
-result = client.wait_run(run["run_id"], timeout=120)
+result = app.wait_run(run["run_id"], timeout=120)
 print(result["status"])
 ```
 
