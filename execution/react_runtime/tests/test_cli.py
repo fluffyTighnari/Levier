@@ -40,7 +40,7 @@ class CLITest(unittest.TestCase):
         self.assertIn("react1", output.getvalue())
         self.assertIn("daemon-cli", output.getvalue())
 
-    def test_legacy_env_names_are_mapped(self) -> None:
+    def test_canonical_env_names_override_config(self) -> None:
         directory = tempfile.TemporaryDirectory()
         self.addCleanup(directory.cleanup)
         path = Path(directory.name) / "config.yaml"
@@ -50,8 +50,8 @@ class CLITest(unittest.TestCase):
         with patch.dict(
             os.environ,
             {
-                "LEVIER_REACT_RUNTIME_INSTANCE_ID": "legacy-instance",
-                "LEVIER_REACT_RUNTIME_NAME": "legacy-runtime",
+                "LEVIER_RUNTIME_INSTANCE_ID": "env-instance",
+                "LEVIER_RUNTIME_NAME": "env-runtime",
             },
             clear=False,
         ):
@@ -59,8 +59,8 @@ class CLITest(unittest.TestCase):
                 code = main(["--config", str(path), "--check"])
 
         self.assertEqual(code, 0)
-        self.assertIn("legacy-runtime", output.getvalue())
-        self.assertIn("legacy-instance", output.getvalue())
+        self.assertIn("env-runtime", output.getvalue())
+        self.assertIn("env-instance", output.getvalue())
 
     def test_version_and_redacted_config(self) -> None:
         directory = tempfile.TemporaryDirectory()

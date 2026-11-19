@@ -49,10 +49,9 @@ logging:
 
 The SDK reads `middleware`, `runtime`, and `logging`. The React entry point
 reads `mcp_runtime.socket`; it can be overridden with
-`LEVIER_REACT_RUNTIME_MCP_SOCKET`.
+`LEVIER_MCP_RUNTIME_SOCKET`.
 
-Legacy `LEVIER_REACT_RUNTIME_*` environment names are mapped to the SDK's
-`LEVIER_MIDDLEWARE_*` / `LEVIER_RUNTIME_*` names. The canonical names are:
+Use the SDK environment names:
 
 ```text
 LEVIER_RUNTIME_CONFIG

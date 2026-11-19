@@ -25,19 +25,6 @@ from levier_runtime.tools import ToolRouter
 
 _DEFAULT_CONFIG = Path(__file__).resolve().parents[2] / "react.example.yaml"
 
-_LEGACY_ENV = {
-    "LEVIER_REACT_RUNTIME_ADDRESS": "LEVIER_MIDDLEWARE_ADDRESS",
-    "LEVIER_REACT_RUNTIME_TLS": "LEVIER_MIDDLEWARE_TLS",
-    "LEVIER_REACT_RUNTIME_TOKEN": "LEVIER_RUNTIME_TOKEN",
-    "LEVIER_REACT_RUNTIME_TOKEN_FILE": "LEVIER_RUNTIME_TOKEN_FILE",
-    "LEVIER_REACT_RUNTIME_INSTANCE_ID": "LEVIER_RUNTIME_INSTANCE_ID",
-    "LEVIER_REACT_RUNTIME_TYPE": "LEVIER_RUNTIME_TYPE",
-    "LEVIER_REACT_RUNTIME_MAX_CONCURRENT_RUNS": "LEVIER_RUNTIME_MAX_CONCURRENT_RUNS",
-    "LEVIER_REACT_RUNTIME_NAME": "LEVIER_RUNTIME_NAME",
-    "LEVIER_REACT_RUNTIME_LABELS": "LEVIER_RUNTIME_LABELS",
-    "LEVIER_REACT_RUNTIME_LOG_LEVEL": "LEVIER_RUNTIME_LOG_LEVEL",
-}
-
 
 def _add_arguments(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--mcp-socket", default="", help="override MCP Runtime socket")
@@ -47,10 +34,9 @@ def _mcp_socket(config_path: str, override: str) -> str:
     """Read the optional shared MCP socket without coupling it to RuntimeConfig."""
     if override:
         return override
-    for name in ("LEVIER_REACT_RUNTIME_MCP_SOCKET", "LEVIER_MCP_RUNTIME_SOCKET"):
-        value = os.environ.get(name)
-        if value:
-            return value
+    value = os.environ.get("LEVIER_MCP_RUNTIME_SOCKET")
+    if value:
+        return value
     try:
         data = yaml.safe_load(Path(config_path).read_text(encoding="utf-8"))
     except (OSError, yaml.YAMLError):
@@ -84,10 +70,9 @@ def main(argv: list[str] | None = None) -> int:
         prog="levier-react-runtime",
         version=RUNTIME_VERSION,
         default_config=_DEFAULT_CONFIG,
-        config_env=("LEVIER_REACT_RUNTIME_CONFIG", "LEVIER_RUNTIME_CONFIG"),
+        config_env=("LEVIER_RUNTIME_CONFIG",),
         serve=_serve,
         add_arguments=_add_arguments,
-        env_aliases=_LEGACY_ENV,
         print_config_extra=_print_extra,
         argv=argv,
     )

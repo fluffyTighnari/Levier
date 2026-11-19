@@ -301,9 +301,9 @@ def start_middleware() -> None:
 def start_react_runtime() -> None:
     env = {
         "PYTHONPATH": "execution/agent_core/src:execution/runtime_sdk/src:execution/react_runtime/src",
-        "LEVIER_REACT_RUNTIME_ADDRESS": "127.0.0.1:9090",
-        "LEVIER_REACT_RUNTIME_INSTANCE_ID": "daemon-local-1",
-        "LEVIER_REACT_RUNTIME_TOKEN": DAEMON_TOKEN,
+        "LEVIER_MIDDLEWARE_ADDRESS": "127.0.0.1:9090",
+        "LEVIER_RUNTIME_INSTANCE_ID": "daemon-local-1",
+        "LEVIER_RUNTIME_TOKEN": DAEMON_TOKEN,
     }
     start("react-runtime", [str(REACT_RUNTIME_PYTHON), "-m", "levier_react_runtime", "--config", REACT_RUNTIME_CONFIG], env=env)
     wait_metric('daemon="daemon-local-1"', 10)

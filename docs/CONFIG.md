@@ -39,7 +39,7 @@ Levier 控制面
   internal/config + levier.example.yaml + LEVIER_* 环境变量
 
 React Runtime
-  execution/react_runtime/react.example.yaml + LEVIER_REACT_RUNTIME_* / LEVIER_* environment variables
+  execution/react_runtime/react.example.yaml + LEVIER_RUNTIME_* / LEVIER_MIDDLEWARE_* environment variables
 
 MCP Runtime
   命令行参数 + MCP_RUNTIME_* + LEVIER_SECRET_*
@@ -212,7 +212,7 @@ logging:
 ```
 
 The SDK reads `middleware`, `runtime`, and `logging`. The React entry point
-reads `mcp_runtime.socket` and supports `LEVIER_REACT_RUNTIME_MCP_SOCKET`.
+reads `mcp_runtime.socket` and supports `LEVIER_MCP_RUNTIME_SOCKET`.
 
 Canonical environment variables:
 
@@ -230,9 +230,9 @@ LEVIER_RUNTIME_LABELS
 LEVIER_RUNTIME_LOG_LEVEL
 ```
 
-Legacy `LEVIER_REACT_RUNTIME_*` names are mapped to the equivalent SDK names
-for Compose compatibility. `DEEPSEEK_*` remains an LLM-provider concern and is
-not part of Runtime configuration.
+Use the SDK environment names above. `DEEPSEEK_*` remains a legacy local
+Runtime fallback; production should use the control-plane provider catalog and
+secret refs instead.
 
 ---
 
@@ -358,7 +358,7 @@ updated_at
 | `LEVIER_MIDDLEWARE_ADDRESS` | react-runtime | `levier:9090` | 否 | 连接地址 |
 | `LEVIER_RUNTIME_INSTANCE_ID` | react-runtime | `daemon-local-1` | 否 | daemon 身份 |
 | `LEVIER_RUNTIME_TOKEN` | react-runtime | `change-me` | **是** | 仅开发 |
-| `LEVIER_REACT_RUNTIME_MCP_SOCKET` | react-runtime | socket path | 否 | MCP socket |
+| `LEVIER_MCP_RUNTIME_SOCKET` | react-runtime | socket path | 否 | MCP socket |
 | `LEVIER_APP_URL` | agent / smoke | `http://levier:8080` | 否 | HTTP 地址 |
 | `LEVIER_APP_CREDENTIALS` | agent | `/data/credentials.json` | 文件秘密 | 由 host `levier app init` 写入 `data/agent` |
 | `DEEPSEEK_API_KEY` | react-runtime / baseline | 空 | **是** | 模型 key |
@@ -478,7 +478,7 @@ LEVIER_TEST_DATABASE_URL（测试）
 ```text
 Levier 产品命名空间：LEVIER_
 控制面：LEVIER_HTTP_* / LEVIER_GRPC_* / LEVIER_DATABASE_* / LEVIER_WORKFLOW_* / LEVIER_LOG_*
-React Runtime：目标 LEVIER_REACT_RUNTIME_*，保留 HARNESS_* fallback
+React Runtime：目标 LEVIER_RUNTIME_* / LEVIER_MIDDLEWARE_*，保留 HARNESS_* fallback
 MCP：目标 LEVIER_MCP_*，保留 MCP_RUNTIME_* fallback
 Agent：目标 LEVIER_APP_*，保留 LEVIER_* / MW_* fallback
 ```
@@ -500,7 +500,7 @@ config print（脱敏）
 6C 已采用：
 
 ```text
-React Runtime 支持 LEVIER_REACT_RUNTIME_*，保留 HARNESS_* / HARNESS_MIDDLEWARE_* fallback
+React Runtime 支持 LEVIER_RUNTIME_* / LEVIER_MIDDLEWARE_*，保留 HARNESS_* / HARNESS_MIDDLEWARE_* fallback
 React Runtime 支持 daemon.auth_token_file
 MCP 支持 LEVIER_MCP_*，保留 MCP_RUNTIME_* fallback
 MCP secrets-file 在 Unix 上检查 0600
@@ -533,7 +533,7 @@ Compose smoke：本地开发栈已通过
 ```text
 1. 在 YAML 顶层加入 config_version: 1 和 environment
 2. 控制面环境变量改用 LEVIER_*；旧 MIDDLEWARE_* 仍兼容一个版本
-3. React Runtime / MCP / Agent 改用 LEVIER_REACT_RUNTIME_* / LEVIER_MCP_* / LEVIER_APP_*
+3. React Runtime / MCP / Agent 改用 LEVIER_RUNTIME_* / LEVIER_MIDDLEWARE_* / LEVIER_MCP_* / LEVIER_APP_*
 4. 生产环境把 token / DSN 移到 0600 secret 文件，YAML 只保留 *_file 路径
 5. 启动前运行 config check；生产再加 --production
 ```

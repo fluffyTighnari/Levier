@@ -15,7 +15,7 @@ import logging
 import os
 import sys
 from pathlib import Path
-from typing import Awaitable, Callable, Mapping, Sequence
+from typing import Awaitable, Callable, Sequence
 
 from .runtime import Runtime
 
@@ -32,7 +32,6 @@ def run_cli(
     serve: ServeFunction,
     config_env: Sequence[str] = (),
     add_arguments: ExtraArguments | None = None,
-    env_aliases: Mapping[str, str] | None = None,
     print_config_extra: PrintConfigExtra | None = None,
     argv: Sequence[str] | None = None,
 ) -> int:
@@ -52,7 +51,6 @@ def run_cli(
         print(f"{prog} {version}")
         return 0
 
-    _apply_env_aliases(env_aliases)
     if getattr(args, "log_level", ""):
         os.environ["LEVIER_RUNTIME_LOG_LEVEL"] = args.log_level
     try:
@@ -98,15 +96,6 @@ def _print_config(
     if extra is not None:
         for line in extra(runtime, args):
             print(line)
-
-
-def _apply_env_aliases(aliases: Mapping[str, str] | None) -> None:
-    if not aliases:
-        return
-    for old, new in aliases.items():
-        value = os.environ.get(old)
-        if value is not None and new not in os.environ:
-            os.environ[new] = value
 
 
 def _first_env(names: Sequence[str]) -> str:
