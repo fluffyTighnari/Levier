@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"runtime"
 	"strings"
 
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -32,6 +33,15 @@ type FileSecretResolver struct {
 
 // LoadFileSecretResolver reads a JSON object of secret name -> value.
 func LoadFileSecretResolver(path string) (*FileSecretResolver, error) {
+	if runtime.GOOS != "windows" {
+		info, err := os.Stat(path)
+		if err != nil {
+			return nil, fmt.Errorf("read secret file: %w", err)
+		}
+		if info.Mode().Perm()&0o077 != 0 {
+			return nil, fmt.Errorf("secret file must be 0600: %s", path)
+		}
+	}
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return nil, fmt.Errorf("read secret file: %w", err)

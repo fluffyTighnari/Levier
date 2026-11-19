@@ -61,7 +61,7 @@ func runApp(args []string, stdout, stderr io.Writer) int {
 
 func printAppUsage(out io.Writer) {
 	fmt.Fprintln(out, "usage:")
-	fmt.Fprintln(out, "  levier app init --name <app> [--credentials-out path]")
+	fmt.Fprintln(out, "  levier app init --name <app> [--credentials-out path] [--mcp-ref name,name]")
 	fmt.Fprintln(out, "  levier app show --credentials path")
 	fmt.Fprintln(out, "  levier app check --credentials path")
 	fmt.Fprintln(out, "  levier app rotate-key --credentials path --yes")
@@ -78,6 +78,7 @@ func runAppInit(args []string, stdout, stderr io.Writer) int {
 	rotate := flags.Bool("rotate", false, "rotate key if the App already exists")
 	yes := flags.Bool("yes", false, "confirm rotation")
 	force := flags.Bool("force", false, "overwrite an existing credentials file")
+	mcpRefs := flags.String("mcp-ref", "", "comma-separated MCP server names")
 	dryRun := flags.Bool("dry-run", false, "show what would happen")
 	asJSON := flags.Bool("json", false, "print JSON")
 	timeout := flags.Duration("timeout", 10*time.Second, "per-request timeout")
@@ -124,7 +125,7 @@ func runAppInit(args []string, stdout, stderr io.Writer) int {
 
 	ctx := context.Background()
 	client := newAPIClient(serverURL, admin, *timeout)
-	app, key, err := client.createApp(ctx, name, false)
+	app, key, err := client.createApp(ctx, name, false, splitCSV(*mcpRefs))
 	if err != nil {
 		return reportAPIError(err, stderr)
 	}

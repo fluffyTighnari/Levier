@@ -52,6 +52,7 @@ def register_tools(app: LevierApp, counter: Counter) -> None:
 
 def main() -> int:
     try:
+        # LEVIER_APP_MCP_REFS=github,e2e-echo is read by the SDK.
         app = LevierApp.from_credentials()
     except CredentialsError as exc:
         print(f"credentials error: {exc}", file=sys.stderr)

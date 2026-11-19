@@ -57,6 +57,33 @@ func (c *Control) Handle(ctx context.Context, task workflow.Task, _ workflow.Lea
 		assign.Tools = toolManifests(materials.Tools)
 		assign.McpBindings = mcpBindings(materials.MCPBindings)
 	}
+	if c.cfg.ModelProviders != nil {
+		var profile register.ModelProfile
+		var err error
+		if assign.Model != nil {
+			profile, err = c.cfg.ModelProviders.ResolveModelProfile(
+				ctx,
+				assign.Model.Provider,
+				assign.Model.Model,
+				assign.Model.Params,
+			)
+		} else {
+			profile, err = c.cfg.ModelProviders.ResolveDefaultModelProfile(ctx, nil)
+		}
+		if err != nil && !errors.Is(err, register.ErrModelProviderNotFound) {
+			return workflow.Permanent(fmt.Errorf("resolve model provider: %w", err))
+		}
+		if err == nil {
+			if assign.Model == nil {
+				assign.Model = &runtimev1.ModelProfile{}
+			}
+			assign.Model.Provider = profile.Provider
+			assign.Model.Model = profile.Model
+			assign.Model.BaseUrl = profile.BaseURL
+			assign.Model.ApiKey = profile.APIKey
+			assign.Model.Params = profile.Params
+		}
+	}
 
 	placement := PlacementRequest{
 		Runtime:     runtimeType(run.Runtime),

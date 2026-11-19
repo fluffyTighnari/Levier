@@ -32,18 +32,23 @@ func runCLI(args []string, stdout, stderr io.Writer) int {
 	switch args[0] {
 	case "version":
 		return printVersion(args[1:], stdout, stderr)
-	case "describe":
-		return runDescribe(args[1:], stdout, stderr)
-	case "selfcheck":
-		return runSelfcheck(args[1:], stdout, stderr)
 	case "doctor":
 		return runDoctor(args[1:], stdout, stderr)
 	case "status":
 		return runStatus(args[1:], stdout, stderr)
 	case "app":
 		return runApp(args[1:], stdout, stderr)
+	case "provider":
+		return runProvider(args[1:], stdout, stderr)
+	case "mcp":
+		return runMCP(args[1:], stdout, stderr)
 	case "run":
 		return runRun(args[1:], stdout, stderr)
+	case "runtime":
+		return runRuntime(args[1:], stdout, stderr)
+	case "admin":
+		return runAdmin(args[1:], stdout, stderr)
+	// Compatibility aliases for deployment scripts and existing operators.
 	case "ops":
 		return runOps(args[1:], stdout, stderr)
 	case "migrate":
@@ -54,6 +59,10 @@ func runCLI(args []string, stdout, stderr io.Writer) int {
 		return runConfig(args[1:], stdout, stderr)
 	case "daemon":
 		return runDaemon(args[1:], stdout, stderr)
+	case "describe":
+		return runDescribe(args[1:], stdout, stderr)
+	case "selfcheck":
+		return runSelfcheck(args[1:], stdout, stderr)
 	case "serve":
 		runServer(args[1:])
 		return 0
@@ -119,17 +128,14 @@ func printUsage(out io.Writer) {
 	fmt.Fprintln(out, "Usage:")
 	fmt.Fprintln(out, "  levier serve [-config path]")
 	fmt.Fprintln(out, "  levier version [--json]")
-	fmt.Fprintln(out, "  levier describe [--server url] [--json]")
-	fmt.Fprintln(out, "  levier selfcheck [options]")
 	fmt.Fprintln(out, "  levier doctor [--config path] [--server url] [--credentials path] [--json]")
 	fmt.Fprintln(out, "  levier status [--server url] [--json]")
 	fmt.Fprintln(out, "  levier app init|show|check|list|rotate-key")
-	fmt.Fprintln(out, "  levier run submit|watch|cancel")
-	fmt.Fprintln(out, "  levier ops runs|daemons|tasks")
-	fmt.Fprintln(out, "  levier migrate status|up")
-	fmt.Fprintln(out, "  levier maintenance status|prune")
-	fmt.Fprintln(out, "  levier config check|print")
-	fmt.Fprintln(out, "  levier daemon check")
+	fmt.Fprintln(out, "  levier provider list|show|add|update|remove|check")
+	fmt.Fprintln(out, "  levier mcp list|add|remove")
+	fmt.Fprintln(out, "  levier run submit|watch|show|cancel")
+	fmt.Fprintln(out, "  levier runtime list")
+	fmt.Fprintln(out, "  levier admin ops|migrate|maintenance|config|daemon|describe|selfcheck")
 	fmt.Fprintln(out, "  levier help")
 	fmt.Fprintln(out)
 	fmt.Fprintln(out, "Compatibility:")

@@ -27,7 +27,8 @@
       "websocket",
       "local_tools",
       "global_tools",
-      "mcp_tools"
+      "mcp_tools",
+      "model_providers"
     ]
   },
   "limits": {
@@ -55,6 +56,8 @@
     "ws_token": "/api/v1/ws-token",
     "websocket": "/api/v1/ws",
     "admin_apps": "/admin/apps",
-    "admin_mcp": "/admin/mcp"
+    "admin_mcp": "/admin/mcp",
+    "model_providers": "/api/v1/model-providers",
+    "admin_model_providers": "/admin/model-providers"
   }
 }

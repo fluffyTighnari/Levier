@@ -90,19 +90,21 @@ type AuthScheme struct {
 
 // Endpoints lists stable public HTTP paths. Path placeholders are literal.
 type Endpoints struct {
-	Health    string `json:"health"`
-	Ready     string `json:"ready"`
-	Metrics   string `json:"metrics"`
-	Apps      string `json:"apps"`
-	App       string `json:"app"`
-	Runs      string `json:"runs"`
-	Run       string `json:"run"`
-	RunEvents string `json:"run_events"`
-	RunCancel string `json:"run_cancel"`
-	WSToken   string `json:"ws_token"`
-	WebSocket string `json:"websocket"`
-	AdminApps string `json:"admin_apps"`
-	AdminMCP  string `json:"admin_mcp"`
+	Health              string `json:"health"`
+	Ready               string `json:"ready"`
+	Metrics             string `json:"metrics"`
+	Apps                string `json:"apps"`
+	App                 string `json:"app"`
+	Runs                string `json:"runs"`
+	Run                 string `json:"run"`
+	RunEvents           string `json:"run_events"`
+	RunCancel           string `json:"run_cancel"`
+	WSToken             string `json:"ws_token"`
+	WebSocket           string `json:"websocket"`
+	AdminApps           string `json:"admin_apps"`
+	AdminMCP            string `json:"admin_mcp"`
+	ModelProviders      string `json:"model_providers"`
+	AdminModelProviders string `json:"admin_model_providers"`
 }
 
 // Options supplies build and runtime values used to construct a Document.
@@ -182,6 +184,7 @@ func New(opts Options) Document {
 				"local_tools",
 				"global_tools",
 				"mcp_tools",
+				"model_providers",
 			},
 		},
 		Limits: Limits{
@@ -197,19 +200,21 @@ func New(opts Options) Document {
 			WebSocket: AuthScheme{Scheme: "query", Parameter: "token"},
 		},
 		Endpoints: Endpoints{
-			Health:    "/healthz",
-			Ready:     "/readyz",
-			Metrics:   "/metrics",
-			Apps:      "/api/v1/apps",
-			App:       "/api/v1/apps/{app_id}",
-			Runs:      "/api/v1/runs",
-			Run:       "/api/v1/runs/{run_id}",
-			RunEvents: "/api/v1/runs/{run_id}/events",
-			RunCancel: "/api/v1/runs/{run_id}/cancel",
-			WSToken:   "/api/v1/ws-token",
-			WebSocket: "/api/v1/ws",
-			AdminApps: "/admin/apps",
-			AdminMCP:  "/admin/mcp",
+			Health:              "/healthz",
+			Ready:               "/readyz",
+			Metrics:             "/metrics",
+			Apps:                "/api/v1/apps",
+			App:                 "/api/v1/apps/{app_id}",
+			Runs:                "/api/v1/runs",
+			Run:                 "/api/v1/runs/{run_id}",
+			RunEvents:           "/api/v1/runs/{run_id}/events",
+			RunCancel:           "/api/v1/runs/{run_id}/cancel",
+			WSToken:             "/api/v1/ws-token",
+			WebSocket:           "/api/v1/ws",
+			AdminApps:           "/admin/apps",
+			AdminMCP:            "/admin/mcp",
+			ModelProviders:      "/api/v1/model-providers",
+			AdminModelProviders: "/admin/model-providers",
 		},
 	}
 }

@@ -9,6 +9,7 @@ Copyright 2026 The Levier Authors.
 from __future__ import annotations
 
 import json
+import os
 from typing import AsyncIterator, Sequence
 
 from levier_runtime.llm.base import (
@@ -131,8 +132,9 @@ class AnthropicProvider:
             "anthropic-version": self.api_version,
             "content-type": "application/json",
         }
-        if model.api_key:
-            headers["x-api-key"] = model.api_key
+        api_key = model.api_key or os.environ.get("ANTHROPIC_API_KEY", "").strip()
+        if api_key:
+            headers["x-api-key"] = api_key
         return HTTPRequest(
             url=model.base_url or _DEFAULT_BASE_URL,
             headers=headers,

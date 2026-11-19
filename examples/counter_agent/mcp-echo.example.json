@@ -1,0 +1,7 @@
+{
+  "command": "python",
+  "args": ["path/to/your_mcp_server.py"],
+  "env": {
+    "TOKEN": "${secret:e2e_token}"
+  }
+}

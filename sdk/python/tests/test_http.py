@@ -61,6 +61,29 @@ class HttpTest(unittest.TestCase):
         self.assertFalse(payload["multiagent"])
         self.assertEqual(payload["tools"][0]["name"], "counter_add")
 
+    def test_update_tools_sends_mcp_refs(self) -> None:
+        transport = FakeTransport(response(200, {"app_id": "app-1"}))
+        client = LevierClient("http://levier:8080", "app-1", "secret", transport)
+        client.update_tools("demo", [], mcp_refs=["github", "e2e-echo"])
+        payload = json.loads(transport.requests[0].body)
+        self.assertEqual(payload["mcp_refs"], ["github", "e2e-echo"])
+
+    def test_list_providers_and_submit_run(self) -> None:
+        transport = FakeTransport(
+            response(200, {"providers": [
+                {"name": "deepseek", "adapter": "openai_compatible", "default_model": "deepseek-flash", "models": []},
+            ]}),
+            response(202, {"run_id": "run-1", "status": "queued"}),
+        )
+        client = LevierClient("http://levier:8080", "app-1", "secret", transport)
+        providers = client.list_model_providers()
+        self.assertEqual(providers[0]["name"], "deepseek")
+        run = client.submit_run("hello", runtime="react1", provider="deepseek")
+        self.assertEqual(run["run_id"], "run-1")
+        payload = json.loads(transport.requests[1].body)
+        self.assertEqual(payload["runtime_name"], "react1")
+        self.assertEqual(payload["model"]["provider"], "deepseek")
+
     def test_http_error_is_normalized(self) -> None:
         transport = FakeTransport(response(401, {
             "error": {"code": "UNAUTHORIZED", "message": "bad key"},

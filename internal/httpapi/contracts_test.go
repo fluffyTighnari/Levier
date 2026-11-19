@@ -189,7 +189,7 @@ func TestValidateCreateRunRequest(t *testing.T) {
 	}{
 		{"bad runtime", func(r *CreateRunRequest) { r.Runtime = "vm" }, "runtime"},
 		{"missing runtime name", func(r *CreateRunRequest) { r.RuntimeName = "" }, "runtime_name"},
-		{"missing model provider", func(r *CreateRunRequest) { r.Model = &ModelRequest{Model: "gpt-test"} }, "model.provider"},
+		{"missing runtime name check", func(r *CreateRunRequest) { r.RuntimeName = " " }, "runtime_name"},
 		{"negative timeout", func(r *CreateRunRequest) { r.Timeouts.RunMS = -1 }, "timeouts"},
 		{"tool timeout too large", func(r *CreateRunRequest) { r.Timeouts.ToolMS = maxToolTimeoutMS + 1 }, "tool_ms"},
 		{"session on normal", func(r *CreateRunRequest) { r.SessionID = "s-1" }, "session_id"},

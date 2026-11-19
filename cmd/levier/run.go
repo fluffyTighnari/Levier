@@ -35,6 +35,8 @@ func runRun(args []string, stdout, stderr io.Writer) int {
 		return runRunSubmit(args[1:], stdout, stderr)
 	case "watch":
 		return runRunWatch(args[1:], stdout, stderr)
+	case "show":
+		return runRunShow(args[1:], stdout, stderr)
 	case "cancel":
 		return runRunCancel(args[1:], stdout, stderr)
 	case "help", "-h", "--help":
@@ -49,8 +51,9 @@ func runRun(args []string, stdout, stderr io.Writer) int {
 
 func printRunUsage(out io.Writer) {
 	fmt.Fprintln(out, "usage:")
-	fmt.Fprintln(out, "  levier run submit --runtime <name> --prompt <text> [--request-id id] [--watch]")
+	fmt.Fprintln(out, "  levier run submit --runtime <name> --prompt <text> [--provider name] [--model name] [--watch]")
 	fmt.Fprintln(out, "  levier run watch --run-id <id>")
+	fmt.Fprintln(out, "  levier run show --run-id <id> [--events]")
 	fmt.Fprintln(out, "  levier run cancel --run-id <id> --yes")
 }
 
@@ -61,8 +64,8 @@ func runRunSubmit(args []string, stdout, stderr io.Writer) int {
 	server := flags.String("server", "", "Levier HTTP address")
 	prompt := flags.String("prompt", "", "user prompt")
 	runtimeName := flags.String("runtime", "", "target runtime name, e.g. react1")
-	provider := flags.String("provider", "deepseek", "model provider")
-	model := flags.String("model", "deepseek-flash", "model name")
+	provider := flags.String("provider", "", "provider name (default: control-plane default)")
+	model := flags.String("model", "", "model name (default: provider default)")
 	maxSteps := flags.Int("max-steps", 8, "maximum ReAct steps")
 	runMS := flags.Int64("run-ms", 60000, "run timeout in milliseconds")
 	toolMS := flags.Int64("tool-ms", 10000, "per-tool timeout in milliseconds")
@@ -98,11 +101,13 @@ func runRunSubmit(args []string, stdout, stderr io.Writer) int {
 		RuntimeName: *runtimeName,
 		Params:      map[string]any{"max_steps": *maxSteps},
 		Input:       []chatMessage{{Role: "user", Content: *prompt}},
-		Model:       modelRequest{Provider: *provider, Model: *model},
 		Timeouts: timeoutRequest{
 			RunMS:  *runMS,
 			ToolMS: *toolMS,
 		},
+	}
+	if *provider != "" || *model != "" {
+		request.Model = &modelRequest{Provider: *provider, Model: *model}
 	}
 	client := newAPIClient(resolveServer(*server, &credentials), credentials.APIKey, *timeout)
 	submitted, err := client.createRun(context.Background(), request, *idempotencyKey, *requestID)
@@ -221,6 +226,66 @@ func finishWatch(client *apiClient, run runView, asJSON bool, stdout, stderr io.
 		fmt.Fprintf(stdout, "final: %s\n", result.FinalMessage)
 	}
 	return terminalExitCode(run.Status)
+}
+
+func runRunShow(args []string, stdout, stderr io.Writer) int {
+	flags := flag.NewFlagSet("run show", flag.ContinueOnError)
+	flags.SetOutput(stderr)
+	credentialsPath := flags.String("credentials", os.Getenv("LEVIER_CREDENTIALS"), "credentials file")
+	server := flags.String("server", "", "Levier HTTP address")
+	runID := flags.String("run-id", "", "run id")
+	events := flags.Bool("events", false, "include run events")
+	timeout := flags.Duration("timeout", 10*time.Second, "per-request timeout")
+	asJSON := flags.Bool("json", false, "print JSON")
+	if ok, code := parseFlagSet(flags, args, stdout, stderr); !ok {
+		return code
+	}
+	if *credentialsPath == "" {
+		fmt.Fprintln(stderr, "credentials path is required: --credentials or LEVIER_CREDENTIALS")
+		return 2
+	}
+	if *runID == "" {
+		fmt.Fprintln(stderr, "run id is required: --run-id")
+		return 2
+	}
+	credentials, err := readCredentials(*credentialsPath)
+	if err != nil {
+		fmt.Fprintf(stderr, "read credentials: %v\n", err)
+		return 2
+	}
+	client := newAPIClient(resolveServer(*server, &credentials), credentials.APIKey, *timeout)
+	run, err := client.getRun(context.Background(), *runID)
+	if err != nil {
+		return reportAPIError(err, stderr)
+	}
+	if !*events {
+		if *asJSON {
+			return encodeJSON(stdout, run, stderr)
+		}
+		fmt.Fprintf(stdout, "run_id       %s\n", run.RunID)
+		fmt.Fprintf(stdout, "status       %s\n", run.Status)
+		fmt.Fprintf(stdout, "runtime      %s\n", run.RuntimeName)
+		fmt.Fprintf(stdout, "attempt      %d\n", run.Attempt)
+		fmt.Fprintf(stdout, "session_id   %s\n", run.SessionID)
+		fmt.Fprintf(stdout, "trace_id     %s\n", run.TraceID)
+		fmt.Fprintf(stdout, "created_at   %s\n", run.CreatedAt)
+		fmt.Fprintf(stdout, "updated_at   %s\n", run.UpdatedAt)
+		return 0
+	}
+	eventPage, err := client.listRunEvents(context.Background(), *runID, 0, 0, 1000)
+	if err != nil {
+		return reportAPIError(err, stderr)
+	}
+	if *asJSON {
+		return encodeJSON(stdout, map[string]any{"run": run, "events": eventPage.Events}, stderr)
+	}
+	fmt.Fprintf(stdout, "run_id       %s\n", run.RunID)
+	fmt.Fprintf(stdout, "status       %s\n", run.Status)
+	fmt.Fprintf(stdout, "runtime      %s\n", run.RuntimeName)
+	for _, event := range eventPage.Events {
+		fmt.Fprintf(stdout, "[%d] %-22s %s\n", event.Seq, event.EventType, event.Source)
+	}
+	return 0
 }
 
 func runRunCancel(args []string, stdout, stderr io.Writer) int {

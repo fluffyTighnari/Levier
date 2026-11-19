@@ -23,9 +23,8 @@ func (r CreateRunRequest) Validate() error {
 	default:
 		return fmt.Errorf("runtime must be normal, sandbox, or longterm")
 	}
-	if r.Model != nil && (r.Model.Provider == "" || r.Model.Model == "") {
-		return fmt.Errorf("model.provider and model are required when model is provided")
-	}
+	// A missing provider selects the control-plane default provider. A missing
+	// model selects that provider's default model.
 	if r.Timeouts.RunMS < 0 || r.Timeouts.ToolMS < 0 {
 		return fmt.Errorf("timeouts must not be negative")
 	}

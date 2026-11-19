@@ -275,6 +275,136 @@ paths:
                 $ref: '#/components/schemas/AdminTaskListResponse'
         default:
           $ref: '#/components/responses/Error'
+  /model-providers:
+    get:
+      summary: List enabled model providers for the authenticated App
+      operationId: listModelProviders
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Provider catalog without keys or secret references
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  providers:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        name: {type: string}
+                        adapter: {type: string}
+                        base_url: {type: string}
+                        default_model: {type: string}
+                        models:
+                          type: array
+                          items: {type: string}
+                        default: {type: boolean}
+        default:
+          $ref: '#/components/responses/Error'
+  /admin/model-providers:
+    get:
+      summary: List model providers for operators
+      operationId: listAdminModelProviders
+      security:
+        - adminToken: []
+      responses:
+        "200":
+          description: Provider catalog with secret reference status
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        default:
+          $ref: '#/components/responses/Error'
+    post:
+      summary: Create or update a model provider
+      operationId: upsertModelProvider
+      security:
+        - adminToken: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, adapter, secret_ref]
+              properties:
+                name: {type: string}
+                adapter: {type: string, enum: [openai_compatible, anthropic]}
+                base_url: {type: string}
+                default_model: {type: string}
+                models:
+                  type: array
+                  items: {type: string}
+                secret_ref: {type: string}
+                enabled: {type: boolean}
+                default: {type: boolean}
+      responses:
+        "200":
+          description: Saved provider view
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        default:
+          $ref: '#/components/responses/Error'
+  /admin/model-providers/{name}:
+    parameters:
+      - name: name
+        in: path
+        required: true
+        schema: {type: string}
+    get:
+      summary: Get a model provider
+      operationId: getModelProvider
+      security:
+        - adminToken: []
+      responses:
+        "200":
+          description: Provider view
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        default:
+          $ref: '#/components/responses/Error'
+    delete:
+      summary: Delete a model provider
+      operationId: deleteModelProvider
+      security:
+        - adminToken: []
+      responses:
+        "200":
+          description: Deleted
+        default:
+          $ref: '#/components/responses/Error'
+  /admin/model-providers/{name}/check:
+    parameters:
+      - name: name
+        in: path
+        required: true
+        schema: {type: string}
+    post:
+      summary: Check provider metadata and secret resolution
+      operationId: checkModelProvider
+      security:
+        - adminToken: []
+      responses:
+        "200":
+          description: Provider is configured
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        default:
+          $ref: '#/components/responses/Error'
   /apps:
     post:
       summary: Update the authenticated App
@@ -564,7 +694,7 @@ components:
           type: string
     ModelRequest:
       type: object
-      required: [provider, model]
+      description: provider and model are optional when a default provider is configured
       properties:
         provider:
           type: string

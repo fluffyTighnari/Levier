@@ -122,7 +122,7 @@ type createRunRequest struct {
 	Runtime     string         `json:"runtime,omitempty"`
 	Params      map[string]any `json:"params,omitempty"`
 	Input       []chatMessage  `json:"input"`
-	Model       modelRequest   `json:"model"`
+	Model       *modelRequest  `json:"model,omitempty"`
 	Timeouts    timeoutRequest `json:"timeouts,omitempty"`
 }
 
@@ -269,12 +269,95 @@ func (c *apiClient) doWithHeaders(ctx context.Context, method, path string, body
 	return nil
 }
 
-func (c *apiClient) createApp(ctx context.Context, name string, multiagent bool) (appView, string, error) {
+type modelProviderView struct {
+	Name             string   `json:"name"`
+	Adapter          string   `json:"adapter"`
+	BaseURL          string   `json:"base_url"`
+	DefaultModel     string   `json:"default_model"`
+	Models           []string `json:"models"`
+	SecretRef        string   `json:"secret_ref"`
+	SecretConfigured bool     `json:"secret_configured"`
+	Enabled          bool     `json:"enabled"`
+	Default          bool     `json:"default"`
+}
+
+type modelProviderListResponse struct {
+	Providers []modelProviderView `json:"providers"`
+}
+
+func (c *apiClient) listModelProviders(ctx context.Context) ([]modelProviderView, error) {
+	var response modelProviderListResponse
+	if err := c.do(ctx, http.MethodGet, "/admin/model-providers", nil, &response); err != nil {
+		return nil, err
+	}
+	return response.Providers, nil
+}
+
+func (c *apiClient) getModelProvider(ctx context.Context, name string) (modelProviderView, error) {
+	var response modelProviderView
+	err := c.do(ctx, http.MethodGet, "/admin/model-providers/"+url.PathEscape(name), nil, &response)
+	return response, err
+}
+
+func (c *apiClient) upsertModelProvider(ctx context.Context, payload map[string]any) (modelProviderView, error) {
+	var response modelProviderView
+	err := c.do(ctx, http.MethodPost, "/admin/model-providers", payload, &response)
+	return response, err
+}
+
+func (c *apiClient) deleteModelProvider(ctx context.Context, name string) error {
+	return c.do(ctx, http.MethodDelete, "/admin/model-providers/"+url.PathEscape(name), nil, nil)
+}
+
+func (c *apiClient) checkModelProvider(ctx context.Context, name string) (modelProviderView, error) {
+	var response modelProviderView
+	err := c.do(ctx, http.MethodPost, "/admin/model-providers/"+url.PathEscape(name)+"/check", nil, &response)
+	return response, err
+}
+
+type mcpServerView struct {
+	Name         string   `json:"name"`
+	Transport    string   `json:"transport"`
+	AllowedTools []string `json:"allowed_tools"`
+	SecretRefs   []string `json:"secret_refs"`
+}
+
+type mcpServerListResponse struct {
+	Servers []mcpServerView `json:"servers"`
+}
+
+func (c *apiClient) listMCPServers(ctx context.Context) ([]mcpServerView, error) {
+	var response mcpServerListResponse
+	if err := c.do(ctx, http.MethodGet, "/admin/mcp", nil, &response); err != nil {
+		return nil, err
+	}
+	return response.Servers, nil
+}
+
+func (c *apiClient) upsertMCPServer(ctx context.Context, payload map[string]any) (mcpServerView, error) {
+	var response mcpServerView
+	err := c.do(ctx, http.MethodPost, "/admin/mcp", payload, &response)
+	return response, err
+}
+
+func (c *apiClient) deleteMCPServer(ctx context.Context, name string, force bool) error {
+	path := "/admin/mcp/" + url.PathEscape(name)
+	if force {
+		path += "?force=true"
+	}
+	return c.do(ctx, http.MethodDelete, path, nil, nil)
+}
+
+func (c *apiClient) createApp(ctx context.Context, name string, multiagent bool, mcpRefs []string) (appView, string, error) {
 	var response createAppResponse
-	err := c.do(ctx, http.MethodPost, "/admin/apps", map[string]any{
+	body := map[string]any{
 		"name":       name,
 		"multiagent": multiagent,
-	}, &response)
+	}
+	if len(mcpRefs) > 0 {
+		body["mcp_refs"] = mcpRefs
+	}
+	err := c.do(ctx, http.MethodPost, "/admin/apps", body, &response)
 	return response.App, response.APIKey, err
 }
 

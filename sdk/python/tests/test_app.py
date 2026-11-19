@@ -83,6 +83,18 @@ class AppToolTest(unittest.TestCase):
         self.assertFalse(result["ok"])
         self.assertEqual(result["error"]["code"], "TOOL_EXEC_ERROR")
 
+    def test_mcp_refs_are_declared_on_connect(self) -> None:
+        app = LevierApp(
+            Credentials(
+                app_id="app-1",
+                app_name="demo",
+                api_key=Secret("mw_secret"),
+                server="http://127.0.0.1:8080",
+            ),
+            mcp_refs=["github"],
+        )
+        self.assertEqual(app.mcp_refs, ["github"])
+
     def test_duplicate_tool_is_rejected(self) -> None:
         app = self.app()
 

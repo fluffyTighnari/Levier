@@ -219,6 +219,7 @@ deploy/secrets/levier_daemon_tokens.json
 deploy/secrets/levier_database_url
 deploy/secrets/levier_react_runtime_daemon_token
 deploy/secrets/levier_mcp_secrets.json
+deploy/secrets/levier_model_secrets.json
 ```
 
 `levier_admin_token` 同时供控制面与 Agent 使用，避免同一 Admin token 出现两份来源。

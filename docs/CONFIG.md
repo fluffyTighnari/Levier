@@ -236,6 +236,57 @@ not part of Runtime configuration.
 
 ---
 
+## 4.1 Model provider catalog
+
+The control plane owns provider metadata and secret references. It never
+stores or returns a plaintext model key.
+
+```yaml
+# levier provider add ...
+name: deepseek
+adapter: openai_compatible
+base_url: https://api.deepseek.com
+default_model: deepseek-flash
+models: [deepseek-flash, deepseek-reasoner]
+secret_ref: deepseek_api_key
+enabled: true
+default: true
+```
+
+Secret values come from:
+
+```text
+LEVIER_SECRET_<UPPER_REF>
+LEVIER_SECRETS_FILE
+```
+
+Example:
+
+```text
+secret_ref=deepseek_api_key
+LEVIER_SECRET_DEEPSEEK_API_KEY=sk-...
+```
+
+or a 0600 JSON file:
+
+```json
+{"deepseek_api_key": "sk-...", "openai_api_key": "sk-..."}
+```
+
+Provider endpoints:
+
+```text
+GET    /api/v1/model-providers        App-readable catalog, no secrets
+GET    /admin/model-providers         Admin catalog with secret_ref status
+POST   /admin/model-providers         Upsert provider metadata
+DELETE /admin/model-providers/{name}
+POST   /admin/model-providers/{name}/check
+```
+
+Provider keys are resolved at dispatch time and placed only in the per-run
+`TaskAssign.ModelProfile`. They are not included in provider list responses,
+events, logs, checkpoints, or `/meta`.
+
 ## 5. MCP Runtime 配置
 
 文件/入口：`execution/mcp_runtime/src/levier_mcp_runtime/__main__.py`

@@ -30,6 +30,7 @@ from levier_runtime.llm.http import (
 )
 
 _DEFAULT_BASE_URL = "https://api.deepseek.com"
+_DEFAULT_OPENAI_BASE_URL = "https://api.openai.com/v1"
 _DEFAULT_DEEPSEEK_MODEL = "deepseek-flash"
 _RETRYABLE_STATUS = {408, 409, 429, 500, 502, 503, 504, 529}
 
@@ -120,18 +121,33 @@ class OpenAICompatibleProvider:
 
 
 def _resolve_model(model: ModelConfig) -> ModelConfig:
-    """Apply the DeepSeek experiment environment when fields are empty."""
-    if (model.provider or "").lower() != "deepseek":
+    """Apply local provider environment fallbacks when fields are empty."""
+    provider = (model.provider or "").lower()
+    if provider not in {"deepseek", "openai"}:
         return model
-    api_key = model.api_key or os.environ.get("DEEPSEEK_API_KEY", "").strip()
+    if provider == "deepseek":
+        env_key = "DEEPSEEK_API_KEY"
+        env_base = "DEEPSEEK_BASE_URL"
+        env_model = "DEEPSEEK_MODEL"
+        default_base = _DEFAULT_BASE_URL
+        default_model = _DEFAULT_DEEPSEEK_MODEL
+    else:
+        env_key = "OPENAI_API_KEY"
+        env_base = "OPENAI_BASE_URL"
+        env_model = "OPENAI_MODEL"
+        default_base = _DEFAULT_OPENAI_BASE_URL
+        default_model = ""
+    api_key = model.api_key or os.environ.get(env_key, "").strip()
     if not api_key:
         raise LLMError(
             "PROVIDER_UNAVAILABLE",
-            "DEEPSEEK_API_KEY is required for provider deepseek",
+            f"{env_key} is required for provider {provider}",
             retryable=False,
         )
-    base_url = model.base_url or os.environ.get("DEEPSEEK_BASE_URL", "").strip() or _DEFAULT_BASE_URL
-    model_name = model.model or os.environ.get("DEEPSEEK_MODEL", "").strip() or _DEFAULT_DEEPSEEK_MODEL
+    base_url = model.base_url or os.environ.get(env_base, "").strip() or default_base
+    model_name = model.model or os.environ.get(env_model, "").strip() or default_model
+    if not model_name:
+        raise LLMError("BAD_REQUEST", "model is required", retryable=False)
     return replace(model, api_key=api_key, base_url=base_url, model=model_name)
 
 

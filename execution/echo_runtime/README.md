@@ -8,6 +8,16 @@ PYTHONPATH=execution/runtime_sdk/src \
   --config execution/echo_runtime/runtime.yaml
 ```
 
+CLI:
+
+```text
+--config PATH       runtime YAML
+--check             validate and exit
+--print-config      print redacted effective config
+--version           print package version
+--log-level LEVEL   override logging level
+```
+
 It implements only:
 
 ```python

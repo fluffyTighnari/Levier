@@ -100,6 +100,17 @@ PYTHONPATH=src:../runtime_sdk/src:../agent_core/src .venv/bin/python -m levier_r
   --config react.example.yaml
 ```
 
+CLI:
+
+```text
+--config PATH       runtime YAML
+--check             validate and exit
+--print-config      print redacted effective config
+--version           print package version
+--log-level LEVEL   override logging level
+--mcp-socket PATH   override MCP Runtime socket
+```
+
 Start the shared MCP Runtime separately when MCP bindings are used:
 
 ```sh

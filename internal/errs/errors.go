@@ -45,6 +45,8 @@ const (
 	CodeBadTool                      Code = "BAD_TOOL"
 	CodeBadMCP                       Code = "BAD_MCP"
 	CodeBadMCPRef                    Code = "BAD_MCP_REF"
+	CodeBadModelProvider             Code = "BAD_MODEL_PROVIDER"
+	CodeModelProviderNotFound        Code = "MODEL_PROVIDER_NOT_FOUND"
 	CodeMCPNotFound                  Code = "MCP_NOT_FOUND"
 	CodeMCPInUse                     Code = "MCP_IN_USE"
 	CodeBadMessage                   Code = "BAD_MESSAGE"
@@ -170,6 +172,8 @@ var codeMetaByCode = map[Code]codeMeta{
 	CodeBadTool:                      {retryable: false, status: 400},
 	CodeBadMCP:                       {retryable: false, status: 400},
 	CodeBadMCPRef:                    {retryable: false, status: 400},
+	CodeBadModelProvider:             {retryable: false, status: 400},
+	CodeModelProviderNotFound:        {retryable: false, status: 404},
 	CodeMCPNotFound:                  {retryable: false, status: 404},
 	CodeMCPInUse:                     {retryable: false, status: 409},
 	CodeBadMessage:                   {retryable: false, status: 400},

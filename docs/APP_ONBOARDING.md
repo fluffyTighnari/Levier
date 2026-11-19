@@ -1,5 +1,10 @@
 <!-- Levier — App onboarding, current runtime contract. -->
 
+> Current App integration guide: see the repository [`README.md`](../README.md) and
+> `sdk/python/README.md`. This document is the lower-level HTTP/WebSocket
+> contract reference, not the primary onboarding path.
+
+
 # App 接入 Levier
 
 这份文档描述**当前可用**的接入方式，对应 P6B 已闭环的实现。

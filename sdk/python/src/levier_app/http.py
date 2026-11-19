@@ -9,11 +9,12 @@ Copyright 2026 The Levier Authors.
 from __future__ import annotations
 
 import json
+import time
 import urllib.error
 import urllib.parse
 import urllib.request
 from dataclasses import dataclass, field
-from typing import Any, Protocol
+from typing import Any, Protocol, Sequence
 
 from .credentials import Secret
 from .errors import HTTPError, TransportError
@@ -153,13 +154,50 @@ class LevierClient:
         response = self._request("GET", f"/api/v1/apps/{urllib.parse.quote(self.app_id, safe='')}")
         return _require_ok(response, 200)
 
-    def update_tools(self, app_name: str, tools: list[dict[str, Any]]) -> dict[str, Any]:
-        response = self._request("POST", "/api/v1/apps", body={
+    @classmethod
+    def from_credentials(
+        cls,
+        path: str | None = None,
+        *,
+        server: str | None = None,
+        transport: Transport | None = None,
+        timeout: float = 15.0,
+    ) -> "LevierClient":
+        from .credentials import load_credentials, resolve_server
+
+        credentials = load_credentials(path)
+        return cls(
+            resolve_server(credentials, server),
+            credentials.app_id,
+            credentials.api_key.reveal(),
+            transport,
+            timeout,
+        )
+
+    def update_tools(
+        self,
+        app_name: str,
+        tools: list[dict[str, Any]],
+        *,
+        mcp_refs: Sequence[str] | None = None,
+    ) -> dict[str, Any]:
+        body: dict[str, Any] = {
             "name": app_name,
             "multiagent": False,
             "tools": tools,
-        })
+        }
+        if mcp_refs is not None:
+            body["mcp_refs"] = list(mcp_refs)
+        response = self._request("POST", "/api/v1/apps", body=body)
         return _require_ok(response, 200)
+
+    def list_model_providers(self) -> list[dict[str, Any]]:
+        response = self._request("GET", "/api/v1/model-providers")
+        payload = _require_ok(response, 200)
+        providers = payload.get("providers")
+        if not isinstance(providers, list):
+            raise HTTPError(response.status, "BAD_RESPONSE", "providers must be a list")
+        return [provider for provider in providers if isinstance(provider, dict)]
 
     def create_ws_token(self) -> WsToken:
         response = self._request("POST", "/api/v1/ws-token")
@@ -185,9 +223,75 @@ class LevierClient:
         response = self._request("POST", "/api/v1/runs", body=payload, headers=headers)
         return _require_ok(response, 202)
 
+    def submit_run(
+        self,
+        prompt: str,
+        *,
+        runtime: str,
+        provider: str = "",
+        model: str = "",
+        max_steps: int = 8,
+        run_ms: int = 60000,
+        tool_ms: int = 10000,
+        idempotency_key: str = "",
+    ) -> dict[str, Any]:
+        """Submit one user prompt and return the queued Run view."""
+        if not prompt.strip():
+            raise ValueError("prompt is required")
+        if not runtime.strip():
+            raise ValueError("runtime is required")
+        payload: dict[str, Any] = {
+            "runtime_name": runtime,
+            "params": {"max_steps": max_steps},
+            "input": [{"role": "user", "content": prompt}],
+            "timeouts": {"run_ms": run_ms, "tool_ms": tool_ms},
+        }
+        if provider or model:
+            payload["model"] = {"provider": provider, "model": model}
+        return self.create_run(payload, idempotency_key=idempotency_key)
+
+    def wait_run(
+        self,
+        run_id: str,
+        *,
+        timeout: float = 300.0,
+        interval: float = 0.5,
+    ) -> dict[str, Any]:
+        """Poll until a Run reaches a terminal status and return its view."""
+        if timeout <= 0:
+            raise ValueError("timeout must be positive")
+        if interval <= 0:
+            interval = 0.5
+        deadline = time.monotonic() + timeout
+        while True:
+            run = self.get_run(run_id)
+            status = str(run.get("status") or "")
+            if status in {"completed", "failed", "cancelled", "timeout"}:
+                return run
+            if time.monotonic() >= deadline:
+                raise TimeoutError(f"run {run_id} did not finish within {timeout}s")
+            time.sleep(interval)
+
     def get_run(self, run_id: str) -> dict[str, Any]:
         response = self._request("GET", f"/api/v1/runs/{urllib.parse.quote(run_id, safe='')}")
         return _require_ok(response, 200)
+
+    def get_events(
+        self,
+        run_id: str,
+        *,
+        after_attempt: int = 0,
+        after_seq: int = 0,
+        limit: int = 1000,
+    ) -> list[dict[str, Any]]:
+        payload = self.list_events(
+            run_id,
+            after_attempt=after_attempt,
+            after_seq=after_seq,
+            limit=limit,
+        )
+        events = payload.get("events")
+        return [event for event in events if isinstance(event, dict)] if isinstance(events, list) else []
 
     def list_events(
         self,

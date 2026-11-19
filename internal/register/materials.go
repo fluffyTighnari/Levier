@@ -25,12 +25,12 @@ func (r EnvSecretResolver) Resolve(_ context.Context, ref string) (string, error
 	}
 	suffix := strings.ToUpper(strings.ReplaceAll(ref, "-", "_"))
 	key := prefix + suffix
-	if value, ok := os.LookupEnv(key); ok {
+	if value, ok := os.LookupEnv(key); ok && value != "" {
 		return value, nil
 	}
 	if r.Prefix == "" {
 		legacyKey := "MIDDLEWARE_SECRET_" + suffix
-		if value, ok := os.LookupEnv(legacyKey); ok {
+		if value, ok := os.LookupEnv(legacyKey); ok && value != "" {
 			return value, nil
 		}
 	}

@@ -1,9 +1,10 @@
-# Levier Python App Adapter
+# Levier Python App SDK
 
-Python App 只需要写业务工具；凭据、HTTP、WebSocket、重连、工具注册和
-`local_tool_call` / `local_tool_result` 由本包处理。
+`levier_app` is the App-side SDK. It owns credentials, HTTP, WebSocket,
+reconnects, tool registration, and the `local_tool_call` /
+`local_tool_result` contract. An App owns its own state and tool handlers.
 
-## 最小示例
+## Minimal App
 
 ```python
 from levier_app import LevierApp
@@ -29,47 +30,95 @@ if __name__ == "__main__":
     raise SystemExit(app.run())
 ```
 
-本地安装：
+Install locally:
 
 ```sh
 pip install -e ./sdk/python
 ```
 
-运行：
+Run with the credentials created by `levier app init`:
 
 ```sh
-LEVIER_CREDENTIALS=~/.config/levier/counter-app.json \
-  python app.py
+LEVIER_CREDENTIALS=~/.config/levier/counter-app.json python app.py
 ```
 
-工具 handler 是同步函数，接收已解析的 `arguments` 字典，返回值必须可 JSON
-序列化。handler 抛出 `ToolExecutionError` 时可以指定 `code` 和 `retryable`；
-其他异常会被转换为 `TOOL_EXEC_ERROR`。
+## MCP references
 
-公开 manifest 的机器可读定义在 `public/app-adapter/v1/schema.json`。
+MCP tools are not implemented in the App process. The App declares which
+registered MCP servers it wants:
 
-## 当前范围
+```python
+app = LevierApp.from_credentials(mcp_refs=["github", "e2e-echo"])
+```
+
+or:
+
+```sh
+export LEVIER_APP_MCP_REFS=github,e2e-echo
+```
+
+The same references can be set when the App is created:
+
+```sh
+levier app init --name counter-agent --mcp-ref github,e2e-echo
+```
+
+The Runtime resolves the referenced MCP servers into its per-run MCP bindings.
+The App does not need any MCP client code.
+
+## Client API
+
+`LevierClient` uses the same credentials file as `LevierApp`:
+
+```python
+from levier_app import LevierClient
+
+client = LevierClient.from_credentials()
+
+providers = client.list_model_providers()
+run = client.submit_run(
+    "Add 2, then add 3.",
+    runtime="react1",
+    provider="deepseek",
+    model="deepseek-flash",
+)
+result = client.wait_run(run["run_id"], timeout=120)
+events = client.get_events(run["run_id"])
+```
+
+Public methods:
 
 ```text
-Python App adapter
-标准库 HTTP / WebSocket
-凭据文件复用 Levier CLI 的 canonical 格式
-hello / ping / pong
-工具注册和调用
-断线重连
-优雅停止
+LevierClient.from_credentials()
+LevierClient.list_model_providers()
+LevierClient.submit_run(prompt, runtime=..., provider=..., model=...)
+LevierClient.wait_run(run_id, timeout=...)
+LevierClient.get_run(run_id)
+LevierClient.get_events(run_id)
+LevierClient.cancel_run(run_id)
 ```
 
-暂不包含：
+`provider` and `model` are optional when the control plane has a default
+provider. App code never receives or stores the provider API key.
 
-```text
-Node / TypeScript SDK
-Sidecar
-非 Python adapter
-GUI
+## Credentials
+
+`levier app init` writes a 0600 JSON file containing:
+
+```json
+{
+  "credential_version": 1,
+  "app_id": "...",
+  "app_name": "counter-agent",
+  "api_key": "...",
+  "server": "http://127.0.0.1:8080"
+}
 ```
 
-## 测试
+`LEVIER_CREDENTIALS` selects the file. The App API key is distinct from model
+provider keys; provider keys live in the control plane secret configuration.
+
+## Tests
 
 ```sh
 PYTHONPATH=sdk/python/src python3 -m unittest discover -s sdk/python/tests -v

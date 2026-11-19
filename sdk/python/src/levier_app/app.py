@@ -11,12 +11,13 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 import signal
 import socket
 import threading
 import time
 from dataclasses import dataclass, field
-from typing import Any, Callable, Mapping
+from typing import Any, Callable, Mapping, Sequence
 
 from .credentials import Credentials, load_credentials, resolve_server
 from .errors import (
@@ -82,6 +83,7 @@ class LevierApp:
         transport: Transport | None = None,
         logger: logging.Logger | None = None,
         on_event: EventCallback | None = None,
+        mcp_refs: Sequence[str] | None = None,
     ) -> None:
         self.credentials = credentials
         self.server = resolve_server(credentials, server)
@@ -93,6 +95,7 @@ class LevierApp:
         )
         self.logger = logger or logging.getLogger("levier_app")
         self.on_event = on_event
+        self.mcp_refs = _parse_mcp_refs(mcp_refs)
         self._tools: dict[str, ToolSpec] = {}
         self._stop_requested = False
         self._active_ws: WebSocketClient | None = None
@@ -106,6 +109,7 @@ class LevierApp:
         transport: Transport | None = None,
         logger: logging.Logger | None = None,
         on_event: EventCallback | None = None,
+        mcp_refs: Sequence[str] | None = None,
     ) -> "LevierApp":
         return cls(
             load_credentials(path),
@@ -113,6 +117,7 @@ class LevierApp:
             transport=transport,
             logger=logger,
             on_event=on_event,
+            mcp_refs=mcp_refs,
         )
 
     def tool(
@@ -266,7 +271,11 @@ class LevierApp:
         status = str(app.get("status") or "")
         if status != "active":
             raise AppInactiveError(f"app status is {status!r}, want active")
-        self.client.update_tools(self.credentials.app_name, self.tools_manifest())
+        self.client.update_tools(
+            self.credentials.app_name,
+            self.tools_manifest(),
+            mcp_refs=self.mcp_refs,
+        )
         token = self.client.create_ws_token()
         url = websocket_url(
             self.server,
@@ -383,3 +392,17 @@ def _tool_error(
             "retryable": retryable,
         },
     }
+
+
+def _parse_mcp_refs(value: Sequence[str] | None) -> list[str] | None:
+    if value is None:
+        raw = os.environ.get("LEVIER_APP_MCP_REFS", "")
+        if not raw.strip():
+            return None
+        value = raw.split(",")
+    refs: list[str] = []
+    for item in value:
+        name = str(item).strip()
+        if name and name not in refs:
+            refs.append(name)
+    return refs

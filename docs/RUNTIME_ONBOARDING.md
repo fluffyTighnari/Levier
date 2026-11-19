@@ -104,7 +104,9 @@ await ctx.checkpoint(state)
 
 ## 4. Optional inputs
 
-- **Model**: read `ctx.model`; call your own LLM or an optional provider.
+- **Model**: read `ctx.model`; the control plane resolves the registered provider,
+  base URL, and key into this run. Runtime code does not need a model key in its
+  process environment when using the managed provider catalog.
 - **Tools**: read `ctx.tools`; call them through `ctx.call_tool`.
 - **MCP**: read `ctx.mcp_bindings`; open sessions via `levier_runtime.mcp` or
   your own client.

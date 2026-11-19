@@ -107,6 +107,14 @@ func runServer(args []string) {
 	metrics := observe.NewRegistry()
 	runs := runstore.New(pool)
 	registry := register.New(pool)
+	if secretsPath := os.Getenv("LEVIER_SECRETS_FILE"); secretsPath != "" {
+		resolver, err := register.LoadFileSecretResolver(secretsPath)
+		if err != nil {
+			logger.Error("load control-plane secrets failed", "err", err)
+			os.Exit(1)
+		}
+		registry = register.NewWithSecrets(pool, resolver)
+	}
 	queue := workflow.NewPostgres(pool)
 	reaperDone := make(chan struct{})
 	go func() {
@@ -138,13 +146,14 @@ func runServer(args []string) {
 		gateway.WithMetrics(metrics),
 	)
 	controller := control.New(runs, hub, control.Config{
-		Logger:      logger,
-		Publisher:   appHub,
-		Scheduler:   control.NewHubScheduler(hub),
-		Tools:       toolInvoker,
-		Tasks:       queue,
-		EventBuffer: cfg.Workflow.EventBuffer,
-		LocalTools:  appHub,
+		Logger:         logger,
+		Publisher:      appHub,
+		Scheduler:      control.NewHubScheduler(hub),
+		Tools:          toolInvoker,
+		Tasks:          queue,
+		EventBuffer:    cfg.Workflow.EventBuffer,
+		LocalTools:     appHub,
+		ModelProviders: registry,
 		DaemonAvailable: func(daemonID string) bool {
 			_, ok := hub.Get(daemonID)
 			return ok

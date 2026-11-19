@@ -18,7 +18,7 @@ from typing import Sequence
 
 import yaml
 
-from levier_runtime import Runtime
+from levier_runtime import Runtime, __version__ as RUNTIME_VERSION
 from levier_runtime.llm import ProviderRouter
 from levier_runtime.mcp import McpRuntimeClient
 from levier_runtime.react import ReactAgent
@@ -48,8 +48,10 @@ def _apply_legacy_env() -> None:
             os.environ[new] = value
 
 
-def _mcp_socket(config_path: str) -> str:
+def _mcp_socket(config_path: str, override: str = "") -> str:
     """Read the optional shared MCP socket without coupling it to RuntimeConfig."""
+    if override:
+        return override
     for name in ("LEVIER_REACT_RUNTIME_MCP_SOCKET", "LEVIER_MCP_RUNTIME_SOCKET"):
         override = os.environ.get(name)
         if override:
@@ -77,12 +79,21 @@ def build_parser() -> argparse.ArgumentParser:
         help="path to React Runtime YAML configuration",
     )
     parser.add_argument("--check", action="store_true", help="validate configuration")
+    parser.add_argument("--print-config", action="store_true", help="print redacted configuration")
+    parser.add_argument("--version", action="store_true", help="print version")
+    parser.add_argument("--log-level", default="", help="override log level")
+    parser.add_argument("--mcp-socket", default="", help="override MCP Runtime socket")
     return parser
 
 
 def main(argv: Sequence[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
+    if args.version:
+        print(f"levier-react-runtime {RUNTIME_VERSION}")
+        return 0
     _apply_legacy_env()
+    if args.log_level:
+        os.environ["LEVIER_RUNTIME_LOG_LEVEL"] = args.log_level
     try:
         runtime = Runtime.from_config(args.config)
     except Exception as exc:
@@ -94,12 +105,28 @@ def main(argv: Sequence[str] | None = None) -> int:
     if args.check:
         print(f"runtime {runtime.config.runtime_name} / {runtime.config.instance_id}")
         return 0
+    if args.print_config:
+        print_effective_config(runtime, _mcp_socket(args.config, args.mcp_socket))
+        return 0
 
     try:
-        asyncio.run(_serve(runtime, _mcp_socket(args.config)))
+        asyncio.run(_serve(runtime, _mcp_socket(args.config, args.mcp_socket)))
     except KeyboardInterrupt:
         pass
     return 0
+
+
+def print_effective_config(runtime: Runtime, mcp_socket: str) -> None:
+    config = runtime.config
+    print(f"runtime: {config.runtime_name}")
+    print(f"instance_id: {config.instance_id}")
+    print(f"runtime_type: {config.runtime_type}")
+    print(f"middleware_address: {config.middleware.address}")
+    print(f"middleware_tls: {str(config.middleware.tls).lower()}")
+    print("middleware_auth_token: ***" if config.middleware.auth_token else "middleware_auth_token: (empty)")
+    print(f"mcp_socket: {mcp_socket or '(disabled)'}")
+    print(f"max_concurrent_runs: {config.max_concurrent_runs}")
+    print(f"log_level: {config.log_level}")
 
 
 async def _serve(runtime: Runtime, mcp_socket: str) -> None:

@@ -1,5 +1,12 @@
 <!-- Levier — MCP operational guide. -->
 
+
+> **Current operator surface.** Register MCP servers with `levier mcp add`, then
+> give the App a reference with `levier app init --mcp-ref` or
+> `LevierApp.from_credentials(mcp_refs=[...])`. The Runtime receives resolved
+> bindings; App code never implements an MCP client.
+
+
 # MCP 接入与运行
 
 这份文档只讲当前实现的 MCP 链路，不重复 App 本地工具。

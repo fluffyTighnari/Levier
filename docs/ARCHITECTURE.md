@@ -23,7 +23,7 @@ PostgreSQL      runs, events, sessions, apps, tools, registrations
 ```text
 contract        wire contracts and event names
 runstore        runs / events / sessions / apps persistence
-register        app, tool, MCP, material, and secret registration
+register        app, tool, MCP, model-provider, material, and secret registration
 workflow        durable run workflow and worker loop
 control         scheduling, attempts, leases, event handling, transitions
 gateway         local/global tool invocation routing
@@ -70,6 +70,7 @@ App POST /runs
   -> workflow
   -> control.Handle
       -> register.AssembleTaskMaterials
+      -> resolve model provider + secret ref
       -> AssignRun(attempt, lease_epoch)
       -> TaskAssign -> selected Runtime
   -> Runtime events over RuntimeChannel

@@ -36,6 +36,7 @@ func TestSchemaTablesIndexesAndConstraints(t *testing.T) {
 		"idx_runs_ops_app_created",
 		"idx_runs_ops_daemon_created",
 		"idx_run_tasks_ops_updated",
+		"uq_model_providers_default",
 	} {
 		var exists bool
 		if err := pool.QueryRow(ctx,

@@ -23,11 +23,13 @@ services:
       LEVIER_ENV: production
       LEVIER_DATABASE_URL: ""
       LEVIER_HTTP_ADMIN_TOKEN: ""
+      LEVIER_SECRETS_FILE: /run/secrets/levier_model_secrets.json
     volumes:
       - ./deploy/config/levier.prod.yaml:/app/levier.yaml:ro
       - ./deploy/secrets/levier_admin_token:/run/secrets/levier_admin_token:ro
       - ./deploy/secrets/levier_daemon_tokens.json:/run/secrets/levier_daemon_tokens.json:ro
       - ./deploy/secrets/levier_database_url:/run/secrets/levier_database_url:ro
+      - ./deploy/secrets/levier_model_secrets.json:/run/secrets/levier_model_secrets.json:ro
 
   react-runtime:
     environment:

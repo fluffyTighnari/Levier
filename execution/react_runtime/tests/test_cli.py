@@ -62,6 +62,24 @@ class CLITest(unittest.TestCase):
         self.assertIn("legacy-runtime", output.getvalue())
         self.assertIn("legacy-instance", output.getvalue())
 
+    def test_version_and_redacted_config(self) -> None:
+        directory = tempfile.TemporaryDirectory()
+        self.addCleanup(directory.cleanup)
+        path = Path(directory.name) / "config.yaml"
+        path.write_text(VALID_YAML, encoding="utf-8")
+
+        output = StringIO()
+        with redirect_stdout(output):
+            self.assertEqual(main(["--config", str(path), "--version"]), 0)
+        self.assertIn("levier-react-runtime", output.getvalue())
+
+        output = StringIO()
+        with redirect_stdout(output):
+            self.assertEqual(main(["--config", str(path), "--print-config"]), 0)
+        text = output.getvalue()
+        self.assertIn("middleware_auth_token: ***", text)
+        self.assertNotIn("token", text.split("middleware_auth_token")[1].splitlines()[0])
+
     def test_invalid_config(self) -> None:
         error = StringIO()
         with redirect_stderr(error):

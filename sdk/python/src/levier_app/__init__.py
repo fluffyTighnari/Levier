@@ -13,7 +13,8 @@ A minimal App:
     app.run()
 
 The adapter owns authentication, tool registration, WebSocket lifecycle,
-reconnects, and the local_tool_call/local_tool_result contract.
+reconnects, and the local_tool_call/local_tool_result contract. `LevierClient`
+also provides provider discovery, Run submission, waiting, events, and cancel.
 
 Copyright 2026 The Levier Authors.
 """

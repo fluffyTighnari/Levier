@@ -42,6 +42,7 @@ type Config struct {
 	Tools                ToolInvoker
 	Tasks                TaskStore
 	LocalTools           LocalToolCanceller
+	ModelProviders       ModelProviderResolver
 	DaemonAvailable      func(daemonID string) bool
 	Logger               *slog.Logger
 	Metrics              *observe.Registry
@@ -79,6 +80,12 @@ type RunStore interface {
 // MaterialAssembler supplies TaskAssign tools and MCP bindings.
 type MaterialAssembler interface {
 	AssembleTaskMaterials(ctx context.Context, appID string) (register.TaskMaterials, error)
+}
+
+// ModelProviderResolver resolves a logical provider/model into runtime settings.
+type ModelProviderResolver interface {
+	ResolveModelProfile(ctx context.Context, name, model string, params map[string]string) (register.ModelProfile, error)
+	ResolveDefaultModelProfile(ctx context.Context, params map[string]string) (register.ModelProfile, error)
 }
 
 // DaemonHub is the connection subset used by Control.
