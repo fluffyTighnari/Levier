@@ -1,4 +1,4 @@
-"""Levier — harness CLI skeleton tests.
+"""Levier — harness CLI tests.
 
 Copyright 2026 The Levier Authors.
 """

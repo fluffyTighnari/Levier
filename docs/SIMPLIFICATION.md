@@ -1,6 +1,6 @@
 # App / Runtime 接入面简化讨论稿
 
-> 状态：0 步骤与 Runtime SDK R0/R2 已实施；React Runtime 迁移待做。
+> 状态：0 步骤、Runtime SDK 与 React Runtime 迁移已实施；App SDK 公开表面收敛待做。
 >
 > 目标不是继续增加抽象，而是把“接入方真正要写什么”压缩到最小。
 

@@ -16,4 +16,4 @@ async def run(ctx: RunContext) -> str:
     return "completed"
 ```
 
-No strategy, LLM, tool router, or MCP client is involved.
+No LLM, tool router, or MCP client is involved.

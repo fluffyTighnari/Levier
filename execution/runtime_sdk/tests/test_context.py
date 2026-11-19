@@ -7,7 +7,6 @@ import unittest
 
 from middleware.runtime.v1 import runtime_pb2
 
-from levier_runtime.channel.envelope import new_envelope
 from levier_runtime.context import RunContext, RuntimeUsageError
 from levier_runtime.events import EventWriter
 from levier_runtime.types import Message, Timeouts

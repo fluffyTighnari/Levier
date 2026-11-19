@@ -1203,7 +1203,7 @@ public/           对外可依赖的 schema 与示例
 proto/            gRPC 契约
 gen/              proto 生成的 Go 代码
 execution/agent_core/       语言无关的 Agent 循环与 conformance fixtures
-execution/harness/          Python Harness
+execution/harness/          React Runtime（基于 levier_runtime）
 execution/runtime_sdk/       Python Runtime SDK（channel + run(ctx) + RunContext）
 execution/mcp_runtime/      独立 MCP 连接进程
 sdk/python/       Python App adapter（levier_app）

@@ -16,8 +16,6 @@ from levier_harness.runtime.checkpoint import (
     CheckpointState,
     capture,
 )
-from levier_harness.runtime.events import EventWriter
-from levier_harness.runtime.run import RunContext
 
 
 class FakeSender:
@@ -79,74 +77,6 @@ class CheckpointCodecTest(unittest.TestCase):
     def test_missing_fields(self) -> None:
         with self.assertRaises(CheckpointError):
             CheckpointState.decode(b'{"version":1}')
-
-
-class RunContextCheckpointTest(unittest.IsolatedAsyncioTestCase):
-    def make_context(self, *, every_events: int = 20, every_seconds: float = 60.0) -> tuple[RunContext, FakeSender]:
-        sender = FakeSender()
-        assign = runtime_pb2.TaskAssign(
-            run_id="run-1",
-            app_id="app-1",
-            session_id="session-1",
-        )
-        ctx = RunContext(
-            assign=assign,
-            runtime_name="react1",
-            attempt=2,
-            lease_epoch=5,
-            events=EventWriter(sender, "run-1", 2, 5),
-            checkpoint_enabled=True,
-            checkpoint_every_events=every_events,
-            checkpoint_every_seconds=every_seconds,
-        )
-        return ctx, sender
-
-    async def test_save_checkpoint_sends_envelope_and_event(self) -> None:
-        ctx, sender = self.make_context()
-        await ctx.emit(runtime_pb2.EventType.RUN_STATUS, {"status": "running"})
-        await ctx.save_checkpoint(state())
-
-        checkpoint = next(
-            envelope for envelope in sender.sent
-            if envelope.WhichOneof("payload") == "checkpoint"
-        )
-        self.assertEqual(checkpoint.checkpoint.session_id, "session-1")
-        self.assertEqual(checkpoint.checkpoint.event_seq_watermark, 1)
-        self.assertEqual(checkpoint.attempt, 2)
-        self.assertEqual(checkpoint.lease_epoch, 5)
-        decoded = CheckpointState.decode(checkpoint.checkpoint.state)
-        self.assertEqual(decoded.last_event_attempt, 2)
-        self.assertEqual(decoded.last_event_seq, 1)
-
-        saved = next(
-            envelope for envelope in sender.sent
-            if envelope.WhichOneof("payload") == "event"
-            and envelope.event.type == runtime_pb2.EventType.CHECKPOINT_SAVED
-        )
-        self.assertEqual(saved.event.data.fields["event_seq_watermark"].number_value, 1)
-        self.assertEqual(saved.event.seq, 2)
-        self.assertFalse(ctx.checkpoint_due())
-
-    async def test_checkpoint_due_by_event_count(self) -> None:
-        ctx, _ = self.make_context(every_events=1)
-        self.assertFalse(ctx.checkpoint_due())
-        await ctx.emit(runtime_pb2.EventType.RUN_STATUS, {"status": "running"})
-        self.assertTrue(ctx.checkpoint_due())
-
-    async def test_checkpoint_due_by_time(self) -> None:
-        ctx, _ = self.make_context(every_seconds=0.001)
-        ctx._last_checkpoint_at = time.monotonic() - 1
-        self.assertTrue(ctx.checkpoint_due())
-
-    async def test_no_checkpoint_without_session(self) -> None:
-        ctx, sender = self.make_context()
-        ctx.assign.session_id = ""
-        await ctx.save_checkpoint(state())
-        self.assertFalse(any(
-            envelope.WhichOneof("payload") == "checkpoint"
-            for envelope in sender.sent
-        ))
-        self.assertFalse(ctx.checkpoint_due())
 
 
 if __name__ == "__main__":

@@ -12,7 +12,7 @@ from typing import AsyncIterator
 
 from middleware.runtime.v1 import runtime_pb2
 
-from levier_harness.channel.envelope import new_envelope, response_envelope
+from levier_runtime.channel.envelope import new_envelope, response_envelope
 from levier_harness.llm import (
     AnthropicProvider,
     HTTPRequest,
@@ -23,7 +23,7 @@ from levier_harness.llm import (
     ToolCall,
     ToolSpec,
 )
-from levier_harness.runtime import ManagerConfig, RunManager
+from levier_runtime.manager import ManagerConfig, RunManager
 from levier_harness.runtime.react import ReactRuntime
 
 

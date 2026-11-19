@@ -8,7 +8,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "levier-harness"
 version = "0.1.0"
-description = "Stripped-down Python harness for the Levier agent runtime"
+description = "Levier React runtime built on levier-runtime"
 requires-python = ">=3.12"
 dependencies = [
     "grpcio>=1.75.0",
@@ -16,10 +16,12 @@ dependencies = [
     "pydantic>=2.14.3",
     "PyYAML>=6.0",
     "levier-agent-core",
+    "levier-runtime",
 ]
 
 [tool.uv.sources]
 levier-agent-core = { path = "../agent_core", editable = true }
+levier-runtime = { path = "../runtime_sdk", editable = true }
 
 [tool.setuptools.packages.find]
 where = ["src"]

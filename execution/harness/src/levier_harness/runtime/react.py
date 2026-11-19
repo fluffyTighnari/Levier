@@ -8,12 +8,9 @@ Copyright 2026 The Levier Authors.
 
 from __future__ import annotations
 
-import asyncio
-import time
 from typing import Any, Sequence
 
-from google.protobuf import struct_pb2
-from middleware.runtime.v1 import runtime_pb2
+from levier_runtime import RunContext
 
 from levier_agent_core import (
     AgentCore,
@@ -46,8 +43,7 @@ from levier_harness.llm.base import (
     ToolCall,
     ToolSpec,
 )
-from levier_harness.runtime.checkpoint import capture
-from levier_harness.runtime.run import RunContext
+from levier_harness.runtime.checkpoint import CheckpointError, CheckpointState, capture
 from levier_harness.tools.base import ToolProvider, as_tool_provider
 
 _DEFAULT_MAX_STEPS = 32
@@ -73,30 +69,50 @@ class ReactRuntime:
 
     async def run(self, ctx: RunContext) -> str:
         """Adapt one TaskAssign to the agent core loop."""
-        max_steps = max(1, _int_param(ctx.assign.params, "max_steps", _DEFAULT_MAX_STEPS))
+        max_steps = max(1, _int_param(ctx.params, "max_steps", _DEFAULT_MAX_STEPS))
         step_timeout_ms = _int_param(
-            ctx.assign.params,
+            ctx.params,
             "step_timeout_ms",
             self.default_step_timeout_ms,
         )
-        tool_timeout_ms = ctx.assign.timeouts.tool_timeout_ms or self.default_tool_timeout_ms
+        tool_timeout_ms = ctx.timeouts.tool_ms or self.default_tool_timeout_ms
 
-        messages = [Message.from_proto(message) for message in ctx.assign.input]
+        messages = [_message_from_context(message) for message in ctx.input]
         start_step = 1
-        if ctx.resume is not None:
-            if ctx.resume.runtime_name != ctx.runtime_name:
+        resume: CheckpointState | None = None
+        if ctx.resume_from:
+            try:
+                resume = CheckpointState.decode(ctx.resume_from)
+            except CheckpointError as exc:
+                await self._emit_error(ctx, "INVALID_CHECKPOINT", str(exc))
+                return "failed"
+            if resume.runtime_name != ctx.runtime_name:
                 await self._emit_error(
                     ctx,
                     "CHECKPOINT_RUNTIME_MISMATCH",
-                    f"checkpoint runtime {ctx.resume.runtime_name!r} does not match {ctx.runtime_name!r}",
+                    f"checkpoint runtime {resume.runtime_name!r} does not match {ctx.runtime_name!r}",
                 )
                 return "failed"
-            if ctx.resume.messages:
-                messages = list(ctx.resume.messages)
-            start_step = max(1, ctx.resume.step + 1)
+            if resume.session_id != ctx.session_id:
+                await self._emit_error(
+                    ctx,
+                    "CHECKPOINT_SESSION_MISMATCH",
+                    f"checkpoint session {resume.session_id!r} does not match {ctx.session_id!r}",
+                )
+                return "failed"
+            if resume.messages:
+                messages = list(resume.messages)
+            start_step = max(1, resume.step + 1)
 
-        tools = [ToolSpec.from_manifest(manifest) for manifest in ctx.assign.tools]
-        model = ModelConfig.from_profile(ctx.assign.model)
+        try:
+            tools = [_tool_from_context(tool) for tool in ctx.tools]
+            model = _model_from_context(ctx.model)
+            if model is None:
+                await self._emit_error(ctx, "MODEL_REQUIRED", "TaskAssign has no model")
+                return "failed"
+        except Exception as exc:
+            await self._emit_error(ctx, "INVALID_TASK_ASSIGN", str(exc))
+            return "failed"
 
         result = None
         saved_on_cancel = False
@@ -115,7 +131,7 @@ class ReactRuntime:
                 max_steps=max_steps,
                 step_timeout_ms=step_timeout_ms,
                 tool_timeout_ms=tool_timeout_ms,
-                session_id=ctx.assign.session_id or "",
+                session_id=ctx.session_id or "",
             )
             core = AgentCore(
                 _ProviderAdapter(self.provider, model),
@@ -124,7 +140,7 @@ class ReactRuntime:
             )
 
             async def on_step_end(core_messages: Sequence[CoreMessage], step: int) -> None:
-                if ctx.checkpoint_due():
+                if ctx.session_id:
                     await self._save_checkpoint(
                         ctx,
                         [_to_harness_message(message) for message in core_messages],
@@ -133,7 +149,7 @@ class ReactRuntime:
 
             async def on_cancel(core_messages: Sequence[CoreMessage], step: int) -> None:
                 nonlocal saved_on_cancel
-                if ctx.assign.session_id and step > 0:
+                if ctx.session_id and step > 0:
                     try:
                         await self._save_checkpoint(
                             ctx,
@@ -154,7 +170,7 @@ class ReactRuntime:
         finally:
             if (
                 not saved_on_cancel
-                and ctx.assign.session_id
+                and ctx.session_id
                 and result is not None
                 and result.steps > 0
             ):
@@ -178,17 +194,18 @@ class ReactRuntime:
         messages: Sequence[Message],
         step: int,
     ) -> None:
-        if not ctx.assign.session_id:
+        if not ctx.session_id:
             return
-        await ctx.save_checkpoint(capture(
-            session_id=ctx.assign.session_id,
+        state = capture(
+            session_id=ctx.session_id,
             run_id=ctx.run_id,
             attempt=ctx.attempt,
             runtime_name=ctx.runtime_name,
             step=step,
             messages=list(messages),
-            last_event_seq=ctx.events.seq,
-        ))
+            last_event_seq=0,
+        )
+        await ctx.checkpoint(state.encode())
 
     async def __call__(self, ctx: RunContext) -> str:
         """Allow the runtime to be used as a RunManager runner."""
@@ -203,7 +220,7 @@ class ReactRuntime:
         retryable: bool = False,
     ) -> None:
         await ctx.emit(
-            runtime_pb2.EventType.ERROR,
+            "ERROR",
             {"code": code, "message": message, "retryable": retryable},
         )
 
@@ -272,7 +289,7 @@ class _ToolAdapter:
 async def _emit_core_event(ctx: RunContext, event: Any) -> None:
     if isinstance(event, MessageDelta):
         await ctx.emit(
-            runtime_pb2.EventType.MESSAGE_DELTA,
+            "MESSAGE_DELTA",
             {"message_id": event.message_id, "delta": event.delta, "step": event.step},
             ephemeral=True,
         )
@@ -295,14 +312,14 @@ async def _emit_core_event(ctx: RunContext, event: Any) -> None:
                 }
                 for call in event.tool_calls
             ]
-        await ctx.emit(runtime_pb2.EventType.MESSAGE_COMPLETED, data)
+        await ctx.emit("MESSAGE_COMPLETED", data)
         return
     if isinstance(event, UsageEvent):
-        await ctx.emit(runtime_pb2.EventType.USAGE, event.usage.to_dict())
+        await ctx.emit("USAGE", event.usage.to_dict())
         return
     if isinstance(event, ToolStarted):
         await ctx.emit(
-            runtime_pb2.EventType.TOOL_CALL_BEGIN,
+            "TOOL_CALL_BEGIN",
             {
                 "invocation_id": event.invocation_id,
                 "tool_name": event.tool_name,
@@ -323,12 +340,12 @@ async def _emit_core_event(ctx: RunContext, event: Any) -> None:
             data["error_code"] = event.error_code
             data["error_message"] = event.error_message
             data["retryable"] = event.retryable
-        await ctx.emit(runtime_pb2.EventType.TOOL_CALL_END, data)
+        await ctx.emit("TOOL_CALL_END", data)
         return
     if isinstance(event, ErrorEvent):
         code = "MAX_STEPS_EXCEEDED" if event.code == "MAX_STEPS" else event.code
         await ctx.emit(
-            runtime_pb2.EventType.ERROR,
+            "ERROR",
             {"code": code, "message": event.message, "retryable": event.retryable},
         )
 
@@ -414,15 +431,43 @@ def _to_core_usage(raw: dict[str, int]) -> Usage:
     )
 
 
-def _int_param(params: struct_pb2.Struct, name: str, default: int) -> int:
-    value = params.fields.get(name)
-    if value is None:
+def _int_param(params: dict[str, Any], name: str, default: int) -> int:
+    value = params.get(name)
+    if isinstance(value, bool):
         return default
-    if value.WhichOneof("kind") == "number_value":
-        return int(value.number_value)
-    if value.WhichOneof("kind") == "string_value":
+    if isinstance(value, (int, float)):
+        return int(value)
+    if isinstance(value, str):
         try:
-            return int(value.string_value)
+            return int(value)
         except ValueError:
             return default
     return default
+
+
+def _message_from_context(message: Any) -> Message:
+    return Message(
+        role=message.role,
+        content=message.content,
+        name=message.name,
+    )
+
+
+def _tool_from_context(tool: Any) -> ToolSpec:
+    return ToolSpec(
+        name=tool.name,
+        description=tool.description,
+        input_schema_json=tool.input_schema_json,
+    )
+
+
+def _model_from_context(model: Any) -> ModelConfig | None:
+    if model is None:
+        return None
+    return ModelConfig(
+        provider=model.provider,
+        model=model.model,
+        api_key=model.api_key,
+        base_url=model.base_url,
+        params=dict(model.params),
+    )

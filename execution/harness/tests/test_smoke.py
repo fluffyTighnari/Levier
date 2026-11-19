@@ -1,4 +1,4 @@
-"""Levier — harness skeleton smoke test.
+"""Levier — harness smoke test.
 
 Copyright 2026 The Levier Authors.
 """

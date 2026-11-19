@@ -72,6 +72,9 @@ class RunContext:
         self.started_at = datetime.now(tz=timezone.utc)
         self.outcome = ""
         self.task: asyncio.Task[Any] | None = None
+        # Useful for runtimes that include attempt information in their own
+        # checkpoint or logs; it is not a control-plane action.
+        self.attempt = attempt
 
         self._channel = channel
         self._events = events

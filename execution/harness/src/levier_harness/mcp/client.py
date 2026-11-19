@@ -13,7 +13,7 @@ import json
 from dataclasses import dataclass, field
 from typing import Any
 
-from middleware.runtime.v1 import runtime_pb2
+from levier_runtime import McpBinding
 
 from levier_harness.llm.base import ToolSpec
 from levier_harness.tools.base import ToolResult
@@ -70,7 +70,7 @@ class McpRuntimeClient:
         result = await self._request("mcp.health", {})
         return result if isinstance(result, dict) else {}
 
-    async def open(self, binding: runtime_pb2.McpBinding) -> McpSessionInfo:
+    async def open(self, binding: McpBinding) -> McpSessionInfo:
         """Open one binding and return its namespaced tools."""
         result = await self._request("mcp.open", _binding_dict(binding), timeout=60.0)
         if not isinstance(result, dict):
@@ -262,7 +262,7 @@ class McpRuntimeClient:
                 future.set_exception(exc)
 
 
-def _binding_dict(binding: runtime_pb2.McpBinding) -> dict[str, Any]:
+def _binding_dict(binding: McpBinding) -> dict[str, Any]:
     return {
         "server_name": binding.server_name,
         "transport": binding.transport,

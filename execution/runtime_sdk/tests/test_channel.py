@@ -15,8 +15,8 @@ from typing import AsyncIterator
 import grpc
 from middleware.runtime.v1 import runtime_pb2, runtime_pb2_grpc
 
-from levier_harness.channel import ChannelClient, ChannelConfig
-from levier_harness.channel.envelope import new_envelope
+from levier_runtime.channel import ChannelClient, ChannelConfig
+from levier_runtime.channel.envelope import new_envelope
 
 
 class FakeRuntimeService(runtime_pb2_grpc.RuntimeServiceServicer):

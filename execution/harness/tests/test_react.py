@@ -11,9 +11,9 @@ import unittest
 
 from middleware.runtime.v1 import runtime_pb2
 
-from levier_harness.channel.envelope import new_envelope, response_envelope
+from levier_runtime.channel.envelope import new_envelope, response_envelope
 from levier_harness.llm.base import LLMResponse, Message, ModelConfig, ToolCall, ToolSpec
-from levier_harness.runtime import ManagerConfig, RunManager
+from levier_runtime.manager import ManagerConfig, RunManager
 from levier_harness.runtime.react import ReactRuntime
 from levier_harness.tools.base import ToolResult
 

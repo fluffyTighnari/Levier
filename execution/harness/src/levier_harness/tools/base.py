@@ -14,7 +14,7 @@ from typing import TYPE_CHECKING, Protocol, Sequence
 from levier_harness.llm.base import ToolCall, ToolSpec
 
 if TYPE_CHECKING:
-    from levier_harness.runtime.run import RunContext
+    from levier_runtime import RunContext
 
 
 @dataclass
@@ -59,7 +59,7 @@ class ToolProvider(Protocol):
 
 
 class UnavailableToolExecutor:
-    """Default executor used when no tool bridge is configured."""
+    """Default executor used when no tool execution is configured."""
 
     async def __call__(
         self,

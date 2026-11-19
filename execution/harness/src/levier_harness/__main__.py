@@ -1,7 +1,7 @@
 """Levier — harness command entry point.
 
-P3-23 provides configuration, logging, health state, and a process
-lifecycle skeleton. RuntimeChannel/ReAct start in later steps.
+The React runtime uses the independent `levier_runtime` package for
+RuntimeChannel, lifecycle, sequencing, and `RunContext`.
 
 Copyright 2026 The Levier Authors.
 """
@@ -12,21 +12,19 @@ import argparse
 import asyncio
 import json
 import os
-import signal
 import sys
 from pathlib import Path
 from typing import Sequence
 
+from levier_runtime import MiddlewareConfig, Runtime, RuntimeConfig
+
 from levier_harness import __version__
-from levier_harness.channel import ChannelClient
 from levier_harness.config import ConfigError, Settings, load_settings
 from levier_harness.health import HealthState
 from levier_harness.llm import ProviderRouter
 from levier_harness.logging import configure_logging, get_logger
 from levier_harness.mcp import McpRuntimeClient
-from levier_harness.runtime.host import run_runtime
 from levier_harness.runtime.react import ReactRuntime
-from levier_harness.tools.bridge import ToolBridge
 from levier_harness.tools.router import ToolRouter
 
 _DEFAULT_CONFIG = Path(__file__).resolve().parents[2] / "levier.example.yaml"
@@ -51,7 +49,7 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def main(argv: Sequence[str] | None = None) -> int:
-    """Run the harness skeleton."""
+    """Run the React runtime."""
     args = build_parser().parse_args(argv)
 
     try:
@@ -83,18 +81,35 @@ def main(argv: Sequence[str] | None = None) -> int:
 
 async def _run(settings: Settings, health: HealthState) -> None:
     """Start the React runtime and wait for shutdown."""
-
-    def build_runner(channel: ChannelClient) -> tuple[object, object | None]:
-        """Build the React runner and optional MCP client."""
-        mcp_client = (
-            McpRuntimeClient(settings.mcp_runtime.socket)
-            if settings.mcp_runtime.socket
-            else None
-        )
-        tools = ToolRouter(bridge=ToolBridge(channel), mcp=mcp_client)
-        return ReactRuntime(ProviderRouter(), tools), mcp_client
-
-    await run_runtime(settings, build_runner, health=health, logger=get_logger())
+    mcp_client = (
+        McpRuntimeClient(settings.mcp_runtime.socket)
+        if settings.mcp_runtime.socket
+        else None
+    )
+    tools = ToolRouter(mcp=mcp_client)
+    runtime = Runtime(
+        RuntimeConfig(
+            runtime_name=settings.daemon.runtime_name,
+            instance_id=settings.daemon.id,
+            middleware=MiddlewareConfig(
+                address=settings.middleware.address,
+                auth_token=settings.daemon.auth_token.get_secret_value(),
+                auth_token_file=settings.daemon.auth_token_file,
+                tls=settings.middleware.tls,
+            ),
+            runtime_type=settings.daemon.runtime_type,
+            max_concurrent_runs=settings.daemon.max_concurrent_runs,
+            labels=dict(settings.daemon.labels),
+            log_level=settings.logging.level,
+        ),
+        logger=get_logger(),
+    )
+    try:
+        await runtime.serve(ReactRuntime(ProviderRouter(), tools))
+    finally:
+        health.set_ready(False)
+        if mcp_client is not None:
+            await mcp_client.close()
 
 
 if __name__ == "__main__":

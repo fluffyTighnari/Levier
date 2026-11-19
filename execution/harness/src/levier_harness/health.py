@@ -1,7 +1,7 @@
 """Levier — harness health state.
 
 The health object is intentionally independent of gRPC/HTTP so the
-skeleton can start before the RuntimeChannel exists.
+runtime can report readiness without owning transport state.
 
 Copyright 2026 The Levier Authors.
 """

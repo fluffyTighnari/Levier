@@ -10,9 +10,9 @@ import unittest
 
 from middleware.runtime.v1 import runtime_pb2
 
-from levier_harness.channel.envelope import new_envelope, response_envelope
-from levier_harness.runtime import ManagerConfig, NoopRunner, RunManager
-from levier_harness.runtime.run import RunContext
+from levier_runtime.channel.envelope import new_envelope, response_envelope
+from levier_runtime.context import RunContext
+from levier_runtime.manager import ManagerConfig, NoopRunner, RunManager
 
 
 class FakeSender:
@@ -63,7 +63,7 @@ class RunManagerTest(unittest.IsolatedAsyncioTestCase):
 
     async def test_accept_and_complete(self) -> None:
         sender = FakeSender()
-        self.manager = RunManager(sender, runner=NoopRunner())
+        self.manager = RunManager(sender, ManagerConfig(runtime_name="test1"), NoopRunner())
         assign = assign_envelope()
         await self.manager.handle(assign)
         await self.wait_until(lambda: self.manager.running_count() == 0)
@@ -78,7 +78,7 @@ class RunManagerTest(unittest.IsolatedAsyncioTestCase):
 
     async def test_missing_app_rejected(self) -> None:
         sender = FakeSender()
-        self.manager = RunManager(sender)
+        self.manager = RunManager(sender, ManagerConfig(runtime_name="test1"), NoopRunner())
         assign = runtime_pb2.TaskAssign(run_id="run-1")
         envelope = new_envelope(assign, "task_assign", run_id="run-1", attempt=1, lease_epoch=1)
         await self.manager.handle(envelope)
@@ -90,7 +90,7 @@ class RunManagerTest(unittest.IsolatedAsyncioTestCase):
     async def test_capacity_rejected(self) -> None:
         sender = FakeSender()
         runner = BlockingRunner()
-        self.manager = RunManager(sender, ManagerConfig(max_concurrent_runs=1), runner)
+        self.manager = RunManager(sender, ManagerConfig(runtime_name="test1", max_concurrent_runs=1), runner)
         await self.manager.handle(assign_envelope("run-1"))
         await asyncio.wait_for(runner.started.wait(), 1)
         await self.manager.handle(assign_envelope("run-2"))
@@ -105,7 +105,7 @@ class RunManagerTest(unittest.IsolatedAsyncioTestCase):
     async def test_duplicate_assign_is_acknowledged_without_duplicate_run(self) -> None:
         sender = FakeSender()
         runner = BlockingRunner()
-        self.manager = RunManager(sender, runner=runner)
+        self.manager = RunManager(sender, ManagerConfig(runtime_name="test1"), runner)
         await self.manager.handle(assign_envelope("run-1"))
         await asyncio.wait_for(runner.started.wait(), 1)
         await self.manager.handle(assign_envelope("run-1"))
@@ -118,7 +118,7 @@ class RunManagerTest(unittest.IsolatedAsyncioTestCase):
     async def test_cancel_active_run(self) -> None:
         sender = FakeSender()
         runner = BlockingRunner()
-        self.manager = RunManager(sender, runner=runner)
+        self.manager = RunManager(sender, ManagerConfig(runtime_name="test1"), runner)
         assign = assign_envelope("run-cancel")
         await self.manager.handle(assign)
         await asyncio.wait_for(runner.started.wait(), 1)
@@ -131,7 +131,7 @@ class RunManagerTest(unittest.IsolatedAsyncioTestCase):
     async def test_close_cancels_active_runs(self) -> None:
         sender = FakeSender()
         runner = BlockingRunner()
-        self.manager = RunManager(sender, runner=runner)
+        self.manager = RunManager(sender, ManagerConfig(runtime_name="test1"), runner)
         await self.manager.handle(assign_envelope("run-close"))
         await asyncio.wait_for(runner.started.wait(), 1)
         await self.manager.close()
@@ -142,7 +142,7 @@ class RunManagerTest(unittest.IsolatedAsyncioTestCase):
     async def test_reconcile_cancels_runs(self) -> None:
         sender = FakeSender()
         runner = BlockingRunner()
-        self.manager = RunManager(sender, runner=runner)
+        self.manager = RunManager(sender, ManagerConfig(runtime_name="test1"), runner)
         await self.manager.handle(assign_envelope("run-reconcile"))
         await asyncio.wait_for(runner.started.wait(), 1)
         reconcile = new_envelope(

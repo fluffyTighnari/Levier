@@ -10,9 +10,9 @@ import unittest
 
 from middleware.runtime.v1 import runtime_pb2
 
-from levier_harness.channel.envelope import new_envelope, response_envelope
+from levier_runtime.channel.envelope import new_envelope, response_envelope
+from levier_runtime.manager import ManagerConfig, RunManager
 from levier_harness.llm.base import LLMResponse, Message, ModelConfig, ToolSpec
-from levier_harness.runtime import ManagerConfig, RunManager
 from levier_harness.runtime.checkpoint import CheckpointState
 from levier_harness.runtime.react import ReactRuntime
 
@@ -70,7 +70,7 @@ class CheckpointResumeTest(unittest.IsolatedAsyncioTestCase):
         sender = FakeSender()
         manager = RunManager(
             sender,
-            ManagerConfig(runtime_name="react1", runtime_type="longterm"),
+            ManagerConfig(runtime_name="react1"),
             ReactRuntime(provider),
         )
         try:
@@ -129,7 +129,7 @@ class CheckpointResumeTest(unittest.IsolatedAsyncioTestCase):
             ReactRuntime(ScriptedProvider("normal")),
         )
         try:
-            await manager.handle(assign(attempt=1))
+            await manager.handle(assign(session_id="", attempt=1))
             for _ in range(200):
                 if manager.running_count() == 0:
                     break
@@ -146,9 +146,37 @@ class CheckpointResumeTest(unittest.IsolatedAsyncioTestCase):
             for envelope in sender.sent
         ))
 
-    async def test_normal_runtime_rejects_resume_from(self) -> None:
+    async def test_invalid_checkpoint_is_rejected(self) -> None:
+        sender = FakeSender()
+        manager = RunManager(
+            sender,
+            ManagerConfig(runtime_name="react1"),
+            ReactRuntime(ScriptedProvider("never")),
+        )
+        try:
+            await manager.handle(assign(resume=b"{bad", attempt=2))
+            for _ in range(200):
+                if manager.running_count() == 0:
+                    break
+                await asyncio.sleep(0.005)
+        finally:
+            await manager.close()
+
+        ack = next(
+            envelope for envelope in sender.sent
+            if envelope.WhichOneof("payload") == "task_ack"
+        )
+        self.assertTrue(ack.task_ack.accepted)
+        error = next(
+            envelope for envelope in sender.sent
+            if envelope.WhichOneof("payload") == "event"
+            and envelope.event.type == runtime_pb2.EventType.ERROR
+        )
+        self.assertEqual(error.event.data.fields["code"].string_value, "INVALID_CHECKPOINT")
+
+    async def test_mismatched_checkpoint_is_rejected(self) -> None:
         checkpoint = CheckpointState(
-            session_id="session-1",
+            session_id="other-session",
             run_id="run-1",
             attempt=1,
             runtime_name="react1",
@@ -162,24 +190,10 @@ class CheckpointResumeTest(unittest.IsolatedAsyncioTestCase):
         )
         try:
             await manager.handle(assign(resume=checkpoint.encode(), attempt=2))
-        finally:
-            await manager.close()
-        ack = next(
-            envelope for envelope in sender.sent
-            if envelope.WhichOneof("payload") == "task_ack"
-        )
-        self.assertFalse(ack.task_ack.accepted)
-        self.assertIn("longterm", ack.task_ack.reason)
-
-    async def test_invalid_checkpoint_is_rejected(self) -> None:
-        sender = FakeSender()
-        manager = RunManager(
-            sender,
-            ManagerConfig(runtime_name="react1", runtime_type="longterm"),
-            ReactRuntime(ScriptedProvider("never")),
-        )
-        try:
-            await manager.handle(assign(resume=b"{bad", attempt=2))
+            for _ in range(200):
+                if manager.running_count() == 0:
+                    break
+                await asyncio.sleep(0.005)
         finally:
             await manager.close()
 
@@ -187,34 +201,13 @@ class CheckpointResumeTest(unittest.IsolatedAsyncioTestCase):
             envelope for envelope in sender.sent
             if envelope.WhichOneof("payload") == "task_ack"
         )
-        self.assertFalse(ack.task_ack.accepted)
-        self.assertIn("invalid checkpoint", ack.task_ack.reason)
-
-    async def test_mismatched_checkpoint_is_rejected(self) -> None:
-        checkpoint = CheckpointState(
-            session_id="other-session",
-            run_id="run-1",
-            attempt=1,
-            runtime_name="react1",
-            step=1,
-        )
-        sender = FakeSender()
-        manager = RunManager(
-            sender,
-            ManagerConfig(runtime_name="react1", runtime_type="longterm"),
-            ReactRuntime(ScriptedProvider("never")),
-        )
-        try:
-            await manager.handle(assign(resume=checkpoint.encode(), attempt=2))
-        finally:
-            await manager.close()
-
-        ack = next(
+        self.assertTrue(ack.task_ack.accepted)
+        error = next(
             envelope for envelope in sender.sent
-            if envelope.WhichOneof("payload") == "task_ack"
+            if envelope.WhichOneof("payload") == "event"
+            and envelope.event.type == runtime_pb2.EventType.ERROR
         )
-        self.assertFalse(ack.task_ack.accepted)
-        self.assertIn("session_id", ack.task_ack.reason)
+        self.assertEqual(error.event.data.fields["code"].string_value, "CHECKPOINT_SESSION_MISMATCH")
 
 
 if __name__ == "__main__":

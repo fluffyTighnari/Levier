@@ -14,16 +14,17 @@
 | 测试 | `make harness-test` |
 
 The harness is the execution-side daemon for the middleware control plane.
-It owns the RuntimeChannel client, ReAct loop, LLM adapters, tool bridge,
-MCP client, and checkpointing. The MCP runtime is a separate process under
+It owns the ReAct loop, LLM adapters, MCP client, and React checkpointing.
+RuntimeChannel, lifecycle, event sequencing, and `RunContext` come from
+`levier-runtime` (the independent Runtime SDK). The MCP runtime is a separate process under
 `execution/mcp_runtime/`; it is not part of this package.
 
-P3-23 provides:
+The React runtime provides:
 
 - configuration loading with `HARNESS_*` overrides
 - JSON/text structured logging
 - health state snapshot
-- a start/stop process skeleton
+- ReAct, LLM providers, MCP tools, and React checkpointing
 
 ## Environment
 
@@ -41,6 +42,7 @@ python3 -m venv .venv
 # levier-agent-core is a local workspace package; pip does not read
 # [tool.uv.sources], so install it first when not using uv.
 .venv/bin/python -m pip install -e ../agent_core
+.venv/bin/python -m pip install -e ../runtime_sdk
 .venv/bin/python -m pip install -e .
 ```
 
@@ -53,14 +55,14 @@ PYTHONPATH=src:../runtime_sdk/src .venv/bin/python -m levier_harness \
   --config levier.example.yaml --check
 ```
 
-or start the skeleton:
+or start the React runtime:
 
 ```sh
 PYTHONPATH=src:../runtime_sdk/src .venv/bin/python -m levier_harness \
   --config levier.example.yaml
 ```
 
-RuntimeChannel, ReAct, LLM, and tools are added in P3-24 onward. The
+The Harness is now a React runtime on top of `levier-runtime`. The
 standalone MCP runtime is a separate process; start it with:
 
 ```sh

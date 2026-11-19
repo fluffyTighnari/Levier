@@ -68,12 +68,30 @@ version = "0.1.0"
 source = { editable = "../agent_core" }
 
 [[package]]
+name = "levier-runtime"
+version = "0.1.0"
+source = { editable = "../runtime_sdk" }
+dependencies = [
+    { name = "grpcio" },
+    { name = "protobuf" },
+    { name = "pyyaml" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "grpcio", specifier = ">=1.75.0" },
+    { name = "protobuf", specifier = ">=7.36.2" },
+    { name = "pyyaml", specifier = ">=6.0" },
+]
+
+[[package]]
 name = "levier-harness"
 version = "0.1.0"
 source = { editable = "." }
 dependencies = [
     { name = "grpcio" },
     { name = "levier-agent-core" },
+    { name = "levier-runtime" },
     { name = "protobuf" },
     { name = "pydantic" },
     { name = "pyyaml" },
@@ -83,6 +101,7 @@ dependencies = [
 requires-dist = [
     { name = "grpcio", specifier = ">=1.75.0" },
     { name = "levier-agent-core", editable = "../agent_core" },
+    { name = "levier-runtime", editable = "../runtime_sdk" },
     { name = "protobuf", specifier = ">=7.36.2" },
     { name = "pydantic", specifier = ">=2.14.3" },
     { name = "pyyaml", specifier = ">=6.0" },
