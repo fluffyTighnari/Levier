@@ -245,7 +245,7 @@ go run ./cmd/levier migrate up -config levier.example.yaml
 bin/levier serve -config levier.example.yaml
 
 # 3. 启动 Harness
-(cd execution/harness && PYTHONPATH=src:src/gen .venv/bin/python -m levier_harness \
+(cd execution/harness && PYTHONPATH=src:../runtime_sdk/src .venv/bin/python -m levier_harness \
   --config levier.example.yaml)
 
 # 4. 可选：启动 MCP runtime
@@ -1151,6 +1151,7 @@ make deps-check
 make build
 make agent-core-test
 make harness-test
+make runtime-sdk-test
 make mcp-runtime-test
 make sdk-test
 make counter-agent-test
@@ -1203,9 +1204,11 @@ proto/            gRPC 契约
 gen/              proto 生成的 Go 代码
 execution/agent_core/       语言无关的 Agent 循环与 conformance fixtures
 execution/harness/          Python Harness
+execution/runtime_sdk/       Python Runtime SDK（channel + run(ctx) + RunContext）
 execution/mcp_runtime/      独立 MCP 连接进程
 sdk/python/       Python App adapter（levier_app）
 examples/         counter_agent、HTTP/Node 接入示例
+examples/echo_runtime/       最小 Echo Runtime（仅依赖 levier_runtime）
 tests/            单元/契约/E2E 与检查脚本
 scripts/          发布构建、安装、备份恢复脚本
 docs/             设计、契约、接入、迁移、运维文档

@@ -4,7 +4,8 @@
 #   postgres      PostgreSQL 16
 #   levier        Go control plane
 #   mcp-runtime   independent MCP runtime (runtime 1)
-#   harness       Python Agent runtime (runtime 2)
+#   harness       React runtime (runtime 2)
+#   echo-runtime  minimal Echo runtime (runtime 3)
 #   agent         counter_agent App
 #
 # Smoke profile:
@@ -104,13 +105,13 @@ services:
       context: .
       dockerfile: deploy/harness.Dockerfile
     init: true
-    entrypoint: ["python", "-m", "levier_harness.echo"]
-    command: ["--config", "/app/harness/echo.example.yaml"]
+    entrypoint: ["python", "/app/examples/echo_runtime/app.py"]
+    command: ["--config", "/app/examples/echo_runtime/runtime.yaml"]
     environment:
-      LEVIER_HARNESS_ADDRESS: levier:9090
-      LEVIER_HARNESS_DAEMON_ID: echo-local-1
-      LEVIER_HARNESS_DAEMON_AUTH_TOKEN: ${LEVIER_HARNESS_DAEMON_AUTH_TOKEN:-${HARNESS_DAEMON_AUTH_TOKEN:-change-me}}
-      LEVIER_HARNESS_LOG_FORMAT: json
+      LEVIER_MIDDLEWARE_ADDRESS: levier:9090
+      LEVIER_RUNTIME_INSTANCE_ID: echo-local-1
+      LEVIER_RUNTIME_TOKEN: ${LEVIER_HARNESS_DAEMON_AUTH_TOKEN:-${HARNESS_DAEMON_AUTH_TOKEN:-change-me}}
+      LEVIER_RUNTIME_LOG_LEVEL: ${LEVIER_LOG_LEVEL:-info}
     depends_on:
       levier:
         condition: service_healthy

@@ -10,8 +10,8 @@ plugins:
     out: gen
     opt: paths=source_relative
   - remote: buf.build/protocolbuffers/python
-    out: execution/harness/src/gen
+    out: execution/runtime_sdk/src
   - remote: buf.build/grpc/python
-    out: execution/harness/src/gen
+    out: execution/runtime_sdk/src
   - remote: buf.build/protocolbuffers/pyi
-    out: execution/harness/src/gen
+    out: execution/runtime_sdk/src

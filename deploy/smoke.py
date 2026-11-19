@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Levier — Docker Compose smoke check.
 
-Waits for Levier readiness, Harness registration, App WebSocket, MCP
+Waits for Levier readiness, Runtime registration, App WebSocket, MCP
 runtime health, then submits one echo run and verifies it completes.
 
 Uses only the Python standard library.
@@ -109,7 +109,7 @@ def main() -> int:
 
     wait_for("service /status", status_ok)
     wait_for(
-        "harness registered",
+        "runtime registered",
         lambda: ('daemon="' + DAEMON_ID + '"' in metrics(), ""),
     )
 

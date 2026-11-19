@@ -96,7 +96,7 @@ done
 curl -fsS "$LEVIER_URL/healthz" >/dev/null 2>&1 || fail "Levier did not become healthy"
 
 echo "== start Harness =="
-PYTHONPATH="execution/agent_core/src:execution/harness/src/gen:execution/harness/src" "$HARNESS_PYTHON" -m levier_harness \
+PYTHONPATH="execution/agent_core/src:execution/runtime_sdk/src:execution/harness/src" "$HARNESS_PYTHON" -m levier_harness \
   --config "$HARNESS_CONFIG" >"$OUT/harness.log" 2>&1 &
 HARNESS_PID=$!
 sleep 2

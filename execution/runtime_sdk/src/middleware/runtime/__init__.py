@@ -1,0 +1,1 @@
+"""Generated middleware protocol namespace."""

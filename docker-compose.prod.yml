@@ -38,8 +38,8 @@ services:
 
   echo-runtime:
     environment:
-      LEVIER_HARNESS_DAEMON_AUTH_TOKEN: ""
-      LEVIER_HARNESS_DAEMON_AUTH_TOKEN_FILE: /run/secrets/levier_harness_daemon_token
+      LEVIER_RUNTIME_TOKEN: ""
+      LEVIER_RUNTIME_TOKEN_FILE: /run/secrets/levier_harness_daemon_token
     volumes:
       - ./deploy/secrets/levier_harness_daemon_token:/run/secrets/levier_harness_daemon_token:ro
 

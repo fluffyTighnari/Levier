@@ -300,7 +300,7 @@ def start_middleware() -> None:
 
 def start_harness() -> None:
     env = {
-        "PYTHONPATH": "execution/agent_core/src:execution/harness/src/gen:execution/harness/src",
+        "PYTHONPATH": "execution/agent_core/src:execution/runtime_sdk/src:execution/harness/src",
         "HARNESS_LEVIER_ADDRESS": "127.0.0.1:9090",
         "HARNESS_DAEMON_ID": "daemon-local-1",
         "HARNESS_DAEMON_AUTH_TOKEN": DAEMON_TOKEN,

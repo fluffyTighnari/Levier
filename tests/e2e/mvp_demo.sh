@@ -41,12 +41,13 @@ case "$MODE" in
 esac
 
 if [ "$MODE" = "echo" ]; then
-  HARNESS_CONFIG="${HARNESS_CONFIG:-execution/harness/echo.example.yaml}"
-  HARNESS_MODULE="${HARNESS_MODULE:-levier_harness.echo}"
+  RUNTIME_CONFIG="${RUNTIME_CONFIG:-examples/echo_runtime/runtime.yaml}"
+  RUNTIME_APP="${RUNTIME_APP:-examples/echo_runtime/app.py}"
+  RUNTIME_PYTHONPATH="execution/runtime_sdk/src"
   RUNTIME_NAME="${RUNTIME_NAME:-echo1}"
 else
-  HARNESS_CONFIG="${HARNESS_CONFIG:-execution/harness/levier.example.yaml}"
-  HARNESS_MODULE="${HARNESS_MODULE:-levier_harness}"
+  RUNTIME_CONFIG="${RUNTIME_CONFIG:-execution/harness/levier.example.yaml}"
+  RUNTIME_PYTHONPATH="execution/agent_core/src:execution/runtime_sdk/src:execution/harness/src"
   RUNTIME_NAME="${RUNTIME_NAME:-react1}"
 fi
 
@@ -116,9 +117,14 @@ for _ in $(seq 1 100); do
 done
 [ -n "$ready" ] || fail "Levier did not become healthy; see $OUT/middleware.log"
 
-echo "== start Harness =="
-PYTHONPATH="execution/agent_core/src:execution/harness/src/gen:execution/harness/src" "$HARNESS_PYTHON" -m "$HARNESS_MODULE" \
-  --config "$HARNESS_CONFIG" >"$OUT/harness.log" 2>&1 &
+echo "== start Runtime =="
+if [ "$MODE" = "echo" ]; then
+  PYTHONPATH="$RUNTIME_PYTHONPATH" "$HARNESS_PYTHON" "$RUNTIME_APP" \
+    --config "$RUNTIME_CONFIG" >"$OUT/harness.log" 2>&1 &
+else
+  PYTHONPATH="$RUNTIME_PYTHONPATH" "$HARNESS_PYTHON" -m levier_harness \
+    --config "$RUNTIME_CONFIG" >"$OUT/harness.log" 2>&1 &
+fi
 HARNESS_PID=$!
 sleep 2
 

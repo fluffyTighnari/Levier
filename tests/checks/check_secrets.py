@@ -17,7 +17,7 @@ import sys
 EXCLUDE_PREFIXES = (
     "docs/reports/",
     "gen/",
-    "execution/harness/src/gen/",
+    "execution/runtime_sdk/src/",
     "workflow_engine/",
 )
 

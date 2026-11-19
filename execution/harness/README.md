@@ -49,14 +49,14 @@ python3 -m venv .venv
 From `execution/harness/`:
 
 ```sh
-PYTHONPATH=src:src/gen .venv/bin/python -m levier_harness \
+PYTHONPATH=src:../runtime_sdk/src .venv/bin/python -m levier_harness \
   --config levier.example.yaml --check
 ```
 
 or start the skeleton:
 
 ```sh
-PYTHONPATH=src:src/gen .venv/bin/python -m levier_harness \
+PYTHONPATH=src:../runtime_sdk/src .venv/bin/python -m levier_harness \
   --config levier.example.yaml
 ```
 

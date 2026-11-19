@@ -27,6 +27,7 @@ MAP.md          仓库地图
 |---|---|
 | `ONBOARDING.md` | 从启动 Levier 到第一个 Run 的一站式引导 |
 | `APP_ONBOARDING.md` | App 接入流程与底层协议 |
+| `RUNTIME_ONBOARDING.md` | Runtime 作者最小接入：runtime_name + run(ctx) + 可选能力 |
 | `APP_ADAPTER_CONTRACT.md` | Python App adapter C0/C1 契约（handler、工具、重连、结果） |
 | `DAEMON_CONTRACT.md` | Harness / Daemon 协议 |
 | `AGENT_CORE_CONTRACT.md` | Agent Core v1 契约 |

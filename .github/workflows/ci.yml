@@ -54,13 +54,16 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - run: python -m compileall execution/harness/src
+      - run: python -m compileall execution/runtime_sdk/src execution/harness/src
       - run: python -m pip install --upgrade pip
       # harness depends on the local workspace package levier-agent-core.
       # pip does not understand [tool.uv.sources], so install it explicitly first.
       - run: python -m pip install -e ./execution/agent_core
+      - run: python -m pip install -e ./execution/runtime_sdk
       - run: python -m pip install -e ./execution/harness
-      - run: PYTHONPATH=execution/harness/src/gen:execution/harness/src python tests/contract/test_contract.py -v
-      - run: PYTHONPATH=execution/harness/src/gen:execution/harness/src python -m unittest discover -s execution/harness/tests -v
+      - run: PYTHONPATH=execution/runtime_sdk/src:execution/harness/src python tests/contract/test_contract.py -v
+      - run: PYTHONPATH=execution/runtime_sdk/src:execution/harness/src python -m unittest discover -s execution/harness/tests -v
+      - run: PYTHONPATH=execution/runtime_sdk/src python -m unittest discover -s execution/runtime_sdk/tests -v
+      - run: PYTHONPATH=execution/runtime_sdk/src python examples/echo_runtime/app.py --config examples/echo_runtime/runtime.yaml --check
       - run: PYTHONPATH=sdk/python/src python -m unittest discover -s sdk/python/tests -v
       - run: PYTHONPATH=sdk/python/src python -m unittest discover -s examples/counter_agent/tests -v

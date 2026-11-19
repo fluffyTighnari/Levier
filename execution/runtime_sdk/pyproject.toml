@@ -1,0 +1,19 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "levier-runtime"
+version = "0.1.0"
+description = "Minimal Python SDK for Levier runtimes"
+requires-python = ">=3.12"
+dependencies = [
+    "grpcio>=1.75.0",
+    "protobuf>=7.36.2",
+    "PyYAML>=6.0",
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["levier_runtime*", "middleware*"]
+namespaces = true

@@ -6,7 +6,7 @@
 |---|---|
 | 版本 | v1 |
 | 源文件 | `proto/middleware/runtime/v1/runtime.proto` |
-| 生成物 | `gen/`、`execution/harness/src/gen/` |
+| 生成物 | `gen/`、`execution/runtime_sdk/src/` |
 | 基线 | `buf breaking --against '.git#branch=main'` |
 | 黄金样本 | `tests/contract/envelopes.json` |
 
@@ -62,7 +62,7 @@ buf lint
 buf build
 buf breaking --against '.git#branch=main'
 go test ./internal/protocol -run TestContractGolden
-PYTHONPATH=execution/harness/src/gen:execution/harness/src python3 tests/contract/test_contract.py -v
+PYTHONPATH=execution/runtime_sdk/src:execution/harness/src python3 tests/contract/test_contract.py -v
 ```
 
 黄金样本必须同时被 Go 和 Python 解析；任何一侧失败都视为契约破坏。

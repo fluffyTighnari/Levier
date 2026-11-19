@@ -6,7 +6,7 @@ GO ?= go
 PYTHON ?= $(if $(wildcard execution/harness/.venv/bin/python),execution/harness/.venv/bin/python,$(if $(wildcard execution/harness/.venv/Scripts/python.exe),execution/harness/.venv/Scripts/python.exe,python3))
 MCP_PYTHON ?= $(if $(wildcard execution/mcp_runtime/.venv/bin/python),execution/mcp_runtime/.venv/bin/python,$(if $(wildcard execution/mcp_runtime/.venv/Scripts/python.exe),execution/mcp_runtime/.venv/Scripts/python.exe,python3))
 PYTHONPATH_SEP ?= $(if $(filter Windows_NT,$(OS)),;,:)
-CONTRACT_PYTHONPATH := execution/agent_core/src$(PYTHONPATH_SEP)execution/harness/src/gen$(PYTHONPATH_SEP)execution/harness/src
+CONTRACT_PYTHONPATH := execution/agent_core/src$(PYTHONPATH_SEP)execution/runtime_sdk/src$(PYTHONPATH_SEP)execution/harness/src
 BUF ?= $(shell command -v buf 2>/dev/null || printf '%s\n' "$(HOME)/go/bin/buf")
 PROTOC_BIN ?= $(HOME)/go/bin
 
@@ -22,7 +22,7 @@ LDFLAGS := -X github.com/fluffyTighnari/levier/internal/version.Version=$(VERSIO
 	-X github.com/fluffyTighnari/levier/internal/version.Commit=$(COMMIT) \
 	-X github.com/fluffyTighnari/levier/internal/version.Built=$(BUILD_TIME)
 
-.PHONY: all build test lint fmt fmt-check vet run clean dev-up dev-down migrate proto proto-check proto-lint contract-check harness-test mcp-runtime-test sdk-test image-harness image-mcp-runtime counter-agent counter-agent-test http-smoke retrofit-e2e mcp-e2e deps-check structure-check scripts-check size-report daemon-check agent-core-test mvp-demo mvp-demo-react fault-matrix secrets-check docker-up docker-down docker-smoke docker-logs docker-reset release-dist
+.PHONY: all build test lint fmt fmt-check vet run clean dev-up dev-down migrate proto proto-check proto-lint contract-check harness-test runtime-sdk-test mcp-runtime-test sdk-test image-harness image-mcp-runtime counter-agent counter-agent-test http-smoke retrofit-e2e mcp-e2e deps-check structure-check scripts-check size-report daemon-check agent-core-test mvp-demo mvp-demo-react fault-matrix secrets-check docker-up docker-down docker-smoke docker-logs docker-reset release-dist
 
 all: build
 
@@ -70,7 +70,7 @@ proto:
 	PATH="$(PROTOC_BIN):$$PATH" $(BUF) generate
 
 proto-check: proto
-	@git diff --exit-code -- gen execution/harness/src/gen
+	@git diff --exit-code -- gen execution/runtime_sdk/src
 
 proto-lint:
 	$(BUF) lint
@@ -83,6 +83,9 @@ contract-check: proto-lint
 
 harness-test:
 	PYTHONPATH="$(CONTRACT_PYTHONPATH)" $(PYTHON) -m unittest discover -s execution/harness/tests -v
+
+runtime-sdk-test:
+	PYTHONPATH="execution/runtime_sdk/src" $(PYTHON) -m unittest discover -s execution/runtime_sdk/tests -v
 
 mcp-runtime-test:
 	PYTHONPATH="execution/mcp_runtime/src" $(MCP_PYTHON) -m unittest discover -s execution/mcp_runtime/tests -v
