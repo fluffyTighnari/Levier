@@ -2,9 +2,9 @@
 
 # 仓库地图
 
-> 只做导航，不重复设计。最后更新：2026-11-17。
+> 只做导航，不重复设计。最后更新：2026-11-19。
 
-## 1. 五层
+## 1. 六层
 
 ```text
 控制面（产品）
@@ -15,6 +15,9 @@
 
 执行侧（默认组件）
   execution/agent_core/ + execution/harness/ + execution/mcp_runtime/
+
+App SDK
+  sdk/python/
 
 参考示例
   examples/
@@ -36,12 +39,14 @@
 | `cmd/` | Go 可执行入口 | `cmd/levier`、`cmd/migrate`、`cmd/mw-daemon-check` | `make build` |
 | `internal/` | 控制面实现 | 由 `cmd/levier` 装配 | `go test ./...` |
 | `contracts/` | App HTTP / WS 契约 | `contracts/app-ws.schema.json`、`docs/api/openapi.yaml` | `make contract-check` |
+| `public/` | 对外可依赖的 schema 与示例 | `public/app-adapter/v1/`、`public/service-*/v1/` | 结构检查 |
 | `proto/` | gRPC 契约 | `proto/middleware/runtime/v1/runtime.proto` | `buf lint`、`make proto-lint` |
 | `gen/` | proto 生成的 Go 代码 | `gen/middleware/runtime/v1` | 不手改，`make proto` |
 | `execution/agent_core/` | 语言无关循环核心 | `levier_agent_core` | `make agent-core-test` |
 | `execution/harness/` | 默认执行侧 runtime | `python -m levier_harness` | `make harness-test` |
 | `execution/mcp_runtime/` | 默认 MCP 连接进程 | `python -m levier_mcp_runtime` | `make mcp-runtime-test` |
-| `examples/` | 参考 App / 客户端 | `counter_agent`、`http_client`、`node_counter_agent` | `make counter-agent-test` |
+| `sdk/python/` | Python App 适配器（C0/C1） | `levier_app` | `make sdk-test` |
+| `examples/` | 参考 App / 客户端 | `python_sdk_counter`、`counter_agent`、`http_client`、`node_counter_agent` | `make sdk-test`、`make counter-agent-test` |
 | `deploy/` | 镜像、Compose、smoke | `docker-compose.yml`、`deploy/*.Dockerfile` | `docker compose config`、smoke |
 | `scripts/` | 发布、安装与生命周期脚本 | `scripts/build-release.sh`、`scripts/install.sh`、`scripts/backup.sh`、`scripts/restore.sh` | `make release-dist`、`make lint`、备份/恢复演练 |
 | `tests/` | 跨单元测试与检查 | `tests/contract`、`tests/e2e`、`tests/app`、`tests/checks` | 对应 make target |
@@ -59,6 +64,7 @@
 | 持久化 / 查询 / 迁移 | `internal/runstore/` + `internal/db/migrations/` |
 | 事件模型 / 错误码 | `internal/contract/`、`internal/errs/` |
 | 首次启动 / App 接入 | `docs/ONBOARDING.md` |
+| Python App 接入 | `sdk/python/README.md` + `docs/APP_ADAPTER_CONTRACT.md` |
 | App 协议细节 | `docs/APP_ONBOARDING.md` |
 | CLI 使用 / 参数 / 退出码 | `docs/CLI_REFERENCE.md` |
 | Release 构建 / checksums | `scripts/build-release.sh` + `docs/RELEASE.md` |
@@ -90,6 +96,7 @@ contract  → 无 internal 依赖
 agent_core → 不依赖 harness / mcp_runtime / protobuf
 harness    → agent_core / generated proto / mcp client
 mcp_runtime → 不直连控制面
+sdk/python → 标准库 HTTP/WebSocket，不依赖 internal
 ```
 
 护栏：`make deps-check`、`make structure-check`。
@@ -100,13 +107,14 @@ mcp_runtime → 不直连控制面
 1. docs/SCOPE.md           产品边界
 2. docs/MAP.md             仓库导航
 3. docs/ONBOARDING.md      启动与首次接入
-4. docs/APP_ONBOARDING.md  接 App
-5. docs/DESIGN.md          控制面设计
-6. docs/ARCHITECTURE.md    依赖与分层
-7. deploy/README.md        部署
-8. docs/RUNTIME_OPS.md     运行操作面
-9. docs/LIFECYCLE.md       备份/恢复/轮换
-10. docs/MIGRATION-1D.md   命名/有状态迁移
+4. docs/APP_ONBOARDING.md  接 App 的底层协议
+5. sdk/python/README.md    Python App adapter 快速接入
+6. docs/DESIGN.md          控制面设计
+7. docs/ARCHITECTURE.md    依赖与分层
+8. deploy/README.md        部署
+9. docs/RUNTIME_OPS.md     运行操作面
+10. docs/LIFECYCLE.md      备份/恢复/轮换
+11. docs/MIGRATION-1D.md   命名/有状态迁移
 ```
 
 ## 6. 结构护栏

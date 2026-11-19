@@ -4,8 +4,8 @@
 
 | 项目 | 内容 |
 |---|---|
-| 状态 | 立项，延后实现 |
-| 归属 | 产品能力，但不是当前迭代 |
+| 状态 | Python SDK C0/C1 第一版已实现；Sidecar 与其他语言 SDK 延后 |
+| 归属 | 产品能力，当前只支持 Python App/runtime |
 | 目的 | 降低 App 接入成本，覆盖更多语言和部署形态 |
 | 前置 | 控制面可操作面稳定（CLI / 配置 / 自描述 / 状态 / 自检） |
 
@@ -13,23 +13,24 @@
 
 ## 1. 结论
 
-Adapter / Sidecar 一定要做，但**不是现在做**。
+当前先做 Python adapter；Sidecar、Node/TypeScript、Go SDK 继续延后。
 
 顺序建议：
 
 ```text
-P0  凭据文件 + app init
-P0  doctor --app / conformance
-P1  Python SDK
-P1  Sidecar + manifest
-P1  tool test / replay
-P2  Node / TypeScript SDK
-P2  OpenAPI 生成客户端 / Go SDK
-P3  GUI onboarding wizard
+P0  凭据文件 + app init                        已完成
+P0  doctor --app / conformance                 部分完成
+P1  Python SDK（C0/C1）                         第一版已实现
+P1  Sidecar + manifest                         延后
+P1  tool test / replay                         延后
+P2  Node / TypeScript SDK                      延后
+P2  OpenAPI 生成客户端 / Go SDK                 延后
+P3  GUI onboarding wizard                      延后
 ```
 
-理由：Adapter 会把 AppPort 的形状固化下来。  
-控制面的 CLI、配置、自描述、状态、自检还没稳定之前做 Adapter，等于把不稳定的接口包装成 SDK，后面要同时维护协议和 SDK 两套迁移。
+Python SDK 的第一版产物在 `sdk/python/`，契约见
+`docs/APP_ADAPTER_CONTRACT.md`。当前明确不修改 Harness、MCP Runtime 或其他
+运行侧组件；先把 App 接入代码收敛为业务 handler、工具 schema 和凭据。
 
 ---
 
@@ -129,16 +130,16 @@ ping / pong 正常
 需要处理不同语言/运行时的差异
 ```
 
-### P1：Python SDK
+### P1：Python SDK（C0/C1 第一版已实现）
 
 第一个正式 SDK，优先服务参考实现和 Python 团队。
 
 产物：
 
 ```text
-levier-agent（Python 包）
+sdk/python/（包名 levier-app，import levier_app）
 注册工具 handler
-SDK 负责 HTTP、ws_token、WebSocket、重连、幂等、结果序列化
+SDK 负责 HTTP、ws_token、WebSocket、重连、结果序列化
 ```
 
 收益：

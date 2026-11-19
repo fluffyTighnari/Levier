@@ -1,6 +1,10 @@
 <!-- Levier — counter agent: baseline + Levier runtime. -->
 
-# Counter Agent（参考接入实现）
+# Counter Agent（旧参考接入实现）
+
+> 新 App 请优先使用 [`../python_sdk_counter`](../python_sdk_counter/README.md) 和
+> [`../../sdk/python`](../../sdk/python/README.md)。本目录保留为底层协议与
+> 基线行为对照；它还没有迁移到 SDK。
 
 这个目录同时承载两件事：
 

@@ -26,7 +26,8 @@ MAP.md          仓库地图
 | 文档 | 内容 |
 |---|---|
 | `ONBOARDING.md` | 从启动 Levier 到第一个 Run 的一站式引导 |
-| `APP_ONBOARDING.md` | App 接入流程与协议 |
+| `APP_ONBOARDING.md` | App 接入流程与底层协议 |
+| `APP_ADAPTER_CONTRACT.md` | Python App adapter C0/C1 契约（handler、工具、重连、结果） |
 | `DAEMON_CONTRACT.md` | Harness / Daemon 协议 |
 | `AGENT_CORE_CONTRACT.md` | Agent Core v1 契约 |
 | `MCP.md` | MCP 接入与运行 |
@@ -45,7 +46,7 @@ MAP.md          仓库地图
 | `CLI_DISTRIBUTION_PLAN.md` | CLI 操作面与分发安装计划 |
 | `CLI_ACTIONS.md` | 动作型 CLI：app / run / migrate / daemon 设计 |
 | `RELEASE.md` | release 构建、checksums、tag 与发布流程 |
-| `TODO.md` | 公开前最终检查清单 + 6 配置外部化 / 7 服务自描述 / 8 状态总览 / 9 逐跳自检 / 10 生命周期 / 11 引导与凭据 / 12 运行操作面 |
+| `TODO.md` | 公开前最终检查清单 + 6 配置外部化 / 7 服务自描述 / 8 状态总览 / 9 逐跳自检 / 10 生命周期 / 11 引导与凭据 / 12 运行操作面 / 13 Python App adapter |
 | `SELF_DESCRIPTION_PLAN.md` | 7 服务自描述改造计划（内部开发文档） |
 | `STATUS_OVERVIEW_PLAN.md` | 8 状态总览改造计划（内部开发文档） |
 | `HOP_CHECK_PLAN.md` | 9 逐跳自检改造计划（内部开发文档） |
@@ -59,7 +60,8 @@ MAP.md          仓库地图
 ```text
 SCOPE → MAP → 你的任务对应文档
 第一次接入    → ONBOARDING.md
-接 App        → APP_ONBOARDING.md
+接 Python App → sdk/python/README.md + APP_ADAPTER_CONTRACT.md
+底层 App 协议 → APP_ONBOARDING.md
 引导计划      → ONBOARDING_CREDENTIALS_PLAN.md
 用 CLI        → CLI_REFERENCE.md
 安装 CLI      → INSTALL.md

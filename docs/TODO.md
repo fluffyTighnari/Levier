@@ -3,7 +3,8 @@
 # Levier TODO
 
 > 当前决策：**暂不公开仓库，不创建正式 `v0.1.0`**。
-> 5 CLI 与分发进入冻结状态；下一阶段是 **6 配置外部化**。
+> 5 CLI 与分发进入冻结状态；13 C0/C1 Python App adapter 第一版已实现。
+> 下一阶段：运行侧 Python runtime 改造（本阶段不改 runtime）。
 > 最后更新：2026-11-19。
 
 ---
@@ -524,7 +525,26 @@ Levier  负责启动、就绪、优雅停止和恢复语义
 
 第一版只读视图和单 Run 取消已完成；高风险操作留到 12B。
 
-## 10. 相关文档
+## 10. 13 Python App adapter（C0/C1，第一版已实现）
+
+目标是让 Python App 只保留业务状态、工具 schema 和 handler，不再重复实现
+HTTP 认证、工具注册、WebSocket、token、重连和 `local_tool_call` 结果封装。
+
+- [x] C0 适配器契约（handler 签名、工具 manifest、调用/结果、版本、重连）
+- [x] `sdk/python/` 标准库实现 `levier_app`
+- [x] canonical 凭据加载与 App key 认证
+- [x] 工具注册、hello、ping/pong、断线重连、优雅停止
+- [x] `examples/python_sdk_counter` 薄示例
+- [x] SDK 单元测试、结构检查、Makefile 与 CI
+- [x] 真实 Compose Run 端到端验证
+- [ ] 将 `examples/counter_agent` 迁移到 SDK；当前保留为底层协议对照
+- [ ] Node / TypeScript SDK
+- [ ] Sidecar / manifest
+- [ ] 多语言 conformance
+
+当前只支持 Python App / Python runtime，不修改 Harness、MCP Runtime 或其他运行侧组件。
+
+## 11. 相关文档
 
 ```text
 docs/CLI_REFERENCE.md
@@ -533,10 +553,12 @@ docs/RELEASE.md
 docs/CONFIG.md
 docs/CLI_DISTRIBUTION_PLAN.md
 docs/MAP.md
+docs/APP_ADAPTER_CONTRACT.md
 docs/SELF_DESCRIPTION_PLAN.md
 docs/STATUS_OVERVIEW_PLAN.md
 docs/HOP_CHECK_PLAN.md
 docs/LIFECYCLE_PLAN.md
 docs/ONBOARDING_CREDENTIALS_PLAN.md
 docs/RUNTIME_OPS.md
+sdk/python/README.md
 ```

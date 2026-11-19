@@ -17,6 +17,7 @@ checks/     依赖、结构、密钥、规模检查
 make contract-check
 make deps-check
 make structure-check
+make sdk-test
 make mvp-demo
 make mvp-demo-react
 make fault-matrix

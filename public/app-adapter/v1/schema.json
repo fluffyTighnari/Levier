@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://levier.dev/app-adapter/v1/schema.json",
+  "title": "Levier App adapter tool manifest v1",
+  "description": "The local tool manifest sent by levier_app to POST /api/v1/apps. Handler signatures and lifecycle rules are documented in sdk/python/README.md.",
+  "type": "array",
+  "items": {
+    "$ref": "#/$defs/tool"
+  },
+  "$defs": {
+    "tool": {
+      "type": "object",
+      "required": ["name", "schema", "timeout_ms"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "description": {
+          "type": "string"
+        },
+        "schema": {
+          "type": "object"
+        },
+        "timeout_ms": {
+          "type": "integer",
+          "minimum": 1
+        }
+      },
+      "additionalProperties": true
+    }
+  }
+}

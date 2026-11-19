@@ -246,19 +246,20 @@ bin/levier serve -config levier.example.yaml
   PYTHONPATH=src .venv/bin/python -m levier_mcp_runtime \
   --socket /tmp/levier-mcp.sock)
 
-# 5. 启动参考 App（bootstrap + 注册工具 + 连 WS）
+# 5. 启动 Python SDK 参考 App（注册工具 + 连 WS）
 python3 examples/counter_agent/bootstrap_app.py \
   --credentials-out ~/.config/levier/counter.json
-python3 examples/counter_agent/serve.py \
-  --credentials ~/.config/levier/counter.json \
-  --mw-url http://127.0.0.1:8080
+PYTHONPATH=sdk/python/src \
+LEVIER_CREDENTIALS=~/.config/levier/counter.json \
+  python3 examples/python_sdk_counter/app.py
 
-# 6. 提交 Run
-python3 examples/counter_agent/submit_run.py \
+# 6. 另开终端提交 Run
+bin/levier run submit \
   --credentials ~/.config/levier/counter.json \
   --strategy react \
   --provider deepseek --model deepseek-flash \
-  --prompt "Add 2, then add 3, then read the counter."
+  --prompt "Add 2, then add 3, then read the counter." \
+  --watch
 ```
 
 ### 3.4 确认链路健康
@@ -343,7 +344,9 @@ LEVIER_URL
 常驻运行，不因一次工具调用结束就退出
 ```
 
-不需要 SDK、生成代码或特定目录结构。
+Python App 推荐直接使用仓库内的 `sdk/python`（`levier_app`），把上述
+HTTP/WebSocket/重连/工具分发代码收敛为业务 handler；上面的最小能力清单
+用于其他语言或需要对照底层协议时使用。
 
 ### 4.3 选择接入粒度
 
@@ -1139,6 +1142,7 @@ make build
 make agent-core-test
 make harness-test
 make mcp-runtime-test
+make sdk-test
 make counter-agent-test
 make secrets-check
 
@@ -1184,12 +1188,14 @@ python3 tests/app/app_check.py --credentials /path/to/app.json \
 cmd/              levier（serve / app / run / ops / migrate / maintenance / daemon check）/ migrate
 internal/         控制面、存储、调度、网关、HTTP/WS
 contracts/        HTTP / WS 机器可读契约
+public/           对外可依赖的 schema 与示例
 proto/            gRPC 契约
 gen/              proto 生成的 Go 代码
 execution/agent_core/       语言无关的 Agent 循环与 conformance fixtures
 execution/harness/          Python Harness
 execution/mcp_runtime/      独立 MCP 连接进程
-examples/         counter_agent、HTTP/Node 接入示例
+sdk/python/       Python App adapter（levier_app）
+examples/         python_sdk_counter、counter_agent、HTTP/Node 接入示例
 tests/            单元/契约/E2E 与检查脚本
 scripts/          发布构建、安装、备份恢复脚本
 docs/             设计、契约、接入、迁移、运维文档
@@ -1203,7 +1209,9 @@ deploy/           容器镜像与 Compose
 | `docs/NAMING.md` | 命名、标识符与改名记录 |
 | `docs/MIGRATION-1D.md` | Compose / 数据库 / 指标迁移 |
 | `docs/ONBOARDING.md` | 从启动 Levier 到第一个 Run 的一站式引导 |
-| `docs/APP_ONBOARDING.md` | App 接入流程与协议细节 |
+| `docs/APP_ONBOARDING.md` | App 接入流程与底层协议细节 |
+| `docs/APP_ADAPTER_CONTRACT.md` | Python App adapter C0/C1 契约 |
+| `sdk/python/README.md` | Python App 快速接入 |
 | `docs/DESIGN.md` | 核心设计（当前实现） |
 | `docs/CONFIG.md` | 配置盘点、环境变量矩阵与外部化契约 |
 | `docs/LIFECYCLE.md` | 备份、恢复、Docker volume 与 secret 轮换 |
@@ -1213,7 +1221,7 @@ deploy/           容器镜像与 Compose
 | `docs/CLI_REFERENCE.md` | CLI 命令、参数、环境变量、JSON、退出码 |
 | `docs/INSTALL.md` | CLI 安装、升级、卸载、checksum、镜像/离线 |
 | `docs/RELEASE.md` | release 构建、checksums 与发布流程 |
-| `docs/TODO.md` | 公开前检查清单与 6 配置外部化计划 |
+| `docs/TODO.md` | 公开前检查清单与当前阶段计划 |
 | `docs/ARCHITECTURE.md` | 一页架构与依赖方向 |
 | `docs/DAEMON_CONTRACT.md` | Daemon / Harness 协议 |
 | `docs/MCP.md` | MCP 接入与运行 |
@@ -1225,12 +1233,14 @@ deploy/           容器镜像与 Compose
 参考实现（用来对照改造，不是接入规范）：
 
 ```text
-examples/counter_agent       Python 标准库实现：bootstrap、常驻服务、提交 Run
+examples/python_sdk_counter  推荐：Python SDK 薄示例（业务 handler + schema）
+examples/counter_agent       Python 标准库旧实现：对照底层协议
 examples/node_counter_agent  Node.js 原生 WebSocket 实现，验证语言无关
 examples/http_client         只验证 HTTP：认证、创建、查询、取消
 ```
 
-接入其他语言时，只需满足第 4.2 节的最小能力，不要求照搬目录结构。
+接入 Python App 时使用 `sdk/python`；接入其他语言时，只需满足第 4.2 节的
+最小能力，不要求照搬目录结构。
 
 ---
 

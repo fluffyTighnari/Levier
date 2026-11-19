@@ -1,0 +1,11 @@
+{
+  "type": "local_tool_result",
+  "correlation_id": "msg-1",
+  "invocation_id": "inv-1",
+  "ok": false,
+  "error": {
+    "code": "TOOL_EXEC_ERROR",
+    "message": "delta must be an integer",
+    "retryable": false
+  }
+}

@@ -6,7 +6,8 @@
 它以 Counter Agent 为参考，但内容不绑定语言、SDK 或文件布局。
 
 > 第一次接入请先按 [`ONBOARDING.md`](ONBOARDING.md) 完成启动、App 创建和 `app check`。
-> 本文保留完整的 App 协议与运行细节。
+> Python App 推荐先用 [`sdk/python/README.md`](../sdk/python/README.md) 和
+> [`APP_ADAPTER_CONTRACT.md`](APP_ADAPTER_CONTRACT.md)；本文保留完整的底层协议与运行细节。
 
 > MVP 只支持 `runtime=normal`。`sandbox` 与 `longterm` 尚未闭环，
 > 不要在接入中使用；崩溃语义与限制见 `docs/MVP.md`。

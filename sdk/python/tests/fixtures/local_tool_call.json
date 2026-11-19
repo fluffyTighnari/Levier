@@ -1,0 +1,8 @@
+{
+  "type": "local_tool_call",
+  "msg_id": "msg-1",
+  "invocation_id": "inv-1",
+  "tool_name": "counter_add",
+  "arguments_json": "{\"delta\": 2}",
+  "timeout_ms": 10000
+}

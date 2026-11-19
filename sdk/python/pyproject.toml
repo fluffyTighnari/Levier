@@ -1,0 +1,17 @@
+# Levier — Python App adapter package.
+# Copyright 2026 The Levier Authors.
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "levier-app"
+version = "0.1.0"
+description = "Reusable Python adapter for Levier Apps"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = []
+
+[tool.setuptools.packages.find]
+where = ["src"]

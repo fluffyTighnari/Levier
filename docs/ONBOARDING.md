@@ -114,24 +114,33 @@ app check: PASS
 
 ## 4. 启动示例 App
 
-在仓库根目录：
+推荐使用 Python SDK 薄示例（在仓库根目录，无需先安装包）：
+
+```sh
+PYTHONPATH=sdk/python/src \
+LEVIER_CREDENTIALS=~/.config/levier/counter-agent.json \
+  python3 examples/python_sdk_counter/app.py
+```
+
+它会注册 `counter_add` / `counter_get` / `counter_reset`，并把凭据、HTTP 和
+WebSocket 生命周期交给 `levier_app`。保持它运行，然后在另一个终端提交 Run：
+
+```sh
+LEVIER_CREDENTIALS=~/.config/levier/counter-agent.json \
+  levier run submit \
+  --strategy react \
+  --prompt "Add 2, then add 3, then read the counter." \
+  --watch
+```
+
+旧的标准库实现仍可用于对照底层协议：
 
 ```sh
 LEVIER_CREDENTIALS=~/.config/levier/counter-agent.json \
   python3 examples/counter_agent/serve.py
 ```
 
-首次启动会注册本地工具、取得 WebSocket token 并建立连接。保持它运行，然后在另一个终端提交 Run：
-
-```sh
-LEVIER_CREDENTIALS=~/.config/levier/counter-agent.json \
-  levier run submit \
-  --strategy echo \
-  --prompt "hello" \
-  --watch
-```
-
-看到终态 `completed` 即表示接入完成。
+两种 App 都注册相同的 Counter 工具；看到 Run 终态 `completed` 即表示接入完成。
 
 没有示例 App 时，也可以直接提交一个不依赖本地工具的 echo Run：
 
