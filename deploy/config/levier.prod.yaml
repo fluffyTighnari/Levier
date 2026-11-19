@@ -39,6 +39,13 @@ workflow:
   recovery_delay: "10s"
   event_buffer: 256
 
+# Disabled until the operator explicitly runs a maintenance window.
+retention:
+  enabled: false
+  run_days: 30
+  session_days: 7
+  batch_size: 1000
+
 log:
   level: "info"
   format: "json"

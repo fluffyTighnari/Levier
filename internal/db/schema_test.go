@@ -30,6 +30,8 @@ func TestSchemaTablesIndexesAndConstraints(t *testing.T) {
 		"uq_apps_api_key_hash",
 		"idx_apps_status",
 		"idx_app_mcp_refs_mcp",
+		"idx_runs_terminal_updated",
+		"idx_sessions_status_expires",
 	} {
 		var exists bool
 		if err := pool.QueryRow(ctx,

@@ -287,8 +287,11 @@ levier selfcheck
 levier doctor --credentials /path/to/app.json
 levier app show --credentials /path/to/app.json
 levier run submit --credentials /path/to/app.json --strategy echo --prompt "hello" --watch
+levier maintenance status
+levier maintenance prune --dry-run
 ```
 
+`maintenance` 默认只读/演练；只有显式 `--yes` 且启用 retention 才会删除终态数据。
 完整命令、参数、环境变量、JSON 字段和退出码见
 [`docs/CLI_REFERENCE.md`](docs/CLI_REFERENCE.md)。
 
@@ -1166,7 +1169,7 @@ python3 tests/app/app_check.py --credentials /path/to/app.json \
 ## 11. 目录与文档
 
 ```text
-cmd/              levier（serve / app / run / migrate / daemon check）/ migrate
+cmd/              levier（serve / app / run / migrate / maintenance / daemon check）/ migrate
 internal/         控制面、存储、调度、网关、HTTP/WS
 contracts/        HTTP / WS 机器可读契约
 proto/            gRPC 契约

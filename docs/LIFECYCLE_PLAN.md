@@ -2,7 +2,7 @@
 
 # 10. 生命周期（进程与数据）
 
-> 状态：10B 进程优雅停止已实现；10C 数据维护、10D 备份/轮换待开始。
+> 状态：10B 进程优雅停止已实现；10C 数据维护已实现；10D 备份/轮换待开始。
 > 本文位于 `docs/`，属于内部开发文档，不进入镜像、release、HTTP 响应或对外分发。
 > 计划新增的运行状态或维护命令契约放在 `public/service-lifecycle/v1/`（如最终需要对外暴露）。
 
@@ -233,17 +233,13 @@ docker compose down -v   删除数据库/凭据/socket 数据
 
 **第一版默认不自动删除任何用户数据。**
 
-### 5.2 保留配置（建议）
+### 5.2 保留配置
 
 ```yaml
 retention:
   enabled: false
   run_days: 30
-  event_days: 30
-  tool_invocation_days: 30
-  workflow_days: 7
   session_days: 7
-  dead_letter_days: 30
   batch_size: 1000
 ```
 
@@ -253,13 +249,17 @@ retention:
 enabled=false      不删除任何数据
 只删除终态数据
 不删除 queued / assigned / running 的 Run
+以终态 Run 为清理单位
+删除 Run 时级联删除 events / tasks / tool invocations
 外键级联删除前必须确认影响范围
 按 batch 分批删除
-每次删除记录 count 和耗时
 dry-run 必须显示候选数量
 ```
 
-### 5.3 维护命令（建议）
+第一版不单独配置 event / task / tool invocation 的保留天数；它们跟随所属
+终态 Run 的生命周期。更细粒度的分层保留留到后续版本。
+
+### 5.3 维护命令
 
 ```sh
 levier maintenance status
@@ -270,24 +270,24 @@ levier maintenance prune --yes
 `status` 输出：
 
 ```text
-runs.total / terminal / active
+runs.total / terminal / active / eligible
 events.count
 tool_invocations.count
 run_tasks.pending / leased / done / dead
-sessions.active / expired
+sessions.total / active / paused / expired / eligible
 oldest_terminal_age
 ```
 
-`prune` 默认 dry-run；只有显式 `--yes` 才删除。
+`prune` 默认 dry-run；只有显式 `--yes` 且 `retention.enabled=true` 才删除。
 
 ### 5.4 Session 过期
 
-虽然 `sessions` 有 `expires_at` 和索引，但当前没有 GC。建议：
+`sessions` 的 `expires_at` 已接入维护命令：
 
 ```text
-先查询 expires_at < now() - grace
-标记为 expired
-保留 session / checkpoint 一段时间后按 retention 清理
+先查询 expires_at < now() - session_days
+active / paused 且没有 active Run 引用时标记为 expired
+再按 session_days 清理
 绝不删除仍被 active run 引用的 session
 ```
 
@@ -398,18 +398,13 @@ internal/workflow/
 ```text
 internal/maintenance/
   doc.go
+  policy.go
   status.go
   prune.go
-  retention.go
   maintenance_test.go
 
-internal/runstore/
-  Stats
-  CountTerminalBefore
-  DeleteTerminalBefore
-
-internal/workflow/
-  Stats / cleanup terminal tasks
+internal/db/migrations/
+  0010_retention_indexes.sql
 
 internal/db/
   migration / backup helper（不自动执行）
@@ -450,9 +445,10 @@ cmd/levier/maintenance.go
 - `internal/maintenance`
 - `maintenance status`
 - `maintenance prune --dry-run`
-- 终态 Run / events / tool invocations / run_tasks 的批量清理
-- session GC
+- 终态 Run 批量清理，并级联 events / tool invocations / run_tasks
+- session GC，保护仍被 active Run 引用的 session
 - 默认关闭 retention
+- retention 查询索引
 
 ### 10D：备份、恢复、轮换
 
@@ -487,7 +483,7 @@ selfcheck
 | 强制停止 | 超时、exit code、日志 |
 | 重启恢复 | queued / running / assigned Run |
 | retention dry-run | 只读、候选数量、不删除 |
-| retention prune | 只删终态、batch、事务、audit |
+| retention prune | 只删终态、batch、active 保护、结果计数 |
 | session GC | expired / grace / active run 保护 |
 | backup / restore | migration 版本、数据数量、selfcheck |
 | secret rotation | admin / daemon / app key / DB password |
@@ -502,11 +498,11 @@ selfcheck
 [x] SIGTERM/SIGINT 优雅停止有测试
 [x] stop 超时后强制退出并记录
 [x] Compose stop_grace_period 配置
-[ ] retention 默认关闭
-[ ] maintenance status 可用
-[ ] maintenance prune 默认 dry-run
-[ ] 只删除终态数据
-[ ] session GC 不删除 active 数据
+[x] retention 默认关闭
+[x] maintenance status 可用
+[x] maintenance prune 默认 dry-run
+[x] 只删除终态数据
+[x] session GC 不删除 active 数据
 [ ] 备份/恢复文档可执行
 [ ] secret/API key 轮换步骤明确
 [ ] Docker volume 删除风险明确

@@ -75,6 +75,8 @@ func TestSubcommandHelp(t *testing.T) {
 		{name: "run cancel", run: runRunCancel},
 		{name: "migrate status", run: runMigrateStatus},
 		{name: "migrate up", run: runMigrateUp},
+		{name: "maintenance status", run: runMaintenanceStatus},
+		{name: "maintenance prune", run: runMaintenancePrune},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {

@@ -385,11 +385,11 @@ public/     对外契约和示例
 - [x] SIGTERM / SIGINT 优雅停止
 - [x] 停止总超时与强制退出
 - [x] Compose `stop_grace_period`
-- [ ] `internal/maintenance`
-- [ ] `levier maintenance status`
-- [ ] `maintenance prune --dry-run`
-- [ ] retention 默认关闭
-- [ ] session / terminal task 清理
+- [x] `internal/maintenance`
+- [x] `levier maintenance status`
+- [x] `maintenance prune --dry-run`
+- [x] retention 默认关闭
+- [x] session 清理 / 终态任务随 Run 级联
 - [ ] 备份 / 恢复流程
 - [ ] Admin / daemon / App key / DB password 轮换
 - [ ] Docker volume 生命周期说明
@@ -476,7 +476,7 @@ Levier  负责启动、就绪、优雅停止和恢复语义
 10B 进程优雅停止
   └─ 门禁：SIGTERM / worker / HTTP / gRPC / 子进程清理通过
 
-10C 数据维护
+10C 数据维护（已完成）
   └─ 门禁：maintenance status / prune dry-run / 终态清理测试通过
 
 10D 备份与轮换

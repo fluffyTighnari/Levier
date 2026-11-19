@@ -180,6 +180,12 @@ func redactedConfig(cfg config.Config) map[string]any {
 			"recovery_delay": cfg.Workflow.RecoveryDelay.Std().String(),
 			"event_buffer":   cfg.Workflow.EventBuffer,
 		},
+		"retention": map[string]any{
+			"enabled":      cfg.Retention.Enabled,
+			"run_days":     cfg.Retention.RunDays,
+			"session_days": cfg.Retention.SessionDays,
+			"batch_size":   cfg.Retention.BatchSize,
+		},
 		"log": map[string]any{
 			"level":  cfg.Log.Level,
 			"format": cfg.Log.Format,

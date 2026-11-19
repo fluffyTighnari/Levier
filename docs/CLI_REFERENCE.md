@@ -120,7 +120,7 @@ LEVIER_CREDENTIALS
 
 | 变量 | 使用命令 | 说明 |
 |---|---|---|
-| `LEVIER_CONFIG` | `serve`、`doctor`、`migrate`、`config` | YAML 配置路径 |
+| `LEVIER_CONFIG` | `serve`、`doctor`、`migrate`、`maintenance`、`config` | YAML 配置路径 |
 | `LEVIER_ENV` | `serve`、`config` | `development` 或 `production` |
 | `MIDDLEWARE_CONFIG` | `serve` | 旧名兼容；`LEVIER_CONFIG` 优先 |
 | `LEVIER_SERVER` | `doctor`、`status`、`app`、`run`、`daemon check` | HTTP 地址 |
@@ -130,6 +130,10 @@ LEVIER_CREDENTIALS
 | `LEVIER_GRPC` | `daemon check` | gRPC 地址 |
 | `LEVIER_DAEMON_ID` | `daemon check` | 预分配 daemon id |
 | `LEVIER_DAEMON_TOKEN` | `daemon check` | daemon token |
+| `LEVIER_RETENTION_ENABLED` | `maintenance` | 启用 retention |
+| `LEVIER_RETENTION_RUN_DAYS` | `maintenance` | 终态 Run 保留天数 |
+| `LEVIER_RETENTION_SESSION_DAYS` | `maintenance` | 过期 Session 保留天数 |
+| `LEVIER_RETENTION_BATCH_SIZE` | `maintenance` | 单批删除上限 |
 
 优先级：
 
@@ -302,7 +306,7 @@ JSON 结构：
     {
       "name": "migrations",
       "status": "ok",
-      "message": "version 9 (9 applied)"
+      "message": "version 10 (10 applied)"
     }
   ]
 }
@@ -568,6 +572,72 @@ socket 时检查 MCP runtime health；真实 local tool 可继续使用 `tests/a
 
 ```text
 public/service-selfcheck/v1/schema.json
+```
+
+---
+
+### 5.9 `levier maintenance`
+
+```sh
+levier maintenance status [--config path] [--json]
+levier maintenance prune [--config path] [--dry-run] [--yes] [--json]
+```
+
+维护命令直接连接 PostgreSQL，不经过 HTTP，也没有公共 maintenance API。
+
+`status` 只读，显示：
+
+```text
+retention.enabled / run_days / session_days / batch_size
+runs total / active / terminal / eligible
+oldest terminal age
+run_events total
+run_tasks counts by status
+tool_invocations counts by status
+sessions total / active / paused / expired / eligible
+run / session cutoff time
+```
+
+`prune` 默认 dry-run，只显示候选数量，不删除数据。只有同时满足以下条件才会执行：
+
+```text
+retention.enabled = true
+显式传入 --yes
+没有同时传入 --dry-run
+```
+
+执行时只删除超过 `run_days` 的终态 Run；该 Run 的 events、tasks 和 tool
+invocations 通过外键级联删除。过期 Session 会先标记为 `expired`，再按
+`session_days` 清理；仍被 active Run 引用的 Session 不会被删除。
+
+参数：
+
+| 参数 | 默认 | 说明 |
+|---|---|---|
+| `--config` | `LEVIER_CONFIG` 或 `levier.example.yaml` | YAML 配置 |
+| `--dry-run` | `true` | 只显示候选；与 `--yes` 同时使用会报错 |
+| `--yes` | `false` | 确认执行删除 |
+| `--timeout` | status `15s` / prune `60s` | 数据库操作超时 |
+| `--json` | `false` | 输出结构化 JSON |
+
+普通 dry-run 输出示例：
+
+```text
+mode:      dry-run
+retention: enabled=true run_days=30 session_days=7 batch_size=1000
+runs:      eligible=12 deleted=0
+sessions:  eligible=2 expired=0 deleted=0
+batches:   0
+cutoff:    runs=2026-10-20T01:50:54Z sessions=2026-11-12T01:50:54Z
+note:      no data was deleted; rerun with --yes after reviewing the plan
+```
+
+退出码：
+
+```text
+0  查询 / dry-run / 执行成功
+1  数据库错误，或 --yes 时 retention 未启用
+2  配置或参数错误
 ```
 
 ---
@@ -919,8 +989,8 @@ levier migrate status [--config path] [--json]
 
 ```text
 database: postgres://user:change-me@host:5432/levier?sslmode=disable
-current: 9
-applied: 9
+current: 10
+applied: 10
 pending: 0
 ```
 
@@ -929,8 +999,8 @@ JSON：
 ```json
 {
   "database": "postgres://user:change-me@host:5432/levier?sslmode=disable",
-  "current": 9,
-  "applied": 9,
+  "current": 10,
+  "applied": 10,
   "pending": []
 }
 ```
@@ -1142,6 +1212,8 @@ Run 未在 --timeout / --watch-timeout 内进入终态
 | `run cancel` | 取消成功 | 其他错误 | 参数 / 凭据 | 认证 | 网络 | 终态 / 确认拒绝 |
 | `migrate status` | 成功 | 数据库错误 | 配置 / 参数 | - | - | - |
 | `migrate up` | 成功 | 迁移错误 | 配置 / 参数 | - | - | - |
+| `maintenance status` | 成功 | 数据库错误 | 配置 / 参数 | - | - | - |
+| `maintenance prune` | 成功 | 数据库错误 / retention 未启用 | 配置 / 参数 | - | - | - |
 | `daemon check` | 通过 | 检查失败 | 参数 | 认证 | 网络 | daemon 冲突 |
 
 ---

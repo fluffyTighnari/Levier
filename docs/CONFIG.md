@@ -2,7 +2,7 @@
 
 # 配置盘点与外部化契约（6A）
 
-> 状态：6A 盘点完成；6B 控制面配置已实现；6C 执行侧配置已实现；6D 部署配置已实现；6E 测试与文档已完成，Compose smoke 已通过。
+> 状态：6A 盘点完成；6B 控制面配置已实现；6C 执行侧配置已实现；6D 部署配置已实现；6E 测试与文档已完成，Compose smoke 已通过；10C retention 配置已实现。
 > 目标：先明确“现在有哪些配置、从哪里来、哪些是秘密、哪些还缺失”，再进入 6B 改代码。
 > 相关：`TODO.md`、`CLI_REFERENCE.md`、`deploy/README.md`。
 
@@ -118,14 +118,36 @@ CLI
 | `workflow.recovery_delay` | `LEVIER_WORKFLOW_RECOVERY_DELAY` | duration | `10s` | 是 | 否 |
 | `workflow.event_buffer` | `LEVIER_WORKFLOW_EVENT_BUFFER` | int | `256` | 是 | 否 |
 
-### 3.5 Log
+### 3.5 Retention
+
+| YAML | 环境变量 | 类型 | 默认 | 必填 | 秘密 | 现状 |
+|---|---|---|---|---|---|---|
+| `retention.enabled` | `LEVIER_RETENTION_ENABLED` | bool | `false` | 是 | 否 | 默认关闭 |
+| `retention.run_days` | `LEVIER_RETENTION_RUN_DAYS` | int | `30` | 是 | 否 | 终态 Run 保留天数 |
+| `retention.session_days` | `LEVIER_RETENTION_SESSION_DAYS` | int | `7` | 是 | 否 | 过期 Session 保留天数 |
+| `retention.batch_size` | `LEVIER_RETENTION_BATCH_SIZE` | int | `1000` | 是 | 否 | 单批删除上限，最大 10000 |
+
+第一版以**终态 Run** 为清理单位：
+
+```text
+只删除 completed / failed / cancelled / timeout 且超过 run_days 的 Run
+删除 Run 时由外键级联删除 run_events / run_tasks / tool_invocations
+绝不删除 queued / assigned / running 的 Run
+Session 只有 expires_at 过期且没有 active Run 时才标记 / 删除（active / paused 都会过期）
+retention.enabled=false 时 prune 不删除任何数据
+```
+
+`maintenance prune` 默认 dry-run；只有显式 `--yes` 才执行删除。更细粒度的
+event / task / tool invocation 独立保留期留到后续版本。
+
+### 3.6 Log
 
 | YAML | 环境变量 | 类型 | 默认 | 必填 | 秘密 |
 |---|---|---|---|---|---|
 | `log.level` | `LEVIER_LOG_LEVEL` | enum | `info` | 是 | 否 |
 | `log.format` | `LEVIER_LOG_FORMAT` | enum | `json` | 是 | 否 |
 
-### 3.6 兼容与缺口
+### 3.7 兼容与缺口
 
 当前 `MIDDLEWARE_*` 作为旧前缀，在一个版本内作为 `LEVIER_*` 的 fallback。
 
@@ -148,6 +170,14 @@ config check / config print
 Harness / MCP / Agent 配置命名统一
 Compose 默认 secret 清理
 生产式 Compose secret 文件挂载
+```
+
+10C 已补齐：
+
+```text
+retention.enabled / run_days / session_days / batch_size
+LEVIER_RETENTION_* 环境变量
+retention 默认关闭
 ```
 
 仍待后续：

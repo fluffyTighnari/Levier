@@ -81,6 +81,26 @@ docker compose exec levier /app/levier selfcheck --deep \
 
 `selfcheck` 默认只读；`--deep` 会创建临时 App / Run，不删除已有资源。
 
+### 数据维护
+
+维护命令直接连接 PostgreSQL，不经过 HTTP：
+
+```sh
+docker compose exec levier /app/levier maintenance status
+docker compose exec levier /app/levier maintenance prune --dry-run
+```
+
+`retention.enabled` 默认是 `false`，因此 `--yes` 会被拒绝。确认 dry-run
+候选数量后，才在配置中启用 retention，并显式执行：
+
+```sh
+docker compose exec levier /app/levier maintenance prune --yes
+```
+
+第一版只删除超过 `run_days` 的终态 Run；它的 events、tasks 和 tool
+invocations 通过外键级联删除。过期 Session 在没有 active Run 引用时才会
+被清理。执行前请先备份，详见 `docs/LIFECYCLE_PLAN.md`。
+
 ## 3. 真实模型
 
 echo smoke 不需要模型 key。要跑真实 ReAct：

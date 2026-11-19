@@ -22,13 +22,14 @@ import (
 
 // Config is the complete Levier runtime configuration.
 type Config struct {
-	ConfigVersion int            `yaml:"config_version"`
-	Environment   string         `yaml:"environment"`
-	HTTP          HTTPConfig     `yaml:"http"`
-	GRPC          GRPCConfig     `yaml:"grpc"`
-	Database      DatabaseConfig `yaml:"database"`
-	Workflow      WorkflowConfig `yaml:"workflow"`
-	Log           LogConfig      `yaml:"log"`
+	ConfigVersion int             `yaml:"config_version"`
+	Environment   string          `yaml:"environment"`
+	HTTP          HTTPConfig      `yaml:"http"`
+	GRPC          GRPCConfig      `yaml:"grpc"`
+	Database      DatabaseConfig  `yaml:"database"`
+	Workflow      WorkflowConfig  `yaml:"workflow"`
+	Retention     RetentionConfig `yaml:"retention"`
+	Log           LogConfig       `yaml:"log"`
 }
 
 // HTTPConfig configures the App-facing HTTP server.
@@ -77,6 +78,16 @@ type WorkflowConfig struct {
 	EventBuffer   int      `yaml:"event_buffer"`
 }
 
+// RetentionConfig configures offline data cleanup. It is disabled by default.
+// Deleting a terminal run also deletes its events, tasks, and tool invocations
+// through database foreign-key cascades.
+type RetentionConfig struct {
+	Enabled     bool `yaml:"enabled"`
+	RunDays     int  `yaml:"run_days"`
+	SessionDays int  `yaml:"session_days"`
+	BatchSize   int  `yaml:"batch_size"`
+}
+
 // LogConfig configures structured logging.
 type LogConfig struct {
 	Level  string `yaml:"level"`
@@ -116,6 +127,12 @@ func Default() Config {
 			ReapLimit:     100,
 			RecoveryDelay: Duration(10 * time.Second),
 			EventBuffer:   256,
+		},
+		Retention: RetentionConfig{
+			Enabled:     false,
+			RunDays:     30,
+			SessionDays: 7,
+			BatchSize:   1000,
 		},
 		Log: LogConfig{
 			Level:  "info",
@@ -240,6 +257,18 @@ func ApplyEnv(cfg *Config, lookup func(string) (string, bool)) error {
 		return err
 	}
 	if err := intOverride(lookup, "LEVIER_WORKFLOW_EVENT_BUFFER", &cfg.Workflow.EventBuffer); err != nil {
+		return err
+	}
+	if err := boolOverride(lookup, "LEVIER_RETENTION_ENABLED", &cfg.Retention.Enabled); err != nil {
+		return err
+	}
+	if err := intOverride(lookup, "LEVIER_RETENTION_RUN_DAYS", &cfg.Retention.RunDays); err != nil {
+		return err
+	}
+	if err := intOverride(lookup, "LEVIER_RETENTION_SESSION_DAYS", &cfg.Retention.SessionDays); err != nil {
+		return err
+	}
+	if err := intOverride(lookup, "LEVIER_RETENTION_BATCH_SIZE", &cfg.Retention.BatchSize); err != nil {
 		return err
 	}
 	return nil
@@ -458,6 +487,15 @@ func (c Config) Validate() error {
 	}
 	if c.Workflow.EventBuffer <= 0 {
 		problems = append(problems, "workflow.event_buffer must be positive")
+	}
+	if c.Retention.RunDays <= 0 {
+		problems = append(problems, "retention.run_days must be positive")
+	}
+	if c.Retention.SessionDays <= 0 {
+		problems = append(problems, "retention.session_days must be positive")
+	}
+	if c.Retention.BatchSize <= 0 || c.Retention.BatchSize > 10000 {
+		problems = append(problems, "retention.batch_size must be between 1 and 10000")
 	}
 	switch strings.ToLower(c.Log.Level) {
 	case "debug", "info", "warn", "error":

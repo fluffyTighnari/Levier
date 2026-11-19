@@ -48,6 +48,12 @@ func TestParseDefaultsAndOverrides(t *testing.T) {
 	if cfg.Workflow.Workers != 4 {
 		t.Fatalf("Workflow.Workers default = %d", cfg.Workflow.Workers)
 	}
+	if cfg.Retention.Enabled {
+		t.Fatal("Retention.Enabled default = true, want false")
+	}
+	if cfg.Retention.RunDays != 30 || cfg.Retention.SessionDays != 7 || cfg.Retention.BatchSize != 1000 {
+		t.Fatalf("Retention defaults = %+v", cfg.Retention)
+	}
 	if cfg.Log.Level != "debug" || cfg.Log.Format != "text" {
 		t.Fatalf("Log = %+v", cfg.Log)
 	}
@@ -98,6 +104,10 @@ func TestApplyEnv(t *testing.T) {
 		"LEVIER_WORKFLOW_REAP_LIMIT":      "25",
 		"LEVIER_WORKFLOW_RECOVERY_DELAY":  "12s",
 		"LEVIER_WORKFLOW_EVENT_BUFFER":    "128",
+		"LEVIER_RETENTION_ENABLED":        "true",
+		"LEVIER_RETENTION_RUN_DAYS":       "14",
+		"LEVIER_RETENTION_SESSION_DAYS":   "3",
+		"LEVIER_RETENTION_BATCH_SIZE":     "250",
 		"LEVIER_LOG_LEVEL":                "warn",
 		"LEVIER_HTTP_ALLOW_LEGACY_BEARER": "true",
 	}
@@ -126,6 +136,10 @@ func TestApplyEnv(t *testing.T) {
 	}
 	if cfg.Workflow.EventBuffer != 128 {
 		t.Fatalf("event buffer = %d", cfg.Workflow.EventBuffer)
+	}
+	if !cfg.Retention.Enabled || cfg.Retention.RunDays != 14 ||
+		cfg.Retention.SessionDays != 3 || cfg.Retention.BatchSize != 250 {
+		t.Fatalf("Retention = %+v", cfg.Retention)
 	}
 	if cfg.Log.Level != "warn" {
 		t.Fatalf("Log.Level = %q", cfg.Log.Level)
@@ -204,6 +218,9 @@ func TestValidateRejectsBadConfig(t *testing.T) {
 		{"zero reap limit", func(c *Config) { c.Workflow.ReapLimit = 0 }, "workflow.reap_limit"},
 		{"zero recovery delay", func(c *Config) { c.Workflow.RecoveryDelay = 0 }, "workflow.recovery_delay"},
 		{"zero event buffer", func(c *Config) { c.Workflow.EventBuffer = 0 }, "workflow.event_buffer"},
+		{"zero retention run days", func(c *Config) { c.Retention.RunDays = 0 }, "retention.run_days"},
+		{"zero retention session days", func(c *Config) { c.Retention.SessionDays = 0 }, "retention.session_days"},
+		{"huge retention batch", func(c *Config) { c.Retention.BatchSize = 10001 }, "retention.batch_size"},
 	}
 
 	for _, tt := range tests {
