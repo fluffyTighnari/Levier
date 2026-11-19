@@ -121,7 +121,7 @@ func printUsage(out io.Writer) {
 	fmt.Fprintln(out, "  levier selfcheck [options]")
 	fmt.Fprintln(out, "  levier doctor [--config path] [--server url] [--credentials path] [--json]")
 	fmt.Fprintln(out, "  levier status [--server url] [--json]")
-	fmt.Fprintln(out, "  levier app init|show|rotate-key")
+	fmt.Fprintln(out, "  levier app init|show|check|list|rotate-key")
 	fmt.Fprintln(out, "  levier run submit|watch|cancel")
 	fmt.Fprintln(out, "  levier migrate status|up")
 	fmt.Fprintln(out, "  levier maintenance status|prune")

@@ -33,6 +33,22 @@ class CredentialsTest(unittest.TestCase):
             self.assertEqual(loaded.api_key.reveal(), "mw_secret")
             self.assertNotIn("mw_secret", repr(loaded))
             self.assertNotIn("mw_secret", str(loaded.summary()))
+            self.assertEqual(loaded.credential_version, 1)
+            self.assertEqual(loaded.server, "")
+            self.assertTrue(loaded.created_at)
+            self.assertTrue(loaded.updated_at)
+
+    def test_legacy_credentials_still_load(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "app.json"
+            path.write_text(
+                '{"app_id":"a","app_name":"n","api_key":"mw_x"}',
+                encoding="utf-8",
+            )
+            os.chmod(path, 0o600)
+            loaded = load_credentials(path)
+            self.assertEqual(loaded.app_id, "a")
+            self.assertEqual(loaded.credential_version, 1)
 
     @unittest.skipIf(os.name == "nt", "POSIX file mode enforcement is not available on Windows")
     def test_p3_3_rejects_group_readable_file(self) -> None:
@@ -42,6 +58,20 @@ class CredentialsTest(unittest.TestCase):
             os.chmod(path, 0o644)
             with self.assertRaises(CredentialsError):
                 load_credentials(path)
+
+    def test_server_metadata_round_trip(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "app.json"
+            credentials = AppCredentials(
+                app_id="a",
+                app_name="n",
+                api_key=Secret("mw_x"),
+                server="http://127.0.0.1:8080/",
+            )
+            save_credentials(path, credentials)
+            loaded = load_credentials(path)
+            self.assertEqual(loaded.server, "http://127.0.0.1:8080")
+            self.assertEqual(loaded.credential_version, 1)
 
     def test_p3_3_rejects_missing_fields(self) -> None:
         with tempfile.TemporaryDirectory() as directory:

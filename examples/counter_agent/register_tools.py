@@ -14,16 +14,16 @@ import os
 import sys
 from pathlib import Path
 
-from credentials import CredentialsError, load_credentials
+from credentials import CredentialsError, load_credentials, resolve_server
 from http_client import AppClient, HttpError, HttpTransportError, UrllibTransport, parse_app_view
 from tools import TOOL_DEFINITIONS
 
 
 def default_credentials_path() -> Path:
-    value = os.environ.get("COUNTER_APP_CREDENTIALS", "")
+    value = os.environ.get("LEVIER_APP_CREDENTIALS") or os.environ.get("LEVIER_CREDENTIALS") or os.environ.get("COUNTER_APP_CREDENTIALS", "")
     if value:
         return Path(value).expanduser()
-    return Path.home() / ".config" / "middleware" / "counter-app.json"
+    return Path.home() / ".config" / "levier" / "counter-app.json"
 
 
 def load_tools(path: str) -> list[dict]:
@@ -42,7 +42,7 @@ def load_tools(path: str) -> list[dict]:
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Register App local tools")
     parser.add_argument("--credentials", default="", help="0600 credential file path")
-    parser.add_argument("--mw-url", default=os.environ.get("LEVIER_APP_URL") or os.environ.get("LEVIER_URL") or os.environ.get("MW_URL") or "http://127.0.0.1:8080")
+    parser.add_argument("--mw-url", default="")
     parser.add_argument("--tools-file", default="", help="optional JSON tool list")
     return parser
 
@@ -52,8 +52,9 @@ def main(argv: list[str] | None = None) -> int:
     path = Path(args.credentials).expanduser() if args.credentials else default_credentials_path()
     try:
         credentials = load_credentials(path)
+        base_url = resolve_server(args.mw_url, credentials)
         tools = load_tools(args.tools_file)
-        client = AppClient(args.mw_url, credentials.app_id, credentials.api_key, UrllibTransport())
+        client = AppClient(base_url, credentials.app_id, credentials.api_key, UrllibTransport())
         response = client.update_tools(credentials.app_name, tools)
         app = parse_app_view(response)
     except (CredentialsError, HttpError, HttpTransportError, OSError, ValueError) as exc:

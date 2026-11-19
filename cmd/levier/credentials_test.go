@@ -3,6 +3,7 @@ package main
 import (
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 )
@@ -38,6 +39,60 @@ func TestWriteCredentialsBacksUpOnForce(t *testing.T) {
 	}
 	if credentials.APIKey != "two" {
 		t.Fatalf("api key = %q, want two", credentials.APIKey)
+	}
+}
+
+func TestCredentialsVersionServerAndFingerprint(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "credentials.json")
+	credentials := appCredentials{
+		AppID:   "app_1",
+		AppName: "demo",
+		APIKey:  "secret-key",
+		Server:  "http://127.0.0.1:8080/",
+	}
+	if _, err := writeCredentials(path, credentials, false); err != nil {
+		t.Fatalf("writeCredentials() error = %v", err)
+	}
+	loaded, err := readCredentials(path)
+	if err != nil {
+		t.Fatalf("readCredentials() error = %v", err)
+	}
+	if loaded.CredentialVersion != credentialVersion {
+		t.Fatalf("CredentialVersion = %d", loaded.CredentialVersion)
+	}
+	if loaded.Server != "http://127.0.0.1:8080" {
+		t.Fatalf("Server = %q", loaded.Server)
+	}
+	if loaded.CreatedAt == "" || loaded.UpdatedAt == "" {
+		t.Fatalf("timestamps missing: %+v", loaded)
+	}
+	if fingerprint := credentialFingerprint("secret-key"); len(fingerprint) != 12 {
+		t.Fatalf("fingerprint = %q", fingerprint)
+	}
+}
+
+func TestReadCredentialsRejectsLoosePermissions(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("POSIX permission bits are not enforced on Windows")
+	}
+	path := filepath.Join(t.TempDir(), "credentials.json")
+	data := []byte(`{"app_id":"app_1","app_name":"demo","api_key":"secret-key"}`)
+	if err := os.WriteFile(path, data, 0o644); err != nil {
+		t.Fatalf("write credentials: %v", err)
+	}
+	if _, err := readCredentials(path); err == nil || !strings.Contains(err.Error(), "0600") {
+		t.Fatalf("readCredentials() error = %v", err)
+	}
+}
+
+func TestReadCredentialsRejectsFutureVersion(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "credentials.json")
+	data := []byte(`{"credential_version":2,"app_id":"app_1","app_name":"demo","api_key":"secret-key"}`)
+	if err := os.WriteFile(path, data, 0o600); err != nil {
+		t.Fatalf("write credentials: %v", err)
+	}
+	if _, err := readCredentials(path); err == nil || !strings.Contains(err.Error(), "unsupported credentials version") {
+		t.Fatalf("readCredentials() error = %v", err)
 	}
 }
 

@@ -57,7 +57,7 @@ func runRunSubmit(args []string, stdout, stderr io.Writer) int {
 	flags := flag.NewFlagSet("run submit", flag.ContinueOnError)
 	flags.SetOutput(stderr)
 	credentialsPath := flags.String("credentials", os.Getenv("LEVIER_CREDENTIALS"), "credentials file")
-	server := flags.String("server", envOr("LEVIER_SERVER", "http://127.0.0.1:8080"), "Levier HTTP address")
+	server := flags.String("server", "", "Levier HTTP address")
 	prompt := flags.String("prompt", "", "user prompt")
 	strategy := flags.String("strategy", "react", "strategy: react or echo")
 	provider := flags.String("provider", "deepseek", "model provider")
@@ -101,7 +101,7 @@ func runRunSubmit(args []string, stdout, stderr io.Writer) int {
 			ToolMS: *toolMS,
 		},
 	}
-	client := newAPIClient(*server, credentials.APIKey, *timeout)
+	client := newAPIClient(resolveServer(*server, &credentials), credentials.APIKey, *timeout)
 	submitted, err := client.createRun(context.Background(), request, *idempotencyKey)
 	if err != nil {
 		return reportAPIError(err, stderr)
@@ -127,7 +127,7 @@ func runRunWatch(args []string, stdout, stderr io.Writer) int {
 	flags := flag.NewFlagSet("run watch", flag.ContinueOnError)
 	flags.SetOutput(stderr)
 	credentialsPath := flags.String("credentials", os.Getenv("LEVIER_CREDENTIALS"), "credentials file")
-	server := flags.String("server", envOr("LEVIER_SERVER", "http://127.0.0.1:8080"), "Levier HTTP address")
+	server := flags.String("server", "", "Levier HTTP address")
 	runID := flags.String("run-id", "", "run id")
 	interval := flags.Duration("interval", 500*time.Millisecond, "poll interval")
 	watchTimeout := flags.Duration("timeout", 30*time.Minute, "watch timeout")
@@ -149,7 +149,7 @@ func runRunWatch(args []string, stdout, stderr io.Writer) int {
 		fmt.Fprintf(stderr, "read credentials: %v\n", err)
 		return 2
 	}
-	client := newAPIClient(*server, credentials.APIKey, *requestTimeout)
+	client := newAPIClient(resolveServer(*server, &credentials), credentials.APIKey, *requestTimeout)
 	return watchRun(client, *runID, *interval, *watchTimeout, *asJSON, stdout, stderr)
 }
 
@@ -215,7 +215,7 @@ func runRunCancel(args []string, stdout, stderr io.Writer) int {
 	flags := flag.NewFlagSet("run cancel", flag.ContinueOnError)
 	flags.SetOutput(stderr)
 	credentialsPath := flags.String("credentials", os.Getenv("LEVIER_CREDENTIALS"), "credentials file")
-	server := flags.String("server", envOr("LEVIER_SERVER", "http://127.0.0.1:8080"), "Levier HTTP address")
+	server := flags.String("server", "", "Levier HTTP address")
 	runID := flags.String("run-id", "", "run id")
 	yes := flags.Bool("yes", false, "confirm cancellation")
 	timeout := flags.Duration("timeout", 10*time.Second, "per-request timeout")
@@ -236,7 +236,7 @@ func runRunCancel(args []string, stdout, stderr io.Writer) int {
 		fmt.Fprintf(stderr, "read credentials: %v\n", err)
 		return 2
 	}
-	client := newAPIClient(*server, credentials.APIKey, *timeout)
+	client := newAPIClient(resolveServer(*server, &credentials), credentials.APIKey, *timeout)
 	run, err := client.getRun(context.Background(), *runID)
 	if err != nil {
 		return reportAPIError(err, stderr)

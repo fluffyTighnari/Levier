@@ -69,6 +69,8 @@ func TestSubcommandHelp(t *testing.T) {
 		{name: "status", run: runStatus},
 		{name: "app init", run: runAppInit},
 		{name: "app show", run: runAppShow},
+		{name: "app check", run: runAppCheck},
+		{name: "app list", run: runAppList},
 		{name: "app rotate-key", run: runAppRotateKey},
 		{name: "run submit", run: runRunSubmit},
 		{name: "run watch", run: runRunWatch},

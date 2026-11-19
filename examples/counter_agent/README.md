@@ -40,17 +40,17 @@ Harness：ReAct 循环 + 模型调用
 LEVIER_URL=http://127.0.0.1:8080 \
 LEVIER_ADMIN_TOKEN=... \
 LEVIER_APP_NAME=counter-app \
-python3 examples/counter_agent/bootstrap_app.py --credentials-out ~/.config/middleware/counter.json
+python3 examples/counter_agent/bootstrap_app.py --credentials-out ~/.config/levier/counter.json
 ```
 
-产物是 0600 凭据文件：`app_id` / `app_name` / `api_key`。
+产物是 0600 凭据文件：凭据版本、`app_id` / `app_name` / `server` 和 `api_key`。
 key 只在这里出现一次，之后不再打印。
 
 ### 2.2 启动 App
 
 ```sh
 python3 examples/counter_agent/serve.py \
-  --credentials ~/.config/middleware/counter.json \
+  --credentials ~/.config/levier/counter.json \
   --mw-url http://127.0.0.1:8080
 ```
 
@@ -81,7 +81,7 @@ load credentials
 
 ```sh
 python3 examples/counter_agent/submit_run.py \
-  --credentials ~/.config/middleware/counter.json \
+  --credentials ~/.config/levier/counter.json \
   --mw-url http://127.0.0.1:8080 \
   --strategy react \
   --provider deepseek --model deepseek-flash \

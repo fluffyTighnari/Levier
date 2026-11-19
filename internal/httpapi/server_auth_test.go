@@ -54,6 +54,14 @@ func (f *fakeApps) RegisterApp(_ context.Context, name string, multiagent bool) 
 	return app, key, true, nil
 }
 
+func (f *fakeApps) ListApps(_ context.Context) ([]runstore.App, error) {
+	apps := make([]runstore.App, 0, len(f.apps))
+	for _, app := range f.apps {
+		apps = append(apps, app)
+	}
+	return apps, nil
+}
+
 func (f *fakeApps) GetApp(_ context.Context, appID string) (runstore.App, error) {
 	app, ok := f.apps[appID]
 	if !ok {
@@ -150,6 +158,33 @@ func TestAdminCreateAppIdempotent(t *testing.T) {
 	resp = request(t, http.MethodPost, server.URL+"/admin/apps", "wrong", []byte(`{"name":"app-b"}`))
 	if resp.StatusCode != http.StatusUnauthorized {
 		t.Fatalf("wrong admin status = %d", resp.StatusCode)
+	}
+	resp.Body.Close()
+}
+
+func TestAdminListApps(t *testing.T) {
+	_, _, apps, server := newAppTestServer(t)
+	app, key, _, err := apps.RegisterApp(context.Background(), "list-me", false)
+	if err != nil {
+		t.Fatalf("RegisterApp() error = %v", err)
+	}
+
+	resp := request(t, http.MethodGet, server.URL+"/admin/apps", "admin-token", nil)
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("list status = %d", resp.StatusCode)
+	}
+	var listed AppListResponse
+	if err := json.NewDecoder(resp.Body).Decode(&listed); err != nil {
+		t.Fatalf("decode list: %v", err)
+	}
+	resp.Body.Close()
+	if len(listed.Apps) != 1 || listed.Apps[0].AppID != app.AppID {
+		t.Fatalf("listed apps = %+v", listed.Apps)
+	}
+
+	resp = request(t, http.MethodGet, server.URL+"/admin/apps", key, nil)
+	if resp.StatusCode != http.StatusUnauthorized {
+		t.Fatalf("app-key list status = %d, want 401", resp.StatusCode)
 	}
 	resp.Body.Close()
 }

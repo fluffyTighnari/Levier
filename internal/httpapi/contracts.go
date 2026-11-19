@@ -190,6 +190,11 @@ type CreateAppResponse struct {
 	APIKey string  `json:"api_key"`
 }
 
+// AppListResponse returns admin-visible App metadata without key material.
+type AppListResponse struct {
+	Apps []AppView `json:"apps"`
+}
+
 // ErrorBody is the structured error payload.
 type ErrorBody struct {
 	Code      string `json:"code"`

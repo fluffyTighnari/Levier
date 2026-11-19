@@ -76,6 +76,20 @@ paths:
               schema:
                 $ref: '#/components/schemas/HealthResponse'
   /admin/apps:
+    get:
+      summary: List App metadata without API keys
+      operationId: listApps
+      security:
+        - adminToken: []
+      responses:
+        "200":
+          description: App metadata
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AppListResponse'
+        default:
+          $ref: '#/components/responses/Error'
     post:
       summary: Create an App and return its API key once
       operationId: createApp
@@ -642,3 +656,11 @@ components:
           $ref: '#/components/schemas/AppView'
         api_key:
           type: string
+    AppListResponse:
+      type: object
+      required: [apps]
+      properties:
+        apps:
+          type: array
+          items:
+            $ref: '#/components/schemas/AppView'

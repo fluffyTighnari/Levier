@@ -258,17 +258,23 @@ secrets-file JSON：secret name -> value
 | `LEVIER_APP_ADMIN_TOKEN` / 旧 `LEVIER_ADMIN_TOKEN` / `MW_ADMIN_TOKEN` | string | 空 | bootstrap 时是 | **是** |
 | `LEVIER_APP_ADMIN_TOKEN_FILE` / 旧 `LEVIER_ADMIN_TOKEN_FILE` | path | 空 | 与 token 二选一 | 文件内容秘密 |
 | `LEVIER_APP_NAME` / 旧 `MW_APP_NAME` | string | `retrofit-counter` | 否 | 否 |
-| `LEVIER_APP_CREDENTIALS` / 旧 `COUNTER_APP_CREDENTIALS` | path | 用户目录 | 运行时时是 | 文件内容秘密 |
+| `LEVIER_APP_CREDENTIALS` / `LEVIER_CREDENTIALS` / 旧 `COUNTER_APP_CREDENTIALS` | path | `~/.config/levier/counter-app.json` | 运行时时是 | 文件内容秘密 |
 | `DEEPSEEK_API_KEY` | string | 空 | baseline 模式 | **是** |
 | `--credentials` / `--mw-url` / `--tools-file` | CLI flags | 见脚本 | 视命令 | 否 |
 
-凭据文件包含：
+凭据文件格式版本为 1，包含：
 
 ```text
+credential_version
 app_id
 app_name
 api_key
+server
+created_at
+updated_at
 ```
+
+旧文件只包含 `app_id` / `app_name` / `api_key` 时仍可读取；下一次写入会升级格式。文件必须为 0600。
 
 ---
 

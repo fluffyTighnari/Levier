@@ -32,10 +32,10 @@ from http_client import (
 
 
 def default_credentials_path() -> Path:
-    value = os.environ.get("LEVIER_APP_CREDENTIALS") or os.environ.get("COUNTER_APP_CREDENTIALS", "")
+    value = os.environ.get("LEVIER_APP_CREDENTIALS") or os.environ.get("LEVIER_CREDENTIALS") or os.environ.get("COUNTER_APP_CREDENTIALS", "")
     if value:
         return Path(value).expanduser()
-    return Path.home() / ".config" / "middleware" / "counter-app.json"
+    return Path.home() / ".config" / "levier" / "counter-app.json"
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -70,7 +70,12 @@ def main(argv: list[str] | None = None) -> int:
             api_key = parse_rotate_key_response(client.rotate_app_key(app.app_id))
         save_credentials(
             output,
-            AppCredentials(app_id=app.app_id, app_name=app.name, api_key=api_key),
+            AppCredentials(
+                app_id=app.app_id,
+                app_name=app.name,
+                api_key=api_key,
+                server=config.mw_url,
+            ),
         )
     except (HttpError, HttpTransportError, OSError, ValueError) as exc:
         print(f"bootstrap failed: {exc}", file=sys.stderr)

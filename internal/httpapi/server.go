@@ -52,6 +52,11 @@ type AppRegistry interface {
 	RotateAPIKey(ctx context.Context, appID string) (string, error)
 }
 
+// AppLister is the optional admin-only App inventory subset.
+type AppLister interface {
+	ListApps(ctx context.Context) ([]runstore.App, error)
+}
+
 // CatalogRegistry is the optional App tool/MCP catalog subset.
 // Canceller cancels one non-terminal run.
 type Canceller interface {
@@ -173,6 +178,7 @@ func (s *Server) routes() {
 	s.mux.HandleFunc("GET "+APIPrefix+"/sessions/{session_id}/events", s.handleListSessionEvents)
 	s.mux.HandleFunc("POST "+APIPrefix+"/ws-token", s.handleIssueWSToken)
 	s.mux.HandleFunc("POST /admin/apps", s.handleAdminCreateApp)
+	s.mux.HandleFunc("GET /admin/apps", s.handleAdminListApps)
 	s.mux.HandleFunc("POST /admin/mcp", s.handleAdminUpsertMCP)
 	s.mux.HandleFunc("GET /admin/mcp", s.handleAdminListMCP)
 	s.mux.HandleFunc("DELETE /admin/mcp/{name}", s.handleAdminDeleteMCP)

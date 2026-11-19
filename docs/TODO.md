@@ -492,13 +492,22 @@ Levier  负责启动、就绪、优雅停止和恢复语义
 
 ---
 
-## 8. 下一阶段：11 引导与凭据管理
+## 8. 11 引导与凭据管理（第一版已实现）
 
 计划文档：`docs/ONBOARDING_CREDENTIALS_PLAN.md`
 
 目标是让第一次使用 Levier 的人从启动、创建 App、拿到凭据、验证接入到完成第一个 Run，只需要遵循一条清晰路径；同时统一 App 凭据的文件格式、权限、指纹和轮换行为。部署级 Admin / daemon / 数据库 / MCP 凭据继续沿用 10D 的边界和轮换方式。
 
-本阶段开始实现前，先确认计划中的默认目录、凭据文件字段、App 列表范围和轮换语义。
+- [x] 统一 App 凭据目录、版本、服务地址和权限
+- [x] `app init` 创建后验证
+- [x] `app check`
+- [x] `app show` 指纹和本地凭据信息
+- [x] `app rotate-key` 原子写回、备份和验证
+- [x] `app list` 只读 Admin App 列表
+- [x] Counter Agent 示例使用新凭据路径
+- [x] 启动/接入主文档
+
+本阶段仍不做 App archive/delete、多 key 重叠和新的 Secret Manager。
 
 ## 9. 相关文档
 

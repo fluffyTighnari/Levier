@@ -109,6 +109,30 @@ func (r *Registry) GetAppByName(ctx context.Context, name string) (runstore.App,
 	return app, nil
 }
 
+// ListApps returns App metadata without API-key material.
+func (r *Registry) ListApps(ctx context.Context) ([]runstore.App, error) {
+	if r == nil || r.pool == nil {
+		return nil, fmt.Errorf("register: postgres pool is nil")
+	}
+	rows, err := r.pool.Query(ctx, "SELECT "+appColumns+" FROM apps ORDER BY created_at, app_id")
+	if err != nil {
+		return nil, fmt.Errorf("register: list apps: %w", err)
+	}
+	defer rows.Close()
+	var apps []runstore.App
+	for rows.Next() {
+		app, err := scanApp(rows)
+		if err != nil {
+			return nil, fmt.Errorf("register: scan app: %w", err)
+		}
+		apps = append(apps, app)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("register: list apps: %w", err)
+	}
+	return apps, nil
+}
+
 // AuthenticateAPIKey returns the active App for a plaintext API key.
 func (r *Registry) AuthenticateAPIKey(ctx context.Context, key string) (runstore.App, error) {
 	if r == nil || r.pool == nil {

@@ -13,6 +13,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"time"
 
@@ -537,6 +538,13 @@ type appCredentials struct {
 }
 
 func readAppCredentials(path string) (appCredentials, error) {
+	info, err := os.Stat(filepath.Clean(path))
+	if err != nil {
+		return appCredentials{}, fmt.Errorf("read credentials file: %w", err)
+	}
+	if runtime.GOOS != "windows" && info.Mode().Perm()&0o077 != 0 {
+		return appCredentials{}, fmt.Errorf("credentials file permissions must be 0600")
+	}
 	data, err := os.ReadFile(filepath.Clean(path))
 	if err != nil {
 		return appCredentials{}, fmt.Errorf("read credentials file: %w", err)

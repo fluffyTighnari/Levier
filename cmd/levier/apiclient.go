@@ -31,6 +31,16 @@ type rotateKeyResponse struct {
 	APIKey string `json:"api_key"`
 }
 
+type appListResponse struct {
+	Apps []appView `json:"apps"`
+}
+
+type wsTokenResponse struct {
+	WSURL     string `json:"ws_url"`
+	WSToken   string `json:"ws_token"`
+	ExpiresIn int64  `json:"expires_in"`
+}
+
 type strategyRequest struct {
 	Name   string         `json:"name"`
 	Params map[string]any `json:"params,omitempty"`
@@ -221,6 +231,18 @@ func (c *apiClient) rotateAppKey(ctx context.Context, appID string) (string, err
 func (c *apiClient) getApp(ctx context.Context, appID string) (appView, error) {
 	var response appView
 	err := c.do(ctx, http.MethodGet, "/api/v1/apps/"+url.PathEscape(appID), nil, &response)
+	return response, err
+}
+
+func (c *apiClient) listApps(ctx context.Context) ([]appView, error) {
+	var response appListResponse
+	err := c.do(ctx, http.MethodGet, "/admin/apps", nil, &response)
+	return response.Apps, err
+}
+
+func (c *apiClient) issueWSToken(ctx context.Context) (wsTokenResponse, error) {
+	var response wsTokenResponse
+	err := c.do(ctx, http.MethodPost, "/api/v1/ws-token", nil, &response)
 	return response, err
 }
 

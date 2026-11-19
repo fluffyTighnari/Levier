@@ -58,14 +58,15 @@
 | 工具路由 / 幂等 / 调用记录 | `internal/gateway/` |
 | 持久化 / 查询 / 迁移 | `internal/runstore/` + `internal/db/migrations/` |
 | 事件模型 / 错误码 | `internal/contract/`、`internal/errs/` |
-| App 接入流程 | `docs/APP_ONBOARDING.md` |
+| 首次启动 / App 接入 | `docs/ONBOARDING.md` |
+| App 协议细节 | `docs/APP_ONBOARDING.md` |
 | CLI 使用 / 参数 / 退出码 | `docs/CLI_REFERENCE.md` |
 | Release 构建 / checksums | `scripts/build-release.sh` + `docs/RELEASE.md` |
 | CLI 安装 / 校验 / 镜像 | `scripts/install.sh`、`scripts/install.ps1` + `docs/INSTALL.md` |
 | 公开前检查 / 下一阶段 | `docs/TODO.md` |
 | 配置盘点 / 环境变量 | `docs/CONFIG.md` |
 | 备份 / 恢复 / 卷 / secret 轮换 | `docs/LIFECYCLE.md` + `scripts/backup.sh`、`scripts/restore.sh` |
-| 引导 / App 凭据管理规划 | `docs/ONBOARDING_CREDENTIALS_PLAN.md` |
+| 引导 / App 凭据管理 | `docs/ONBOARDING.md`、`docs/ONBOARDING_CREDENTIALS_PLAN.md` |
 | Harness / Agent 循环 | `execution/harness/` |
 | Agent Core 契约 | `execution/agent_core/` + `docs/AGENT_CORE_CONTRACT.md` |
 | MCP 连接 / 会话 | `execution/mcp_runtime/` + `docs/MCP.md` |
@@ -97,12 +98,13 @@ mcp_runtime → 不直连控制面
 ```text
 1. docs/SCOPE.md           产品边界
 2. docs/MAP.md             仓库导航
-3. docs/APP_ONBOARDING.md  接 App
-4. docs/DESIGN.md          控制面设计
-5. docs/ARCHITECTURE.md    依赖与分层
-6. deploy/README.md        部署
-7. docs/LIFECYCLE.md       备份/恢复/轮换
-8. docs/MIGRATION-1D.md    命名/有状态迁移
+3. docs/ONBOARDING.md      启动与首次接入
+4. docs/APP_ONBOARDING.md  接 App
+5. docs/DESIGN.md          控制面设计
+6. docs/ARCHITECTURE.md    依赖与分层
+7. deploy/README.md        部署
+8. docs/LIFECYCLE.md       备份/恢复/轮换
+9. docs/MIGRATION-1D.md    命名/有状态迁移
 ```
 
 ## 6. 结构护栏

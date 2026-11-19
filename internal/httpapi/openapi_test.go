@@ -37,7 +37,7 @@ func TestOpenAPIMatchesHTTPRoutes(t *testing.T) {
 		"/status":                         {"get"},
 		"/healthz":                        {"get"},
 		"/readyz":                         {"get"},
-		"/admin/apps":                     {"post"},
+		"/admin/apps":                     {"get", "post"},
 		"/admin/apps/{app_id}/rotate-key": {"post"},
 		"/apps":                           {"post"},
 		"/apps/{app_id}":                  {"get"},

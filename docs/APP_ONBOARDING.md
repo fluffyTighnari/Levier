@@ -5,6 +5,9 @@
 这份文档描述**当前可用**的接入方式，对应 P6B 已闭环的实现。
 它以 Counter Agent 为参考，但内容不绑定语言、SDK 或文件布局。
 
+> 第一次接入请先按 [`ONBOARDING.md`](ONBOARDING.md) 完成启动、App 创建和 `app check`。
+> 本文保留完整的 App 协议与运行细节。
+
 > MVP 只支持 `runtime=normal`。`sandbox` 与 `longterm` 尚未闭环，
 > 不要在接入中使用；崩溃语义与限制见 `docs/MVP.md`。
 
@@ -113,9 +116,12 @@ Authorization: Bearer {LEVIER_ADMIN_TOKEN}
 保存：
 
 ```text
-app_id / app_name 非秘密
-api_key           秘密
+credential_version / app_id / app_name / server / 时间戳  非秘密
+api_key                                                  秘密
 ```
+
+保存后不要继续操作 Admin token。第一次接入建议直接使用
+[`ONBOARDING.md`](ONBOARDING.md) 中的 `levier app init` 和 `levier app check`。
 
 > Admin token 不要进入 App 的长期运行环境。
 

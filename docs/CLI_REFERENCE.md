@@ -124,8 +124,8 @@ LEVIER_CREDENTIALS
 | `LEVIER_ENV` | `serve`、`config` | `development` 或 `production` |
 | `MIDDLEWARE_CONFIG` | `serve` | 旧名兼容；`LEVIER_CONFIG` 优先 |
 | `LEVIER_SERVER` | `doctor`、`status`、`app`、`run`、`daemon check` | HTTP 地址 |
-| `LEVIER_CREDENTIALS` | `app init/show/rotate-key`、`run`、`doctor` | 凭据文件路径 |
-| `LEVIER_ADMIN_TOKEN` | `app init`、`app rotate-key`、`daemon check`、`doctor` | Admin token |
+| `LEVIER_CREDENTIALS` | `app init/show/check/rotate-key`、`run`、`doctor` | 凭据文件路径 |
+| `LEVIER_ADMIN_TOKEN` | `app init`、`app rotate-key`、`app list`、`daemon check`、`doctor` | Admin token |
 | `LEVIER_APP_NAME` | `app init` | App 名称 |
 | `LEVIER_GRPC` | `daemon check` | gRPC 地址 |
 | `LEVIER_DAEMON_ID` | `daemon check` | 预分配 daemon id |
@@ -161,8 +161,11 @@ levier app init \
   --name demo \
   --credentials-out ./demo.json
 
-# 3. 确认 App 可用
-levier app show --credentials ./demo.json
+# 3. 确认 App 凭据和接入链路
+levier app check --credentials ./demo.json
+
+# 可选：查看服务端 App 列表
+levier app list
 
 # 4. 提交并等待一个 Run
 levier run submit \
@@ -664,8 +667,8 @@ levier app init \
 | 参数 | 默认 | 说明 |
 |---|---|---|
 | `--name` | `LEVIER_APP_NAME` | 必填，App 名称 |
-| `--credentials-out` | `LEVIER_CREDENTIALS` 或用户配置目录 | 凭据输出路径 |
-| `--server` | `LEVIER_SERVER` 或 `http://127.0.0.1:8080` | HTTP 地址 |
+| `--credentials-out` | `LEVIER_CREDENTIALS` 或 `~/.config/levier/<app>.json` | 凭据输出路径 |
+| `--server` | `LEVIER_SERVER` 或 `http://127.0.0.1:8080` | HTTP 地址，会写入凭据文件 |
 | `--admin-token` | `LEVIER_ADMIN_TOKEN` | 创建 App 所需 |
 | `--rotate` | `false` | App 已存在时轮换 key |
 | `--yes` | `false` | 非交互确认轮换 |
@@ -682,7 +685,8 @@ levier app init \
 App 已存在且没有 --rotate -> 提示并用 rotate-key，退出 0
 --rotate 需要确认；非 TTY 必须 --yes
 写入凭据：0600、原子写入、覆盖时生成 .bak
---json 不输出 api_key
+创建或轮换后先用新 key 验证 App，再报告成功
+--json 不输出 api_key，只输出不可逆指纹
 ```
 
 JSON 字段：
@@ -691,7 +695,10 @@ JSON 字段：
 {
   "app_id": "app_...",
   "app_name": "demo",
+  "server": "http://127.0.0.1:8080",
   "credentials": "./demo.json",
+  "credential_version": 1,
+  "key_fingerprint": "a1b2c3d4e5f6",
   "created": true,
   "rotated": false
 }
@@ -700,7 +707,6 @@ JSON 字段：
 可选字段：
 
 ```text
-server      dry-run 时输出
 backup      覆盖凭据文件时输出
 ```
 
@@ -726,11 +732,11 @@ levier app show --credentials <path> [--server url] [--json]
 | 参数 | 默认 | 说明 |
 |---|---|---|
 | `--credentials` | `LEVIER_CREDENTIALS` | 必填 |
-| `--server` | `LEVIER_SERVER` 或 `http://127.0.0.1:8080` | HTTP 地址 |
+| `--server` | 凭据文件中的地址，或 `LEVIER_SERVER` | HTTP 地址 |
 | `--timeout` | `10s` | 单次请求超时 |
 | `--json` | `false` | JSON 输出 |
 
-JSON 字段：
+输出包含服务端 App 元数据，以及本地凭据文件路径、版本、服务地址和 key 指纹；不会输出 key：
 
 ```json
 {
@@ -739,7 +745,11 @@ JSON 字段：
   "status": "active",
   "multiagent": false,
   "created_at": "...",
-  "updated_at": "..."
+  "updated_at": "...",
+  "credentials": "./demo.json",
+  "credential_version": 1,
+  "server": "http://127.0.0.1:8080",
+  "key_fingerprint": "a1b2c3d4e5f6"
 }
 ```
 
@@ -769,7 +779,7 @@ levier app rotate-key \
 |---|---|---|
 | `--credentials` | `LEVIER_CREDENTIALS` | 必填，读取 app_id 并写回新 key |
 | `--admin-token` | `LEVIER_ADMIN_TOKEN` | 必填 |
-| `--server` | `LEVIER_SERVER` 或 `http://127.0.0.1:8080` | HTTP 地址 |
+| `--server` | 凭据文件中的地址，或 `LEVIER_SERVER` | HTTP 地址 |
 | `--yes` | `false` | 非交互确认轮换 |
 | `--timeout` | `10s` | 单次请求超时 |
 | `--json` | `false` | JSON 输出 |
@@ -794,6 +804,44 @@ levier app rotate-key \
 4  网络错误
 5  终端里拒绝确认，或非 TTY 没有 --yes
 ```
+
+### 6.4 `levier app check`
+
+```sh
+levier app check --credentials <path> [--server url] [--json]
+```
+
+只读检查本地凭据和接入链路：
+
+```text
+凭据文件是否存在、格式是否正确、版本是否支持
+凭据文件权限是否为 0600
+服务端是否可连接
+App key 是否有效
+App 是否处于 active
+是否能够取得 WebSocket token
+```
+
+不会创建 Run，也不会修改工具。JSON 中只包含检查结果和 key 指纹，不包含 key 或 WebSocket token。
+
+| 参数 | 默认 | 说明 |
+|---|---|---|
+| `--credentials` | `LEVIER_CREDENTIALS` | 必填 |
+| `--server` | 凭据文件中的地址，或 `LEVIER_SERVER` | HTTP 地址 |
+| `--timeout` | `10s` | 单次请求超时 |
+| `--json` | `false` | JSON 输出 |
+
+退出码：`0` 全部通过；`1` 有检查失败；`2` 参数或凭据文件错误。
+
+### 6.5 `levier app list`
+
+```sh
+levier app list [--server url] [--admin-token token] [--json]
+```
+
+需要 Admin token，返回 App ID、名称、状态和创建/更新时间，不返回 API key 或 hash。
+
+退出码：`0` 成功；`1` 服务端错误；`2` 参数或 Admin token 错误。
 
 ---
 
@@ -1204,9 +1252,11 @@ Run 未在 --timeout / --watch-timeout 内进入终态
 | `serve` | 正常退出 | 启动失败 | 参数 | - | - | - |
 | `doctor` | 全部通过 | 有 fail | 参数 | - | - | - |
 | `status` | 全部 ok | 有异常 | 参数 | - | - | - |
-| `app init` | 成功 | 写入失败 | 参数 / 冲突 | 认证 | 网络 | 确认拒绝 |
+| `app init` | 成功 | 写入/验证失败 | 参数 / 冲突 | 认证 | 网络 | 确认拒绝 |
 | `app show` | 成功 | 其他错误 | 参数 / 凭据 | 认证 | 网络 | - |
-| `app rotate-key` | 成功 | 写入失败 | 参数 / 凭据 | 认证 | 网络 | 确认拒绝 |
+| `app check` | 全部通过 | 有检查失败 | 参数 / 凭据 | - | - | - |
+| `app list` | 成功 | 服务端错误 | 参数 / Admin token | 认证 | 网络 | - |
+| `app rotate-key` | 成功 | 写入/验证失败 | 参数 / 凭据 | 认证 | 网络 | 确认拒绝 |
 | `run submit` | 成功 / completed | failed | 参数 | 认证 | 网络 | cancelled / timeout |
 | `run watch` | completed | failed | 参数 | 认证 | 网络 | cancelled / timeout |
 | `run cancel` | 取消成功 | 其他错误 | 参数 / 凭据 | 认证 | 网络 | 终态 / 确认拒绝 |

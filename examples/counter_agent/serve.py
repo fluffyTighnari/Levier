@@ -22,7 +22,7 @@ import sys
 import time
 from pathlib import Path
 
-from credentials import CredentialsError, load_credentials
+from credentials import CredentialsError, load_credentials, resolve_server
 from http_client import (
     AppClient,
     HttpError,
@@ -40,7 +40,7 @@ from ws_tool_host import default_credentials_path, serve_calls
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Serve the Counter App to Levier")
     parser.add_argument("--credentials", default="", help="0600 credential file path")
-    parser.add_argument("--mw-url", default=os.environ.get("LEVIER_APP_URL") or os.environ.get("LEVIER_URL") or os.environ.get("MW_URL") or "http://127.0.0.1:8080")
+    parser.add_argument("--mw-url", default="")
     parser.add_argument("--tools-file", default="", help="optional JSON tool list")
     parser.add_argument(
         "--skip-register",
@@ -72,7 +72,8 @@ def main(argv: list[str] | None = None) -> int:
     path = Path(args.credentials).expanduser() if args.credentials else default_credentials_path()
     try:
         credentials = load_credentials(path)
-        client = AppClient(args.mw_url, credentials.app_id, credentials.api_key, UrllibTransport())
+        base_url = resolve_server(args.mw_url, credentials)
+        client = AppClient(base_url, credentials.app_id, credentials.api_key, UrllibTransport())
 
         app = parse_app_view(client.get_app())
         if app.status != "active":
@@ -85,7 +86,7 @@ def main(argv: list[str] | None = None) -> int:
             parse_app_view(client.update_tools(credentials.app_name, tools))
 
         token = parse_ws_token_response(client.create_ws_token())
-        url = websocket_url(args.mw_url, token.ws_url, credentials.app_id, token.token.reveal())
+        url = websocket_url(base_url, token.ws_url, credentials.app_id, token.token.reveal())
         ws = WebSocketClient.connect(url)
     except (CredentialsError, HttpError, HttpTransportError, WebSocketError, OSError, ValueError) as exc:
         print(f"serve failed: {exc}", file=sys.stderr)
@@ -109,7 +110,7 @@ def main(argv: list[str] | None = None) -> int:
         if ws is None:
             try:
                 token = parse_ws_token_response(client.create_ws_token())
-                url = websocket_url(args.mw_url, token.ws_url, credentials.app_id, token.token.reveal())
+                url = websocket_url(base_url, token.ws_url, credentials.app_id, token.token.reveal())
                 ws = WebSocketClient.connect(url)
             except (HttpError, HttpTransportError, WebSocketError, OSError) as exc:
                 _log({"reconnect_failed": str(exc)})

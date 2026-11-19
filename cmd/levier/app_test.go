@@ -38,6 +38,25 @@ func newAppTestServer(t *testing.T) *httptest.Server {
 				"status":     "active",
 				"multiagent": false,
 			})
+		case r.Method == http.MethodPost && r.URL.Path == "/api/v1/ws-token":
+			w.Header().Set("Content-Type", "application/json")
+			_ = json.NewEncoder(w).Encode(map[string]any{
+				"ws_url":     "/api/v1/ws",
+				"ws_token":   "ws-token",
+				"expires_in": 60,
+			})
+		case r.Method == http.MethodGet && r.URL.Path == "/admin/apps":
+			w.Header().Set("Content-Type", "application/json")
+			_ = json.NewEncoder(w).Encode(map[string]any{
+				"apps": []map[string]any{{
+					"app_id":     "app_1",
+					"name":       "demo",
+					"status":     "active",
+					"multiagent": false,
+					"created_at": "2026-11-19T00:00:00Z",
+					"updated_at": "2026-11-19T00:00:00Z",
+				}},
+			})
 		default:
 			http.NotFound(w, r)
 		}
@@ -105,6 +124,56 @@ func TestRunAppInitShowRotate(t *testing.T) {
 	}
 	if credentials.APIKey != "new-secret-key" {
 		t.Fatalf("rotated api key = %q", credentials.APIKey)
+	}
+}
+
+func TestRunAppCheckAndList(t *testing.T) {
+	server := newAppTestServer(t)
+	defer server.Close()
+	path := filepath.Join(t.TempDir(), "credentials.json")
+
+	var stdout, stderr bytes.Buffer
+	if code := runAppInit([]string{
+		"--name", "demo",
+		"--credentials-out", path,
+		"--server", server.URL,
+		"--admin-token", "admin",
+	}, &stdout, &stderr); code != 0 {
+		t.Fatalf("app init = %d, stderr = %s", code, stderr.String())
+	}
+	credentials, err := readCredentials(path)
+	if err != nil {
+		t.Fatalf("read credentials: %v", err)
+	}
+	if credentials.CredentialVersion != credentialVersion || credentials.Server != server.URL {
+		t.Fatalf("credentials = %+v", credentials)
+	}
+
+	stdout.Reset()
+	stderr.Reset()
+	if code := runAppCheck([]string{"--credentials", path}, &stdout, &stderr); code != 0 {
+		t.Fatalf("app check = %d, stderr = %s, stdout = %s", code, stderr.String(), stdout.String())
+	}
+	if strings.Contains(stdout.String(), credentials.APIKey) || !strings.Contains(stdout.String(), "app check: PASS") {
+		t.Fatalf("app check output = %s", stdout.String())
+	}
+
+	stdout.Reset()
+	stderr.Reset()
+	if code := runAppCheck([]string{"--credentials", path, "--json"}, &stdout, &stderr); code != 0 {
+		t.Fatalf("app check --json = %d, stderr = %s", code, stderr.String())
+	}
+	if strings.Contains(stdout.String(), credentials.APIKey) || !strings.Contains(stdout.String(), `"ok": true`) {
+		t.Fatalf("app check JSON = %s", stdout.String())
+	}
+
+	stdout.Reset()
+	stderr.Reset()
+	if code := runAppList([]string{"--server", server.URL, "--admin-token", "admin", "--json"}, &stdout, &stderr); code != 0 {
+		t.Fatalf("app list = %d, stderr = %s", code, stderr.String())
+	}
+	if !strings.Contains(stdout.String(), "app_1") {
+		t.Fatalf("app list output = %s", stdout.String())
 	}
 }
 

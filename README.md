@@ -171,6 +171,8 @@ docker compose down -v       # 删除 PostgreSQL、凭据和 socket 卷
 
 ### 3.2 本地开发
 
+第一次启动和接入请按 [`docs/ONBOARDING.md`](docs/ONBOARDING.md) 操作；这里保留开发命令速查。
+
 前置：Go 1.26+、Python 3.12+、`uv`、PostgreSQL 16+、`curl`。
 Windows 建议使用 WSL / Git Bash 执行 Makefile，或直接用 Docker Compose。
 
@@ -246,14 +248,14 @@ bin/levier serve -config levier.example.yaml
 
 # 5. 启动参考 App（bootstrap + 注册工具 + 连 WS）
 python3 examples/counter_agent/bootstrap_app.py \
-  --credentials-out ~/.config/middleware/counter.json
+  --credentials-out ~/.config/levier/counter.json
 python3 examples/counter_agent/serve.py \
-  --credentials ~/.config/middleware/counter.json \
+  --credentials ~/.config/levier/counter.json \
   --mw-url http://127.0.0.1:8080
 
 # 6. 提交 Run
 python3 examples/counter_agent/submit_run.py \
-  --credentials ~/.config/middleware/counter.json \
+  --credentials ~/.config/levier/counter.json \
   --strategy react \
   --provider deepseek --model deepseek-flash \
   --prompt "Add 2, then add 3, then read the counter."
@@ -286,6 +288,8 @@ levier describe
 levier selfcheck
 levier doctor --credentials /path/to/app.json
 levier app show --credentials /path/to/app.json
+levier app check --credentials /path/to/app.json
+levier app list
 levier run submit --credentials /path/to/app.json --strategy echo --prompt "hello" --watch
 levier maintenance status
 levier maintenance prune --dry-run
@@ -470,7 +474,7 @@ POST {LEVIER_URL}/admin/apps/{APP_ID}/rotate-key
 Authorization: Bearer {LEVIER_ADMIN_TOKEN}
 ```
 
-把 `app_id` / `app_name` / `api_key` 写进 0600 凭据文件。**Admin token 不要进入 App 的长期运行环境。**
+把凭据版本、`app_id` / `app_name` / `server` 和 `api_key` 写进 0600 凭据文件。**Admin token 不要进入 App 的长期运行环境。**
 
 **每次启动**（或每次工具变更发布时）注册工具：
 
@@ -743,6 +747,7 @@ B. 接受重复，并提供人工或自动补偿
 | `GET` | `/meta` | 无 | 服务自描述（协议、能力、限制） |
 | `GET` | `/status` | 无 | 运行状态总览（daemon、App、Run、workflow） |
 | `POST` | `/admin/apps` | Admin token | 创建 App，返回一次性 key |
+| `GET` | `/admin/apps` | Admin token | 只读 App 列表，不返回 key |
 | `POST` | `/admin/apps/{app_id}/rotate-key` | Admin token | 轮换 App key |
 | `GET` | `/api/v1/apps/{app_id}` | App key | 验证身份与状态 |
 | `POST` | `/api/v1/apps` | App key | 全量更新工具 / MCP 引用 |
@@ -1190,11 +1195,12 @@ deploy/           容器镜像与 Compose
 | `docs/MAP.md` | 仓库地图与单元入口 |
 | `docs/NAMING.md` | 命名、标识符与改名记录 |
 | `docs/MIGRATION-1D.md` | Compose / 数据库 / 指标迁移 |
+| `docs/ONBOARDING.md` | 从启动 Levier 到第一个 Run 的一站式引导 |
 | `docs/APP_ONBOARDING.md` | App 接入流程与协议细节 |
 | `docs/DESIGN.md` | 核心设计（当前实现） |
 | `docs/CONFIG.md` | 配置盘点、环境变量矩阵与外部化契约 |
 | `docs/LIFECYCLE.md` | 备份、恢复、Docker volume 与 secret 轮换 |
-| `docs/ONBOARDING_CREDENTIALS_PLAN.md` | 引导与 App 凭据管理计划 |
+| `docs/ONBOARDING_CREDENTIALS_PLAN.md` | 引导与 App 凭据管理设计与实现记录 |
 | `docs/MVP.md` | 单机 MVP 的边界、启动、验收与限制 |
 | `docs/CLI_REFERENCE.md` | CLI 命令、参数、环境变量、JSON、退出码 |
 | `docs/INSTALL.md` | CLI 安装、升级、卸载、checksum、镜像/离线 |

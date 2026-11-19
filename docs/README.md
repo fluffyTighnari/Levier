@@ -25,6 +25,7 @@ MAP.md          仓库地图
 
 | 文档 | 内容 |
 |---|---|
+| `ONBOARDING.md` | 从启动 Levier 到第一个 Run 的一站式引导 |
 | `APP_ONBOARDING.md` | App 接入流程与协议 |
 | `DAEMON_CONTRACT.md` | Harness / Daemon 协议 |
 | `AGENT_CORE_CONTRACT.md` | Agent Core v1 契约 |
@@ -48,7 +49,7 @@ MAP.md          仓库地图
 | `STATUS_OVERVIEW_PLAN.md` | 8 状态总览改造计划（内部开发文档） |
 | `HOP_CHECK_PLAN.md` | 9 逐跳自检改造计划（内部开发文档） |
 | `LIFECYCLE_PLAN.md` | 10 生命周期（进程与数据）改造计划（内部开发文档） |
-| `ONBOARDING_CREDENTIALS_PLAN.md` | 11 引导与凭据管理计划（内部开发文档） |
+| `ONBOARDING_CREDENTIALS_PLAN.md` | 11 引导与凭据管理设计与实现记录（内部开发文档） |
 | `adr/` | 历史架构决策记录 |
 | `api/openapi.yaml` | HTTP API 契约 |
 
@@ -56,6 +57,7 @@ MAP.md          仓库地图
 
 ```text
 SCOPE → MAP → 你的任务对应文档
+第一次接入    → ONBOARDING.md
 接 App        → APP_ONBOARDING.md
 引导计划      → ONBOARDING_CREDENTIALS_PLAN.md
 用 CLI        → CLI_REFERENCE.md

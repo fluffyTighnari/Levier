@@ -45,6 +45,28 @@ func (s *Server) handleAdminCreateApp(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, status, CreateAppResponse{App: appView(app), APIKey: key})
 }
 
+func (s *Server) handleAdminListApps(w http.ResponseWriter, r *http.Request) {
+	if !s.isAdmin(r) {
+		writeErrorCode(w, errs.CodeUnauthorized, "admin token is required", false)
+		return
+	}
+	lister, ok := s.apps.(AppLister)
+	if !ok {
+		writeErrorCode(w, errs.CodeNotImplemented, "app registry does not support listing", false)
+		return
+	}
+	apps, err := lister.ListApps(r.Context())
+	if err != nil {
+		writeErrorCode(w, errs.CodeInternal, "list apps failed", true)
+		return
+	}
+	views := make([]AppView, 0, len(apps))
+	for _, app := range apps {
+		views = append(views, appView(app))
+	}
+	writeJSON(w, http.StatusOK, AppListResponse{Apps: views})
+}
+
 func (s *Server) applyAppCatalog(w http.ResponseWriter, r *http.Request, appID string, request AppUpsertRequest) bool {
 	catalog, ok := s.apps.(CatalogRegistry)
 	if !ok {
