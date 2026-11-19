@@ -106,11 +106,9 @@ services:
     init: true
     environment:
       LEVIER_APP_URL: http://levier:8080
-      LEVIER_APP_ADMIN_TOKEN: ${LEVIER_APP_ADMIN_TOKEN:-${LEVIER_ADMIN_TOKEN:-${MW_ADMIN_TOKEN:-admin-change-me}}}
-      LEVIER_APP_NAME: ${LEVIER_APP_NAME:-${MW_APP_NAME:-counter-agent}}
       LEVIER_APP_CREDENTIALS: /data/credentials.json
     volumes:
-      - agent_data:/data
+      - ./data/agent:/data
     depends_on:
       levier:
         condition: service_healthy
@@ -128,7 +126,7 @@ services:
     volumes:
       - ./deploy/smoke.py:/app/smoke.py:ro
       - mcp_socket:/run/levier
-      - agent_data:/data
+      - ./data/agent:/data
     depends_on:
       levier:
         condition: service_healthy
@@ -143,4 +141,3 @@ services:
 volumes:
   pgdata:
   mcp_socket:
-  agent_data:

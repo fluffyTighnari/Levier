@@ -63,3 +63,4 @@ jobs:
       - run: PYTHONPATH=execution/harness/src/gen:execution/harness/src python tests/contract/test_contract.py -v
       - run: PYTHONPATH=execution/harness/src/gen:execution/harness/src python -m unittest discover -s execution/harness/tests -v
       - run: PYTHONPATH=sdk/python/src python -m unittest discover -s sdk/python/tests -v
+      - run: PYTHONPATH=sdk/python/src python -m unittest discover -s examples/counter_agent/tests -v

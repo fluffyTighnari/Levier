@@ -26,10 +26,11 @@ Levier SDK
 先准备一个 0600 凭据文件（bootstrap 可由任意语言完成，这里是 Python）：
 
 ```sh
-LEVIER_URL=http://127.0.0.1:8080 \
 LEVIER_ADMIN_TOKEN=... \
-LEVIER_APP_NAME=node-counter \
-python3 examples/counter_agent/bootstrap_app.py --credentials-out /tmp/node-app.json
+levier app init \
+  --name node-counter \
+  --server http://127.0.0.1:8080 \
+  --credentials-out /tmp/node-app.json
 ```
 
 启动 App：

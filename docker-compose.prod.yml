@@ -44,7 +44,6 @@ services:
 
   agent:
     environment:
-      LEVIER_APP_ADMIN_TOKEN: ""
-      LEVIER_APP_ADMIN_TOKEN_FILE: /run/secrets/levier_admin_token
+      LEVIER_APP_CREDENTIALS: /data/credentials.json
     volumes:
-      - ./deploy/secrets/levier_admin_token:/run/secrets/levier_admin_token:ro
+      - ./data/agent:/data

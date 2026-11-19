@@ -31,9 +31,10 @@ from pathlib import Path
 from typing import Any
 
 ROOT = Path(__file__).resolve().parents[2]
-sys.path.insert(0, str(ROOT / "examples" / "counter_agent"))
+sys.path.insert(0, str(ROOT / "sdk" / "python" / "src"))
 
-from ws_client import WebSocketClient, WebSocketError, websocket_url  # noqa: E402
+from levier_app.websocket import WebSocketClient, websocket_url  # noqa: E402
+from levier_app.errors import ProtocolError  # noqa: E402
 
 
 def request(
@@ -149,7 +150,7 @@ def check_protocol(args: argparse.Namespace, credentials: dict[str, str]) -> dic
             websocket_url(base, token_payload["ws_url"], app_id, "invalid-token")
         ).close()
         raise RuntimeError("invalid ws token was accepted")
-    except WebSocketError:
+    except ProtocolError:
         result["checks"]["ws_token_rejected"] = "ok"
 
     return result

@@ -48,7 +48,7 @@ func runRun(args []string, stdout, stderr io.Writer) int {
 
 func printRunUsage(out io.Writer) {
 	fmt.Fprintln(out, "usage:")
-	fmt.Fprintln(out, "  levier run submit --prompt <text> [--strategy react] [--watch]")
+	fmt.Fprintln(out, "  levier run submit --prompt <text> [--strategy react] [--request-id id] [--watch]")
 	fmt.Fprintln(out, "  levier run watch --run-id <id>")
 	fmt.Fprintln(out, "  levier run cancel --run-id <id> --yes")
 }
@@ -66,6 +66,7 @@ func runRunSubmit(args []string, stdout, stderr io.Writer) int {
 	runMS := flags.Int64("run-ms", 60000, "run timeout in milliseconds")
 	toolMS := flags.Int64("tool-ms", 10000, "per-tool timeout in milliseconds")
 	idempotencyKey := flags.String("idempotency-key", "", "optional Idempotency-Key")
+	requestID := flags.String("request-id", "", "optional X-Request-ID / trace correlation")
 	watch := flags.Bool("watch", false, "watch until terminal")
 	interval := flags.Duration("interval", 500*time.Millisecond, "watch poll interval")
 	watchTimeout := flags.Duration("watch-timeout", 30*time.Minute, "watch timeout")
@@ -102,7 +103,7 @@ func runRunSubmit(args []string, stdout, stderr io.Writer) int {
 		},
 	}
 	client := newAPIClient(resolveServer(*server, &credentials), credentials.APIKey, *timeout)
-	submitted, err := client.createRun(context.Background(), request, *idempotencyKey)
+	submitted, err := client.createRun(context.Background(), request, *idempotencyKey, *requestID)
 	if err != nil {
 		return reportAPIError(err, stderr)
 	}

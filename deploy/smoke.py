@@ -121,7 +121,7 @@ def main() -> int:
             return False, "missing app credentials"
         return True, data
 
-    wait_for("agent bootstrap", credentials_ready)
+    wait_for("agent credentials", credentials_ready)
     credentials = read_credentials()
     app_id = credentials["app_id"]
     app_key = credentials["api_key"]

@@ -129,7 +129,7 @@ postgres 就绪
   （serve 启动时检查 pending migration）
 → mcp-runtime 创建 /run/levier/mcp.sock
 → harness 连接 levier，注册为 daemon-local-1
-→ agent 等待 /readyz，bootstrap App，注册工具，建立 WebSocket
+→ agent 等待 /readyz 和凭据文件，启动 SDK App，注册工具，建立 WebSocket
 ```
 
 跑一次不依赖模型的端到端 smoke：
@@ -144,17 +144,24 @@ docker compose --profile smoke run --rm smoke
 docker-smoke: PASS
 ```
 
-它覆盖了：Levier 健康检查、Harness 注册、App bootstrap、App WebSocket、MCP runtime socket、提交一个 echo Run 并到达 `completed`。
+它覆盖了：Levier 健康检查、Harness 注册、App 凭据、App WebSocket、MCP runtime socket、提交一个 echo Run 并到达 `completed`。
 
 跑真实模型 + 本地工具：
 
 ```sh
 # 在 .env 里设置 DEEPSEEK_API_KEY 后
+mkdir -p data/agent
 docker compose up --build -d
 
-docker compose exec agent python3 /app/examples/counter_agent/submit_run.py \
-  --credentials /data/credentials.json \
-  --mw-url http://levier:8080 \
+# 首次运行：用 canonical CLI 创建 App，credentials 写入宿主机 bind mount
+bin/levier app init \
+  --name counter-agent \
+  --server http://127.0.0.1:8080 \
+  --credentials-out data/agent/credentials.json
+
+bin/levier run submit \
+  --credentials data/agent/credentials.json \
+  --server http://127.0.0.1:8080 \
   --strategy react \
   --provider deepseek \
   --model deepseek-flash \
@@ -166,7 +173,7 @@ docker compose exec agent python3 /app/examples/counter_agent/submit_run.py \
 ```sh
 docker compose logs -f
 docker compose down          # 保留数据卷
-docker compose down -v       # 删除 PostgreSQL、凭据和 socket 卷
+docker compose down -v       # 删除 PostgreSQL 和 socket 卷；data/agent 需手动删除
 ```
 
 ### 3.2 本地开发
@@ -246,16 +253,18 @@ bin/levier serve -config levier.example.yaml
   PYTHONPATH=src .venv/bin/python -m levier_mcp_runtime \
   --socket /tmp/levier-mcp.sock)
 
-# 5. 启动 Python SDK 参考 App（注册工具 + 连 WS）
-python3 examples/counter_agent/bootstrap_app.py \
-  --credentials-out ~/.config/levier/counter.json
+# 5. 创建并启动 Counter App
+bin/levier app init \
+  --name counter-agent \
+  --server http://127.0.0.1:8080 \
+  --credentials-out ./data/agent/credentials.json
+LEVIER_CREDENTIALS=./data/agent/credentials.json \
 PYTHONPATH=sdk/python/src \
-LEVIER_CREDENTIALS=~/.config/levier/counter.json \
-  python3 examples/python_sdk_counter/app.py
+  python3 examples/counter_agent/app.py
 
 # 6. 另开终端提交 Run
 bin/levier run submit \
-  --credentials ~/.config/levier/counter.json \
+  --credentials ./data/agent/credentials.json \
   --strategy react \
   --provider deepseek --model deepseek-flash \
   --prompt "Add 2, then add 3, then read the counter." \
@@ -908,7 +917,7 @@ Run 终态会以 `run_completed` 推送，`status` 为 `completed / failed / can
 | `LEVIER_DATABASE_URL` | Levier 的 PostgreSQL DSN |
 | `LEVIER_TEST_DATABASE_URL` | 测试库 DSN |
 | `LEVIER_ADMIN_TOKEN` | Admin token，必须与配置里的 `http.admin_token` 一致 |
-| `LEVIER_APP_NAME` | Compose 中 agent 的 App 名称 |
+| `LEVIER_APP_NAME` | `app init` / `make docker-up` 创建的测试 App 名称 |
 | `DEEPSEEK_API_KEY` | Harness 调用 DeepSeek 的 key |
 | `DEEPSEEK_BASE_URL` | 模型网关地址 |
 | `DEEPSEEK_MODEL` | 默认模型名 |
@@ -982,7 +991,7 @@ logging:
 |---|---|
 | `POSTGRES_PASSWORD` | `change-me` |
 | `LEVIER_ADMIN_TOKEN` | `admin-change-me` |
-| `LEVIER_APP_NAME` | `counter-agent` |
+| `LEVIER_APP_NAME` | `counter-agent`（仅测试 App 初始化） |
 | daemon token | `change-me`（本地 demo 固定值） |
 
 这些都是本地演示配置，共享主机或生产环境必须替换。
@@ -1014,12 +1023,12 @@ docker build -f deploy/agent.Dockerfile -t levier-agent:dev .
 
 ### 8.2 数据与密钥
 
-Compose 使用三个命名卷：
+Compose 使用两个命名卷和一个 host 凭据目录：
 
 ```text
 pgdata        PostgreSQL 数据
 mcp_socket    mcp-runtime 与 harness 共享的 unix socket
-agent_data    App 凭据（0600）
+data/agent    App 凭据（host bind mount，0600）
 ```
 
 密钥处理原则：
@@ -1195,7 +1204,7 @@ execution/agent_core/       语言无关的 Agent 循环与 conformance fixtures
 execution/harness/          Python Harness
 execution/mcp_runtime/      独立 MCP 连接进程
 sdk/python/       Python App adapter（levier_app）
-examples/         python_sdk_counter、counter_agent、HTTP/Node 接入示例
+examples/         counter_agent、HTTP/Node 接入示例
 tests/            单元/契约/E2E 与检查脚本
 scripts/          发布构建、安装、备份恢复脚本
 docs/             设计、契约、接入、迁移、运维文档
@@ -1233,8 +1242,7 @@ deploy/           容器镜像与 Compose
 参考实现（用来对照改造，不是接入规范）：
 
 ```text
-examples/python_sdk_counter  推荐：Python SDK 薄示例（业务 handler + schema）
-examples/counter_agent       Python 标准库旧实现：对照底层协议
+examples/counter_agent       推荐：Python SDK 薄 App（业务 handler + schema）
 examples/node_counter_agent  Node.js 原生 WebSocket 实现，验证语言无关
 examples/http_client         只验证 HTTP：认证、创建、查询、取消
 ```

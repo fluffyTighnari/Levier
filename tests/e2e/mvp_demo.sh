@@ -113,36 +113,39 @@ PYTHONPATH="execution/agent_core/src:execution/harness/src/gen:execution/harness
 HARNESS_PID=$!
 sleep 2
 
-echo "== bootstrap App =="
-LEVIER_URL="$LEVIER_URL" LEVIER_ADMIN_TOKEN="$ADMIN_TOKEN" LEVIER_APP_NAME="mvp-demo-$MODE-$STAMP" \
-  python3 examples/counter_agent/bootstrap_app.py --credentials-out "$CREDENTIALS" \
-  >"$OUT/bootstrap.json" 2>"$OUT/bootstrap.err" || fail "bootstrap failed; see $OUT/bootstrap.err"
+echo "== create App =="
+"$LEVIER_BIN" app init \
+  --name "mvp-demo-$MODE-$STAMP" \
+  --server "$LEVIER_URL" \
+  --admin-token "$ADMIN_TOKEN" \
+  --credentials-out "$CREDENTIALS" \
+  >"$OUT/bootstrap.json" 2>"$OUT/bootstrap.err" || fail "app init failed; see $OUT/bootstrap.err"
+
+APP_ID="$(python3 -c 'import json,sys;print(json.load(open(sys.argv[1]))["app_id"])' "$CREDENTIALS")"
 
 echo "== start App =="
-python3 examples/counter_agent/serve.py \
-  --credentials "$CREDENTIALS" \
-  --mw-url "$LEVIER_URL" \
-  --timeout 300 \
+LEVIER_CREDENTIALS="$CREDENTIALS" PYTHONPATH="sdk/python/src" \
+  python3 examples/counter_agent/app.py \
   >"$OUT/serve.log" 2>"$OUT/serve.err" &
 SERVE_PID=$!
 serving=""
-for _ in $(seq 1 100); do
-  if grep -q '"serving": true' "$OUT/serve.log" 2>/dev/null; then
+for _ in $(seq 1 150); do
+  if curl -fsS "$LEVIER_URL/metrics" 2>/dev/null | grep -q "levier_ws_connections{app=\"$APP_ID\"} 1"; then
     serving=1
     break
   fi
   sleep 0.1
 done
-[ -n "$serving" ] || fail "App did not start serving; see $OUT/serve.log"
+[ -n "$serving" ] || fail "App did not connect its WebSocket; see $OUT/serve.log"
 
 echo "== submit $MODE run =="
 if [ "$MODE" = "react" ]; then
   if [ -z "${DEEPSEEK_API_KEY:-}" ]; then
     fail "react mode requires DEEPSEEK_API_KEY"
   fi
-  python3 examples/counter_agent/submit_run.py \
+  "$LEVIER_BIN" run submit \
     --credentials "$CREDENTIALS" \
-    --mw-url "$LEVIER_URL" \
+    --server "$LEVIER_URL" \
     --strategy react \
     --prompt "$PROMPT_REACT" \
     --provider deepseek \
@@ -150,15 +153,17 @@ if [ "$MODE" = "react" ]; then
     --max-steps 8 \
     --run-ms 120000 \
     --request-id "mvp-demo-$MODE-$STAMP" \
+    --json \
     >"$OUT/submit_run.json" 2>"$OUT/submit_run.err" || fail "run submission failed; see $OUT/submit_run.err"
 else
-  python3 examples/counter_agent/submit_run.py \
+  "$LEVIER_BIN" run submit \
     --credentials "$CREDENTIALS" \
-    --mw-url "$LEVIER_URL" \
+    --server "$LEVIER_URL" \
     --strategy echo \
     --prompt "$PROMPT_ECHO" \
     --run-ms 30000 \
     --request-id "mvp-demo-$MODE-$STAMP" \
+    --json \
     >"$OUT/submit_run.json" 2>"$OUT/submit_run.err" || fail "run submission failed; see $OUT/submit_run.err"
 fi
 

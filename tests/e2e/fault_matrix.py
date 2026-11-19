@@ -45,6 +45,7 @@ CONFIG = _env("LEVIER_CONFIG", "MIDDLEWARE_CONFIG", "levier.example.yaml")
 HARNESS_CONFIG = os.environ.get("HARNESS_CONFIG", "execution/harness/levier.example.yaml")
 HARNESS_PYTHON = ROOT / os.environ.get("HARNESS_PYTHON", "execution/harness/.venv/bin/python")
 APP_PYTHON = os.environ.get("APP_PYTHON", sys.executable)
+LEVIER_BIN = os.environ.get("LEVIER_BIN", str(ROOT / "bin" / "levier"))
 ADMIN_TOKEN = _env("LEVIER_ADMIN_TOKEN", "MW_ADMIN_TOKEN", "admin-change-me")
 DAEMON_TOKEN = _env("LEVIER_DAEMON_TOKEN", "MW_DAEMON_TOKEN", "change-me")
 DATABASE_URL = _env("LEVIER_DATABASE_URL", "MIDDLEWARE_DATABASE_URL", "")
@@ -219,15 +220,16 @@ def cancel(run_id: str, reason: str = "fault-matrix") -> None:
 
 def submit(strategy: str, prompt: str, run_ms: int) -> str:
     cmd = [
-        APP_PYTHON,
-        "examples/counter_agent/submit_run.py",
+        LEVIER_BIN,
+        "run", "submit",
         "--credentials", str(CREDENTIALS),
-        "--mw-url", MW_URL,
+        "--server", MW_URL,
         "--strategy", strategy,
         "--prompt", prompt,
         "--run-ms", str(run_ms),
         "--tool-ms", "10000",
         "--request-id", f"fault-{strategy}-{time.time_ns()}",
+        "--json",
     ]
     if strategy == "react":
         cmd += ["--provider", "deepseek", "--model", "deepseek-flash", "--max-steps", "8"]
@@ -308,35 +310,28 @@ def start_harness() -> None:
 
 
 def start_app() -> None:
+    app_id = read_credentials()["app_id"]
     start("app", [
         APP_PYTHON,
-        "examples/counter_agent/serve.py",
-        "--credentials", str(CREDENTIALS),
-        "--mw-url", MW_URL,
-        "--timeout", "300",
-    ])
-    deadline = time.monotonic() + 10
-    log_path = OUT / "app.log"
-    while time.monotonic() < deadline:
-        if log_path.exists() and '"serving": true' in log_path.read_text(encoding="utf-8", errors="replace"):
-            return
-        time.sleep(0.05)
-    raise FaultError("App did not start serving")
+        "examples/counter_agent/app.py",
+    ], env={
+        "LEVIER_CREDENTIALS": str(CREDENTIALS),
+        "PYTHONPATH": "sdk/python/src",
+    })
+    wait_metric(f'levier_ws_connections{{app="{app_id}"}} 1', 10)
 
 
 def bootstrap() -> None:
-    env = {
-        "LEVIER_URL": MW_URL,
-        "LEVIER_ADMIN_TOKEN": ADMIN_TOKEN,
-        "LEVIER_APP_NAME": APP_NAME,
-    }
     result = run([
-        APP_PYTHON,
-        "examples/counter_agent/bootstrap_app.py",
+        LEVIER_BIN,
+        "app", "init",
+        "--name", APP_NAME,
+        "--server", MW_URL,
+        "--admin-token", ADMIN_TOKEN,
         "--credentials-out", str(CREDENTIALS),
-    ], env=env, timeout=30)
+    ], timeout=30)
     if result.returncode != 0:
-        raise FaultError(f"bootstrap failed: {result.stderr.strip()}")
+        raise FaultError(f"app init failed: {result.stderr.strip()}")
 
 
 def scenario_harness_kill() -> str:

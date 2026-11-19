@@ -133,9 +133,12 @@ curl -fsS -X POST "$LEVIER_URL/admin/mcp" \
   -H "Content-Type: application/json" \
   --data-binary "@$OUT/catalog_request.json" >"$OUT/catalog.json" || fail "catalog registration failed"
 
-LEVIER_URL="$LEVIER_URL" LEVIER_ADMIN_TOKEN="$ADMIN_TOKEN" LEVIER_APP_NAME="mcp-e2e-$STAMP" \
-  python3 examples/counter_agent/bootstrap_app.py --credentials-out "$CREDENTIALS" \
-  >"$OUT/bootstrap.json" 2>"$OUT/bootstrap.err" || fail "bootstrap failed"
+"$LEVIER_BIN" app init \
+  --name "mcp-e2e-$STAMP" \
+  --server "$LEVIER_URL" \
+  --admin-token "$ADMIN_TOKEN" \
+  --credentials-out "$CREDENTIALS" \
+  >"$OUT/bootstrap.json" 2>"$OUT/bootstrap.err" || fail "app init failed"
 
 APP_NAME="$(python3 -c 'import json,sys;print(json.load(open(sys.argv[1]))["app_name"])' "$CREDENTIALS")"
 APP_KEY="$(python3 -c 'import json,sys;print(json.load(open(sys.argv[1]))["api_key"])' "$CREDENTIALS")"
@@ -149,15 +152,16 @@ curl -fsS -X POST "$LEVIER_URL/api/v1/apps" \
   --data-binary "@$OUT/app_request.json" >"$OUT/app.json" || fail "app mcp_refs update failed"
 
 echo "== run =="
-python3 examples/counter_agent/submit_run.py \
+"$LEVIER_BIN" run submit \
   --credentials "$CREDENTIALS" \
-  --mw-url "$LEVIER_URL" \
+  --server "$LEVIER_URL" \
   --strategy react \
   --prompt "Call the tool named $TOOL_NAME exactly once, then report the exact string it returns." \
   --provider deepseek \
   --model deepseek-flash \
   --max-steps 3 \
   --run-ms 120000 \
+  --json \
   >"$OUT/submit_run.json" 2>"$OUT/submit_run.err" || fail "run submission failed"
 RUN_ID="$(python3 -c 'import json,sys;print(json.load(open(sys.argv[1]))["run_id"])' "$OUT/submit_run.json")"
 echo "run_id=$RUN_ID"

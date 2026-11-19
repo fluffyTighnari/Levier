@@ -101,35 +101,42 @@ PYTHONPATH="execution/agent_core/src:execution/harness/src/gen:execution/harness
 HARNESS_PID=$!
 sleep 2
 
-echo "== bootstrap App =="
-LEVIER_URL="$LEVIER_URL" LEVIER_ADMIN_TOKEN="$ADMIN_TOKEN" LEVIER_APP_NAME="retrofit-e2e-$STAMP" \
-  python3 examples/counter_agent/bootstrap_app.py --credentials-out "$CREDENTIALS" \
-  >"$OUT/bootstrap.json" 2>"$OUT/bootstrap.err" || fail "bootstrap failed"
+echo "== create App =="
+"$LEVIER_BIN" app init \
+  --name "retrofit-e2e-$STAMP" \
+  --server "$LEVIER_URL" \
+  --admin-token "$ADMIN_TOKEN" \
+  --credentials-out "$CREDENTIALS" \
+  >"$OUT/bootstrap.json" 2>"$OUT/bootstrap.err" || fail "app init failed"
+
+APP_ID="$(python3 -c 'import json,sys;print(json.load(open(sys.argv[1]))["app_id"])' "$CREDENTIALS")"
 
 echo "== start App =="
-python3 examples/counter_agent/serve.py \
-  --credentials "$CREDENTIALS" \
-  --mw-url "$LEVIER_URL" \
-  --timeout 60 \
+LEVIER_CREDENTIALS="$CREDENTIALS" PYTHONPATH="sdk/python/src" \
+  python3 examples/counter_agent/app.py \
   >"$OUT/serve.log" 2>"$OUT/serve.err" &
 SERVE_PID=$!
-for _ in $(seq 1 100); do
-  grep -q '"serving": true' "$OUT/serve.log" 2>/dev/null && break
+for _ in $(seq 1 150); do
+  if curl -fsS "$LEVIER_URL/metrics" 2>/dev/null | grep -q "levier_ws_connections{app=\"$APP_ID\"} 1"; then
+    break
+  fi
   sleep 0.1
 done
-grep -q '"serving": true' "$OUT/serve.log" || fail "App did not start serving"
+curl -fsS "$LEVIER_URL/metrics" 2>/dev/null | grep -q "levier_ws_connections{app=\"$APP_ID\"} 1" \
+  || fail "App did not connect its WebSocket"
 
 echo "== submit run =="
 curl -fsS "$LEVIER_URL/metrics" >"$OUT/metrics_before.txt"
-python3 examples/counter_agent/submit_run.py \
+"$LEVIER_BIN" run submit \
   --credentials "$CREDENTIALS" \
-  --mw-url "$LEVIER_URL" \
+  --server "$LEVIER_URL" \
   --strategy react \
   --prompt "$PROMPT" \
   --provider deepseek \
   --model deepseek-flash \
   --max-steps 8 \
   --request-id "$TRACE" \
+  --json \
   >"$OUT/submit_run.json" 2>"$OUT/submit_run.err" || fail "run submission failed"
 RUN_ID="$(python3 -c 'import json,sys;print(json.load(open(sys.argv[1]))["run_id"])' "$OUT/submit_run.json")"
 echo "run_id=$RUN_ID trace=$TRACE"

@@ -60,7 +60,7 @@ MAP.md          仓库地图
 ```text
 SCOPE → MAP → 你的任务对应文档
 第一次接入    → ONBOARDING.md
-接 Python App → sdk/python/README.md + APP_ADAPTER_CONTRACT.md
+接 Python App → examples/counter_agent + sdk/python/README.md + APP_ADAPTER_CONTRACT.md
 底层 App 协议 → APP_ONBOARDING.md
 引导计划      → ONBOARDING_CREDENTIALS_PLAN.md
 用 CLI        → CLI_REFERENCE.md

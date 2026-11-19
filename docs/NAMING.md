@@ -424,7 +424,7 @@ examples、deploy、tests/e2e 都支持两套名字
 同时更新：
 
 ```text
-examples/counter_agent 的 config 与测试
+examples/counter_agent 的 SDK App 与测试
 examples/http_client、node_counter_agent
 deploy/agent-entrypoint.sh、deploy/smoke.py
 tests/e2e 三个脚本与 fault_matrix.py
@@ -451,7 +451,7 @@ go test ./...                          PASS
 go build ./...                         PASS
 go vet ./...                           PASS
 mcp_runtime secrets test               PASS
-counter_agent 配置测试                 PASS（Windows 文件权限用例除外）
+counter_agent SDK 测试                 PASS
 docker compose config                  PASS
 ```
 
@@ -551,7 +551,7 @@ Compose 项目名/服务名、数据库名、指标前缀
 agent_core tests                      PASS
 harness 配置/IDs/日志/健康测试          PASS
 mcp_runtime secrets 测试               PASS
-counter_agent 配置测试                 PASS（Windows 文件权限用例除外）
+counter_agent SDK 测试                 PASS
 新旧包 import 与 submodule import       PASS
 go build / go test                     PASS
 docker compose config                  PASS

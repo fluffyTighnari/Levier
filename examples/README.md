@@ -1,32 +1,43 @@
 # examples
 
-职责：参考 App 与最小客户端，用来对照接入方式。
-
-目录：
+这里放可运行的参考 App 和客户端；**不负责**生产代码、协议定义或控制面实现。
 
 ```text
-python_sdk_counter/   推荐：Python SDK 薄示例（业务 handler + schema）
-counter_agent/        Python 标准库旧参考 App：bootstrap、serve、submit
+counter_agent/        推荐：Python SDK 薄 App（业务 handler + schema）
 http_client/          只验证 HTTP 的最小客户端
 node_counter_agent/   Node.js 原生 WebSocket 参考 App
 ```
 
-入口：
+推荐入口：
 
 ```sh
-# 推荐的新 App 接入方式（从仓库根目录运行）
+# 从仓库根目录运行
+LEVIER_CREDENTIALS=./data/agent/credentials.json \
 PYTHONPATH=sdk/python/src \
-LEVIER_CREDENTIALS=~/.config/levier/sdk-counter.json \
-  python3 examples/python_sdk_counter/app.py
+  python3 examples/counter_agent/app.py
 
-# 旧参考实现仍保留，用于对照底层协议
-python3 examples/counter_agent/bootstrap_app.py --credentials-out /path/to/credentials.json
-python3 examples/counter_agent/serve.py --credentials /path/to/credentials.json
-python3 examples/counter_agent/submit_run.py --credentials /path/to/credentials.json --strategy react
+LEVIER_CREDENTIALS=./data/agent/credentials.json \
+  levier run submit \
+  --strategy react \
+  --prompt "Add 2, then add 3, then read the counter." \
+  --watch
 ```
 
-不负责：生产代码、协议定义、控制面实现。
+准备：
 
-测试：`make sdk-test`、`make counter-agent-test`、`examples/http_client/client.py`。
+```sh
+python3 -m venv .venv
+.venv/Scripts/python -m pip install -e ./sdk/python
 
-注意：新 App 首选 `docs/ONBOARDING.md` 和 `sdk/python/README.md`；旧示例仅用于对照底层协议。
+LEVIER_ADMIN_TOKEN=admin-change-me \
+  levier app init \
+  --name counter-agent \
+  --server http://127.0.0.1:8080 \
+  --credentials-out ./data/agent/credentials.json
+```
+
+参考实现只用于对照接入形态，不是协议规范。接入说明见
+[`../sdk/python/README.md`](../sdk/python/README.md) 和
+[`../docs/ONBOARDING.md`](../docs/ONBOARDING.md)。
+
+测试：`make counter-agent-test`、`make sdk-test`、`examples/http_client/client.py`。

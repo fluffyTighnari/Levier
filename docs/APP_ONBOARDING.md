@@ -471,14 +471,11 @@ ws_token      只放内存，不入库
 
 | 文件 | 职责 |
 |---|---|
-| `serve.py` | 运行时入口：验证 → 注册 → 连 WS → 服务 |
-| `bootstrap_app.py` | 一次性创建/轮换 |
-| `tools.py` / `dispatch.py` | 业务函数与本地分发 |
-| `ws_tool_host.py` | 仅 WS 的诊断探针 |
-| `http_client.py` / `ws_client.py` | HTTP 与 WS 的标准库实现 |
-| `main.py` | 接入前基线，不参与接入 |
+| `app.py` | `LevierApp`、工具 schema、业务 handler、启动入口 |
+| `tools.py` | 纯业务 Counter 状态 |
+| `tests/` | Counter 与 SDK 分发测试 |
 
-其他语言只需满足：
+Python App 推荐直接使用 `sdk/python`；其他语言只需满足：
 
 ```text
 能发 HTTP/WS
@@ -487,7 +484,7 @@ ws_token      只放内存，不入库
 把 arguments_json / result_json 当字符串处理
 ```
 
-不需要 SDK、生成代码或特定目录结构。
+不需要照搬目录结构。
 
 ---
 

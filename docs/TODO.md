@@ -534,10 +534,10 @@ HTTP 认证、工具注册、WebSocket、token、重连和 `local_tool_call` 结
 - [x] `sdk/python/` 标准库实现 `levier_app`
 - [x] canonical 凭据加载与 App key 认证
 - [x] 工具注册、hello、ping/pong、断线重连、优雅停止
-- [x] `examples/python_sdk_counter` 薄示例
-- [x] SDK 单元测试、结构检查、Makefile 与 CI
+- [x] `examples/counter_agent` 薄示例（业务 handler + schema）
+- [x] 删除旧 Counter Agent 的 HTTP/WS/bootstrap/submit 轮子
+- [x] SDK 单元测试、示例测试、结构检查、Makefile 与 CI
 - [x] 真实 Compose Run 端到端验证
-- [ ] 将 `examples/counter_agent` 迁移到 SDK；当前保留为底层协议对照
 - [ ] Node / TypeScript SDK
 - [ ] Sidecar / manifest
 - [ ] 多语言 conformance

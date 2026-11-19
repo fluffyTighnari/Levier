@@ -339,11 +339,19 @@ func (c *apiClient) listAdminTasks(ctx context.Context, query url.Values) (admin
 	return response, err
 }
 
-func (c *apiClient) createRun(ctx context.Context, request createRunRequest, idempotencyKey string) (createRunResponse, error) {
+func (c *apiClient) createRun(
+	ctx context.Context,
+	request createRunRequest,
+	idempotencyKey string,
+	requestID string,
+) (createRunResponse, error) {
 	var response createRunResponse
 	headers := map[string]string{}
 	if idempotencyKey != "" {
 		headers["Idempotency-Key"] = idempotencyKey
+	}
+	if requestID != "" {
+		headers["X-Request-ID"] = requestID
 	}
 	err := c.doWithHeaders(ctx, http.MethodPost, "/api/v1/runs", request, &response, headers)
 	return response, err

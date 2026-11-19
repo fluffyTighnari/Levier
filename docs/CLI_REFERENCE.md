@@ -871,6 +871,7 @@ levier run submit \
 | `--run-ms` | `60000` | Run 超时，毫秒 |
 | `--tool-ms` | `10000` | 单工具超时，毫秒 |
 | `--idempotency-key` | 空 | 可选 Idempotency-Key |
+| `--request-id` | 空 | 可选 X-Request-ID / trace 关联 |
 | `--watch` | `false` | 提交后等待终态 |
 | `--interval` | `500ms` | watch 轮询间隔 |
 | `--watch-timeout` | `30m` | watch 总超时 |

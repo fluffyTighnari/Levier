@@ -97,7 +97,7 @@ image-mcp-runtime:
 	docker build -f deploy/mcp-runtime.Dockerfile -t levier-mcp-runtime:dev .
 
 counter-agent:
-	$(PYTHON) examples/counter_agent/main.py
+	PYTHONPATH="sdk/python/src" $(PYTHON) examples/counter_agent/app.py
 
 http-smoke:
 	$(PYTHON) examples/http_client/client.py
@@ -139,7 +139,21 @@ secrets-check:
 	python3 tests/checks/check_secrets.py
 
 docker-up:
-	docker compose up --build -d
+	docker compose up --build -d postgres levier mcp-runtime harness
+	@mkdir -p data/agent
+	@if [ ! -f data/agent/credentials.json ]; then \
+		for i in $$(seq 1 100); do \
+			curl -fsS http://127.0.0.1:8080/healthz >/dev/null 2>&1 && break; \
+			sleep 0.2; \
+		done; \
+		LEVIER_ADMIN_TOKEN="$${LEVIER_ADMIN_TOKEN:-admin-change-me}" \
+			$(GO) run ./cmd/levier app init \
+			--name "$${LEVIER_APP_NAME:-counter-agent}" \
+			--server http://127.0.0.1:8080 \
+			--credentials-out data/agent/credentials.json \
+			--rotate --yes; \
+	fi
+	docker compose up -d agent
 
 docker-down:
 	docker compose down
@@ -154,4 +168,4 @@ docker-reset:
 	docker compose down -v
 
 counter-agent-test:
-	cd examples/counter_agent && python3 -m unittest discover -s . -p 'test_*.py' -v
+	PYTHONPATH="sdk/python/src" python3 -m unittest discover -s examples/counter_agent/tests -p 'test_*.py' -v

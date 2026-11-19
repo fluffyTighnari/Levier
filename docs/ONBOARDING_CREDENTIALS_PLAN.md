@@ -47,7 +47,7 @@ levier app init --name counter-agent
 
 ```sh
 LEVIER_CREDENTIALS=~/.config/levier/counter-agent.json \
-  python3 examples/counter_agent/serve.py
+  python3 examples/counter_agent/app.py
 ```
 
 然后运行一个只读检查：

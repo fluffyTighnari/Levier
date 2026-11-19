@@ -46,7 +46,7 @@ App SDK
 | `execution/harness/` | 默认执行侧 runtime | `python -m levier_harness` | `make harness-test` |
 | `execution/mcp_runtime/` | 默认 MCP 连接进程 | `python -m levier_mcp_runtime` | `make mcp-runtime-test` |
 | `sdk/python/` | Python App 适配器（C0/C1） | `levier_app` | `make sdk-test` |
-| `examples/` | 参考 App / 客户端 | `python_sdk_counter`、`counter_agent`、`http_client`、`node_counter_agent` | `make sdk-test`、`make counter-agent-test` |
+| `examples/` | 参考 App / 客户端 | `counter_agent`、`http_client`、`node_counter_agent` | `make sdk-test`、`make counter-agent-test` |
 | `deploy/` | 镜像、Compose、smoke | `docker-compose.yml`、`deploy/*.Dockerfile` | `docker compose config`、smoke |
 | `scripts/` | 发布、安装与生命周期脚本 | `scripts/build-release.sh`、`scripts/install.sh`、`scripts/backup.sh`、`scripts/restore.sh` | `make release-dist`、`make lint`、备份/恢复演练 |
 | `tests/` | 跨单元测试与检查 | `tests/contract`、`tests/e2e`、`tests/app`、`tests/checks` | 对应 make target |

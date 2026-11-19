@@ -26,7 +26,20 @@ agent         counter_agent App
 ## 1. 构建并启动
 
 ```sh
+# 先创建 host 目录，避免 Docker 以 root 创建 bind mount 目录
+mkdir -p data/agent
+
+# 启动基础设施；agent 会等待 /data/credentials.json
 docker compose up --build -d
+
+# 首次运行：用 canonical CLI 创建 App，credentials 写入宿主机 bind mount
+LEVIER_ADMIN_TOKEN=admin-change-me bin/levier app init \
+  --name counter-agent \
+  --server http://127.0.0.1:8080 \
+  --credentials-out data/agent/credentials.json
+
+# 或直接使用封装
+make docker-up
 docker compose ps
 ```
 
@@ -37,8 +50,11 @@ levier 等 PostgreSQL → migrate up → serve
   （serve 启动时检查 pending migration）
 mcp-runtime 创建 /run/levier/mcp.sock
 harness 连接 levier，注册 daemon-local-1
-agent 等 /readyz → bootstrap App → 注册工具 → 连 WebSocket
+agent 等 /readyz 和 credentials 文件 → 启动 SDK 薄 App → 连 WebSocket
 ```
+
+生产环境的 Agent 由用户自己部署；这里的 `agent` 容器只是测试镜像，
+不持有 Admin token，也不负责创建 App 身份。
 
 ## 2. 一键 smoke
 
@@ -53,7 +69,7 @@ smoke 检查：
 /meta
 /status
 Harness 已注册
-App 已 bootstrap 并建立 WebSocket
+App 凭据已创建并建立 WebSocket
 MCP runtime socket 可连接，mcp.health = ok
 提交一个 echo Run，最终 completed
 ```
@@ -109,12 +125,12 @@ echo smoke 不需要模型 key。要跑真实 ReAct：
 DEEPSEEK_API_KEY=... docker compose up --build -d
 ```
 
-然后在 App 容器里提交：
+然后在宿主机提交（使用同一个 bind mount 中的凭据）：
 
 ```sh
-docker compose exec agent python3 /app/examples/counter_agent/submit_run.py \
-  --credentials /data/credentials.json \
-  --mw-url http://levier:8080 \
+bin/levier run submit \
+  --credentials data/agent/credentials.json \
+  --server http://127.0.0.1:8080 \
   --strategy react \
   --provider deepseek \
   --model deepseek-flash \
@@ -126,7 +142,7 @@ docker compose exec agent python3 /app/examples/counter_agent/submit_run.py \
 ```sh
 docker compose logs -f
 docker compose down
-docker compose down -v   # 同时删除 PostgreSQL/凭据/socket 卷
+docker compose down -v   # 删除 PostgreSQL/socket 卷；data/agent 需手动删除
 ```
 
 ### 优雅停止
@@ -166,8 +182,8 @@ levier stopped
 
 ```text
 POSTGRES_PASSWORD       change-me
-LEVIER_ADMIN_TOKEN      admin-change-me
-LEVIER_APP_NAME         counter-agent
+LEVIER_ADMIN_TOKEN      admin-change-me（仅 host 初始化 / 控制面）
+LEVIER_APP_NAME         counter-agent（仅测试 App 初始化）
 LEVIER_HARNESS_DAEMON_AUTH_TOKEN  change-me
 ```
 
@@ -263,7 +279,7 @@ SHA256 校验；不包含 `deploy/secrets/`。备份文件和 secret 都要限�
 
 ```text
 levier-mvp_pgdata        PostgreSQL 数据
-levier-mvp_agent_data    Agent credentials
+data/agent               Agent credentials（host bind mount）
 levier-mvp_mcp_socket    运行时 socket，不需要长期备份
 ```
 

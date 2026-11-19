@@ -30,7 +30,7 @@
 | 内容 | 是否由脚本处理 | 说明 |
 |---|---|---|
 | PostgreSQL 数据库 | 是 | `pg_dump --format=custom`，包含 schema 与数据 |
-| `agent_data` volume | 是 | Agent 的 `credentials.json` 等 |
+| `data/agent` 目录 | 是 | Agent 的 `credentials.json` 等（测试栈 bind mount） |
 | `deploy/secrets/*` | 否 | 必须单独加密保存，不能混入普通备份 |
 | `mcp_socket` volume | 否 | 只是运行时 socket，不需要长期备份 |
 | `.env` / 账号凭据 | 否 | 由部署系统或密码管理器管理 |
@@ -66,7 +66,7 @@ COMPOSE_FILE=docker-compose.yml:docker-compose.prod.yml \
 ```
 
 脚本要求 `postgres` 服务正在运行。默认还要求 `agent` 服务正在运行；
-如果只需要数据库备份，使用 `--db-only`。`agent_data` 是运行中在线复制，
+如果只需要数据库备份，使用 `--db-only`。`data/agent` 是运行中在线复制，
 不要在 App key 轮换或凭据写入的同时执行；需要严格一致时先停止 Agent。
 
 ### 2.3 输出结构
@@ -74,7 +74,7 @@ COMPOSE_FILE=docker-compose.yml:docker-compose.prod.yml \
 ```text
 data/backups/levier-<UTC time>/
   postgres.dump       PostgreSQL custom-format dump
-  agent_data.tar      agent_data volume（可选）
+  agent_data.tar      agent 凭据目录（可选，文件名保留兼容）
   manifest.txt       格式、时间、migration version、文件清单
   SHA256SUMS         文件校验和
 ```
@@ -154,12 +154,12 @@ sh scripts/restore.sh \
 停止 levier / harness / agent，停止写入
 清理该数据库的残留连接
 pg_restore --clean --if-exists --no-owner --no-privileges
-可选恢复 agent_data
+可选恢复 agent 凭据目录
 重新启动 levier / harness / agent
 读取 migrate status
 ```
 
-如果 PostgreSQL 或 `agent_data` 恢复失败，脚本会让相关服务保持停止状态，
+如果 PostgreSQL 或 `data/agent` 恢复失败，脚本会让相关服务保持停止状态，
 不会在失败后继续启动并接受流量。保留备份目录和输出日志，先排查再重试。
 
 ### 3.3 只恢复数据库
@@ -191,14 +191,14 @@ MCP runtime socket 正常
 一个 echo Run 可以完成
 ```
 
-如果数据库恢复了旧数据，而 `agent_data` 仍包含当前 App key，需要确认 App
+如果数据库恢复了旧数据，而 `data/agent` 仍包含当前 App key，需要确认 App
 key hash 与数据库一致；不一致时重新 bootstrap 或恢复对应的凭据卷。
 
 ### 3.5 失败与回滚
 
 ```text
 不要执行 docker compose down -v
-不要删除现有 pgdata / agent_data volume
+不要删除现有 pgdata / data/agent
 不要覆盖原始备份
 先停止流量，再从最近一次已验证备份重试
 ```
@@ -214,7 +214,7 @@ key hash 与数据库一致；不一致时重新 bootstrap 或恢复对应的凭
 
 ```text
 levier-mvp_pgdata
-levier-mvp_agent_data
+data/agent
 levier-mvp_mcp_socket
 ```
 
@@ -223,7 +223,7 @@ levier-mvp_mcp_socket
 | 卷 | 内容 | 备份策略 |
 |---|---|---|
 | `pgdata` | PostgreSQL 数据目录 | 用 `pg_dump` 逻辑备份；不要热复制目录 |
-| `agent_data` | Agent credentials / 本地凭据 | 由 `backup.sh` 复制，或停机后复制 |
+| `data/agent` | Agent credentials / 本地凭据 | 由 `backup.sh` 复制，或停机后复制 |
 | `mcp_socket` | MCP 运行时 Unix socket | 不备份，重建容器即可 |
 
 查看：
@@ -233,7 +233,7 @@ docker volume ls | grep levier-mvp
 docker volume inspect levier-mvp_pgdata
 ```
 
-`docker compose down` 保留 volume；`docker compose down -v` 会删除 volume，
+`docker compose down` 保留命名卷；`docker compose down -v` 会删除命名卷，
 包括数据库和凭据。后者只应在明确确认“数据不要了”或已经从备份恢复成功后
 使用。
 
@@ -263,8 +263,8 @@ docker volume inspect levier-mvp_pgdata
 
 ```text
 Levier HTTP Admin API
-Agent bootstrap 使用的 LEVIER_APP_ADMIN_TOKEN
-运维脚本里的 LEVIER_ADMIN_TOKEN
+运维脚本 / 测试初始化使用的 LEVIER_ADMIN_TOKEN
+（Agent 运行时不持有 Admin token）
 ```
 
 步骤：
@@ -276,11 +276,11 @@ openssl rand -hex 32 > /secure/new-admin-token
 # 2. 原子替换生产 secret，保持 0600
 install -m 0600 /secure/new-admin-token deploy/secrets/levier_admin_token
 
-# 3. 让 levier 和 agent 重新读取挂载文件
+# 3. 让 levier 重新读取挂载文件
 docker compose \
   -f docker-compose.yml \
   -f docker-compose.prod.yml \
-  up -d --force-recreate levier agent
+  up -d --force-recreate levier
 
 # 4. 在受控环境中把新 token 写入 LEVIER_ADMIN_TOKEN，再验证 Admin API
 #    不要把 token 值直接写进命令历史

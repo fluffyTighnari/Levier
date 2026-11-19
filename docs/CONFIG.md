@@ -249,18 +249,18 @@ secrets-file JSON：secret name -> value
 
 ## 6. Counter Agent 配置
 
-文件：`examples/counter_agent/config.py`
-说明：这是示例 App，不是控制面核心，但需要与统一配置契约对齐。
+文件：`sdk/python/src/levier_app/credentials.py`、`examples/counter_agent/app.py`
+说明：示例 App 只读取 canonical 凭据和 server 地址，不再持有 Admin token。
 
 | 变量/参数 | 类型 | 默认 | 必填 | 秘密 |
 |---|---|---|---|---|
-| `LEVIER_APP_URL` / 旧 `LEVIER_URL` / `MW_URL` | URL | `http://127.0.0.1:8080` | 是 | 否 |
-| `LEVIER_APP_ADMIN_TOKEN` / 旧 `LEVIER_ADMIN_TOKEN` / `MW_ADMIN_TOKEN` | string | 空 | bootstrap 时是 | **是** |
-| `LEVIER_APP_ADMIN_TOKEN_FILE` / 旧 `LEVIER_ADMIN_TOKEN_FILE` | path | 空 | 与 token 二选一 | 文件内容秘密 |
-| `LEVIER_APP_NAME` / 旧 `MW_APP_NAME` | string | `retrofit-counter` | 否 | 否 |
-| `LEVIER_APP_CREDENTIALS` / `LEVIER_CREDENTIALS` / 旧 `COUNTER_APP_CREDENTIALS` | path | `~/.config/levier/counter-app.json` | 运行时时是 | 文件内容秘密 |
-| `DEEPSEEK_API_KEY` | string | 空 | baseline 模式 | **是** |
-| `--credentials` / `--mw-url` / `--tools-file` | CLI flags | 见脚本 | 视命令 | 否 |
+| `LEVIER_CREDENTIALS` / `LEVIER_APP_CREDENTIALS` | path | `~/.config/levier/app.json` | 运行时是 | 文件内容秘密 |
+| `LEVIER_SERVER` / `LEVIER_APP_URL` / 旧 `LEVIER_URL` | URL | 凭据中的 `server` 或 `http://127.0.0.1:8080` | 否 | 否 |
+| `LEVIER_APP_NAME` | string | `counter-agent` | 仅 `app init` 时 | 否 |
+| `LEVIER_ADMIN_TOKEN` | string | 空 | 仅 `app init` 时 | **是** |
+
+凭据通过 `levier app init` 创建并写入 0600 文件；运行中的 App 只读取
+`app_id` / `app_name` / `api_key` / `server`，不需要 Admin token。
 
 凭据文件格式版本为 1，包含：
 
@@ -296,9 +296,7 @@ updated_at
 | `LEVIER_HARNESS_DAEMON_AUTH_TOKEN` | harness | `change-me` | **是** | 仅开发 |
 | `LEVIER_HARNESS_MCP_RUNTIME_SOCKET` | harness | socket path | 否 | MCP socket |
 | `LEVIER_APP_URL` | agent / smoke | `http://levier:8080` | 否 | HTTP 地址 |
-| `LEVIER_APP_ADMIN_TOKEN` | agent | `admin-change-me` | **是** | 仅开发 |
-| `LEVIER_APP_NAME` | agent | `counter-agent` | 否 | App 名称 |
-| `LEVIER_APP_CREDENTIALS` | agent | `/data/credentials.json` | 文件秘密 | 凭据文件 |
+| `LEVIER_APP_CREDENTIALS` | agent | `/data/credentials.json` | 文件秘密 | 由 host `levier app init` 写入 `data/agent` |
 | `DEEPSEEK_API_KEY` | harness / baseline | 空 | **是** | 模型 key |
 | `DEEPSEEK_BASE_URL` / `DEEPSEEK_MODEL` | harness | DeepSeek 默认 | 否 | 模型配置 |
 
@@ -307,7 +305,7 @@ updated_at
 | secret 文件 | 消费者 |
 |---|---|
 | `deploy/secrets/levier_postgres_password` | PostgreSQL |
-| `deploy/secrets/levier_admin_token` | Levier HTTP admin + Counter Agent bootstrap |
+| `deploy/secrets/levier_admin_token` | Levier HTTP admin（测试 App 由 host 上的 `levier app init` 创建） |
 | `deploy/secrets/levier_daemon_tokens.json` | Levier gRPC daemon tokens |
 | `deploy/secrets/levier_database_url` | Levier 数据库 DSN |
 | `deploy/secrets/levier_harness_daemon_token` | Harness daemon token |
@@ -365,7 +363,7 @@ database.url（含密码）
 LEVIER_HARNESS_DAEMON_AUTH_TOKEN
 LEVIER_SECRET_* / MCP secrets file
 DEEPSEEK_API_KEY
-LEVIER_ADMIN_TOKEN / LEVIER_APP_ADMIN_TOKEN
+LEVIER_ADMIN_TOKEN（仅 app init / rotate / 测试初始化）
 App credentials 文件中的 api_key
 POSTGRES_PASSWORD
 MCP_E2E_TOKEN（仅本地测试）
@@ -442,9 +440,9 @@ Harness 支持 LEVIER_HARNESS_*，保留 HARNESS_* / HARNESS_MIDDLEWARE_* fallba
 Harness 支持 daemon.auth_token_file
 MCP 支持 LEVIER_MCP_*，保留 MCP_RUNTIME_* fallback
 MCP secrets-file 在 Unix 上检查 0600
-Agent 支持 LEVIER_APP_*，保留 LEVIER_* / MW_* fallback
-Agent 支持 LEVIER_APP_ADMIN_TOKEN_FILE
-Agent 支持 LEVIER_APP_CREDENTIALS
+Agent 只读取 LEVIER_APP_CREDENTIALS / LEVIER_CREDENTIALS
+Agent 不接收 Admin token；身份由 host 上的 levier app init 创建
+Agent 的 server 地址优先使用凭据文件中的 server
 ```
 
 6D 已采用：
@@ -453,7 +451,7 @@ Agent 支持 LEVIER_APP_CREDENTIALS
 docker-compose.prod.yml 生产式 overlay
 deploy/config/levier.prod.yaml 只含非秘密配置
 deploy/secrets/* 宿主机 0600 secret 文件
-admin token 由控制面与 Agent 共用同一文件
+admin token 只用于控制面和测试初始化，不进入 Agent 运行时
 数据库 DSN / daemon tokens / MCP secrets 均通过 *_file 注入
 ```
 

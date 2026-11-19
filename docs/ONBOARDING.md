@@ -114,12 +114,12 @@ app check: PASS
 
 ## 4. 启动示例 App
 
-推荐使用 Python SDK 薄示例（在仓库根目录，无需先安装包）：
+推荐使用 `examples/counter_agent`（在仓库根目录，无需先安装包）：
 
 ```sh
 PYTHONPATH=sdk/python/src \
 LEVIER_CREDENTIALS=~/.config/levier/counter-agent.json \
-  python3 examples/python_sdk_counter/app.py
+  python3 examples/counter_agent/app.py
 ```
 
 它会注册 `counter_add` / `counter_get` / `counter_reset`，并把凭据、HTTP 和
@@ -133,14 +133,7 @@ LEVIER_CREDENTIALS=~/.config/levier/counter-agent.json \
   --watch
 ```
 
-旧的标准库实现仍可用于对照底层协议：
-
-```sh
-LEVIER_CREDENTIALS=~/.config/levier/counter-agent.json \
-  python3 examples/counter_agent/serve.py
-```
-
-两种 App 都注册相同的 Counter 工具；看到 Run 终态 `completed` 即表示接入完成。
+看到 Run 终态 `completed` 即表示接入完成。
 
 没有示例 App 时，也可以直接提交一个不依赖本地工具的 echo Run：
 

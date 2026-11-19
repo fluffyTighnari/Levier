@@ -113,7 +113,7 @@ make mvp-demo
 ```text
 MW 启动
 Harness 连接
-App bootstrap + 工具注册 + WS 连接
+App init + SDK 工具注册 + WS 连接
 提交 echo Run
 Run completed
 MESSAGE_COMPLETED 内容为 hello mvp
@@ -177,9 +177,9 @@ mvp-demo: PASS
 4. levier serve（启动时检查 pending migration）
 5. 等 /healthz
 6. 启动 harness
-7. 用 Admin token bootstrap 一个唯一 App
-8. 启动 serve.py（注册工具 + 连 WS）
-9. 提交 Run
+7. 用 `levier app init` 创建一个唯一 App
+8. 启动 `examples/counter_agent/app.py`（SDK 注册工具 + 连 WS）
+9. 用 `levier run submit` 提交 Run
 10. 轮询 /api/v1/runs/{id}
 11. 拉事件、统计工具调用、校验终态
 12. 写 summary.txt
@@ -207,7 +207,7 @@ data/mvp-demo/<时间>-<mode>/
 | `LEVIER_DATABASE_URL is required` | 没 source `.env` | `cp -n .env.example .env` 后重跑 |
 | 迁移失败 | PostgreSQL 未启动或端口不对 | 看 `data/mvp-demo/.../migrate.log` |
 | `already serving` | 8080 上还有旧 MW | 停掉旧进程或改 `LEVIER_URL` |
-| App did not start serving | bootstrap/注册/WS 失败 | 看 `serve.log`、`serve.err` |
+| App did not start serving | app init/注册/WS 失败 | 看 `serve.log`、`serve.err` |
 | react 模式失败 | 没有有效 `DEEPSEEK_API_KEY` | 设置 key 或先用 echo 模式 |
 | Run failed | 模型/工具错误 | 看 `summary.txt` 和 `middleware.log` |
 
