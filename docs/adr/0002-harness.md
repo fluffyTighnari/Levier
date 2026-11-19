@@ -1,5 +1,8 @@
 # ADR-0002：精简 Python Harness（v1）
 
+> **Historical design record.** Strategy was removed in the App/Runtime simplification step 0. The current protocol is defined by `proto/middleware/runtime/v1/runtime.proto` and `docs/DAEMON_CONTRACT.md`.
+
+
 > 路径说明：`agent_core/`、`harness/`、`mcp_runtime/` 已迁移到 `execution/`；本文保留历史路径。
 
 | 项目 | 内容 |

@@ -44,13 +44,9 @@
     },
     "capabilities": {
       "type": "object",
-      "required": ["runtime_types", "builtin_strategies", "tool_scopes", "mcp_transports", "features"],
+      "required": ["runtime_types", "tool_scopes", "mcp_transports", "features"],
       "properties": {
         "runtime_types": {
-          "type": "array",
-          "items": {"type": "string"}
-        },
-        "builtin_strategies": {
           "type": "array",
           "items": {"type": "string"}
         },

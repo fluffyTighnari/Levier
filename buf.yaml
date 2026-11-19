@@ -1,7 +1,4 @@
-# Levier — buf module and lint policy.
-# Copyright 2026 The Levier Authors.
-
-version: v2
+﻿version: v2
 modules:
   - path: proto
 lint:
@@ -19,3 +16,10 @@ lint:
 breaking:
   use:
     - FILE
+  except:
+    # Step 0 intentionally removes strategy fields. The numbers are reserved
+    # and runtime_name/params are additive; these exceptions can be dropped
+    # once main carries the new RuntimeChannel contract.
+    - FIELD_NO_DELETE
+    - FIELD_SAME_NAME
+    - FIELD_SAME_JSON_NAME

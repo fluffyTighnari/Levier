@@ -34,9 +34,10 @@ class FakeChannel:
 
 
 def make_ctx() -> RunContext:
-    assign = runtime_pb2.TaskAssign(run_id="run-1", app_id="app-1", strategy="react")
+    assign = runtime_pb2.TaskAssign(run_id="run-1", app_id="app-1")
     return RunContext(
         assign=assign,
+        runtime_name="react1",
         attempt=2,
         lease_epoch=7,
         events=FakeEvents(),

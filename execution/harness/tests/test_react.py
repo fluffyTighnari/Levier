@@ -1,4 +1,4 @@
-"""Levier — ReAct strategy tests.
+"""Levier - ReAct runtime tests.
 
 Copyright 2026 The Levier Authors.
 """
@@ -14,7 +14,7 @@ from middleware.runtime.v1 import runtime_pb2
 from levier_harness.channel.envelope import new_envelope, response_envelope
 from levier_harness.llm.base import LLMResponse, Message, ModelConfig, ToolCall, ToolSpec
 from levier_harness.runtime import ManagerConfig, RunManager
-from levier_harness.strategies import ReactStrategy
+from levier_harness.runtime.react import ReactRuntime
 from levier_harness.tools.base import ToolResult
 
 
@@ -83,13 +83,12 @@ class FakeTools:
 
 def assign_envelope(
     *,
-    strategy_params: dict[str, object] | None = None,
+    params: dict[str, object] | None = None,
     tools: list[str] | None = None,
 ) -> runtime_pb2.Envelope:
     assign = runtime_pb2.TaskAssign(
         run_id="run-react",
         app_id="app-1",
-        strategy="react",
         input=[
             runtime_pb2.ChatMessage(role="system", content="be brief"),
             runtime_pb2.ChatMessage(role="user", content="hello"),
@@ -108,8 +107,8 @@ def assign_envelope(
             for name in (tools or [])
         ],
     )
-    if strategy_params:
-        assign.strategy_params.update(strategy_params)
+    if params:
+        assign.params.update(params)
     return new_envelope(assign, "task_assign", run_id="run-react", attempt=1, lease_epoch=1)
 
 
@@ -117,7 +116,7 @@ def payload_type(envelope: runtime_pb2.Envelope) -> str:
     return envelope.WhichOneof("payload")
 
 
-class ReactStrategyTest(unittest.IsolatedAsyncioTestCase):
+class ReactRuntimeTest(unittest.IsolatedAsyncioTestCase):
     async def asyncTearDown(self) -> None:
         if hasattr(self, "manager"):
             await self.manager.close()
@@ -131,11 +130,11 @@ class ReactStrategyTest(unittest.IsolatedAsyncioTestCase):
 
     async def start(self, provider, tools=None, **kwargs) -> FakeSender:
         sender = FakeSender()
-        strategy = ReactStrategy(provider, tools)
+        runner = ReactRuntime(provider, tools)
         self.manager = RunManager(
             sender,
-            ManagerConfig(supported_strategies=("react",)),
-            strategy,
+            ManagerConfig(runtime_name="react1"),
+            runner,
         )
         await self.manager.handle(assign_envelope(**kwargs))
         await self.wait_until(lambda: self.manager.running_count() == 0)
@@ -252,7 +251,7 @@ class ReactStrategyTest(unittest.IsolatedAsyncioTestCase):
         sender = await self.start(
             provider,
             tools,
-            strategy_params={"max_steps": 2},
+            params={"max_steps": 2},
         )
 
         events = self.events(sender)
@@ -266,7 +265,7 @@ class ReactStrategyTest(unittest.IsolatedAsyncioTestCase):
     async def test_react_step_timeout(self) -> None:
         sender = await self.start(
             SlowProvider(),
-            strategy_params={"step_timeout_ms": 10},
+            params={"step_timeout_ms": 10},
         )
 
         events = self.events(sender)
@@ -325,11 +324,11 @@ class ReactStrategyTest(unittest.IsolatedAsyncioTestCase):
     async def test_react_cancel_interrupts(self) -> None:
         provider = BlockingProvider()
         sender = FakeSender()
-        strategy = ReactStrategy(provider)
+        runner = ReactRuntime(provider)
         self.manager = RunManager(
             sender,
-            ManagerConfig(supported_strategies=("react",)),
-            strategy,
+            ManagerConfig(runtime_name="react1"),
+            runner,
         )
         await self.manager.handle(assign_envelope())
         await asyncio.wait_for(provider.started.wait(), 1)

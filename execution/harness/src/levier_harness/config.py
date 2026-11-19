@@ -55,11 +55,11 @@ class DaemonSettings:
     """Daemon identity and capacity settings."""
 
     id: str
+    runtime_name: str
     auth_token: SecretToken
     auth_token_file: str = ""
     runtime_type: str = "normal"
     max_concurrent_runs: int = 4
-    strategies: list[str] = field(default_factory=lambda: ["react", "echo"])
     labels: dict[str, str] = field(default_factory=dict)
 
 
@@ -84,7 +84,7 @@ class Settings:
 
     middleware: MiddlewareSettings = field(default_factory=MiddlewareSettings)
     daemon: DaemonSettings = field(default_factory=lambda: DaemonSettings(
-        id="", auth_token=SecretToken("")
+        id="", runtime_name="", auth_token=SecretToken("")
     ))
     mcp_runtime: McpRuntimeSettings = field(default_factory=McpRuntimeSettings)
     logging: LoggingSettings = field(default_factory=LoggingSettings)
@@ -95,10 +95,10 @@ class Settings:
             "middleware_address": self.middleware.address,
             "middleware_tls": self.middleware.tls,
             "daemon_id": self.daemon.id,
+            "runtime_name": self.daemon.runtime_name,
             "daemon_auth_token_file": self.daemon.auth_token_file,
             "runtime_type": self.daemon.runtime_type,
             "max_concurrent_runs": self.daemon.max_concurrent_runs,
-            "strategies": list(self.daemon.strategies),
             "labels": dict(self.daemon.labels),
             "mcp_runtime_socket": self.mcp_runtime.socket,
             "log_level": self.logging.level,
@@ -149,11 +149,11 @@ def _parse_settings(data: dict[str, Any]) -> Settings:
         raise ConfigError("daemon.auth_token or daemon.auth_token_file is required")
     daemon = DaemonSettings(
         id=_string(daemon_data, "daemon.id", "", required=True),
+        runtime_name=_string(daemon_data, "daemon.runtime_name", "", required=True),
         auth_token=SecretToken(auth_token),
         auth_token_file=auth_token_file,
         runtime_type=_runtime_type(daemon_data),
         max_concurrent_runs=_positive_int(daemon_data, "daemon.max_concurrent_runs", 4),
-        strategies=_string_list(daemon_data, "daemon.strategies", ["react", "echo"]),
         labels=_string_map(daemon_data, "daemon.labels"),
     )
 
@@ -226,18 +226,6 @@ def _runtime_type(section: dict[str, Any]) -> str:
     return value
 
 
-def _string_list(section: dict[str, Any], name: str, default: list[str]) -> list[str]:
-    value = section.get(name.rsplit(".", 1)[-1], default)
-    if not isinstance(value, list) or not value:
-        raise ConfigError(f"{name} must be a non-empty list")
-    result: list[str] = []
-    for item in value:
-        if not isinstance(item, str) or not item:
-            raise ConfigError(f"{name} must contain non-empty strings")
-        result.append(item)
-    return result
-
-
 def _string_map(section: dict[str, Any], name: str) -> dict[str, str]:
     value = section.get(name.rsplit(".", 1)[-1], {})
     if not isinstance(value, dict):
@@ -290,6 +278,12 @@ def _apply_env(data: dict[str, Any], env: Mapping[str, str]) -> None:
     _set(
         data,
         "daemon",
+        "runtime_name",
+        _first_env(env, "LEVIER_HARNESS_RUNTIME_NAME", "HARNESS_RUNTIME_NAME"),
+    )
+    _set(
+        data,
+        "daemon",
         "auth_token",
         _first_env(env, "LEVIER_HARNESS_DAEMON_AUTH_TOKEN", "HARNESS_DAEMON_AUTH_TOKEN"),
     )
@@ -318,12 +312,6 @@ def _apply_env(data: dict[str, Any], env: Mapping[str, str]) -> None:
             "LEVIER_HARNESS_DAEMON_MAX_CONCURRENT_RUNS",
             "HARNESS_DAEMON_MAX_CONCURRENT_RUNS",
         ),
-    )
-    _set_list(
-        data,
-        "daemon",
-        "strategies",
-        _first_env(env, "LEVIER_HARNESS_DAEMON_STRATEGIES", "HARNESS_DAEMON_STRATEGIES"),
     )
     _set_map(
         data,
@@ -421,13 +409,6 @@ def _set_int(data: dict[str, Any], section: str, key: str, value: str | None) ->
     except ValueError as exc:
         raise ConfigError(f"{section}.{key} must be an integer, got {value!r}") from exc
     _env_section(data, section)[key] = parsed
-
-
-def _set_list(data: dict[str, Any], section: str, key: str, value: str | None) -> None:
-    if value is None:
-        return
-    items = [item.strip() for item in value.split(",") if item.strip()]
-    _env_section(data, section)[key] = items
 
 
 def _set_map(data: dict[str, Any], section: str, key: str, value: str | None) -> None:

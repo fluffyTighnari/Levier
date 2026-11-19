@@ -18,7 +18,7 @@ PYTHONPATH=sdk/python/src \
 
 LEVIER_CREDENTIALS=./data/agent/credentials.json \
   levier run submit \
-  --strategy react \
+  --runtime react1 \
   --prompt "Add 2, then add 3, then read the counter." \
   --watch
 ```

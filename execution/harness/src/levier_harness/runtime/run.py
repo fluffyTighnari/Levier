@@ -22,6 +22,7 @@ class RunContext:
     """State and collaborators for one TaskAssign."""
 
     assign: runtime_pb2.TaskAssign
+    runtime_name: str
     attempt: int
     lease_epoch: int
     events: EventWriter

@@ -1,7 +1,7 @@
-"""Levier — ReAct strategy adapter.
+"""Levier — ReAct runtime runner.
 
 The loop lives in `levier_agent_core`; this module only translates between
-Levier/TaskAssign types and the core contract.
+Levier/TaskAssign types and the loop contract.
 
 Copyright 2026 The Levier Authors.
 """
@@ -55,10 +55,8 @@ _DEFAULT_STEP_TIMEOUT_MS = 120_000
 _DEFAULT_TOOL_TIMEOUT_MS = 60_000
 
 
-class ReactStrategy:
+class ReactRuntime:
     """Alternate model completions and tool calls until a terminal answer."""
-
-    name = "react"
 
     def __init__(
         self,
@@ -75,9 +73,9 @@ class ReactStrategy:
 
     async def run(self, ctx: RunContext) -> str:
         """Adapt one TaskAssign to the agent core loop."""
-        max_steps = max(1, _int_param(ctx.assign.strategy_params, "max_steps", _DEFAULT_MAX_STEPS))
+        max_steps = max(1, _int_param(ctx.assign.params, "max_steps", _DEFAULT_MAX_STEPS))
         step_timeout_ms = _int_param(
-            ctx.assign.strategy_params,
+            ctx.assign.params,
             "step_timeout_ms",
             self.default_step_timeout_ms,
         )
@@ -86,11 +84,11 @@ class ReactStrategy:
         messages = [Message.from_proto(message) for message in ctx.assign.input]
         start_step = 1
         if ctx.resume is not None:
-            if ctx.resume.strategy != self.name:
+            if ctx.resume.runtime_name != ctx.runtime_name:
                 await self._emit_error(
                     ctx,
-                    "CHECKPOINT_STRATEGY_MISMATCH",
-                    f"checkpoint strategy {ctx.resume.strategy!r} does not match {self.name!r}",
+                    "CHECKPOINT_RUNTIME_MISMATCH",
+                    f"checkpoint runtime {ctx.resume.runtime_name!r} does not match {ctx.runtime_name!r}",
                 )
                 return "failed"
             if ctx.resume.messages:
@@ -186,14 +184,14 @@ class ReactStrategy:
             session_id=ctx.assign.session_id,
             run_id=ctx.run_id,
             attempt=ctx.attempt,
-            strategy=self.name,
+            runtime_name=ctx.runtime_name,
             step=step,
             messages=list(messages),
             last_event_seq=ctx.events.seq,
         ))
 
     async def __call__(self, ctx: RunContext) -> str:
-        """Allow the strategy to be used as a RunManager runner."""
+        """Allow the runtime to be used as a RunManager runner."""
         return await self.run(ctx)
 
     async def _emit_error(

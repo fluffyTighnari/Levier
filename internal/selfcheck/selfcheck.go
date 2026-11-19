@@ -63,7 +63,7 @@ type Options struct {
 	Credentials string
 	DaemonID    string
 	DaemonToken string
-	Strategy    string
+	RuntimeName string
 	MCPSocket   string
 	Timeout     time.Duration
 	Deep        bool
@@ -159,8 +159,8 @@ func withDefaults(opts Options) Options {
 	if opts.MCPSocket == "" {
 		opts.MCPSocket = os.Getenv("LEVIER_MCP_SOCKET")
 	}
-	if opts.Strategy == "" {
-		opts.Strategy = "echo"
+	if opts.RuntimeName == "" {
+		opts.RuntimeName = "echo1"
 	}
 	if opts.Timeout <= 0 {
 		opts.Timeout = 5 * time.Second
@@ -343,13 +343,13 @@ func (r *runner) checkDeepDaemon() Hop {
 		return Hop{Status: StatusSkip, Message: "requires --admin-token and --daemon-token", DurationMS: time.Since(started).Milliseconds()}
 	}
 	checks, err := daemoncheck.Run(daemoncheck.Config{
-		GRPCAddr:   r.opts.GRPCAddr,
-		HTTPURL:    r.opts.Server,
-		DaemonID:   r.opts.DaemonID,
-		Token:      r.opts.DaemonToken,
-		AdminToken: r.opts.AdminToken,
-		Strategy:   r.opts.Strategy,
-		Timeout:    r.opts.Timeout,
+		GRPCAddr:    r.opts.GRPCAddr,
+		HTTPURL:     r.opts.Server,
+		DaemonID:    r.opts.DaemonID,
+		Token:       r.opts.DaemonToken,
+		AdminToken:  r.opts.AdminToken,
+		RuntimeName: r.opts.RuntimeName,
+		Timeout:     r.opts.Timeout,
 	})
 	if err != nil {
 		return Hop{Status: StatusFail, Message: err.Error(), Fix: "check daemon token, gRPC address and server logs", DurationMS: time.Since(started).Milliseconds()}

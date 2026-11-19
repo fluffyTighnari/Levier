@@ -56,7 +56,7 @@ levier ops runs show --run-id <run_id> --json
 
 ```text
 Run ID、App ID
-status、strategy、attempt
+status / runtime_name / attempt
 assigned daemon
 session ID、trace ID
 最后事件 attempt / seq

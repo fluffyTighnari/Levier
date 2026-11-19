@@ -203,7 +203,7 @@ retention 默认关闭
 | `daemon.auth_token_file` | `LEVIER_HARNESS_DAEMON_AUTH_TOKEN_FILE` / 旧 `HARNESS_DAEMON_AUTH_TOKEN_FILE` | path | 空 | 否 | **是** |
 | `daemon.runtime_type` | `LEVIER_HARNESS_DAEMON_RUNTIME_TYPE` / 旧 `HARNESS_DAEMON_RUNTIME_TYPE` | enum | `normal` | 是 | 否 |
 | `daemon.max_concurrent_runs` | `LEVIER_HARNESS_DAEMON_MAX_CONCURRENT_RUNS` / 旧 `HARNESS_DAEMON_MAX_CONCURRENT_RUNS` | int | `4` | 是 | 否 |
-| `daemon.strategies` | `LEVIER_HARNESS_DAEMON_STRATEGIES` / 旧 `HARNESS_DAEMON_STRATEGIES` | list | `react,echo` | 是 | 否 |
+| `daemon.runtime_name` | `LEVIER_HARNESS_RUNTIME_NAME` / 旧 `HARNESS_RUNTIME_NAME` | string | 必填，例如 `react1` | 是 | 否 |
 | `daemon.labels` | `LEVIER_HARNESS_DAEMON_LABELS` / 旧 `HARNESS_DAEMON_LABELS` | map | 空 | 否 | 否 |
 | `mcp_runtime.socket` | `LEVIER_HARNESS_MCP_RUNTIME_SOCKET` / 旧 `HARNESS_MCP_RUNTIME_SOCKET` | path | 空 | 否 | 否 |
 | `logging.level` | `LEVIER_HARNESS_LOG_LEVEL` / 旧 `HARNESS_LOGGING_LEVEL` | enum | `info` | 是 | 否 |

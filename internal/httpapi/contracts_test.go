@@ -14,13 +14,10 @@ import (
 
 func TestCreateRunRequestGolden(t *testing.T) {
 	req := CreateRunRequest{
-		Runtime: RuntimeNormal,
-		Strategy: StrategyRequest{
-			Name:   "react",
-			Params: map[string]any{"max_steps": 32},
-		},
-		Input: []ChatMessage{{Role: "user", Content: "hi"}},
-		Model: ModelRequest{
+		RuntimeName: "react1",
+		Params:      map[string]any{"max_steps": 32},
+		Input:       []ChatMessage{{Role: "user", Content: "hi"}},
+		Model: &ModelRequest{
 			Provider: "openai",
 			Model:    "gpt-test",
 			Params:   map[string]string{"temperature": "0.7"},
@@ -32,7 +29,7 @@ func TestCreateRunRequestGolden(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Marshal() error = %v", err)
 	}
-	want := `{"runtime":"normal","strategy":{"name":"react","params":{"max_steps":32}},"input":[{"role":"user","content":"hi"}],"model":{"provider":"openai","model":"gpt-test","params":{"temperature":"0.7"}},"timeouts":{"run_ms":1800000,"tool_ms":60000}}`
+	want := `{"runtime_name":"react1","params":{"max_steps":32},"input":[{"role":"user","content":"hi"}],"model":{"provider":"openai","model":"gpt-test","params":{"temperature":"0.7"}},"timeouts":{"run_ms":1800000,"tool_ms":60000}}`
 	if string(data) != want {
 		t.Fatalf("CreateRunRequest JSON\n got: %s\nwant: %s", data, want)
 	}
@@ -177,10 +174,9 @@ func TestParseClientMessageErrors(t *testing.T) {
 
 func TestValidateCreateRunRequest(t *testing.T) {
 	valid := CreateRunRequest{
-		Runtime:  RuntimeNormal,
-		Strategy: StrategyRequest{Name: "react"},
-		Input:    []ChatMessage{{Role: "user", Content: "hi"}},
-		Model:    ModelRequest{Provider: "openai", Model: "gpt-test"},
+		RuntimeName: "react1",
+		Input:       []ChatMessage{{Role: "user", Content: "hi"}},
+		Model:       &ModelRequest{Provider: "openai", Model: "gpt-test"},
 	}
 	if err := valid.Validate(); err != nil {
 		t.Fatalf("Validate() error = %v", err)
@@ -192,8 +188,8 @@ func TestValidateCreateRunRequest(t *testing.T) {
 		want   string
 	}{
 		{"bad runtime", func(r *CreateRunRequest) { r.Runtime = "vm" }, "runtime"},
-		{"missing strategy", func(r *CreateRunRequest) { r.Strategy.Name = "" }, "strategy.name"},
-		{"missing model", func(r *CreateRunRequest) { r.Model.Provider = "" }, "model.provider"},
+		{"missing runtime name", func(r *CreateRunRequest) { r.RuntimeName = "" }, "runtime_name"},
+		{"missing model provider", func(r *CreateRunRequest) { r.Model = &ModelRequest{Model: "gpt-test"} }, "model.provider"},
 		{"negative timeout", func(r *CreateRunRequest) { r.Timeouts.RunMS = -1 }, "timeouts"},
 		{"tool timeout too large", func(r *CreateRunRequest) { r.Timeouts.ToolMS = maxToolTimeoutMS + 1 }, "tool_ms"},
 		{"session on normal", func(r *CreateRunRequest) { r.SessionID = "s-1" }, "session_id"},

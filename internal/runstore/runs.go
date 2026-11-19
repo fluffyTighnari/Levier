@@ -16,14 +16,14 @@ import (
 )
 
 const runColumns = `
-	run_id, app_id, idempotency_key, request_hash, runtime, strategy,
+	run_id, app_id, idempotency_key, request_hash, runtime, runtime_name,
 	params_json, input_json, status, attempt, session_id, model_json, run_timeout_ms,
 	tool_timeout_ms, trace_id, assigned_daemon_id, lease_epoch, assigned_at,
 	last_event_attempt, last_event_seq, created_at, updated_at`
 
 const insertRunSQL = `
 	INSERT INTO runs (
-		run_id, app_id, idempotency_key, request_hash, runtime, strategy,
+		run_id, app_id, idempotency_key, request_hash, runtime, runtime_name,
 		params_json, input_json, status, attempt, session_id, model_json, run_timeout_ms,
 		tool_timeout_ms, trace_id, assigned_daemon_id, lease_epoch, assigned_at,
 		last_event_attempt, last_event_seq, created_at, updated_at
@@ -96,7 +96,7 @@ func createRun(ctx context.Context, q querier, normalized Run) (Run, error) {
 			normalized.IdempotencyKey,
 			normalized.RequestHash,
 			normalized.Runtime,
-			normalized.Strategy,
+			normalized.RuntimeName,
 			normalized.Params,
 			normalized.Input,
 			normalized.Status,
@@ -320,8 +320,8 @@ func normalizeRun(run Run) (Run, error) {
 	if run.Runtime == "" {
 		run.Runtime = "normal"
 	}
-	if run.Strategy == "" {
-		run.Strategy = "react"
+	if run.RuntimeName == "" {
+		return Run{}, fmt.Errorf("%w: runtime_name is required", ErrInvalidRun)
 	}
 	if run.RunTimeoutMS <= 0 {
 		run.RunTimeoutMS = 1_800_000
@@ -367,7 +367,7 @@ func scanRun(row pgx.Row) (Run, error) {
 		&run.IdempotencyKey,
 		&run.RequestHash,
 		&run.Runtime,
-		&run.Strategy,
+		&run.RuntimeName,
 		&params,
 		&run.Input,
 		&run.Status,

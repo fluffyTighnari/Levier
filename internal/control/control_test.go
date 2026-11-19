@@ -267,7 +267,7 @@ func newRun() runstore.Run {
 		RunID:         "run-1",
 		AppID:         "app-1",
 		Runtime:       "normal",
-		Strategy:      "echo",
+		RuntimeName:   "echo1",
 		Params:        json.RawMessage(`{"max_steps":8}`),
 		Input:         json.RawMessage(`[{"role":"user","content":"hi"}]`),
 		Model:         json.RawMessage(`{"provider":"anthropic","model":"claude-test"}`),
@@ -306,7 +306,7 @@ func TestHandleDispatchAndAcceptedAck(t *testing.T) {
 		t.Fatalf("sent = %d", len(hub.sent))
 	}
 	assign := hub.sent[0].GetTaskAssign()
-	if assign.GetRunId() != "run-1" || assign.GetStrategy() != "echo" {
+	if assign.GetRunId() != "run-1" || assign.GetParams().GetFields()["max_steps"].GetNumberValue() != 8 {
 		t.Fatalf("assign = %+v", assign)
 	}
 	if assign.GetModel().GetProvider() != "anthropic" {

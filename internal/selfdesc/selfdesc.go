@@ -59,11 +59,10 @@ type API struct {
 // advertise sandbox/longterm runtimes or session features that are not part
 // of the current MVP.
 type Capabilities struct {
-	RuntimeTypes      []string `json:"runtime_types"`
-	BuiltinStrategies []string `json:"builtin_strategies"`
-	ToolScopes        []string `json:"tool_scopes"`
-	MCPTransports     []string `json:"mcp_transports"`
-	Features          []string `json:"features"`
+	RuntimeTypes  []string `json:"runtime_types"`
+	ToolScopes    []string `json:"tool_scopes"`
+	MCPTransports []string `json:"mcp_transports"`
+	Features      []string `json:"features"`
 }
 
 // Limits exposes effective public request limits, never secret values.
@@ -170,10 +169,9 @@ func New(opts Options) Document {
 			WSProtocol:   1,
 		},
 		Capabilities: Capabilities{
-			RuntimeTypes:      []string{"normal"},
-			BuiltinStrategies: []string{"react", "echo"},
-			ToolScopes:        []string{"local", "global"},
-			MCPTransports:     []string{"stdio", "sse", "streamable_http"},
+			RuntimeTypes:  []string{"normal"},
+			ToolScopes:    []string{"local", "global"},
+			MCPTransports: []string{"stdio", "sse", "streamable_http"},
 			Features: []string{
 				"run_submit",
 				"run_cancel",

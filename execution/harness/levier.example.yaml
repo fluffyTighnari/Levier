@@ -10,12 +10,12 @@ mcp_runtime:
 
 daemon:
   id: "daemon-local-1"
+  runtime_name: "react1"
   auth_token: "change-me"
   # Production: prefer auth_token_file or LEVIER_HARNESS_DAEMON_AUTH_TOKEN.
   # auth_token_file: "/run/secrets/levier_harness_daemon_token"
   runtime_type: "normal"
   max_concurrent_runs: 4
-  strategies: ["react", "echo"]
   labels:
     pool: "local"
 

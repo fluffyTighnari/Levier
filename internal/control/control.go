@@ -83,7 +83,7 @@ type MaterialAssembler interface {
 
 // DaemonHub is the connection subset used by Control.
 type DaemonHub interface {
-	PickHealthy(runtimeType runtimev1.RuntimeType, strategy string, labels map[string]string) (string, bool)
+	PickHealthy(runtimeType runtimev1.RuntimeType, runtimeName string, labels map[string]string) (string, bool)
 	Reserve(daemonID string) bool
 	Release(daemonID string)
 	Send(daemonID string, env *runtimev1.Envelope) error

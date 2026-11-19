@@ -123,10 +123,8 @@ def main() -> int:
         base_url + "/api/v1/runs",
         token=api_key,
         body={
-            "runtime": "normal",
-            "strategy": {"name": "echo"},
+            "runtime_name": os.environ.get("RUNTIME_NAME", "echo1"),
             "input": [{"role": "user", "content": "python stdlib http client"}],
-            "model": {"provider": "anthropic", "model": "claude-test"},
             "timeouts": {"run_ms": 30000, "tool_ms": 5000},
         },
         expected=202,

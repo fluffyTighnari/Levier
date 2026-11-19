@@ -14,7 +14,7 @@ from levier_harness.channel.envelope import new_envelope, response_envelope
 from levier_harness.llm.base import LLMResponse, Message, ModelConfig, ToolSpec
 from levier_harness.runtime import ManagerConfig, RunManager
 from levier_harness.runtime.checkpoint import CheckpointState
-from levier_harness.strategies import EchoStrategy, ReactStrategy
+from levier_harness.runtime.react import ReactRuntime
 
 
 class FakeSender:
@@ -47,7 +47,6 @@ def assign(
     task = runtime_pb2.TaskAssign(
         run_id="run-1",
         app_id="app-1",
-        strategy="react",
         session_id=session_id,
         input=[runtime_pb2.ChatMessage(role="user", content="hello")],
         model=runtime_pb2.ModelProfile(provider="anthropic", model="claude-test"),
@@ -71,8 +70,8 @@ class CheckpointResumeTest(unittest.IsolatedAsyncioTestCase):
         sender = FakeSender()
         manager = RunManager(
             sender,
-            ManagerConfig(supported_strategies=("react",), runtime_type="longterm"),
-            ReactStrategy(provider),
+            ManagerConfig(runtime_name="react1", runtime_type="longterm"),
+            ReactRuntime(provider),
         )
         try:
             await manager.handle(envelope)
@@ -126,8 +125,8 @@ class CheckpointResumeTest(unittest.IsolatedAsyncioTestCase):
         sender = FakeSender()
         manager = RunManager(
             sender,
-            ManagerConfig(supported_strategies=("react",)),
-            ReactStrategy(ScriptedProvider("normal")),
+            ManagerConfig(runtime_name="react1"),
+            ReactRuntime(ScriptedProvider("normal")),
         )
         try:
             await manager.handle(assign(attempt=1))
@@ -152,14 +151,14 @@ class CheckpointResumeTest(unittest.IsolatedAsyncioTestCase):
             session_id="session-1",
             run_id="run-1",
             attempt=1,
-            strategy="react",
+            runtime_name="react1",
             step=1,
         )
         sender = FakeSender()
         manager = RunManager(
             sender,
-            ManagerConfig(supported_strategies=("react",)),
-            ReactStrategy(ScriptedProvider("never")),
+            ManagerConfig(runtime_name="react1"),
+            ReactRuntime(ScriptedProvider("never")),
         )
         try:
             await manager.handle(assign(resume=checkpoint.encode(), attempt=2))
@@ -172,64 +171,12 @@ class CheckpointResumeTest(unittest.IsolatedAsyncioTestCase):
         self.assertFalse(ack.task_ack.accepted)
         self.assertIn("longterm", ack.task_ack.reason)
 
-    async def test_echo_resume_does_not_repeat_message(self) -> None:
-        def echo_envelope(resume: bytes = b"", attempt: int = 1) -> runtime_pb2.Envelope:
-            task = runtime_pb2.TaskAssign(
-                run_id="run-echo",
-                app_id="app-1",
-                strategy="echo",
-                session_id="session-echo",
-                input=[runtime_pb2.ChatMessage(role="user", content="hello")],
-                resume_from=runtime_pb2.Checkpoint(
-                    session_id="session-echo",
-                    state=resume,
-                ),
-            )
-            return new_envelope(task, "task_assign", run_id="run-echo", attempt=attempt, lease_epoch=1)
-
-        async def run_echo(envelope) -> FakeSender:
-            sender = FakeSender()
-            manager = RunManager(
-                sender,
-                ManagerConfig(supported_strategies=("echo",), runtime_type="longterm"),
-                EchoStrategy(),
-            )
-            try:
-                await manager.handle(envelope)
-                for _ in range(200):
-                    if manager.running_count() == 0:
-                        break
-                    await asyncio.sleep(0.005)
-            finally:
-                await manager.close()
-            return sender
-
-        first = await run_echo(echo_envelope(attempt=1))
-        checkpoint_envelope = next(
-            envelope for envelope in first.sent
-            if envelope.WhichOneof("payload") == "checkpoint"
-        )
-        checkpoint = CheckpointState.decode(checkpoint_envelope.checkpoint.state)
-        self.assertEqual(checkpoint.strategy, "echo")
-        self.assertEqual(checkpoint.messages[-1].content, "hello")
-
-        second = await run_echo(echo_envelope(resume=checkpoint.encode(), attempt=2))
-        second_events = events(second)
-        self.assertEqual(
-            [event.event.type for event in second_events],
-            [runtime_pb2.EventType.RUN_STATUS, runtime_pb2.EventType.RUN_STATUS],
-        )
-        self.assertNotIn(
-            runtime_pb2.EventType.MESSAGE_COMPLETED,
-            [event.event.type for event in second_events],
-        )
-
     async def test_invalid_checkpoint_is_rejected(self) -> None:
         sender = FakeSender()
         manager = RunManager(
             sender,
-            ManagerConfig(supported_strategies=("react",), runtime_type="longterm"),
-            ReactStrategy(ScriptedProvider("never")),
+            ManagerConfig(runtime_name="react1", runtime_type="longterm"),
+            ReactRuntime(ScriptedProvider("never")),
         )
         try:
             await manager.handle(assign(resume=b"{bad", attempt=2))
@@ -248,14 +195,14 @@ class CheckpointResumeTest(unittest.IsolatedAsyncioTestCase):
             session_id="other-session",
             run_id="run-1",
             attempt=1,
-            strategy="react",
+            runtime_name="react1",
             step=1,
         )
         sender = FakeSender()
         manager = RunManager(
             sender,
-            ManagerConfig(supported_strategies=("react",), runtime_type="longterm"),
-            ReactStrategy(ScriptedProvider("never")),
+            ManagerConfig(runtime_name="react1", runtime_type="longterm"),
+            ReactRuntime(ScriptedProvider("never")),
         )
         try:
             await manager.handle(assign(resume=checkpoint.encode(), attempt=2))

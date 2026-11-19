@@ -24,7 +24,7 @@ func runSelfcheck(args []string, stdout, stderr io.Writer) int {
 	daemonID := flags.String("daemon-id", envOr("LEVIER_DAEMON_ID", "daemon-local-1"), "daemon id for --deep")
 	daemonToken := flags.String("daemon-token", os.Getenv("LEVIER_DAEMON_TOKEN"), "daemon token for --deep")
 	mcpSocket := flags.String("mcp-socket", os.Getenv("LEVIER_MCP_SOCKET"), "MCP runtime socket for --deep")
-	strategy := flags.String("strategy", "echo", "daemon strategy for --deep")
+	runtimeName := flags.String("runtime", "echo1", "runtime name for --deep")
 	timeout := flags.Duration("timeout", 5*time.Second, "per-hop timeout")
 	deep := flags.Bool("deep", false, "run active daemon protocol checks")
 	asJSON := flags.Bool("json", false, "print JSON")
@@ -45,7 +45,7 @@ func runSelfcheck(args []string, stdout, stderr io.Writer) int {
 		Credentials: *credentials,
 		DaemonID:    *daemonID,
 		DaemonToken: *daemonToken,
-		Strategy:    *strategy,
+		RuntimeName: *runtimeName,
 		MCPSocket:   *mcpSocket,
 		Timeout:     *timeout,
 		Deep:        *deep,
@@ -92,7 +92,7 @@ func printSelfcheckUsage(out io.Writer) {
 	fmt.Fprintln(out, "  --daemon-id id      daemon id for --deep")
 	fmt.Fprintln(out, "  --daemon-token tok  daemon token for --deep")
 	fmt.Fprintln(out, "  --mcp-socket path   MCP runtime socket for --deep")
-	fmt.Fprintln(out, "  --strategy name     daemon strategy for --deep (default echo)")
+	fmt.Fprintln(out, "  --runtime name      runtime name for --deep (default echo1)")
 	fmt.Fprintln(out, "  --timeout duration  per-hop timeout (default 5s)")
 	fmt.Fprintln(out, "  --deep              enable active daemon protocol checks")
 	fmt.Fprintln(out, "  --json              print JSON")

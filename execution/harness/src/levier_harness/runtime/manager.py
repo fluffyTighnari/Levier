@@ -8,25 +8,24 @@ from __future__ import annotations
 import asyncio
 import logging
 from dataclasses import dataclass
-from typing import Any, Protocol, Sequence
+from typing import Any, Protocol
 
 from middleware.runtime.v1 import runtime_pb2
 
 from levier_harness.runtime.checkpoint import CheckpointError, CheckpointState
 from levier_harness.runtime.events import EventSender, EventWriter
 from levier_harness.runtime.run import RunContext
-from levier_harness.strategies.echo import EchoStrategy
 
 
 class Runner(Protocol):
-    """Executes one run context; strategy work arrives in P3-26."""
+    """Executes one RunContext and returns a terminal status."""
 
     async def __call__(self, ctx: RunContext) -> str:
         """Return a terminal status: completed or failed."""
 
 
 class NoopRunner:
-    """Minimal runner used until an echo/react strategy exists."""
+    """Fallback runner used only when no runtime entrypoint is supplied."""
 
     async def __call__(self, ctx: RunContext) -> str:
         return "completed"
@@ -34,10 +33,10 @@ class NoopRunner:
 
 @dataclass
 class ManagerConfig:
-    """Limits for accepted runs."""
+    """Limits and identity for accepted runs."""
 
+    runtime_name: str = ""
     max_concurrent_runs: int = 4
-    supported_strategies: Sequence[str] = ("react", "echo")
     runtime_type: str = "normal"
     checkpoint_every_events: int = 20
     checkpoint_every_seconds: float = 60.0
@@ -55,7 +54,7 @@ class RunManager:
     ) -> None:
         self.sender = sender
         self.config = config or ManagerConfig()
-        self.runner = runner or EchoStrategy()
+        self.runner = runner or NoopRunner()
         self.logger = logger or logging.getLogger("levier_harness.runtime")
         self.active: dict[str, RunContext] = {}
         self._closing = False
@@ -80,7 +79,7 @@ class RunManager:
         self.logger.info("task assign received", extra={
             "run_id": assign.run_id,
             "app_id": assign.app_id,
-            "strategy": assign.strategy,
+            "runtime_name": self.config.runtime_name,
             "attempt": envelope.attempt,
             "lease_epoch": envelope.lease_epoch,
             "trace_context": assign.trace_context,
@@ -130,6 +129,7 @@ class RunManager:
         events = EventWriter(self.sender, assign.run_id, envelope.attempt, envelope.lease_epoch)
         ctx = RunContext(
             assign=assign,
+            runtime_name=self.config.runtime_name,
             attempt=envelope.attempt,
             lease_epoch=envelope.lease_epoch,
             events=events,
@@ -162,8 +162,8 @@ class RunManager:
             return None, "resume_from requires session_id"
         if state.session_id != assign.session_id:
             return None, "checkpoint session_id mismatch"
-        if state.strategy != assign.strategy:
-            return None, "checkpoint strategy mismatch"
+        if state.runtime_name != self.config.runtime_name:
+            return None, "checkpoint runtime_name mismatch"
         return state, ""
 
     def _validation_error(
@@ -177,10 +177,6 @@ class RunManager:
             return "run_id is required"
         if not assign.app_id:
             return "app_id is required"
-        if not assign.strategy:
-            return "strategy is required"
-        if assign.strategy not in self.config.supported_strategies:
-            return f"unsupported strategy {assign.strategy!r}"
         if envelope.attempt < 1:
             return "attempt must be >= 1"
         if envelope.lease_epoch < 1:

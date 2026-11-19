@@ -99,6 +99,24 @@ services:
     stop_grace_period: 20s
     restart: unless-stopped
 
+  echo-runtime:
+    build:
+      context: .
+      dockerfile: deploy/harness.Dockerfile
+    init: true
+    entrypoint: ["python", "-m", "levier_harness.echo"]
+    command: ["--config", "/app/harness/echo.example.yaml"]
+    environment:
+      LEVIER_HARNESS_ADDRESS: levier:9090
+      LEVIER_HARNESS_DAEMON_ID: echo-local-1
+      LEVIER_HARNESS_DAEMON_AUTH_TOKEN: ${LEVIER_HARNESS_DAEMON_AUTH_TOKEN:-${HARNESS_DAEMON_AUTH_TOKEN:-change-me}}
+      LEVIER_HARNESS_LOG_FORMAT: json
+    depends_on:
+      levier:
+        condition: service_healthy
+    stop_grace_period: 20s
+    restart: unless-stopped
+
   agent:
     build:
       context: .
@@ -122,7 +140,8 @@ services:
       LEVIER_URL: http://levier:8080
       MCP_SOCKET: /run/levier/mcp.sock
       CREDENTIALS: /data/credentials.json
-      DAEMON_ID: daemon-local-1
+      DAEMON_ID: echo-local-1
+      RUNTIME_NAME: echo1
     volumes:
       - ./deploy/smoke.py:/app/smoke.py:ro
       - mcp_socket:/run/levier
@@ -133,6 +152,8 @@ services:
       mcp-runtime:
         condition: service_healthy
       harness:
+        condition: service_started
+      echo-runtime:
         condition: service_started
       agent:
         condition: service_started

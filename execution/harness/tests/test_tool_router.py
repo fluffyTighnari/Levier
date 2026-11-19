@@ -61,11 +61,11 @@ def make_ctx(*bindings: runtime_pb2.McpBinding) -> RunContext:
     assign = runtime_pb2.TaskAssign(
         run_id="run-1",
         app_id="app-1",
-        strategy="react",
         mcp_bindings=list(bindings),
     )
     return RunContext(
         assign=assign,
+        runtime_name="react1",
         attempt=1,
         lease_epoch=1,
         events=FakeEvents(),

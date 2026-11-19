@@ -42,12 +42,11 @@ func newRunTestServer(t *testing.T, terminalStatus string) (*httptest.Server, *r
 			}
 			w.Header().Set("Content-Type", "application/json")
 			_ = json.NewEncoder(w).Encode(map[string]any{
-				"run_id":   "run_1",
-				"app_id":   "app_1",
-				"runtime":  "normal",
-				"status":   state.status,
-				"attempt":  1,
-				"strategy": map[string]any{"name": "react"},
+				"run_id":       "run_1",
+				"app_id":       "app_1",
+				"runtime_name": "react1",
+				"status":       state.status,
+				"attempt":      1,
 			})
 		case r.Method == http.MethodGet && r.URL.Path == "/api/v1/runs/run_1/events":
 			w.Header().Set("Content-Type", "application/json")
@@ -94,6 +93,7 @@ func TestRunSubmitJSON(t *testing.T) {
 		"--credentials", path,
 		"--server", server.URL,
 		"--prompt", "hello",
+		"--runtime", "react1",
 		"--json",
 	}, &stdout, &stderr)
 	if code != 0 {
@@ -118,6 +118,7 @@ func TestRunSubmitWatchJSON(t *testing.T) {
 		"--credentials", path,
 		"--server", server.URL,
 		"--prompt", "hello",
+		"--runtime", "react1",
 		"--watch",
 		"--interval", "1ms",
 		"--json",

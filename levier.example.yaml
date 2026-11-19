@@ -22,6 +22,7 @@ grpc:
   shutdown_timeout: "10s"
   daemon_tokens:
     daemon-local-1: "change-me"
+    echo-local-1: "change-me"
   # Production: prefer daemon_tokens_file or LEVIER_GRPC_DAEMON_TOKENS_FILE.
   # daemon_tokens_file: "/run/secrets/levier_daemon_tokens.json"
 

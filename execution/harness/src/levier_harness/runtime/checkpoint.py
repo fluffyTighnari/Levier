@@ -29,7 +29,7 @@ class CheckpointState:
     session_id: str
     run_id: str
     attempt: int
-    strategy: str
+    runtime_name: str
     step: int = 0
     messages: list[Message] = field(default_factory=list)
     last_event_attempt: int = 0
@@ -44,7 +44,7 @@ class CheckpointState:
             "session_id": self.session_id,
             "run_id": self.run_id,
             "attempt": self.attempt,
-            "strategy": self.strategy,
+            "runtime_name": self.runtime_name,
             "step": self.step,
             "messages": [_message_to_dict(message) for message in self.messages],
             "last_event_attempt": self.last_event_attempt,
@@ -70,7 +70,7 @@ class CheckpointState:
 
         session_id = _str(payload.get("session_id"), "session_id", allow_empty=False)
         run_id = _str(payload.get("run_id"), "run_id", allow_empty=False)
-        strategy = _str(payload.get("strategy"), "strategy", allow_empty=False)
+        runtime_name = _str(payload.get("runtime_name"), "runtime_name", allow_empty=False)
         attempt = _int(payload.get("attempt"), "attempt", minimum=1)
         step = _int(payload.get("step"), "step", minimum=0)
         last_event_attempt = _int(payload.get("last_event_attempt"), "last_event_attempt", minimum=0)
@@ -85,7 +85,7 @@ class CheckpointState:
             session_id=session_id,
             run_id=run_id,
             attempt=attempt,
-            strategy=strategy,
+            runtime_name=runtime_name,
             step=step,
             messages=messages,
             last_event_attempt=last_event_attempt,
@@ -100,7 +100,7 @@ def capture(
     session_id: str,
     run_id: str,
     attempt: int,
-    strategy: str,
+    runtime_name: str,
     step: int,
     messages: list[Message],
     last_event_seq: int,
@@ -111,7 +111,7 @@ def capture(
         session_id=session_id,
         run_id=run_id,
         attempt=attempt,
-        strategy=strategy,
+        runtime_name=runtime_name,
         step=step,
         messages=list(messages),
         last_event_attempt=attempt if last_event_attempt is None else last_event_attempt,

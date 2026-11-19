@@ -42,6 +42,7 @@ MAP.md          仓库地图
 
 | 文档 | 内容 |
 |---|---|
+| `SIMPLIFICATION.md` | App / Runtime 接入面简化讨论稿（runtime_name、run(ctx)、凭证分层） |
 | `ADAPTER_ROADMAP.md` | Adapter / Sidecar 优先级、收益、代价 |
 | `CLI_DISTRIBUTION_PLAN.md` | CLI 操作面与分发安装计划 |
 | `CLI_ACTIONS.md` | 动作型 CLI：app / run / migrate / daemon 设计 |

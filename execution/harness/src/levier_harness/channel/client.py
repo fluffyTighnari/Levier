@@ -33,10 +33,10 @@ class ChannelConfig:
 
     address: str
     daemon_id: str
+    runtime_name: str
     auth_token: str
     runtime_type: str = "normal"
     max_concurrent_runs: int = 4
-    strategies: list[str] = field(default_factory=lambda: ["react", "echo"])
     version: str = "0.1.0"
     labels: dict[str, str] = field(default_factory=dict)
     tls: bool = False
@@ -223,10 +223,10 @@ class ChannelClient:
         ]
         hello = runtime_pb2.Hello(
             daemon_id=self.config.daemon_id,
+            runtime_name=self.config.runtime_name,
             auth_token=self.config.auth_token,
             runtime_type=_runtime_type(self.config.runtime_type),
             max_concurrent_runs=self.config.max_concurrent_runs,
-            supported_strategies=self.config.strategies,
             version=self.config.version,
             labels=self.config.labels,
             running_runs=running,

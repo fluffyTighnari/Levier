@@ -51,13 +51,12 @@ func TestSnapshotAggregatesState(t *testing.T) {
 		Commit:    "abc1234",
 		Health:    func(context.Context) error { return nil },
 		Hub: fakeDaemons{infos: []connection.DaemonInfo{{
-			DaemonID:            "daemon-secret-id",
-			RuntimeType:         runtimev1.RuntimeType_NORMAL,
-			MaxConcurrentRuns:   4,
-			RunningCount:        1,
-			Reserved:            2,
-			Healthy:             true,
-			SupportedStrategies: []string{"react", "echo"},
+			DaemonID:          "daemon-secret-id",
+			RuntimeType:       runtimev1.RuntimeType_NORMAL,
+			MaxConcurrentRuns: 4,
+			RunningCount:      1,
+			Reserved:          2,
+			Healthy:           true,
 		}}},
 		AppHub: fakeApps{stats: connection.AppStats{Apps: 2, Connections: 3}},
 		Runs: fakeRuns{
@@ -94,8 +93,7 @@ func TestSnapshotAggregatesState(t *testing.T) {
 		snapshot.Daemons.Available != 2 {
 		t.Fatalf("daemons = %+v", snapshot.Daemons)
 	}
-	if snapshot.Daemons.ByRuntime["normal"].Used != 2 ||
-		snapshot.Daemons.Strategies["react"] != 1 {
+	if snapshot.Daemons.ByRuntime["normal"].Used != 2 {
 		t.Fatalf("daemon detail = %+v", snapshot.Daemons)
 	}
 	if snapshot.Apps.Registered != 2 || snapshot.Apps.WebSocketConnections != 3 {
@@ -137,10 +135,9 @@ func TestSnapshotDegradesWhenDatabaseUnavailable(t *testing.T) {
 func TestSnapshotDoesNotExposeIdentifiersOrSecrets(t *testing.T) {
 	service := New(Options{
 		Hub: fakeDaemons{infos: []connection.DaemonInfo{{
-			DaemonID:            "daemon-secret-id",
-			RuntimeType:         runtimev1.RuntimeType_NORMAL,
-			MaxConcurrentRuns:   1,
-			SupportedStrategies: []string{"echo"},
+			DaemonID:          "daemon-secret-id",
+			RuntimeType:       runtimev1.RuntimeType_NORMAL,
+			MaxConcurrentRuns: 1,
 		}}},
 	})
 	data, err := json.Marshal(service.Snapshot(context.Background()))

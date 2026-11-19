@@ -170,7 +170,7 @@ levier app list
 # 4. 提交并等待一个 Run
 levier run submit \
   --credentials ./demo.json \
-  --strategy echo \
+  --runtime echo1 \
   --prompt "hello" \
   --watch
 
@@ -493,7 +493,6 @@ commit       2ce014d
 api          v1
 ws protocol  1
 runtime      normal
-strategies   react, echo
 limits       body=1048576 run=1800000ms tool=60000ms ws_token=600s
 endpoints    health, ready, metrics, runs, apps, websocket
 ```
@@ -558,7 +557,7 @@ socket 时检查 MCP runtime health；真实 local tool 可继续使用 `tests/a
 | `--daemon-id` | `LEVIER_DAEMON_ID` | deep 检查 daemon id |
 | `--daemon-token` | `LEVIER_DAEMON_TOKEN` | deep 检查 token |
 | `--mcp-socket` | `LEVIER_MCP_SOCKET` | deep 检查 MCP runtime socket |
-| `--strategy` | `echo` | deep 检查策略 |
+| `--runtime` | `echo1` | deep 检查策略 |
 | `--timeout` | `5s` | 单 hop 超时 |
 | `--deep` | `false` | 启用主动 daemon 协议检查 |
 | `--json` | `false` | 输出结构化 JSON |
@@ -853,7 +852,7 @@ levier app list [--server url] [--admin-token token] [--json]
 levier run submit \
   --credentials <path> \
   --prompt "<text>" \
-  [--strategy echo|react] \
+  [--runtime <name>] \
   [--watch] \
   [--json]
 ```
@@ -864,7 +863,7 @@ levier run submit \
 |---|---|---|
 | `--credentials` | `LEVIER_CREDENTIALS` | 必填 |
 | `--prompt` | 无 | 必填 |
-| `--strategy` | `react` | `react` 或 `echo` |
+| `--runtime` | `react1` | Runtime 路由名 |
 | `--provider` | `deepseek` | 模型 provider |
 | `--model` | `deepseek-flash` | 模型名 |
 | `--max-steps` | `8` | ReAct 最大步数 |
@@ -883,7 +882,7 @@ levier run submit \
 ```sh
 levier run submit \
   --credentials ./demo.json \
-  --strategy echo \
+  --runtime echo1 \
   --prompt "hello"
 ```
 
@@ -909,7 +908,7 @@ JSON：
 ```sh
 levier run submit \
   --credentials ./demo.json \
-  --strategy echo \
+  --runtime echo1 \
   --prompt "hello" \
   --watch
 ```
@@ -1192,7 +1191,7 @@ levier daemon check \
   [--daemon-id daemon-local-1] \
   [--token change-me] \
   [--admin-token ...] \
-  [--strategy echo] \
+  [--runtime echo1] \
   [--json]
 ```
 
@@ -1205,7 +1204,7 @@ levier daemon check \
 | `--daemon-id` | `LEVIER_DAEMON_ID` 或 `daemon-local-1` | 预分配 daemon id |
 | `--token` | `LEVIER_DAEMON_TOKEN` 或 `change-me` | daemon token |
 | `--admin-token` | `LEVIER_ADMIN_TOKEN` 或 `admin-change-me` | 创建临时 App |
-| `--strategy` | `echo` | 声明并运行的策略 |
+| `--runtime` | `echo1` | 声明并运行的策略 |
 | `--timeout` | `30s` | 单步超时 |
 | `--json` | `false` | JSON 输出 |
 

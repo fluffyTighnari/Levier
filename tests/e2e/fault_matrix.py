@@ -218,20 +218,20 @@ def cancel(run_id: str, reason: str = "fault-matrix") -> None:
         raise FaultError(f"cancel {run_id}: HTTP {status} {body}")
 
 
-def submit(strategy: str, prompt: str, run_ms: int) -> str:
+def submit(runtime_name: str, prompt: str, run_ms: int) -> str:
     cmd = [
         LEVIER_BIN,
         "run", "submit",
         "--credentials", str(CREDENTIALS),
         "--server", MW_URL,
-        "--strategy", strategy,
+        "--runtime", runtime_name,
         "--prompt", prompt,
         "--run-ms", str(run_ms),
         "--tool-ms", "10000",
-        "--request-id", f"fault-{strategy}-{time.time_ns()}",
+        "--request-id", f"fault-{runtime_name}-{time.time_ns()}",
         "--json",
     ]
-    if strategy == "react":
+    if runtime_name == "react1":
         cmd += ["--provider", "deepseek", "--model", "deepseek-flash", "--max-steps", "8"]
     result = run(cmd, timeout=30)
     if result.returncode != 0:
@@ -336,7 +336,7 @@ def bootstrap() -> None:
 
 def scenario_harness_kill() -> str:
     for _ in range(3):
-        run_id = submit("react", "Add 2, then add 3, then read the counter. Use the counter tools.", 120_000)
+        run_id = submit("react1", "Add 2, then add 3, then read the counter. Use the counter tools.", 120_000)
         try:
             wait_status(run_id, {"running"}, 20)
         except FaultError:
@@ -355,7 +355,7 @@ def scenario_harness_kill() -> str:
 
 
 def scenario_mw_restart() -> str:
-    run_id = submit("react", "Add 2, then add 3, then read the counter. Use the counter tools.", 120_000)
+    run_id = submit("react1", "Add 2, then add 3, then read the counter. Use the counter tools.", 120_000)
     wait_status(run_id, {"running"}, 20)
     stop("middleware")
     start_middleware()
@@ -374,7 +374,7 @@ def scenario_app_disconnect() -> str:
     final: dict[str, Any] = {}
     tool_failures = 0
     for _ in range(3):
-        run_id = submit("react", "Add 2, then add 3, then read the counter. Use the counter tools.", 60_000)
+        run_id = submit("react1", "Add 2, then add 3, then read the counter. Use the counter tools.", 60_000)
         final = wait_terminal(run_id, 120)
         events = get_events(run_id)
         tool_failures = sum(
@@ -387,7 +387,7 @@ def scenario_app_disconnect() -> str:
     if tool_failures == 0:
         raise FaultError("offline run never attempted a tool call")
     start_app()
-    second = submit("react", "Add 1, then read the counter. Use the counter tools.", 120_000)
+    second = submit("react1", "Add 1, then read the counter. Use the counter tools.", 120_000)
     second_final = wait_terminal(second, 120)
     if second_final.get("status") != "completed":
         raise FaultError(f"run after App recovery: {second_final.get('status')}")
@@ -398,7 +398,7 @@ def scenario_app_disconnect() -> str:
 
 
 def scenario_cancel() -> str:
-    run_id = submit("react", "Add 2, then add 3, then read the counter. Use the counter tools.", 120_000)
+    run_id = submit("react1", "Add 2, then add 3, then read the counter. Use the counter tools.", 120_000)
     cancel(run_id)
     final = wait_status(run_id, {"cancelled"}, 30)
     require_mw_event(run_id, "cancelled")
@@ -408,7 +408,7 @@ def scenario_cancel() -> str:
 
 def scenario_timeout() -> str:
     for run_ms in (500, 100):
-        run_id = submit("react", "Add 2, then add 3, then read the counter. Use the counter tools.", run_ms)
+        run_id = submit("react1", "Add 2, then add 3, then read the counter. Use the counter tools.", run_ms)
         try:
             final = wait_status(run_id, {"timeout"}, 30)
         except FaultError:

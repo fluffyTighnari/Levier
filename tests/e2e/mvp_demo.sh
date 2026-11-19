@@ -40,9 +40,18 @@ case "$MODE" in
   *) echo "mvp-demo: mode must be echo or react" >&2; exit 2 ;;
 esac
 
+if [ "$MODE" = "echo" ]; then
+  HARNESS_CONFIG="${HARNESS_CONFIG:-execution/harness/echo.example.yaml}"
+  HARNESS_MODULE="${HARNESS_MODULE:-levier_harness.echo}"
+  RUNTIME_NAME="${RUNTIME_NAME:-echo1}"
+else
+  HARNESS_CONFIG="${HARNESS_CONFIG:-execution/harness/levier.example.yaml}"
+  HARNESS_MODULE="${HARNESS_MODULE:-levier_harness}"
+  RUNTIME_NAME="${RUNTIME_NAME:-react1}"
+fi
+
 LEVIER_BIN="${LEVIER_BIN:-${MIDDLEWARE_BIN:-bin/levier}}"
 LEVIER_CONFIG="${LEVIER_CONFIG:-${MIDDLEWARE_CONFIG:-levier.example.yaml}}"
-HARNESS_CONFIG="${HARNESS_CONFIG:-execution/harness/levier.example.yaml}"
 HARNESS_PYTHON="${HARNESS_PYTHON:-execution/harness/.venv/bin/python}"
 LEVIER_URL="${LEVIER_URL:-${MW_URL:-http://127.0.0.1:8080}}"
 ADMIN_TOKEN="${LEVIER_ADMIN_TOKEN:-${MW_ADMIN_TOKEN:-admin-change-me}}"
@@ -108,7 +117,7 @@ done
 [ -n "$ready" ] || fail "Levier did not become healthy; see $OUT/middleware.log"
 
 echo "== start Harness =="
-PYTHONPATH="execution/agent_core/src:execution/harness/src/gen:execution/harness/src" "$HARNESS_PYTHON" -m levier_harness \
+PYTHONPATH="execution/agent_core/src:execution/harness/src/gen:execution/harness/src" "$HARNESS_PYTHON" -m "$HARNESS_MODULE" \
   --config "$HARNESS_CONFIG" >"$OUT/harness.log" 2>&1 &
 HARNESS_PID=$!
 sleep 2
@@ -146,7 +155,7 @@ if [ "$MODE" = "react" ]; then
   "$LEVIER_BIN" run submit \
     --credentials "$CREDENTIALS" \
     --server "$LEVIER_URL" \
-    --strategy react \
+    --runtime "$RUNTIME_NAME" \
     --prompt "$PROMPT_REACT" \
     --provider deepseek \
     --model deepseek-flash \
@@ -159,7 +168,7 @@ else
   "$LEVIER_BIN" run submit \
     --credentials "$CREDENTIALS" \
     --server "$LEVIER_URL" \
-    --strategy echo \
+    --runtime "$RUNTIME_NAME" \
     --prompt "$PROMPT_ECHO" \
     --run-ms 30000 \
     --request-id "mvp-demo-$MODE-$STAMP" \

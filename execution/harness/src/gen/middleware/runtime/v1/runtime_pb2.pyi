@@ -88,7 +88,7 @@ class Envelope(_message.Message):
     def __init__(self, msg_id: _Optional[str] = ..., correlation_id: _Optional[str] = ..., run_id: _Optional[str] = ..., ts_ms: _Optional[int] = ..., attempt: _Optional[int] = ..., lease_epoch: _Optional[int] = ..., hello: _Optional[_Union[Hello, _Mapping]] = ..., heartbeat: _Optional[_Union[Heartbeat, _Mapping]] = ..., task_assign: _Optional[_Union[TaskAssign, _Mapping]] = ..., task_ack: _Optional[_Union[TaskAck, _Mapping]] = ..., event: _Optional[_Union[Event, _Mapping]] = ..., tool_call_request: _Optional[_Union[ToolCallRequest, _Mapping]] = ..., tool_call_result: _Optional[_Union[ToolCallResult, _Mapping]] = ..., cancel: _Optional[_Union[Cancel, _Mapping]] = ..., reconcile: _Optional[_Union[Reconcile, _Mapping]] = ..., checkpoint: _Optional[_Union[Checkpoint, _Mapping]] = ..., error: _Optional[_Union[ErrorReport, _Mapping]] = ...) -> None: ...
 
 class Hello(_message.Message):
-    __slots__ = ("daemon_id", "auth_token", "runtime_type", "max_concurrent_runs", "supported_strategies", "version", "labels", "running_runs")
+    __slots__ = ("daemon_id", "auth_token", "runtime_type", "max_concurrent_runs", "version", "labels", "running_runs", "runtime_name")
     class LabelsEntry(_message.Message):
         __slots__ = ("key", "value")
         KEY_FIELD_NUMBER: _ClassVar[int]
@@ -100,19 +100,19 @@ class Hello(_message.Message):
     AUTH_TOKEN_FIELD_NUMBER: _ClassVar[int]
     RUNTIME_TYPE_FIELD_NUMBER: _ClassVar[int]
     MAX_CONCURRENT_RUNS_FIELD_NUMBER: _ClassVar[int]
-    SUPPORTED_STRATEGIES_FIELD_NUMBER: _ClassVar[int]
     VERSION_FIELD_NUMBER: _ClassVar[int]
     LABELS_FIELD_NUMBER: _ClassVar[int]
     RUNNING_RUNS_FIELD_NUMBER: _ClassVar[int]
+    RUNTIME_NAME_FIELD_NUMBER: _ClassVar[int]
     daemon_id: str
     auth_token: str
     runtime_type: RuntimeType
     max_concurrent_runs: int
-    supported_strategies: _containers.RepeatedScalarFieldContainer[str]
     version: str
     labels: _containers.ScalarMap[str, str]
     running_runs: _containers.RepeatedCompositeFieldContainer[RunningRun]
-    def __init__(self, daemon_id: _Optional[str] = ..., auth_token: _Optional[str] = ..., runtime_type: _Optional[_Union[RuntimeType, str]] = ..., max_concurrent_runs: _Optional[int] = ..., supported_strategies: _Optional[_Iterable[str]] = ..., version: _Optional[str] = ..., labels: _Optional[_Mapping[str, str]] = ..., running_runs: _Optional[_Iterable[_Union[RunningRun, _Mapping]]] = ...) -> None: ...
+    runtime_name: str
+    def __init__(self, daemon_id: _Optional[str] = ..., auth_token: _Optional[str] = ..., runtime_type: _Optional[_Union[RuntimeType, str]] = ..., max_concurrent_runs: _Optional[int] = ..., version: _Optional[str] = ..., labels: _Optional[_Mapping[str, str]] = ..., running_runs: _Optional[_Iterable[_Union[RunningRun, _Mapping]]] = ..., runtime_name: _Optional[str] = ...) -> None: ...
 
 class RunningRun(_message.Message):
     __slots__ = ("run_id", "lease_epoch")
@@ -139,11 +139,10 @@ class Heartbeat(_message.Message):
     def __init__(self, running_count: _Optional[int] = ..., cpu_load: _Optional[float] = ..., mem_mb: _Optional[float] = ...) -> None: ...
 
 class TaskAssign(_message.Message):
-    __slots__ = ("run_id", "app_id", "strategy", "strategy_params", "input", "model", "tools", "mcp_bindings", "timeouts", "session_id", "resume_from", "trace_context")
+    __slots__ = ("run_id", "app_id", "params", "input", "model", "tools", "mcp_bindings", "timeouts", "session_id", "resume_from", "trace_context")
     RUN_ID_FIELD_NUMBER: _ClassVar[int]
     APP_ID_FIELD_NUMBER: _ClassVar[int]
-    STRATEGY_FIELD_NUMBER: _ClassVar[int]
-    STRATEGY_PARAMS_FIELD_NUMBER: _ClassVar[int]
+    PARAMS_FIELD_NUMBER: _ClassVar[int]
     INPUT_FIELD_NUMBER: _ClassVar[int]
     MODEL_FIELD_NUMBER: _ClassVar[int]
     TOOLS_FIELD_NUMBER: _ClassVar[int]
@@ -154,8 +153,7 @@ class TaskAssign(_message.Message):
     TRACE_CONTEXT_FIELD_NUMBER: _ClassVar[int]
     run_id: str
     app_id: str
-    strategy: str
-    strategy_params: _struct_pb2.Struct
+    params: _struct_pb2.Struct
     input: _containers.RepeatedCompositeFieldContainer[ChatMessage]
     model: ModelProfile
     tools: _containers.RepeatedCompositeFieldContainer[ToolManifest]
@@ -164,7 +162,7 @@ class TaskAssign(_message.Message):
     session_id: str
     resume_from: Checkpoint
     trace_context: str
-    def __init__(self, run_id: _Optional[str] = ..., app_id: _Optional[str] = ..., strategy: _Optional[str] = ..., strategy_params: _Optional[_Union[_struct_pb2.Struct, _Mapping]] = ..., input: _Optional[_Iterable[_Union[ChatMessage, _Mapping]]] = ..., model: _Optional[_Union[ModelProfile, _Mapping]] = ..., tools: _Optional[_Iterable[_Union[ToolManifest, _Mapping]]] = ..., mcp_bindings: _Optional[_Iterable[_Union[McpBinding, _Mapping]]] = ..., timeouts: _Optional[_Union[TimeoutProfile, _Mapping]] = ..., session_id: _Optional[str] = ..., resume_from: _Optional[_Union[Checkpoint, _Mapping]] = ..., trace_context: _Optional[str] = ...) -> None: ...
+    def __init__(self, run_id: _Optional[str] = ..., app_id: _Optional[str] = ..., params: _Optional[_Union[_struct_pb2.Struct, _Mapping]] = ..., input: _Optional[_Iterable[_Union[ChatMessage, _Mapping]]] = ..., model: _Optional[_Union[ModelProfile, _Mapping]] = ..., tools: _Optional[_Iterable[_Union[ToolManifest, _Mapping]]] = ..., mcp_bindings: _Optional[_Iterable[_Union[McpBinding, _Mapping]]] = ..., timeouts: _Optional[_Union[TimeoutProfile, _Mapping]] = ..., session_id: _Optional[str] = ..., resume_from: _Optional[_Union[Checkpoint, _Mapping]] = ..., trace_context: _Optional[str] = ...) -> None: ...
 
 class ChatMessage(_message.Message):
     __slots__ = ("role", "content", "name")

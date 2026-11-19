@@ -37,11 +37,10 @@ class BlockingRunner:
         return "completed"
 
 
-def assign_envelope(run_id: str = "run-1", attempt: int = 1, epoch: int = 1, strategy: str = "echo") -> runtime_pb2.Envelope:
+def assign_envelope(run_id: str = "run-1", attempt: int = 1, epoch: int = 1) -> runtime_pb2.Envelope:
     assign = runtime_pb2.TaskAssign(
         run_id=run_id,
         app_id="app-1",
-        strategy=strategy,
     )
     return new_envelope(assign, "task_assign", run_id=run_id, attempt=attempt, lease_epoch=epoch)
 
@@ -77,13 +76,15 @@ class RunManagerTest(unittest.IsolatedAsyncioTestCase):
         self.assertEqual([event_status(env) for env in events], ["running", "completed"])
         self.assertEqual([env.event.seq for env in events], [1, 2])
 
-    async def test_unsupported_strategy_rejected(self) -> None:
+    async def test_missing_app_rejected(self) -> None:
         sender = FakeSender()
         self.manager = RunManager(sender)
-        await self.manager.handle(assign_envelope(strategy="unknown"))
+        assign = runtime_pb2.TaskAssign(run_id="run-1")
+        envelope = new_envelope(assign, "task_assign", run_id="run-1", attempt=1, lease_epoch=1)
+        await self.manager.handle(envelope)
         ack = next(env for env in sender.sent if env.WhichOneof("payload") == "task_ack")
         self.assertFalse(ack.task_ack.accepted)
-        self.assertIn("unsupported", ack.task_ack.reason)
+        self.assertIn("app_id", ack.task_ack.reason)
         self.assertEqual(self.manager.running_count(), 0)
 
     async def test_capacity_rejected(self) -> None:

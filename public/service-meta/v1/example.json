@@ -16,7 +16,6 @@
   },
   "capabilities": {
     "runtime_types": ["normal"],
-    "builtin_strategies": ["react", "echo"],
     "tool_scopes": ["local", "global"],
     "mcp_transports": ["stdio", "sse", "streamable_http"],
     "features": [

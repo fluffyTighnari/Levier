@@ -195,7 +195,7 @@ func TestRunUsesAuthenticatedApp(t *testing.T) {
 
 	body := []byte(`{
 		"runtime":"normal",
-		"strategy":{"name":"echo"},
+		"runtime_name":"echo1",
 		"input":[{"role":"user","content":"hello"}],
 		"model":{"provider":"anthropic","model":"claude-test"}
 	}`)
@@ -230,7 +230,7 @@ func TestRunUsesAuthenticatedApp(t *testing.T) {
 	resp = request(t, http.MethodPost, server.URL+"/api/v1/runs", key, []byte(`{
 		"app_id":"`+other.AppID+`",
 		"runtime":"normal",
-		"strategy":{"name":"echo"},
+		"runtime_name":"echo1",
 		"input":[{"role":"user","content":"hello"}],
 		"model":{"provider":"anthropic","model":"claude-test"}
 	}`))
@@ -294,7 +294,7 @@ func TestLegacyBearerDisabledByDefault(t *testing.T) {
 	body := []byte(`{
 		"app_id":"` + app.AppID + `",
 		"runtime":"normal",
-		"strategy":{"name":"echo"},
+		"runtime_name":"echo1",
 		"input":[{"role":"user","content":"hello"}],
 		"model":{"provider":"anthropic","model":"claude-test"}
 	}`)
@@ -306,7 +306,7 @@ func TestLegacyBearerDisabledByDefault(t *testing.T) {
 
 	body = []byte(`{
 		"runtime":"normal",
-		"strategy":{"name":"echo"},
+		"runtime_name":"echo1",
 		"input":[{"role":"user","content":"hello"}],
 		"model":{"provider":"anthropic","model":"claude-test"}
 	}`)

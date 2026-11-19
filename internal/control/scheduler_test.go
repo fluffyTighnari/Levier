@@ -11,20 +11,20 @@ import (
 	runtimev1 "github.com/fluffyTighnari/levier/gen/middleware/runtime/v1"
 )
 
-func candidate(id string, runtimeType runtimev1.RuntimeType, running, max int32, labels map[string]string, strategies ...string) Candidate {
+func candidate(id string, runtimeType runtimev1.RuntimeType, running, max int32, labels map[string]string, runtimeName string) Candidate {
 	return Candidate{
-		DaemonID: id, RuntimeType: runtimeType, Healthy: true,
+		DaemonID: id, RuntimeName: runtimeName, RuntimeType: runtimeType, Healthy: true,
 		RunningCount: running, MaxConcurrentRuns: max,
-		Labels: labels, SupportedStrategies: strategies,
+		Labels: labels,
 	}
 }
 
 func TestSelectFiltersAndLeastLoaded(t *testing.T) {
 	candidates := []Candidate{
-		candidate("d1", runtimev1.RuntimeType_NORMAL, 3, 4, map[string]string{"pool": "a"}, "echo"),
-		candidate("d2", runtimev1.RuntimeType_NORMAL, 0, 4, map[string]string{"pool": "a"}, "echo"),
-		candidate("d3", runtimev1.RuntimeType_SANDBOX, 0, 4, map[string]string{"pool": "b"}, "echo"),
-		candidate("d4", runtimev1.RuntimeType_NORMAL, 0, 4, map[string]string{"pool": "b"}, "react"),
+		candidate("d1", runtimev1.RuntimeType_NORMAL, 3, 4, map[string]string{"pool": "a"}, "echo1"),
+		candidate("d2", runtimev1.RuntimeType_NORMAL, 0, 4, map[string]string{"pool": "a"}, "echo1"),
+		candidate("d3", runtimev1.RuntimeType_SANDBOX, 0, 4, map[string]string{"pool": "b"}, "echo1"),
+		candidate("d4", runtimev1.RuntimeType_NORMAL, 0, 4, map[string]string{"pool": "b"}, "react1"),
 	}
 
 	tests := []struct {
@@ -35,22 +35,22 @@ func TestSelectFiltersAndLeastLoaded(t *testing.T) {
 	}{
 		{
 			name:    "least loaded normal echo pool a",
-			request: PlacementRequest{Runtime: runtimev1.RuntimeType_NORMAL, Strategy: "echo", Labels: map[string]string{"pool": "a"}},
+			request: PlacementRequest{Runtime: runtimev1.RuntimeType_NORMAL, RuntimeName: "echo1", Labels: map[string]string{"pool": "a"}},
 			wantID:  "d2", wantOK: true,
 		},
 		{
 			name:    "runtime filter",
-			request: PlacementRequest{Runtime: runtimev1.RuntimeType_SANDBOX, Strategy: "echo"},
+			request: PlacementRequest{Runtime: runtimev1.RuntimeType_SANDBOX, RuntimeName: "echo1"},
 			wantID:  "d3", wantOK: true,
 		},
 		{
-			name:    "strategy filter",
-			request: PlacementRequest{Runtime: runtimev1.RuntimeType_NORMAL, Strategy: "react"},
+			name:    "runtime name filter",
+			request: PlacementRequest{Runtime: runtimev1.RuntimeType_NORMAL, RuntimeName: "react1"},
 			wantID:  "d4", wantOK: true,
 		},
 		{
 			name:    "labels filter",
-			request: PlacementRequest{Runtime: runtimev1.RuntimeType_NORMAL, Strategy: "echo", Labels: map[string]string{"pool": "b"}},
+			request: PlacementRequest{Runtime: runtimev1.RuntimeType_NORMAL, RuntimeName: "echo1", Labels: map[string]string{"pool": "b"}},
 			wantID:  "", wantOK: false,
 		},
 	}
@@ -67,11 +67,11 @@ func TestSelectFiltersAndLeastLoaded(t *testing.T) {
 
 func TestSelectFullCapacity(t *testing.T) {
 	candidates := []Candidate{
-		candidate("d1", runtimev1.RuntimeType_NORMAL, 4, 4, nil, "echo"),
-		candidate("d2", runtimev1.RuntimeType_NORMAL, 2, 2, nil, "echo"),
+		candidate("d1", runtimev1.RuntimeType_NORMAL, 4, 4, nil, "echo1"),
+		candidate("d2", runtimev1.RuntimeType_NORMAL, 2, 2, nil, "echo1"),
 	}
 	if id, ok := Select(candidates, PlacementRequest{
-		Runtime: runtimev1.RuntimeType_NORMAL, Strategy: "echo",
+		Runtime: runtimev1.RuntimeType_NORMAL, RuntimeName: "echo1",
 	}); ok {
 		t.Fatalf("Select() = %q, true; want no daemon", id)
 	}
@@ -79,34 +79,34 @@ func TestSelectFullCapacity(t *testing.T) {
 
 func TestSelectStickyAndFallback(t *testing.T) {
 	candidates := []Candidate{
-		candidate("d1", runtimev1.RuntimeType_LONGTERM, 3, 4, nil, "react"),
-		candidate("d2", runtimev1.RuntimeType_LONGTERM, 0, 4, nil, "react"),
+		candidate("d1", runtimev1.RuntimeType_LONGTERM, 3, 4, nil, "react1"),
+		candidate("d2", runtimev1.RuntimeType_LONGTERM, 0, 4, nil, "react1"),
 	}
 
 	id, ok := Select(candidates, PlacementRequest{
-		Runtime: runtimev1.RuntimeType_LONGTERM, Strategy: "react", StickyDaemonID: "d1",
+		Runtime: runtimev1.RuntimeType_LONGTERM, RuntimeName: "react1", StickyDaemonID: "d1",
 	})
 	if !ok || id != "d1" {
 		t.Fatalf("sticky Select() = %q, %v; want d1", id, ok)
 	}
 
 	full := []Candidate{
-		candidate("d1", runtimev1.RuntimeType_LONGTERM, 4, 4, nil, "react"),
-		candidate("d2", runtimev1.RuntimeType_LONGTERM, 0, 4, nil, "react"),
+		candidate("d1", runtimev1.RuntimeType_LONGTERM, 4, 4, nil, "react1"),
+		candidate("d2", runtimev1.RuntimeType_LONGTERM, 0, 4, nil, "react1"),
 	}
 	id, ok = Select(full, PlacementRequest{
-		Runtime: runtimev1.RuntimeType_LONGTERM, Strategy: "react", StickyDaemonID: "d1",
+		Runtime: runtimev1.RuntimeType_LONGTERM, RuntimeName: "react1", StickyDaemonID: "d1",
 	})
 	if !ok || id != "d2" {
 		t.Fatalf("sticky fallback = %q, %v; want d2", id, ok)
 	}
 
 	unhealthy := []Candidate{
-		{DaemonID: "d1", RuntimeType: runtimev1.RuntimeType_LONGTERM, SupportedStrategies: []string{"react"}, MaxConcurrentRuns: 4, Healthy: false},
-		candidate("d2", runtimev1.RuntimeType_LONGTERM, 0, 4, nil, "react"),
+		{DaemonID: "d1", RuntimeType: runtimev1.RuntimeType_LONGTERM, RuntimeName: "react1", MaxConcurrentRuns: 4, Healthy: false},
+		candidate("d2", runtimev1.RuntimeType_LONGTERM, 0, 4, nil, "react1"),
 	}
 	id, ok = Select(unhealthy, PlacementRequest{
-		Runtime: runtimev1.RuntimeType_LONGTERM, Strategy: "react", StickyDaemonID: "d1",
+		Runtime: runtimev1.RuntimeType_LONGTERM, RuntimeName: "react1", StickyDaemonID: "d1",
 	})
 	if !ok || id != "d2" {
 		t.Fatalf("unhealthy sticky fallback = %q, %v; want d2", id, ok)

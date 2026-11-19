@@ -70,12 +70,13 @@ func (f failingTxQueue) EnqueueTx(context.Context, pgx.Tx, workflow.Task) (workf
 func runBody(t *testing.T, appID, key string) []byte {
 	t.Helper()
 	body, err := json.Marshal(map[string]any{
-		"app_id":   appID,
-		"runtime":  "normal",
-		"strategy": map[string]any{"name": "echo", "params": map[string]any{}},
-		"input":    []map[string]any{{"role": "user", "content": "hello"}},
-		"model":    map[string]any{"provider": "anthropic", "model": "claude-test"},
-		"timeouts": map[string]any{"run_ms": 1000, "tool_ms": 500},
+		"app_id":       appID,
+		"runtime":      "normal",
+		"runtime_name": "echo1",
+		"params":       map[string]any{},
+		"input":        []map[string]any{{"role": "user", "content": "hello"}},
+		"model":        map[string]any{"provider": "anthropic", "model": "claude-test"},
+		"timeouts":     map[string]any{"run_ms": 1000, "tool_ms": 500},
 	})
 	if err != nil {
 		t.Fatalf("marshal body: %v", err)

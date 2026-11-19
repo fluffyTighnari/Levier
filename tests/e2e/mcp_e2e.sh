@@ -155,7 +155,7 @@ echo "== run =="
 "$LEVIER_BIN" run submit \
   --credentials "$CREDENTIALS" \
   --server "$LEVIER_URL" \
-  --strategy react \
+  --runtime react1 \
   --prompt "Call the tool named $TOOL_NAME exactly once, then report the exact string it returns." \
   --provider deepseek \
   --model deepseek-flash \

@@ -74,12 +74,12 @@ func TestDispatchEchoRunEndToEnd(t *testing.T) {
 		t.Fatalf("CreateApp() error = %v", err)
 	}
 	run, err := runs.CreateRun(ctx, runstore.Run{
-		RunID:    "run-" + id.New(),
-		AppID:    app.AppID,
-		Runtime:  "normal",
-		Strategy: "echo",
-		Input:    json.RawMessage(`[{"role":"user","content":"hello"}]`),
-		Model:    json.RawMessage(`{"provider":"anthropic","model":"claude-test"}`),
+		RunID:       "run-" + id.New(),
+		AppID:       app.AppID,
+		Runtime:     "normal",
+		RuntimeName: "echo1",
+		Input:       json.RawMessage(`[{"role":"user","content":"hello"}]`),
+		Model:       json.RawMessage(`{"provider":"anthropic","model":"claude-test"}`),
 	})
 	if err != nil {
 		t.Fatalf("CreateRun() error = %v", err)
@@ -172,12 +172,12 @@ func TestCancelQueuedRunWritesMWEvent(t *testing.T) {
 		t.Fatalf("CreateApp() error = %v", err)
 	}
 	run, err := runs.CreateRun(ctx, runstore.Run{
-		RunID:    "run-" + id.New(),
-		AppID:    app.AppID,
-		Runtime:  "normal",
-		Strategy: "echo",
-		Input:    json.RawMessage(`[{"role":"user","content":"hello"}]`),
-		Model:    json.RawMessage(`{"provider":"anthropic","model":"claude-test"}`),
+		RunID:       "run-" + id.New(),
+		AppID:       app.AppID,
+		Runtime:     "normal",
+		RuntimeName: "echo1",
+		Input:       json.RawMessage(`[{"role":"user","content":"hello"}]`),
+		Model:       json.RawMessage(`{"provider":"anthropic","model":"claude-test"}`),
 	})
 	if err != nil {
 		t.Fatalf("CreateRun() error = %v", err)

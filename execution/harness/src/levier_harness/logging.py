@@ -18,7 +18,6 @@ _LOG_FIELDS = (
     "run_id",
     "attempt",
     "lease_epoch",
-    "strategy",
     "step",
     "invocation_id",
     "app_id",

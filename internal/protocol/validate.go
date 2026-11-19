@@ -121,11 +121,11 @@ func validateHello(env *runtimev1.Envelope, hello *runtimev1.Hello) error {
 	if hello.GetRuntimeType() == runtimev1.RuntimeType_RUNTIME_TYPE_UNSPECIFIED {
 		return fmt.Errorf("hello.runtime_type is required")
 	}
+	if hello.GetRuntimeName() == "" {
+		return fmt.Errorf("hello.runtime_name is required")
+	}
 	if hello.GetMaxConcurrentRuns() <= 0 {
 		return fmt.Errorf("hello.max_concurrent_runs must be positive")
-	}
-	if len(hello.GetSupportedStrategies()) == 0 {
-		return fmt.Errorf("hello.supported_strategies must not be empty")
 	}
 	seen := make(map[string]struct{}, len(hello.GetRunningRuns()))
 	for _, running := range hello.GetRunningRuns() {
@@ -175,11 +175,9 @@ func validateTaskAssign(env *runtimev1.Envelope, assign *runtimev1.TaskAssign) e
 	if assign.GetAppId() == "" {
 		return fmt.Errorf("task_assign.app_id is required")
 	}
-	if assign.GetStrategy() == "" {
-		return fmt.Errorf("task_assign.strategy is required")
-	}
-	if assign.GetModel() == nil || assign.GetModel().GetProvider() == "" || assign.GetModel().GetModel() == "" {
-		return fmt.Errorf("task_assign.model.provider and model are required")
+	if assign.GetModel() != nil &&
+		(assign.GetModel().GetProvider() == "" || assign.GetModel().GetModel() == "") {
+		return fmt.Errorf("task_assign.model.provider and model must both be set")
 	}
 	if assign.GetTimeouts() == nil || assign.GetTimeouts().GetRunTimeoutMs() <= 0 || assign.GetTimeouts().GetToolTimeoutMs() <= 0 {
 		return fmt.Errorf("task_assign.timeouts must be positive")

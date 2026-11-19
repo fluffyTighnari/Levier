@@ -1,5 +1,8 @@
 # ADR-0001：PostgreSQL RunTaskQueue（Workflow v1）
 
+> **Historical design record.** Strategy was removed in the App/Runtime simplification step 0. The current protocol is defined by `proto/middleware/runtime/v1/runtime.proto` and `docs/DAEMON_CONTRACT.md`.
+
+
 | 项目 | 内容 |
 |---|---|
 | 状态 | 提议（P0-02，存储方向已按推荐方案调整为 PostgreSQL） |

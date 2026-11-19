@@ -116,10 +116,6 @@ X-Request-ID: ...
         "used": 1,
         "available": 3
       }
-    },
-    "strategies": {
-      "react": 1,
-      "echo": 1
     }
   },
   "apps": {
@@ -168,7 +164,6 @@ X-Request-ID: ...
 | `daemons.used` | 已使用容量 |
 | `daemons.available` | 可用容量，最小为 0 |
 | `daemons.by_runtime` | 按 runtime type 聚合 |
-| `daemons.strategies` | 声明支持各策略的 daemon 数 |
 | `apps.registered` | 数据库中的 App 数量 |
 | `apps.websocket_connections` | 当前 App WebSocket 连接数 |
 | `runs.total` | Run 总数 |
@@ -211,7 +206,6 @@ X-Request-ID: ...
 | 数据 | 来源 |
 |---|---|
 | daemon 数量、容量、运行数 | `connection.Hub.List()` / `Count()` |
-| daemon 策略 | `DaemonInfo.SupportedStrategies` |
 | App WebSocket 连接 | `AppHub` 新增聚合 Stats |
 | App 注册数 | `runstore` 新增 `CountApps` |
 | Run 状态计数 | `runstore` 新增 `Stats` |

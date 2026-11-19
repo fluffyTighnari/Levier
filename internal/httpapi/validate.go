@@ -8,22 +8,23 @@ package httpapi
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
 )
 
 const maxToolTimeoutMS = 240_000
 
 // Validate checks a create-run request.
 func (r CreateRunRequest) Validate() error {
+	if strings.TrimSpace(r.RuntimeName) == "" {
+		return fmt.Errorf("runtime_name is required")
+	}
 	switch r.Runtime {
-	case RuntimeNormal, RuntimeSandbox, RuntimeLongterm:
+	case "", RuntimeNormal, RuntimeSandbox, RuntimeLongterm:
 	default:
 		return fmt.Errorf("runtime must be normal, sandbox, or longterm")
 	}
-	if r.Strategy.Name == "" {
-		return fmt.Errorf("strategy.name is required")
-	}
-	if r.Model.Provider == "" || r.Model.Model == "" {
-		return fmt.Errorf("model.provider and model are required")
+	if r.Model != nil && (r.Model.Provider == "" || r.Model.Model == "") {
+		return fmt.Errorf("model.provider and model are required when model is provided")
 	}
 	if r.Timeouts.RunMS < 0 || r.Timeouts.ToolMS < 0 {
 		return fmt.Errorf("timeouts must not be negative")

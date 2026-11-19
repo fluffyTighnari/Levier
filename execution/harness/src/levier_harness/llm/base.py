@@ -1,6 +1,6 @@
 """Levier — LLM provider interface.
 
-Defines the provider contract consumed by the ReAct strategy, including
+Defines the provider contract consumed by the ReAct runtime, including
 per-run model configuration, streaming deltas, and normalized provider
 errors.
 
@@ -121,7 +121,7 @@ class DeltaCallback(Protocol):
 
 
 class LLMProvider(Protocol):
-    """Provider contract consumed by the ReAct strategy."""
+    """Provider contract consumed by the ReAct runtime."""
 
     async def complete(
         self,

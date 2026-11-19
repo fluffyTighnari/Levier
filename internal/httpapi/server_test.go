@@ -186,8 +186,8 @@ func (f *fakeQueue) ListTasks(_ context.Context, filter workflow.TaskFilter) ([]
 
 const validBody = `{
   "app_id": "app-1",
-  "runtime": "normal",
-  "strategy": {"name": "echo", "params": {"max_steps": 8}},
+  "runtime_name": "echo1",
+  "params": {"max_steps": 8},
   "input": [{"role": "user", "content": "hello"}],
   "model": {"provider": "anthropic", "model": "claude-test"},
   "timeouts": {"run_ms": 1000, "tool_ms": 500}
@@ -254,7 +254,7 @@ func TestCreateRunGetRunAndEvents(t *testing.T) {
 		t.Fatalf("decode run: %v", err)
 	}
 	resp.Body.Close()
-	if view.RunID != created.RunID || view.Status != RunStatusQueued || view.Strategy.Name != "echo" {
+	if view.RunID != created.RunID || view.Status != RunStatusQueued || view.RuntimeName != "echo1" {
 		t.Fatalf("view = %+v", view)
 	}
 

@@ -21,7 +21,7 @@ type AdminRunView struct {
 	RunID            string          `json:"run_id"`
 	AppID            string          `json:"app_id"`
 	Runtime          string          `json:"runtime"`
-	Strategy         string          `json:"strategy"`
+	RuntimeName      string          `json:"runtime_name"`
 	Status           string          `json:"status"`
 	Attempt          int             `json:"attempt"`
 	SessionID        string          `json:"session_id,omitempty"`
@@ -65,17 +65,17 @@ type AdminTaskListResponse struct {
 
 // AdminDaemonView is the operator projection of a connected daemon.
 type AdminDaemonView struct {
-	DaemonID            string    `json:"daemon_id"`
-	Status              string    `json:"status"`
-	RuntimeType         string    `json:"runtime_type"`
-	MaxConcurrentRuns   int32     `json:"max_concurrent_runs"`
-	Running             int32     `json:"running"`
-	Reserved            int32     `json:"reserved"`
-	Available           int32     `json:"available"`
-	Healthy             bool      `json:"healthy"`
-	SupportedStrategies []string  `json:"supported_strategies,omitempty"`
-	ConnectedAt         time.Time `json:"connected_at"`
-	LastHeartbeat       time.Time `json:"last_heartbeat"`
+	DaemonID          string    `json:"daemon_id"`
+	RuntimeName       string    `json:"runtime_name"`
+	Status            string    `json:"status"`
+	RuntimeType       string    `json:"runtime_type"`
+	MaxConcurrentRuns int32     `json:"max_concurrent_runs"`
+	Running           int32     `json:"running"`
+	Reserved          int32     `json:"reserved"`
+	Available         int32     `json:"available"`
+	Healthy           bool      `json:"healthy"`
+	ConnectedAt       time.Time `json:"connected_at"`
+	LastHeartbeat     time.Time `json:"last_heartbeat"`
 }
 
 // AdminDaemonListResponse is the operator daemon list.
@@ -230,17 +230,17 @@ func (s *Server) handleAdminListDaemons(w http.ResponseWriter, r *http.Request) 
 			available = 0
 		}
 		daemons = append(daemons, AdminDaemonView{
-			DaemonID:            info.DaemonID,
-			Status:              info.Status,
-			RuntimeType:         info.RuntimeType.String(),
-			MaxConcurrentRuns:   total,
-			Running:             info.RunningCount,
-			Reserved:            info.Reserved,
-			Available:           available,
-			Healthy:             info.Healthy,
-			SupportedStrategies: info.SupportedStrategies,
-			ConnectedAt:         info.ConnectedAt,
-			LastHeartbeat:       info.LastHeartbeat,
+			DaemonID:          info.DaemonID,
+			RuntimeName:       info.RuntimeName,
+			Status:            info.Status,
+			RuntimeType:       info.RuntimeType.String(),
+			MaxConcurrentRuns: total,
+			Running:           info.RunningCount,
+			Reserved:          info.Reserved,
+			Available:         available,
+			Healthy:           info.Healthy,
+			ConnectedAt:       info.ConnectedAt,
+			LastHeartbeat:     info.LastHeartbeat,
 		})
 	}
 	writeJSON(w, http.StatusOK, AdminDaemonListResponse{Daemons: daemons})
@@ -303,7 +303,7 @@ func adminRunView(run runstore.Run, tasks []workflow.Task) AdminRunView {
 		RunID:            run.RunID,
 		AppID:            run.AppID,
 		Runtime:          run.Runtime,
-		Strategy:         run.Strategy,
+		RuntimeName:      run.RuntimeName,
 		Status:           run.Status,
 		Attempt:          run.Attempt,
 		SessionID:        run.SessionID,

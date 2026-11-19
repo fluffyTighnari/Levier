@@ -168,8 +168,8 @@ def check_tool(args: argparse.Namespace, credentials: dict[str, str]) -> dict[st
         base + "/api/v1/runs",
         token=key,
         body={
-            "runtime": "normal",
-            "strategy": {"name": "react", "params": {"max_steps": 4}},
+            "runtime_name": "react1",
+            "params": {"max_steps": 4},
             "input": [{"role": "user", "content": prompt}],
             "model": {"provider": args.provider, "model": args.model},
             "timeouts": {"run_ms": args.run_ms, "tool_ms": args.tool_ms},

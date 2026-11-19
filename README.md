@@ -128,7 +128,7 @@ postgres 就绪
 → levier 执行 migrate up，然后 serve
   （serve 启动时检查 pending migration）
 → mcp-runtime 创建 /run/levier/mcp.sock
-→ harness 连接 levier，注册为 daemon-local-1
+→ harness 注册为 daemon-local-1 / react1；echo-runtime 注册为 echo-local-1 / echo1
 → agent 等待 /readyz 和凭据文件，启动 SDK App，注册工具，建立 WebSocket
 ```
 
@@ -162,7 +162,7 @@ bin/levier app init \
 bin/levier run submit \
   --credentials data/agent/credentials.json \
   --server http://127.0.0.1:8080 \
-  --strategy react \
+  --runtime react1 \
   --provider deepseek \
   --model deepseek-flash \
   --prompt "Add 2, then add 3, then read the counter."
@@ -265,7 +265,7 @@ PYTHONPATH=sdk/python/src \
 # 6. 另开终端提交 Run
 bin/levier run submit \
   --credentials ./data/agent/credentials.json \
-  --strategy react \
+  --runtime react1 \
   --provider deepseek --model deepseek-flash \
   --prompt "Add 2, then add 3, then read the counter." \
   --watch
@@ -302,7 +302,7 @@ levier app check --credentials /path/to/app.json
 levier app list
 levier ops runs list
 levier ops daemons
-levier run submit --credentials /path/to/app.json --strategy echo --prompt "hello" --watch
+levier run submit --credentials /path/to/app.json --runtime echo1 --prompt "hello" --watch
 levier maintenance status
 levier maintenance prune --dry-run
 ```
@@ -576,8 +576,8 @@ Idempotency-Key: {可选但建议}
 
 ```json
 {
-  "runtime": "normal",
-  "strategy": {"name": "react", "params": {"max_steps": 8}},
+  "runtime_name": "react1",
+  "params": {"max_steps": 8},
   "input": [
     {"role": "system", "content": "你是客服助手，只能操作当前租户的数据。"},
     {"role": "user", "content": "帮我把订单 A-100 的收货地址改到杭州。"}
@@ -602,9 +602,8 @@ Idempotency-Key: {可选但建议}
 
 | 字段 | 怎么选 |
 |---|---|
-| `runtime` | MVP 固定 `normal` |
-| `strategy.name` | `echo` 只用于连通性测试；真实任务用 `react` |
-| `strategy.params.max_steps` | 限制循环步数，避免模型反复试错 |
+| `runtime_name` | App 选择的 Runtime 路由名，例如 `react1` |
+| `params` | Runtime 专属参数；ReAct Runtime 支持 `max_steps` |
 | `input` | 把原有 system prompt 和对话历史原样放进 messages |
 | `model` | 由后端选择；模型凭据在 Harness 部署环境，不在请求里 |
 | `timeouts.run_ms` | 整个 Run 的预算，默认 30 分钟 |
@@ -940,6 +939,7 @@ grpc:
   addr: ":9090"
   daemon_tokens:
     daemon-local-1: "change-me"   # 预分配 daemon 身份
+    echo-local-1: "change-me"     # Echo Runtime
 
 database:
   url: "postgres://..."
@@ -973,7 +973,7 @@ daemon:
   auth_token: "change-me"
   runtime_type: "normal"
   max_concurrent_runs: 4
-  strategies: ["react", "echo"]
+  runtime_name: "react1"
   labels:
     pool: "local"
 
@@ -983,7 +983,7 @@ logging:
 ```
 
 `daemon_id` 与 token 必须先在 Levier 配置里预分配；Harness 不能自助注册。
-不声明 `supported_strategies` 的 Harness 永远不会拿到对应策略的任务。
+Harness 在 `Hello.runtime_name` 中声明自己的路由名；App 只按名字提交 Run。
 
 ### 7.4 Compose 默认值
 
@@ -1007,7 +1007,8 @@ logging:
 postgres      PostgreSQL 16
 levier        Go 控制面（8080 HTTP / 9090 gRPC）
 mcp-runtime   MCP 连接进程（共享 /run/levier/mcp.sock）
-harness       Agent 循环（daemon-local-1）
+harness       React Runtime（daemon-local-1 / react1）
+echo-runtime  Echo Runtime（echo-local-1 / echo1）
 agent         counter_agent 参考 App
 smoke         一次性 smoke 容器（profile）
 ```

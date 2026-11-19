@@ -80,14 +80,16 @@ message Hello {
   RuntimeType runtime_type = 3;
   // max_concurrent_runs is the advertised capacity.
   int32 max_concurrent_runs = 4;
-  // supported_strategies lists strategies the harness can run.
-  repeated string supported_strategies = 5;
+  // reserved for the removed supported_strategies field.
+  reserved 5;
   // version is the harness version.
   string version = 6;
   // labels are scheduler labels such as pool and region.
   map<string, string> labels = 7;
   // running_runs lists runs still executing after a reconnect.
   repeated RunningRun running_runs = 8;
+  // runtime_name is the stable App-facing routing name, e.g. react1.
+  string runtime_name = 9;
 }
 
 // RunningRun identifies a run and its ownership generation.
@@ -120,10 +122,10 @@ message TaskAssign {
   string run_id = 1;
   // app_id is the owning application identifier.
   string app_id = 2;
-  // strategy is the execution strategy name.
-  string strategy = 3;
-  // strategy_params are strategy-specific parameters.
-  google.protobuf.Struct strategy_params = 4;
+  // reserved for the removed strategy field.
+  reserved 3;
+  // params are optional Runtime-specific parameters.
+  google.protobuf.Struct params = 4;
   // input is the initial conversation.
   repeated ChatMessage input = 5;
   // model is the resolved model profile.

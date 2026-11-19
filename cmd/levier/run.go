@@ -18,6 +18,7 @@ type runSubmitResult struct {
 
 type runWatchResult struct {
 	RunID        string `json:"run_id"`
+	RuntimeName  string `json:"runtime_name,omitempty"`
 	Status       string `json:"status"`
 	Attempt      int    `json:"attempt"`
 	FinalMessage string `json:"final_message,omitempty"`
@@ -48,7 +49,7 @@ func runRun(args []string, stdout, stderr io.Writer) int {
 
 func printRunUsage(out io.Writer) {
 	fmt.Fprintln(out, "usage:")
-	fmt.Fprintln(out, "  levier run submit --prompt <text> [--strategy react] [--request-id id] [--watch]")
+	fmt.Fprintln(out, "  levier run submit --runtime <name> --prompt <text> [--request-id id] [--watch]")
 	fmt.Fprintln(out, "  levier run watch --run-id <id>")
 	fmt.Fprintln(out, "  levier run cancel --run-id <id> --yes")
 }
@@ -59,7 +60,7 @@ func runRunSubmit(args []string, stdout, stderr io.Writer) int {
 	credentialsPath := flags.String("credentials", os.Getenv("LEVIER_CREDENTIALS"), "credentials file")
 	server := flags.String("server", "", "Levier HTTP address")
 	prompt := flags.String("prompt", "", "user prompt")
-	strategy := flags.String("strategy", "react", "strategy: react or echo")
+	runtimeName := flags.String("runtime", "", "target runtime name, e.g. react1")
 	provider := flags.String("provider", "deepseek", "model provider")
 	model := flags.String("model", "deepseek-flash", "model name")
 	maxSteps := flags.Int("max-steps", 8, "maximum ReAct steps")
@@ -83,6 +84,10 @@ func runRunSubmit(args []string, stdout, stderr io.Writer) int {
 		fmt.Fprintln(stderr, "prompt is required: --prompt")
 		return 2
 	}
+	if strings.TrimSpace(*runtimeName) == "" {
+		fmt.Fprintln(stderr, "runtime name is required: --runtime")
+		return 2
+	}
 	credentials, err := readCredentials(*credentialsPath)
 	if err != nil {
 		fmt.Fprintf(stderr, "read credentials: %v\n", err)
@@ -90,13 +95,10 @@ func runRunSubmit(args []string, stdout, stderr io.Writer) int {
 	}
 
 	request := createRunRequest{
-		Runtime: "normal",
-		Strategy: strategyRequest{
-			Name:   *strategy,
-			Params: map[string]any{"max_steps": *maxSteps},
-		},
-		Input: []chatMessage{{Role: "user", Content: *prompt}},
-		Model: modelRequest{Provider: *provider, Model: *model},
+		RuntimeName: *runtimeName,
+		Params:      map[string]any{"max_steps": *maxSteps},
+		Input:       []chatMessage{{Role: "user", Content: *prompt}},
+		Model:       modelRequest{Provider: *provider, Model: *model},
 		Timeouts: timeoutRequest{
 			RunMS:  *runMS,
 			ToolMS: *toolMS,
@@ -193,7 +195,13 @@ func finishWatch(client *apiClient, run runView, asJSON bool, stdout, stderr io.
 	if err != nil {
 		return reportAPIError(err, stderr)
 	}
-	result := runWatchResult{RunID: run.RunID, Status: run.Status, Attempt: run.Attempt, Events: len(events.Events)}
+	result := runWatchResult{
+		RunID:       run.RunID,
+		RuntimeName: run.RuntimeName,
+		Status:      run.Status,
+		Attempt:     run.Attempt,
+		Events:      len(events.Events),
+	}
 	for _, event := range events.Events {
 		if event.EventType != "MESSAGE_COMPLETED" {
 			continue
@@ -205,6 +213,9 @@ func finishWatch(client *apiClient, run runView, asJSON bool, stdout, stderr io.
 
 	if asJSON {
 		return encodeJSON(stdout, result, stderr)
+	}
+	if result.RuntimeName != "" {
+		fmt.Fprintf(stdout, "runtime_name: %s\n", result.RuntimeName)
 	}
 	if result.FinalMessage != "" {
 		fmt.Fprintf(stdout, "final: %s\n", result.FinalMessage)

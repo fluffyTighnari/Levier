@@ -130,7 +130,7 @@ curl -fsS "$LEVIER_URL/metrics" >"$OUT/metrics_before.txt"
 "$LEVIER_BIN" run submit \
   --credentials "$CREDENTIALS" \
   --server "$LEVIER_URL" \
-  --strategy react \
+  --runtime react1 \
   --prompt "$PROMPT" \
   --provider deepseek \
   --model deepseek-flash \

@@ -18,14 +18,14 @@ from pathlib import Path
 from typing import Sequence
 
 from levier_harness import __version__
-from levier_harness.channel import ChannelClient, ChannelConfig
+from levier_harness.channel import ChannelClient
 from levier_harness.config import ConfigError, Settings, load_settings
 from levier_harness.health import HealthState
 from levier_harness.llm import ProviderRouter
 from levier_harness.logging import configure_logging, get_logger
 from levier_harness.mcp import McpRuntimeClient
-from levier_harness.runtime import ManagerConfig, RunManager
-from levier_harness.strategies import EchoStrategy, ReactStrategy, StrategyRouter
+from levier_harness.runtime.host import run_runtime
+from levier_harness.runtime.react import ReactRuntime
 from levier_harness.tools.bridge import ToolBridge
 from levier_harness.tools.router import ToolRouter
 
@@ -82,82 +82,19 @@ def main(argv: Sequence[str] | None = None) -> int:
 
 
 async def _run(settings: Settings, health: HealthState) -> None:
-    """Start the RuntimeChannel client and wait for shutdown."""
-    client = ChannelClient(
-        ChannelConfig(
-            address=settings.middleware.address,
-            daemon_id=settings.daemon.id,
-            auth_token=settings.daemon.auth_token.get_secret_value(),
-            runtime_type=settings.daemon.runtime_type,
-            max_concurrent_runs=settings.daemon.max_concurrent_runs,
-            strategies=list(settings.daemon.strategies),
-            version=__version__,
-            labels=dict(settings.daemon.labels),
-            tls=settings.middleware.tls,
-        ),
-    )
-    runner, supported, mcp_client = _build_runner(settings, client)
-    manager = RunManager(
-        sender=client,
-        config=ManagerConfig(
-            max_concurrent_runs=settings.daemon.max_concurrent_runs,
-            supported_strategies=supported,
-            runtime_type=settings.daemon.runtime_type,
-        ),
-        runner=runner,
-    )
-    client.on_message = manager.handle
-    client.running_runs = manager.running_runs
-    client.running_count = manager.running_count
+    """Start the React runtime and wait for shutdown."""
 
-    await client.start()
-    try:
-        await _wait_for_shutdown()
-    finally:
-        health.set_check("middleware", client.connected)
-        await manager.close()
-        if mcp_client is not None:
-            await mcp_client.close()
-        await client.stop()
-        health.set_ready(False)
+    def build_runner(channel: ChannelClient) -> tuple[object, object | None]:
+        """Build the React runner and optional MCP client."""
+        mcp_client = (
+            McpRuntimeClient(settings.mcp_runtime.socket)
+            if settings.mcp_runtime.socket
+            else None
+        )
+        tools = ToolRouter(bridge=ToolBridge(channel), mcp=mcp_client)
+        return ReactRuntime(ProviderRouter(), tools), mcp_client
 
-
-def _build_runner(
-    settings: Settings,
-    channel: ChannelClient,
-) -> tuple[StrategyRouter, tuple[str, ...], McpRuntimeClient | None]:
-    """Build the strategy registry and tool sources from configuration."""
-    mcp_client = (
-        McpRuntimeClient(settings.mcp_runtime.socket)
-        if settings.mcp_runtime.socket
-        else None
-    )
-    tools = ToolRouter(bridge=ToolBridge(channel), mcp=mcp_client)
-    available = {
-        "echo": EchoStrategy(),
-        "react": ReactStrategy(ProviderRouter(), tools),
-    }
-    unknown = [name for name in settings.daemon.strategies if name not in available]
-    if unknown:
-        raise ConfigError(f"unsupported strategies: {', '.join(unknown)}")
-    names = tuple(dict.fromkeys(settings.daemon.strategies))
-    if not names:
-        raise ConfigError("daemon.strategies must not be empty")
-    return StrategyRouter({name: available[name] for name in names}), names, mcp_client
-
-
-async def _wait_for_shutdown() -> None:
-    """Wait until SIGINT/SIGTERM is received."""
-    stop = asyncio.Event()
-    loop = asyncio.get_running_loop()
-
-    for sig in (signal.SIGINT, signal.SIGTERM):
-        try:
-            loop.add_signal_handler(sig, stop.set)
-        except NotImplementedError:
-            pass
-
-    await stop.wait()
+    await run_runtime(settings, build_runner, health=health, logger=get_logger())
 
 
 if __name__ == "__main__":

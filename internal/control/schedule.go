@@ -59,8 +59,8 @@ func (c *Control) Handle(ctx context.Context, task workflow.Task, _ workflow.Lea
 	}
 
 	placement := PlacementRequest{
-		Runtime:  runtimeType(run.Runtime),
-		Strategy: run.Strategy,
+		Runtime:     runtimeType(run.Runtime),
+		RuntimeName: run.RuntimeName,
 	}
 	if run.Runtime == "longterm" {
 		placement.StickyDaemonID = run.AssignedDaemonID
@@ -114,7 +114,7 @@ func (c *Control) Handle(ctx context.Context, task workflow.Task, _ workflow.Lea
 			observe.FieldLeaseEpoch, leaseEpoch,
 			observe.FieldDaemonID, daemonID,
 			"runtime", run.Runtime,
-			"strategy", run.Strategy,
+			"runtime_name", run.RuntimeName,
 		)
 
 		envelope, err := protocol.NewRun(run.RunID, int32(attempt), leaseEpoch, assign)
@@ -174,7 +174,7 @@ func (c *Control) pick(placement PlacementRequest) (string, bool) {
 	if c.cfg.Scheduler != nil {
 		return c.cfg.Scheduler.Pick(placement)
 	}
-	return c.hub.PickHealthy(placement.Runtime, placement.Strategy, placement.Labels)
+	return c.hub.PickHealthy(placement.Runtime, placement.RuntimeName, placement.Labels)
 }
 
 func (c *Control) removePending(msgID string) {
@@ -190,9 +190,9 @@ func buildTaskAssign(run runstore.Run, attempt int) (*runtimev1.TaskAssign, erro
 			return nil, fmt.Errorf("decode run params: %w", err)
 		}
 	}
-	strategyParams, err := structpb.NewStruct(params)
+	runtimeParams, err := structpb.NewStruct(params)
 	if err != nil {
-		return nil, fmt.Errorf("build strategy params: %w", err)
+		return nil, fmt.Errorf("build runtime params: %w", err)
 	}
 
 	var input []struct {
@@ -238,26 +238,28 @@ func buildTaskAssign(run runstore.Run, attempt int) (*runtimev1.TaskAssign, erro
 	if toolTimeout <= 0 {
 		toolTimeout = 60_000
 	}
-	return &runtimev1.TaskAssign{
-		RunId:          run.RunID,
-		AppId:          run.AppID,
-		Strategy:       run.Strategy,
-		StrategyParams: strategyParams,
-		Input:          messages,
-		Model: &runtimev1.ModelProfile{
-			Provider: model.Provider,
-			Model:    model.Model,
-			ApiKey:   model.APIKey,
-			BaseUrl:  model.BaseURL,
-			Params:   model.Params,
-		},
+	assign := &runtimev1.TaskAssign{
+		RunId:  run.RunID,
+		AppId:  run.AppID,
+		Params: runtimeParams,
+		Input:  messages,
 		Timeouts: &runtimev1.TimeoutProfile{
 			RunTimeoutMs:  runTimeout,
 			ToolTimeoutMs: toolTimeout,
 		},
 		SessionId:    run.SessionID,
 		TraceContext: run.TraceID,
-	}, nil
+	}
+	if model.Provider != "" || model.Model != "" {
+		assign.Model = &runtimev1.ModelProfile{
+			Provider: model.Provider,
+			Model:    model.Model,
+			ApiKey:   model.APIKey,
+			BaseUrl:  model.BaseURL,
+			Params:   model.Params,
+		}
+	}
+	return assign, nil
 }
 
 func toolManifests(tools []register.ToolMaterial) []*runtimev1.ToolManifest {

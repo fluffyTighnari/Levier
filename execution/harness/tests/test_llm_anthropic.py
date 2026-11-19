@@ -24,7 +24,7 @@ from levier_harness.llm import (
     ToolSpec,
 )
 from levier_harness.runtime import ManagerConfig, RunManager
-from levier_harness.strategies import ReactStrategy
+from levier_harness.runtime.react import ReactRuntime
 
 
 class FakeTransport:
@@ -292,13 +292,12 @@ class AnthropicReactIntegrationTest(unittest.IsolatedAsyncioTestCase):
         sender = FakeSender()
         manager = RunManager(
             sender,
-            ManagerConfig(supported_strategies=("react",)),
-            ReactStrategy(provider),
+            ManagerConfig(runtime_name="react1"),
+            ReactRuntime(provider),
         )
         assign = runtime_pb2.TaskAssign(
             run_id="run-1",
             app_id="app-1",
-            strategy="react",
             input=[runtime_pb2.ChatMessage(role="user", content="hi")],
             model=runtime_pb2.ModelProfile(
                 provider="anthropic",

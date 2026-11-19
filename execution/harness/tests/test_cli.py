@@ -14,6 +14,7 @@ from levier_harness.__main__ import main
 VALID_YAML = """
 daemon:
   id: "daemon-cli"
+  runtime_name: "react1"
   auth_token: "token"
 """
 

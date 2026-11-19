@@ -28,7 +28,7 @@ type Run struct {
 	IdempotencyKey   string          `json:"-"`
 	RequestHash      string          `json:"-"`
 	Runtime          string          `json:"runtime"`
-	Strategy         string          `json:"strategy"`
+	RuntimeName      string          `json:"runtime_name"`
 	Params           json.RawMessage `json:"params"`
 	Input            json.RawMessage `json:"input"`
 	Status           string          `json:"status"`

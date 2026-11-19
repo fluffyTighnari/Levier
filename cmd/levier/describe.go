@@ -63,7 +63,7 @@ func runDescribe(args []string, stdout, stderr io.Writer) int {
 	fmt.Fprintf(stdout, "api          %s\n", doc.API.HTTPVersion)
 	fmt.Fprintf(stdout, "ws protocol  %d\n", doc.API.WSProtocol)
 	fmt.Fprintf(stdout, "runtime      %s\n", strings.Join(doc.Capabilities.RuntimeTypes, ", "))
-	fmt.Fprintf(stdout, "strategies   %s\n", strings.Join(doc.Capabilities.BuiltinStrategies, ", "))
+
 	fmt.Fprintf(stdout, "limits       body=%d run=%dms tool=%dms ws_token=%ds\n",
 		doc.Limits.MaxBodyBytes,
 		doc.Limits.DefaultRunTimeoutMS,

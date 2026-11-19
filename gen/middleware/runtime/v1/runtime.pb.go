@@ -517,14 +517,14 @@ type Hello struct {
 	RuntimeType RuntimeType `protobuf:"varint,3,opt,name=runtime_type,json=runtimeType,proto3,enum=middleware.runtime.v1.RuntimeType" json:"runtime_type,omitempty"`
 	// max_concurrent_runs is the advertised capacity.
 	MaxConcurrentRuns int32 `protobuf:"varint,4,opt,name=max_concurrent_runs,json=maxConcurrentRuns,proto3" json:"max_concurrent_runs,omitempty"`
-	// supported_strategies lists strategies the harness can run.
-	SupportedStrategies []string `protobuf:"bytes,5,rep,name=supported_strategies,json=supportedStrategies,proto3" json:"supported_strategies,omitempty"`
 	// version is the harness version.
 	Version string `protobuf:"bytes,6,opt,name=version,proto3" json:"version,omitempty"`
 	// labels are scheduler labels such as pool and region.
 	Labels map[string]string `protobuf:"bytes,7,rep,name=labels,proto3" json:"labels,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
 	// running_runs lists runs still executing after a reconnect.
-	RunningRuns   []*RunningRun `protobuf:"bytes,8,rep,name=running_runs,json=runningRuns,proto3" json:"running_runs,omitempty"`
+	RunningRuns []*RunningRun `protobuf:"bytes,8,rep,name=running_runs,json=runningRuns,proto3" json:"running_runs,omitempty"`
+	// runtime_name is the stable App-facing routing name, e.g. react1.
+	RuntimeName   string `protobuf:"bytes,9,opt,name=runtime_name,json=runtimeName,proto3" json:"runtime_name,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -587,13 +587,6 @@ func (x *Hello) GetMaxConcurrentRuns() int32 {
 	return 0
 }
 
-func (x *Hello) GetSupportedStrategies() []string {
-	if x != nil {
-		return x.SupportedStrategies
-	}
-	return nil
-}
-
 func (x *Hello) GetVersion() string {
 	if x != nil {
 		return x.Version
@@ -613,6 +606,13 @@ func (x *Hello) GetRunningRuns() []*RunningRun {
 		return x.RunningRuns
 	}
 	return nil
+}
+
+func (x *Hello) GetRuntimeName() string {
+	if x != nil {
+		return x.RuntimeName
+	}
+	return ""
 }
 
 // RunningRun identifies a run and its ownership generation.
@@ -787,10 +787,8 @@ type TaskAssign struct {
 	RunId string `protobuf:"bytes,1,opt,name=run_id,json=runId,proto3" json:"run_id,omitempty"`
 	// app_id is the owning application identifier.
 	AppId string `protobuf:"bytes,2,opt,name=app_id,json=appId,proto3" json:"app_id,omitempty"`
-	// strategy is the execution strategy name.
-	Strategy string `protobuf:"bytes,3,opt,name=strategy,proto3" json:"strategy,omitempty"`
-	// strategy_params are strategy-specific parameters.
-	StrategyParams *structpb.Struct `protobuf:"bytes,4,opt,name=strategy_params,json=strategyParams,proto3" json:"strategy_params,omitempty"`
+	// params are optional Runtime-specific parameters.
+	Params *structpb.Struct `protobuf:"bytes,4,opt,name=params,proto3" json:"params,omitempty"`
 	// input is the initial conversation.
 	Input []*ChatMessage `protobuf:"bytes,5,rep,name=input,proto3" json:"input,omitempty"`
 	// model is the resolved model profile.
@@ -855,16 +853,9 @@ func (x *TaskAssign) GetAppId() string {
 	return ""
 }
 
-func (x *TaskAssign) GetStrategy() string {
+func (x *TaskAssign) GetParams() *structpb.Struct {
 	if x != nil {
-		return x.Strategy
-	}
-	return ""
-}
-
-func (x *TaskAssign) GetStrategyParams() *structpb.Struct {
-	if x != nil {
-		return x.StrategyParams
+		return x.Params
 	}
 	return nil
 }
@@ -1857,20 +1848,20 @@ const file_middleware_runtime_v1_runtime_proto_rawDesc = "" +
 	"checkpoint\x18\x13 \x01(\v2!.middleware.runtime.v1.CheckpointH\x00R\n" +
 	"checkpoint\x12:\n" +
 	"\x05error\x18\x14 \x01(\v2\".middleware.runtime.v1.ErrorReportH\x00R\x05errorB\t\n" +
-	"\apayload\"\xca\x03\n" +
+	"\apayload\"\xc0\x03\n" +
 	"\x05Hello\x12\x1b\n" +
 	"\tdaemon_id\x18\x01 \x01(\tR\bdaemonId\x12\x1d\n" +
 	"\n" +
 	"auth_token\x18\x02 \x01(\tR\tauthToken\x12E\n" +
 	"\fruntime_type\x18\x03 \x01(\x0e2\".middleware.runtime.v1.RuntimeTypeR\vruntimeType\x12.\n" +
-	"\x13max_concurrent_runs\x18\x04 \x01(\x05R\x11maxConcurrentRuns\x121\n" +
-	"\x14supported_strategies\x18\x05 \x03(\tR\x13supportedStrategies\x12\x18\n" +
+	"\x13max_concurrent_runs\x18\x04 \x01(\x05R\x11maxConcurrentRuns\x12\x18\n" +
 	"\aversion\x18\x06 \x01(\tR\aversion\x12@\n" +
 	"\x06labels\x18\a \x03(\v2(.middleware.runtime.v1.Hello.LabelsEntryR\x06labels\x12D\n" +
-	"\frunning_runs\x18\b \x03(\v2!.middleware.runtime.v1.RunningRunR\vrunningRuns\x1a9\n" +
+	"\frunning_runs\x18\b \x03(\v2!.middleware.runtime.v1.RunningRunR\vrunningRuns\x12!\n" +
+	"\fruntime_name\x18\t \x01(\tR\vruntimeName\x1a9\n" +
 	"\vLabelsEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"D\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01J\x04\b\x05\x10\x06\"D\n" +
 	"\n" +
 	"RunningRun\x12\x15\n" +
 	"\x06run_id\x18\x01 \x01(\tR\x05runId\x12\x1f\n" +
@@ -1881,13 +1872,12 @@ const file_middleware_runtime_v1_runtime_proto_rawDesc = "" +
 	"\tHeartbeat\x12#\n" +
 	"\rrunning_count\x18\x01 \x01(\x05R\frunningCount\x12\x19\n" +
 	"\bcpu_load\x18\x02 \x01(\x01R\acpuLoad\x12\x15\n" +
-	"\x06mem_mb\x18\x03 \x01(\x01R\x05memMb\"\xd9\x04\n" +
+	"\x06mem_mb\x18\x03 \x01(\x01R\x05memMb\"\xb2\x04\n" +
 	"\n" +
 	"TaskAssign\x12\x15\n" +
 	"\x06run_id\x18\x01 \x01(\tR\x05runId\x12\x15\n" +
-	"\x06app_id\x18\x02 \x01(\tR\x05appId\x12\x1a\n" +
-	"\bstrategy\x18\x03 \x01(\tR\bstrategy\x12@\n" +
-	"\x0fstrategy_params\x18\x04 \x01(\v2\x17.google.protobuf.StructR\x0estrategyParams\x128\n" +
+	"\x06app_id\x18\x02 \x01(\tR\x05appId\x12/\n" +
+	"\x06params\x18\x04 \x01(\v2\x17.google.protobuf.StructR\x06params\x128\n" +
 	"\x05input\x18\x05 \x03(\v2\".middleware.runtime.v1.ChatMessageR\x05input\x129\n" +
 	"\x05model\x18\x06 \x01(\v2#.middleware.runtime.v1.ModelProfileR\x05model\x129\n" +
 	"\x05tools\x18\a \x03(\v2#.middleware.runtime.v1.ToolManifestR\x05tools\x12D\n" +
@@ -1898,7 +1888,7 @@ const file_middleware_runtime_v1_runtime_proto_rawDesc = "" +
 	" \x01(\tR\tsessionId\x12B\n" +
 	"\vresume_from\x18\v \x01(\v2!.middleware.runtime.v1.CheckpointR\n" +
 	"resumeFrom\x12#\n" +
-	"\rtrace_context\x18\f \x01(\tR\ftraceContext\"O\n" +
+	"\rtrace_context\x18\f \x01(\tR\ftraceContextJ\x04\b\x03\x10\x04\"O\n" +
 	"\vChatMessage\x12\x12\n" +
 	"\x04role\x18\x01 \x01(\tR\x04role\x12\x18\n" +
 	"\acontent\x18\x02 \x01(\tR\acontent\x12\x12\n" +
@@ -2057,7 +2047,7 @@ var file_middleware_runtime_v1_runtime_proto_depIdxs = []int32{
 	0,  // 11: middleware.runtime.v1.Hello.runtime_type:type_name -> middleware.runtime.v1.RuntimeType
 	22, // 12: middleware.runtime.v1.Hello.labels:type_name -> middleware.runtime.v1.Hello.LabelsEntry
 	5,  // 13: middleware.runtime.v1.Hello.running_runs:type_name -> middleware.runtime.v1.RunningRun
-	26, // 14: middleware.runtime.v1.TaskAssign.strategy_params:type_name -> google.protobuf.Struct
+	26, // 14: middleware.runtime.v1.TaskAssign.params:type_name -> google.protobuf.Struct
 	9,  // 15: middleware.runtime.v1.TaskAssign.input:type_name -> middleware.runtime.v1.ChatMessage
 	10, // 16: middleware.runtime.v1.TaskAssign.model:type_name -> middleware.runtime.v1.ModelProfile
 	11, // 17: middleware.runtime.v1.TaskAssign.tools:type_name -> middleware.runtime.v1.ToolManifest

@@ -146,7 +146,6 @@ GET /meta
   },
   "capabilities": {
     "runtime_types": ["normal"],
-    "builtin_strategies": ["react", "echo"],
     "tool_scopes": ["local", "global"],
     "mcp_transports": ["stdio", "sse", "streamable_http"],
     "features": [
@@ -213,8 +212,7 @@ meta_version 是自描述协议版本，不是 Levier 版本
 
 - `runtime_types` 只声明真实实现的 `normal`
 - 不声明 `sandbox`、`longterm`
-- `builtin_strategies` 只表示随版本内置的策略名称
-- 实际可用策略以 Harness `Hello.supported_strategies` 为准
+- 实际可用 Runtime 以 Harness `Hello.runtime_name` 为准
 - `features` 只列出已经实现的闭环能力
 - 第一版不声明 `sessions`、`multiagent`
 
@@ -288,7 +286,6 @@ commit       2ce014d
 api          v1
 ws protocol  1
 runtime      normal
-strategies   react, echo
 limits       body=1048576 run=1800000ms tool=60000ms ws_token=600s
 endpoints    health, ready, metrics, runs, apps, websocket
 ```

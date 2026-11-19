@@ -24,9 +24,9 @@ import (
 type Config struct {
 	DaemonID                   string
 	AuthToken                  string
+	RuntimeName                string
 	RuntimeType                runtimev1.RuntimeType
 	MaxConcurrentRuns          int32
-	SupportedStrategies        []string
 	Version                    string
 	Labels                     map[string]string
 	AutoEcho                   bool
@@ -41,14 +41,14 @@ type Config struct {
 // DefaultConfig returns a valid fake daemon configuration.
 func DefaultConfig() Config {
 	return Config{
-		DaemonID:            "fake-daemon",
-		AuthToken:           "test-token",
-		RuntimeType:         runtimev1.RuntimeType_NORMAL,
-		MaxConcurrentRuns:   4,
-		SupportedStrategies: []string{"react", "echo"},
-		Version:             "test",
-		Labels:              map[string]string{"pool": "test"},
-		Accept:              true,
+		DaemonID:          "fake-daemon",
+		AuthToken:         "test-token",
+		RuntimeName:       "fake1",
+		RuntimeType:       runtimev1.RuntimeType_NORMAL,
+		MaxConcurrentRuns: 4,
+		Version:           "test",
+		Labels:            map[string]string{"pool": "test"},
+		Accept:            true,
 	}
 }
 
@@ -246,13 +246,13 @@ func (d *Daemon) SendEvent(runID string, attempt int32, leaseEpoch int64, eventT
 
 func (d *Daemon) sendHello() error {
 	hello := &runtimev1.Hello{
-		DaemonId:            d.cfg.DaemonID,
-		AuthToken:           d.cfg.AuthToken,
-		RuntimeType:         d.cfg.RuntimeType,
-		MaxConcurrentRuns:   d.cfg.MaxConcurrentRuns,
-		SupportedStrategies: d.cfg.SupportedStrategies,
-		Version:             d.cfg.Version,
-		Labels:              d.cfg.Labels,
+		DaemonId:          d.cfg.DaemonID,
+		AuthToken:         d.cfg.AuthToken,
+		RuntimeName:       d.cfg.RuntimeName,
+		RuntimeType:       d.cfg.RuntimeType,
+		MaxConcurrentRuns: d.cfg.MaxConcurrentRuns,
+		Version:           d.cfg.Version,
+		Labels:            d.cfg.Labels,
 	}
 	env, err := protocol.New(hello)
 	if err != nil {
@@ -386,11 +386,11 @@ func normalize(cfg Config) Config {
 	if cfg.RuntimeType == runtimev1.RuntimeType_RUNTIME_TYPE_UNSPECIFIED {
 		cfg.RuntimeType = runtimev1.RuntimeType_NORMAL
 	}
+	if cfg.RuntimeName == "" {
+		cfg.RuntimeName = "fake1"
+	}
 	if cfg.MaxConcurrentRuns <= 0 {
 		cfg.MaxConcurrentRuns = 4
-	}
-	if len(cfg.SupportedStrategies) == 0 {
-		cfg.SupportedStrategies = []string{"react", "echo"}
 	}
 	if cfg.Version == "" {
 		cfg.Version = "test"

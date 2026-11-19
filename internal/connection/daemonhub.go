@@ -62,19 +62,19 @@ type RunRef struct {
 
 // DaemonInfo is the in-memory registration snapshot for one daemon.
 type DaemonInfo struct {
-	DaemonID            string
-	Status              string
-	RuntimeType         runtimev1.RuntimeType
-	MaxConcurrentRuns   int32
-	SupportedStrategies []string
-	Version             string
-	Labels              map[string]string
-	RunningRuns         []RunRef
-	RunningCount        int32
-	Reserved            int32
-	Healthy             bool
-	ConnectedAt         time.Time
-	LastHeartbeat       time.Time
+	DaemonID          string
+	Status            string
+	RuntimeName       string
+	RuntimeType       runtimev1.RuntimeType
+	MaxConcurrentRuns int32
+	Version           string
+	Labels            map[string]string
+	RunningRuns       []RunRef
+	RunningCount      int32
+	Reserved          int32
+	Healthy           bool
+	ConnectedAt       time.Time
+	LastHeartbeat     time.Time
 }
 
 // Config controls DaemonHub behavior.
@@ -208,15 +208,15 @@ func (h *Hub) Channel(stream runtimev1.RuntimeService_ChannelServer) error {
 
 	now := h.cfg.Now()
 	info := DaemonInfo{
-		DaemonID:            hello.GetDaemonId(),
-		Status:              "online",
-		RuntimeType:         hello.GetRuntimeType(),
-		MaxConcurrentRuns:   hello.GetMaxConcurrentRuns(),
-		SupportedStrategies: append([]string(nil), hello.GetSupportedStrategies()...),
-		Version:             hello.GetVersion(),
-		Labels:              cloneStringMap(hello.GetLabels()),
-		ConnectedAt:         now,
-		LastHeartbeat:       now,
+		DaemonID:          hello.GetDaemonId(),
+		Status:            "online",
+		RuntimeName:       hello.GetRuntimeName(),
+		RuntimeType:       hello.GetRuntimeType(),
+		MaxConcurrentRuns: hello.GetMaxConcurrentRuns(),
+		Version:           hello.GetVersion(),
+		Labels:            cloneStringMap(hello.GetLabels()),
+		ConnectedAt:       now,
+		LastHeartbeat:     now,
 	}
 	for _, running := range hello.GetRunningRuns() {
 		info.RunningRuns = append(info.RunningRuns, RunRef{

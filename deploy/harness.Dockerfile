@@ -14,6 +14,7 @@ COPY execution/agent_core/src /app/agent_core/src
 COPY execution/harness/pyproject.toml execution/harness/README.md /app/harness/
 COPY execution/harness/src /app/harness/src
 COPY execution/harness/levier.example.yaml /app/harness/levier.example.yaml
+COPY execution/harness/echo.example.yaml /app/harness/echo.example.yaml
 
 # levier-agent-core is a local path dependency. Install it explicitly and
 # keep pip from trying to resolve it from PyPI.
@@ -23,7 +24,9 @@ RUN pip install --no-cache-dir --no-deps -e /app/agent_core -e /app/harness \
 
 # Fail the image build if generated protobuf modules or the adapter cannot import.
 RUN PYTHONPATH=/app/harness/src:/app/harness/src/gen \
-    python -m levier_harness --config /app/harness/levier.example.yaml --check
+    python -m levier_harness --config /app/harness/levier.example.yaml --check \
+ && PYTHONPATH=/app/harness/src:/app/harness/src/gen \
+    python -m levier_harness.echo --config /app/harness/echo.example.yaml --check
 
 ENTRYPOINT ["python", "-m", "levier_harness"]
 CMD ["--config", "/app/harness/levier.example.yaml"]

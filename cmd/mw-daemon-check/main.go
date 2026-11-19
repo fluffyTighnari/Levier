@@ -27,7 +27,7 @@ func main() {
 	flag.StringVar(&cfg.DaemonID, "daemon-id", "daemon-local-1", "pre-provisioned daemon id")
 	flag.StringVar(&cfg.Token, "token", "change-me", "daemon auth token")
 	flag.StringVar(&cfg.AdminToken, "admin-token", "admin-change-me", "admin token for app bootstrap")
-	flag.StringVar(&cfg.Strategy, "strategy", "echo", "strategy to advertise and run")
+	flag.StringVar(&cfg.RuntimeName, "runtime", "echo1", "runtime name to advertise")
 	flag.DurationVar(&cfg.Timeout, "timeout", 30*time.Second, "per-step timeout")
 	flag.BoolVar(&jsonOut, "json", false, "print JSON result")
 	flag.Parse()

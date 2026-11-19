@@ -25,9 +25,10 @@ func TestAdminRunAndTaskSurface(t *testing.T) {
 	queue := &fakeQueue{}
 	apps := newFakeApps()
 	run, err := store.CreateRun(context.Background(), runstore.Run{
-		RunID:  "run-ops",
-		AppID:  "app-ops",
-		Status: runstore.StatusRunning,
+		RunID:       "run-ops",
+		AppID:       "app-ops",
+		RuntimeName: "echo1",
+		Status:      runstore.StatusRunning,
 	})
 	if err != nil {
 		t.Fatalf("CreateRun() error = %v", err)
@@ -43,12 +44,12 @@ func TestAdminRunAndTaskSurface(t *testing.T) {
 		AdminToken: "admin-token",
 		Canceller:  canceller,
 		Daemons: &fakeDaemonSource{daemons: []connection.DaemonInfo{{
-			DaemonID:            "daemon-1",
-			Status:              "online",
-			MaxConcurrentRuns:   4,
-			RunningCount:        1,
-			Healthy:             true,
-			SupportedStrategies: []string{"echo"},
+			DaemonID:          "daemon-1",
+			RuntimeName:       "echo1",
+			Status:            "online",
+			MaxConcurrentRuns: 4,
+			RunningCount:      1,
+			Healthy:           true,
 		}}},
 	}, apps)
 	httpServer := httptest.NewServer(server.Handler())

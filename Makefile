@@ -139,7 +139,7 @@ secrets-check:
 	python3 tests/checks/check_secrets.py
 
 docker-up:
-	docker compose up --build -d postgres levier mcp-runtime harness
+	docker compose up --build -d postgres levier mcp-runtime harness echo-runtime
 	@mkdir -p data/agent
 	@if [ ! -f data/agent/credentials.json ]; then \
 		for i in $$(seq 1 100); do \

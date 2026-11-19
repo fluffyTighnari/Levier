@@ -33,7 +33,7 @@ def state() -> CheckpointState:
         session_id="session-1",
         run_id="run-1",
         attempt=2,
-        strategy="react",
+        runtime_name="react1",
         step=3,
         messages=[
             Message(role="user", content="hello"),
@@ -59,7 +59,7 @@ class CheckpointCodecTest(unittest.TestCase):
         self.assertEqual(decoded.session_id, "session-1")
         self.assertEqual(decoded.run_id, "run-1")
         self.assertEqual(decoded.attempt, 2)
-        self.assertEqual(decoded.strategy, "react")
+        self.assertEqual(decoded.runtime_name, "react1")
         self.assertEqual(decoded.step, 3)
         self.assertEqual(decoded.last_event_attempt, 2)
         self.assertEqual(decoded.last_event_seq, 11)
@@ -68,7 +68,7 @@ class CheckpointCodecTest(unittest.TestCase):
         self.assertEqual(decoded.messages[2].tool_call_id, "call-1")
 
     def test_invalid_version(self) -> None:
-        payload = b'{"version":99,"session_id":"s","run_id":"r","strategy":"react","attempt":1,"step":0,"messages":[]}'
+        payload = b'{"version":99,"session_id":"s","run_id":"r","runtime_name":"react1","attempt":1,"step":0,"messages":[]}'
         with self.assertRaises(CheckpointError):
             CheckpointState.decode(payload)
 
@@ -87,11 +87,11 @@ class RunContextCheckpointTest(unittest.IsolatedAsyncioTestCase):
         assign = runtime_pb2.TaskAssign(
             run_id="run-1",
             app_id="app-1",
-            strategy="react",
             session_id="session-1",
         )
         ctx = RunContext(
             assign=assign,
+            runtime_name="react1",
             attempt=2,
             lease_epoch=5,
             events=EventWriter(sender, "run-1", 2, 5),

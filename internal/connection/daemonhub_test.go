@@ -94,8 +94,8 @@ func TestHelloAuthHeartbeatAndCleanup(t *testing.T) {
 	if info.RuntimeType != runtimev1.RuntimeType_NORMAL || info.MaxConcurrentRuns != 4 {
 		t.Fatalf("info = %+v", info)
 	}
-	if len(info.SupportedStrategies) != 2 {
-		t.Fatalf("supported strategies = %v", info.SupportedStrategies)
+	if info.RuntimeName != "fake1" {
+		t.Fatalf("runtime_name = %q", info.RuntimeName)
 	}
 	firstHeartbeat := info.LastHeartbeat
 	if !waitFor(t, time.Second, func() bool {
@@ -508,15 +508,15 @@ func TestHubCloseStopsConnections(t *testing.T) {
 	}
 }
 
-func TestPickHealthyLabelsAndStrategies(t *testing.T) {
+func TestPickHealthyLabelsAndRuntimes(t *testing.T) {
 	hub, addr := startHub(t, Config{
 		HelloTimeout: time.Second,
 		Authenticate: func(daemonID, token string) bool { return true },
 	})
 	firstCfg := fakedaemon.DefaultConfig()
 	firstCfg.DaemonID = "daemon-a"
+	firstCfg.RuntimeName = "echo1"
 	firstCfg.Labels = map[string]string{"pool": "a", "region": "cn"}
-	firstCfg.SupportedStrategies = []string{"echo"}
 	first, err := fakedaemon.Dial(context.Background(), addr, firstCfg)
 	if err != nil {
 		t.Fatalf("first Dial() error = %v", err)
@@ -524,8 +524,8 @@ func TestPickHealthyLabelsAndStrategies(t *testing.T) {
 	defer first.Close()
 	secondCfg := fakedaemon.DefaultConfig()
 	secondCfg.DaemonID = "daemon-b"
+	secondCfg.RuntimeName = "echo1"
 	secondCfg.Labels = map[string]string{"pool": "b", "region": "cn"}
-	secondCfg.SupportedStrategies = []string{"echo"}
 	second, err := fakedaemon.Dial(context.Background(), addr, secondCfg)
 	if err != nil {
 		t.Fatalf("second Dial() error = %v", err)
@@ -535,16 +535,16 @@ func TestPickHealthyLabelsAndStrategies(t *testing.T) {
 		t.Fatal("daemons were not registered")
 	}
 
-	if id, ok := hub.PickHealthy(runtimev1.RuntimeType_NORMAL, "echo", map[string]string{"pool": "a"}); !ok || id != "daemon-a" {
+	if id, ok := hub.PickHealthy(runtimev1.RuntimeType_NORMAL, "echo1", map[string]string{"pool": "a"}); !ok || id != "daemon-a" {
 		t.Fatalf("pool a = %q, %v", id, ok)
 	}
-	if id, ok := hub.PickHealthy(runtimev1.RuntimeType_NORMAL, "echo", map[string]string{"pool": "b"}); !ok || id != "daemon-b" {
+	if id, ok := hub.PickHealthy(runtimev1.RuntimeType_NORMAL, "echo1", map[string]string{"pool": "b"}); !ok || id != "daemon-b" {
 		t.Fatalf("pool b = %q, %v", id, ok)
 	}
-	if _, ok := hub.PickHealthy(runtimev1.RuntimeType_NORMAL, "react", nil); ok {
-		t.Fatal("unsupported react strategy matched")
+	if _, ok := hub.PickHealthy(runtimev1.RuntimeType_NORMAL, "react1", nil); ok {
+		t.Fatal("unknown runtime name matched")
 	}
-	if _, ok := hub.PickHealthy(runtimev1.RuntimeType_NORMAL, "echo", map[string]string{"pool": "missing"}); ok {
+	if _, ok := hub.PickHealthy(runtimev1.RuntimeType_NORMAL, "echo1", map[string]string{"pool": "missing"}); ok {
 		t.Fatal("missing label matched")
 	}
 }
@@ -567,14 +567,14 @@ func TestPickHealthy(t *testing.T) {
 		t.Fatal("daemon was not registered")
 	}
 
-	if id, ok := hub.PickHealthy(runtimev1.RuntimeType_NORMAL, "echo", map[string]string{"pool": "a"}); !ok || id != "daemon-1" {
+	if id, ok := hub.PickHealthy(runtimev1.RuntimeType_NORMAL, "fake1", map[string]string{"pool": "a"}); !ok || id != "daemon-1" {
 		t.Fatalf("PickHealthy() = %q, %v", id, ok)
 	}
-	if _, ok := hub.PickHealthy(runtimev1.RuntimeType_LONGTERM, "echo", nil); ok {
+	if _, ok := hub.PickHealthy(runtimev1.RuntimeType_LONGTERM, "fake1", nil); ok {
 		t.Fatal("PickHealthy() matched wrong runtime type")
 	}
 	if _, ok := hub.PickHealthy(runtimev1.RuntimeType_NORMAL, "unknown", nil); ok {
-		t.Fatal("PickHealthy() matched unsupported strategy")
+		t.Fatal("PickHealthy() matched unknown runtime name")
 	}
 }
 

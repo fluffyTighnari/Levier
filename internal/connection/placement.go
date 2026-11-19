@@ -80,7 +80,7 @@ func (h *Hub) Count() int {
 // PickHealthy returns the least-loaded matching daemon.
 func (h *Hub) PickHealthy(
 	runtimeType runtimev1.RuntimeType,
-	strategy string,
+	runtimeName string,
 	labels map[string]string,
 ) (string, bool) {
 	now := h.cfg.Now()
@@ -98,7 +98,7 @@ func (h *Hub) PickHealthy(
 			info.RuntimeType != runtimeType {
 			continue
 		}
-		if strategy != "" && !contains(info.SupportedStrategies, strategy) {
+		if runtimeName != "" && info.RuntimeName != runtimeName {
 			continue
 		}
 		if !labelsMatch(info.Labels, labels) {
@@ -155,7 +155,6 @@ func (h *Hub) reaper() {
 }
 
 func cloneInfo(info DaemonInfo) DaemonInfo {
-	info.SupportedStrategies = append([]string(nil), info.SupportedStrategies...)
 	info.Labels = cloneStringMap(info.Labels)
 	info.RunningRuns = append([]RunRef(nil), info.RunningRuns...)
 	return info

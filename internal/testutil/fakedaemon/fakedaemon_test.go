@@ -39,9 +39,8 @@ func (s *testMW) Channel(stream runtimev1.RuntimeService_ChannelServer) error {
 		switch {
 		case env.GetHello() != nil:
 			assign, err := protocol.NewRun("run-1", 1, 1, &runtimev1.TaskAssign{
-				RunId:    "run-1",
-				AppId:    "app-1",
-				Strategy: "echo",
+				RunId: "run-1",
+				AppId: "app-1",
 				Model: &runtimev1.ModelProfile{
 					Provider: "openai",
 					Model:    "test",

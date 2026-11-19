@@ -16,7 +16,7 @@ import (
 // PlacementRequest describes one scheduling decision.
 type PlacementRequest struct {
 	Runtime          runtimev1.RuntimeType
-	Strategy         string
+	RuntimeName      string
 	Labels           map[string]string
 	StickyDaemonID   string
 	ExcludeDaemonIDs map[string]struct{}
@@ -24,13 +24,13 @@ type PlacementRequest struct {
 
 // Candidate is one schedulable daemon snapshot.
 type Candidate struct {
-	DaemonID            string
-	RuntimeType         runtimev1.RuntimeType
-	SupportedStrategies []string
-	Labels              map[string]string
-	MaxConcurrentRuns   int32
-	RunningCount        int32
-	Healthy             bool
+	DaemonID          string
+	RuntimeName       string
+	RuntimeType       runtimev1.RuntimeType
+	Labels            map[string]string
+	MaxConcurrentRuns int32
+	RunningCount      int32
+	Healthy           bool
 }
 
 // Scheduler chooses a daemon for one placement request.
@@ -85,13 +85,13 @@ func (s *HubScheduler) Pick(request PlacementRequest) (string, bool) {
 	candidates := make([]Candidate, 0, len(infos))
 	for _, info := range infos {
 		candidates = append(candidates, Candidate{
-			DaemonID:            info.DaemonID,
-			RuntimeType:         info.RuntimeType,
-			SupportedStrategies: info.SupportedStrategies,
-			Labels:              info.Labels,
-			MaxConcurrentRuns:   info.MaxConcurrentRuns,
-			RunningCount:        maxInt32(info.RunningCount, info.Reserved),
-			Healthy:             info.Healthy,
+			DaemonID:          info.DaemonID,
+			RuntimeName:       info.RuntimeName,
+			RuntimeType:       info.RuntimeType,
+			Labels:            info.Labels,
+			MaxConcurrentRuns: info.MaxConcurrentRuns,
+			RunningCount:      maxInt32(info.RunningCount, info.Reserved),
+			Healthy:           info.Healthy,
 		})
 	}
 	return Select(candidates, request)
@@ -108,7 +108,7 @@ func candidateEligible(candidate Candidate, request PlacementRequest) bool {
 		candidate.RuntimeType != request.Runtime {
 		return false
 	}
-	if request.Strategy != "" && !contains(candidate.SupportedStrategies, request.Strategy) {
+	if request.RuntimeName != "" && candidate.RuntimeName != request.RuntimeName {
 		return false
 	}
 	for key, value := range request.Labels {

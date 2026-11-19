@@ -359,8 +359,8 @@ Idempotency-Key: {可选}
 
 ```json
 {
-  "runtime": "normal",
-  "strategy": {"name": "react", "params": {"max_steps": 8}},
+  "runtime_name": "react1",
+  "params": {"max_steps": 8},
   "input": [{"role": "user", "content": "Add 2, then add 3, then read the counter."}],
   "model": {"provider": "deepseek", "model": "deepseek-flash"},
   "timeouts": {"run_ms": 60000, "tool_ms": 10000}

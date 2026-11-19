@@ -130,7 +130,7 @@ func runOpsRunsShow(args []string, stdout, stderr io.Writer) int {
 	fmt.Fprintf(stdout, "run_id              %s\n", run.RunID)
 	fmt.Fprintf(stdout, "app_id              %s\n", run.AppID)
 	fmt.Fprintf(stdout, "status              %s\n", run.Status)
-	fmt.Fprintf(stdout, "strategy            %s\n", run.Strategy)
+	fmt.Fprintf(stdout, "runtime_name        %s\n", run.RuntimeName)
 	fmt.Fprintf(stdout, "attempt             %d\n", run.Attempt)
 	fmt.Fprintf(stdout, "daemon              %s\n", run.AssignedDaemonID)
 	fmt.Fprintf(stdout, "session_id          %s\n", run.SessionID)

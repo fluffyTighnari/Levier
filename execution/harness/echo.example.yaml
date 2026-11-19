@@ -1,0 +1,19 @@
+# Levier — standalone Echo runtime configuration.
+# Copyright 2026 The Levier Authors.
+
+middleware:
+  address: "127.0.0.1:9090"
+  tls: false
+
+daemon:
+  id: "echo-local-1"
+  runtime_name: "echo1"
+  auth_token: "change-me"
+  runtime_type: "normal"
+  max_concurrent_runs: 4
+  labels:
+    pool: "local"
+
+logging:
+  level: "info"
+  format: "json"

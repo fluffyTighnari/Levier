@@ -9,11 +9,8 @@
         "auth_token": "token",
         "runtime_type": "NORMAL",
         "max_concurrent_runs": 4,
-        "supported_strategies": [
-          "react",
-          "echo"
-        ],
         "version": "0.1.0",
+        "runtime_name": "react1",
         "labels": {
           "pool": "test"
         },
@@ -43,8 +40,7 @@
       "task_assign": {
         "run_id": "run-1",
         "app_id": "app-1",
-        "strategy": "react",
-        "strategy_params": {
+        "params": {
           "max_steps": 32
         },
         "input": [

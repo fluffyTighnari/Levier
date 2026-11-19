@@ -131,7 +131,7 @@ DEEPSEEK_API_KEY=... docker compose up --build -d
 bin/levier run submit \
   --credentials data/agent/credentials.json \
   --server http://127.0.0.1:8080 \
-  --strategy react \
+  --runtime react1 \
   --provider deepseek \
   --model deepseek-flash \
   --prompt "Add 2, then add 3, then read the counter."

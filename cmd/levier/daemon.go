@@ -47,7 +47,7 @@ func printDaemonCheckUsage(out io.Writer) {
 	fmt.Fprintln(out, "  --daemon-id id     pre-provisioned daemon id (default daemon-local-1)")
 	fmt.Fprintln(out, "  --token token      daemon auth token")
 	fmt.Fprintln(out, "  --admin-token tok  admin token for app bootstrap")
-	fmt.Fprintln(out, "  --strategy name    strategy to advertise and run (default echo)")
+	fmt.Fprintln(out, "  --runtime name     runtime name to advertise (default echo1)")
 	fmt.Fprintln(out, "  --timeout duration per-step timeout (default 30s)")
 	fmt.Fprintln(out, "  --json             print JSON")
 	fmt.Fprintln(out)
@@ -65,7 +65,7 @@ func runDaemonCheck(args []string, stdout, stderr io.Writer) int {
 	flags.StringVar(&cfg.DaemonID, "daemon-id", envOr("LEVIER_DAEMON_ID", "daemon-local-1"), "pre-provisioned daemon id")
 	flags.StringVar(&cfg.Token, "token", envOr("LEVIER_DAEMON_TOKEN", "change-me"), "daemon auth token")
 	flags.StringVar(&cfg.AdminToken, "admin-token", envOr("LEVIER_ADMIN_TOKEN", "admin-change-me"), "admin token for app bootstrap")
-	flags.StringVar(&cfg.Strategy, "strategy", "echo", "strategy to advertise and run")
+	flags.StringVar(&cfg.RuntimeName, "runtime", "echo1", "runtime name to advertise")
 	flags.DurationVar(&cfg.Timeout, "timeout", 30*time.Second, "per-step timeout")
 	asJSON := flags.Bool("json", false, "print JSON")
 	if err := flags.Parse(args); err != nil {

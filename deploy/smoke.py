@@ -22,7 +22,8 @@ import urllib.request
 MW_URL = (os.environ.get("LEVIER_URL") or os.environ.get("MW_URL") or "http://levier:8080").rstrip("/")
 MCP_SOCKET = os.environ.get("MCP_SOCKET", "/run/levier/mcp.sock")
 CREDENTIALS = os.environ.get("CREDENTIALS", "/data/credentials.json")
-DAEMON_ID = os.environ.get("DAEMON_ID", "daemon-local-1")
+DAEMON_ID = os.environ.get("DAEMON_ID", "echo-local-1")
+RUNTIME_NAME = os.environ.get("RUNTIME_NAME", "echo1")
 
 
 def log(message: str) -> None:
@@ -144,10 +145,9 @@ def main() -> int:
     wait_for("mcp runtime health", mcp_ok, timeout=30)
 
     status, created = http("POST", "/api/v1/runs", {
-        "runtime": "normal",
-        "strategy": {"name": "echo", "params": {}},
+        "runtime_name": RUNTIME_NAME,
+        "params": {},
         "input": [{"role": "user", "content": "docker compose smoke"}],
-        "model": {"provider": "anthropic", "model": "claude-test"},
         "timeouts": {"run_ms": 30000, "tool_ms": 5000},
     }, token=app_key)
     if status != 202:

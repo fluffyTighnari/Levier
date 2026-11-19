@@ -60,7 +60,7 @@ type adminRunView struct {
 	RunID            string          `json:"run_id"`
 	AppID            string          `json:"app_id"`
 	Runtime          string          `json:"runtime"`
-	Strategy         string          `json:"strategy"`
+	RuntimeName      string          `json:"runtime_name"`
 	Status           string          `json:"status"`
 	Attempt          int             `json:"attempt"`
 	SessionID        string          `json:"session_id,omitempty"`
@@ -85,26 +85,21 @@ type adminTaskListResponse struct {
 }
 
 type adminDaemonView struct {
-	DaemonID            string   `json:"daemon_id"`
-	Status              string   `json:"status"`
-	RuntimeType         string   `json:"runtime_type"`
-	MaxConcurrentRuns   int32    `json:"max_concurrent_runs"`
-	Running             int32    `json:"running"`
-	Reserved            int32    `json:"reserved"`
-	Available           int32    `json:"available"`
-	Healthy             bool     `json:"healthy"`
-	SupportedStrategies []string `json:"supported_strategies,omitempty"`
-	ConnectedAt         string   `json:"connected_at"`
-	LastHeartbeat       string   `json:"last_heartbeat"`
+	DaemonID          string `json:"daemon_id"`
+	RuntimeName       string `json:"runtime_name"`
+	Status            string `json:"status"`
+	RuntimeType       string `json:"runtime_type"`
+	MaxConcurrentRuns int32  `json:"max_concurrent_runs"`
+	Running           int32  `json:"running"`
+	Reserved          int32  `json:"reserved"`
+	Available         int32  `json:"available"`
+	Healthy           bool   `json:"healthy"`
+	ConnectedAt       string `json:"connected_at"`
+	LastHeartbeat     string `json:"last_heartbeat"`
 }
 
 type adminDaemonListResponse struct {
 	Daemons []adminDaemonView `json:"daemons"`
-}
-
-type strategyRequest struct {
-	Name   string         `json:"name"`
-	Params map[string]any `json:"params,omitempty"`
 }
 
 type chatMessage struct {
@@ -123,11 +118,12 @@ type timeoutRequest struct {
 }
 
 type createRunRequest struct {
-	Runtime  string          `json:"runtime"`
-	Strategy strategyRequest `json:"strategy"`
-	Input    []chatMessage   `json:"input"`
-	Model    modelRequest    `json:"model"`
-	Timeouts timeoutRequest  `json:"timeouts,omitempty"`
+	RuntimeName string         `json:"runtime_name"`
+	Runtime     string         `json:"runtime,omitempty"`
+	Params      map[string]any `json:"params,omitempty"`
+	Input       []chatMessage  `json:"input"`
+	Model       modelRequest   `json:"model"`
+	Timeouts    timeoutRequest `json:"timeouts,omitempty"`
 }
 
 type createRunResponse struct {
@@ -138,16 +134,15 @@ type createRunResponse struct {
 }
 
 type runView struct {
-	RunID     string          `json:"run_id"`
-	AppID     string          `json:"app_id"`
-	Runtime   string          `json:"runtime"`
-	Strategy  strategyRequest `json:"strategy"`
-	Status    string          `json:"status"`
-	Attempt   int             `json:"attempt"`
-	SessionID string          `json:"session_id,omitempty"`
-	TraceID   string          `json:"trace_id,omitempty"`
-	CreatedAt string          `json:"created_at"`
-	UpdatedAt string          `json:"updated_at"`
+	RunID       string `json:"run_id"`
+	AppID       string `json:"app_id"`
+	RuntimeName string `json:"runtime_name"`
+	Status      string `json:"status"`
+	Attempt     int    `json:"attempt"`
+	SessionID   string `json:"session_id,omitempty"`
+	TraceID     string `json:"trace_id,omitempty"`
+	CreatedAt   string `json:"created_at"`
+	UpdatedAt   string `json:"updated_at"`
 }
 
 type runEvent struct {

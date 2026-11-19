@@ -49,13 +49,12 @@ type Health struct {
 
 // DaemonSummary aggregates connected runtime capacity.
 type DaemonSummary struct {
-	Connected  int                       `json:"connected"`
-	Healthy    int                       `json:"healthy"`
-	Capacity   int                       `json:"capacity"`
-	Used       int                       `json:"used"`
-	Available  int                       `json:"available"`
-	ByRuntime  map[string]RuntimeSummary `json:"by_runtime"`
-	Strategies map[string]int            `json:"strategies"`
+	Connected int                       `json:"connected"`
+	Healthy   int                       `json:"healthy"`
+	Capacity  int                       `json:"capacity"`
+	Used      int                       `json:"used"`
+	Available int                       `json:"available"`
+	ByRuntime map[string]RuntimeSummary `json:"by_runtime"`
 }
 
 // RuntimeSummary aggregates one runtime type.
@@ -165,8 +164,7 @@ func (s *Service) Snapshot(ctx context.Context) Snapshot {
 			Database:  "unknown",
 		},
 		Daemons: DaemonSummary{
-			ByRuntime:  make(map[string]RuntimeSummary),
-			Strategies: make(map[string]int),
+			ByRuntime: make(map[string]RuntimeSummary),
 		},
 		Apps: AppSummary{},
 		Runs: RunSummary{
@@ -263,10 +261,6 @@ func (s *Service) collectDaemons(snapshot *Snapshot) {
 		runtimeSummary.Used += used
 		runtimeSummary.Available += available
 		snapshot.Daemons.ByRuntime[runtimeName] = runtimeSummary
-
-		for _, strategy := range daemon.SupportedStrategies {
-			snapshot.Daemons.Strategies[strategy]++
-		}
 	}
 }
 

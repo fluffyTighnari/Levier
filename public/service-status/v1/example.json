@@ -26,10 +26,6 @@
         "used": 1,
         "available": 3
       }
-    },
-    "strategies": {
-      "react": 1,
-      "echo": 1
     }
   },
   "apps": {

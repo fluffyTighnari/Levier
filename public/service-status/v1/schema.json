@@ -40,7 +40,7 @@
     },
     "daemons": {
       "type": "object",
-      "required": ["connected", "healthy", "capacity", "used", "available", "by_runtime", "strategies"],
+      "required": ["connected", "healthy", "capacity", "used", "available", "by_runtime"],
       "properties": {
         "connected": {"type": "integer", "minimum": 0},
         "healthy": {"type": "integer", "minimum": 0},
@@ -50,10 +50,6 @@
         "by_runtime": {
           "type": "object",
           "additionalProperties": {"$ref": "#/$defs/runtimeSummary"}
-        },
-        "strategies": {
-          "type": "object",
-          "additionalProperties": {"type": "integer", "minimum": 0}
         }
       }
     },

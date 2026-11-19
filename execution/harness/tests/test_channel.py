@@ -79,6 +79,7 @@ class ChannelClientTest(unittest.IsolatedAsyncioTestCase):
             ChannelConfig(
                 address=self.address,
                 daemon_id="daemon-test",
+                runtime_name="react1",
                 auth_token="token-test",
                 version="test",
                 heartbeat_interval=0.05,
@@ -106,6 +107,7 @@ class ChannelClientTest(unittest.IsolatedAsyncioTestCase):
             lambda envelope: envelope.WhichOneof("payload") == "hello",
         )
         self.assertEqual(hello.hello.daemon_id, "daemon-test")
+        self.assertEqual(hello.hello.runtime_name, "react1")
         self.assertEqual(hello.hello.auth_token, "token-test")
         self.assertEqual(hello.hello.version, "test")
 
@@ -117,7 +119,7 @@ class ChannelClientTest(unittest.IsolatedAsyncioTestCase):
         )
         self.assertTrue(ack.task_ack.accepted)
 
-        assign = runtime_pb2.TaskAssign(run_id="run-1", app_id="app-1", strategy="echo")
+        assign = runtime_pb2.TaskAssign(run_id="run-1", app_id="app-1")
         await self.service.outgoing.put(
             new_envelope(assign, "task_assign", run_id="run-1", attempt=1, lease_epoch=1)
         )
@@ -230,6 +232,7 @@ class ChannelBackpressureTest(unittest.IsolatedAsyncioTestCase):
             ChannelConfig(
                 address="127.0.0.1:1",
                 daemon_id="daemon-test",
+                runtime_name="react1",
                 auth_token="token-test",
                 reconnect_initial=0.01,
                 reconnect_max=0.05,
@@ -275,6 +278,7 @@ class ChannelBackoffTest(unittest.IsolatedAsyncioTestCase):
             ChannelConfig(
                 address="127.0.0.1:1",
                 daemon_id="daemon-test",
+                runtime_name="react1",
                 auth_token="token-test",
                 reconnect_initial=0.01,
                 reconnect_max=0.05,

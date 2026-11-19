@@ -85,7 +85,7 @@ func TestCreateRunAndGetRun(t *testing.T) {
 		IdempotencyKey: "idem-1",
 		RequestHash:    "hash-1",
 		Runtime:        "normal",
-		Strategy:       "echo",
+		RuntimeName:    "echo1",
 		Params:         params,
 		Model:          json.RawMessage(`{"provider":"anthropic","model":"claude-test"}`),
 		TraceID:        "trace-1",
@@ -104,7 +104,7 @@ func TestCreateRunAndGetRun(t *testing.T) {
 	if err != nil {
 		t.Fatalf("GetRun() error = %v", err)
 	}
-	if got.AppID != app.AppID || got.Strategy != "echo" || got.TraceID != "trace-1" {
+	if got.AppID != app.AppID || got.RuntimeName != "echo1" || got.TraceID != "trace-1" {
 		t.Fatalf("run = %+v", got)
 	}
 	var gotParams, wantParams any
@@ -131,6 +131,7 @@ func TestCreateRunIdempotency(t *testing.T) {
 	first, err := store.CreateRun(ctx, Run{
 		RunID:          "run-" + id.New(),
 		AppID:          app.AppID,
+		RuntimeName:    "react1",
 		IdempotencyKey: "same-key",
 		RequestHash:    "hash-a",
 	})
@@ -141,6 +142,7 @@ func TestCreateRunIdempotency(t *testing.T) {
 	second, err := store.CreateRun(ctx, Run{
 		RunID:          "run-" + id.New(),
 		AppID:          app.AppID,
+		RuntimeName:    "react1",
 		IdempotencyKey: "same-key",
 		RequestHash:    "hash-a",
 	})
@@ -154,6 +156,7 @@ func TestCreateRunIdempotency(t *testing.T) {
 	_, err = store.CreateRun(ctx, Run{
 		RunID:          "run-" + id.New(),
 		AppID:          app.AppID,
+		RuntimeName:    "react1",
 		IdempotencyKey: "same-key",
 		RequestHash:    "hash-b",
 	})
@@ -167,8 +170,9 @@ func TestAppendEventIsIdempotentAndAdvancesProjection(t *testing.T) {
 	ctx := context.Background()
 	app := createApp(t, store)
 	run, err := store.CreateRun(ctx, Run{
-		RunID: "run-" + id.New(),
-		AppID: app.AppID,
+		RunID:       "run-" + id.New(),
+		AppID:       app.AppID,
+		RuntimeName: "react1",
 	})
 	if err != nil {
 		t.Fatalf("CreateRun() error = %v", err)
@@ -245,9 +249,10 @@ func TestAssignRunAndUpdateStatus(t *testing.T) {
 	ctx := context.Background()
 	app := createApp(t, store)
 	run, err := store.CreateRun(ctx, Run{
-		RunID: "run-" + id.New(),
-		AppID: app.AppID,
-		Input: json.RawMessage(`[{"role":"user","content":"hello"}]`),
+		RunID:       "run-" + id.New(),
+		AppID:       app.AppID,
+		RuntimeName: "react1",
+		Input:       json.RawMessage(`[{"role":"user","content":"hello"}]`),
 	})
 	if err != nil {
 		t.Fatalf("CreateRun() error = %v", err)
@@ -314,7 +319,7 @@ func TestAppendEventOutOfOrderAndGap(t *testing.T) {
 	store := New(testPool(t))
 	ctx := context.Background()
 	app := createApp(t, store)
-	run, _ := store.CreateRun(ctx, Run{RunID: "run-" + id.New(), AppID: app.AppID})
+	run, _ := store.CreateRun(ctx, Run{RunID: "run-" + id.New(), AppID: app.AppID, RuntimeName: "react1"})
 	if _, err := store.AssignRun(ctx, Assignment{
 		RunID: run.RunID, ExpectedStatus: StatusQueued,
 		ExpectedAttempt: 0, ExpectedLeaseEpoch: 0,
@@ -367,7 +372,7 @@ func TestAppendEventStaleAndEphemeral(t *testing.T) {
 	store := New(testPool(t))
 	ctx := context.Background()
 	app := createApp(t, store)
-	run, _ := store.CreateRun(ctx, Run{RunID: "run-" + id.New(), AppID: app.AppID})
+	run, _ := store.CreateRun(ctx, Run{RunID: "run-" + id.New(), AppID: app.AppID, RuntimeName: "react1"})
 	if _, err := store.AssignRun(ctx, Assignment{
 		RunID: run.RunID, ExpectedStatus: StatusQueued,
 		ExpectedAttempt: 0, ExpectedLeaseEpoch: 0,
@@ -407,7 +412,7 @@ func TestListEventsPaginationNoDuplicatesOrMisses(t *testing.T) {
 	store := New(testPool(t))
 	ctx := context.Background()
 	app := createApp(t, store)
-	run, _ := store.CreateRun(ctx, Run{RunID: "run-" + id.New(), AppID: app.AppID})
+	run, _ := store.CreateRun(ctx, Run{RunID: "run-" + id.New(), AppID: app.AppID, RuntimeName: "react1"})
 	for attempt := 1; attempt <= 2; attempt++ {
 		maxSeq := 5
 		if attempt == 2 {
@@ -472,12 +477,12 @@ func TestListSessionEventsAcrossRuns(t *testing.T) {
 	app := createApp(t, store)
 	first, _ := store.CreateRun(ctx, Run{
 		RunID: "run-" + id.New(), AppID: app.AppID,
-		Runtime: "longterm", SessionID: "session-1",
+		Runtime: "longterm", RuntimeName: "longterm1", SessionID: "session-1",
 	})
 	time.Sleep(2 * time.Millisecond)
 	second, _ := store.CreateRun(ctx, Run{
 		RunID: "run-" + id.New(), AppID: app.AppID,
-		Runtime: "longterm", SessionID: "session-1",
+		Runtime: "longterm", RuntimeName: "longterm1", SessionID: "session-1",
 	})
 	for _, run := range []Run{first, second} {
 		for seq := int64(1); seq <= 2; seq++ {
@@ -514,7 +519,7 @@ func TestConcurrentTransitionOnlyOneSucceeds(t *testing.T) {
 	store := New(testPool(t))
 	ctx := context.Background()
 	app := createApp(t, store)
-	run, _ := store.CreateRun(ctx, Run{RunID: "run-" + id.New(), AppID: app.AppID})
+	run, _ := store.CreateRun(ctx, Run{RunID: "run-" + id.New(), AppID: app.AppID, RuntimeName: "react1"})
 	if _, err := store.AssignRun(ctx, Assignment{
 		RunID: run.RunID, ExpectedStatus: StatusQueued,
 		ExpectedAttempt: 0, ExpectedLeaseEpoch: 0,
@@ -559,7 +564,7 @@ func TestIllegalTransitionAndTerminalGuard(t *testing.T) {
 	store := New(testPool(t))
 	ctx := context.Background()
 	app := createApp(t, store)
-	run, _ := store.CreateRun(ctx, Run{RunID: "run-" + id.New(), AppID: app.AppID})
+	run, _ := store.CreateRun(ctx, Run{RunID: "run-" + id.New(), AppID: app.AppID, RuntimeName: "react1"})
 
 	if _, err := store.Transition(ctx, Transition{
 		RunID: run.RunID, ExpectedStatus: StatusQueued,
@@ -599,7 +604,7 @@ func TestEventDoesNotChangeRunStatus(t *testing.T) {
 	store := New(testPool(t))
 	ctx := context.Background()
 	app := createApp(t, store)
-	run, _ := store.CreateRun(ctx, Run{RunID: "run-" + id.New(), AppID: app.AppID})
+	run, _ := store.CreateRun(ctx, Run{RunID: "run-" + id.New(), AppID: app.AppID, RuntimeName: "react1"})
 
 	if _, err := store.AppendEvent(ctx, Event{
 		RunID: run.RunID, Attempt: 1, Seq: 1, Source: "daemon",
@@ -617,7 +622,7 @@ func TestListActiveRunsAndRequeue(t *testing.T) {
 	store := New(testPool(t))
 	ctx := context.Background()
 	app := createApp(t, store)
-	run, _ := store.CreateRun(ctx, Run{RunID: "run-" + id.New(), AppID: app.AppID})
+	run, _ := store.CreateRun(ctx, Run{RunID: "run-" + id.New(), AppID: app.AppID, RuntimeName: "react1"})
 	if _, err := store.AssignRun(ctx, Assignment{
 		RunID: run.RunID, ExpectedStatus: StatusQueued,
 		ExpectedAttempt: 0, ExpectedLeaseEpoch: 0,
@@ -649,7 +654,7 @@ func TestListActiveRuns(t *testing.T) {
 	store := New(testPool(t))
 	ctx := context.Background()
 	app := createApp(t, store)
-	run, _ := store.CreateRun(ctx, Run{RunID: "run-" + id.New(), AppID: app.AppID})
+	run, _ := store.CreateRun(ctx, Run{RunID: "run-" + id.New(), AppID: app.AppID, RuntimeName: "react1"})
 	if _, err := store.AssignRun(ctx, Assignment{
 		RunID: run.RunID, ExpectedStatus: StatusQueued,
 		ExpectedAttempt: 0, ExpectedLeaseEpoch: 0,
@@ -685,7 +690,7 @@ func TestRequeueRunKeepsTerminalAttempt(t *testing.T) {
 	store := New(testPool(t))
 	ctx := context.Background()
 	app := createApp(t, store)
-	run, _ := store.CreateRun(ctx, Run{RunID: "run-" + id.New(), AppID: app.AppID})
+	run, _ := store.CreateRun(ctx, Run{RunID: "run-" + id.New(), AppID: app.AppID, RuntimeName: "react1"})
 	if _, err := store.AssignRun(ctx, Assignment{
 		RunID: run.RunID, ExpectedStatus: StatusQueued,
 		ExpectedAttempt: 0, ExpectedLeaseEpoch: 0,
@@ -722,8 +727,8 @@ func TestListQueuedRuns(t *testing.T) {
 	store := New(testPool(t))
 	ctx := context.Background()
 	app := createApp(t, store)
-	queued, _ := store.CreateRun(ctx, Run{RunID: "run-" + id.New(), AppID: app.AppID})
-	assigned, _ := store.CreateRun(ctx, Run{RunID: "run-" + id.New(), AppID: app.AppID})
+	queued, _ := store.CreateRun(ctx, Run{RunID: "run-" + id.New(), AppID: app.AppID, RuntimeName: "react1"})
+	assigned, _ := store.CreateRun(ctx, Run{RunID: "run-" + id.New(), AppID: app.AppID, RuntimeName: "react1"})
 	if _, err := store.AssignRun(ctx, Assignment{
 		RunID: assigned.RunID, ExpectedStatus: StatusQueued,
 		ExpectedAttempt: 0, ExpectedLeaseEpoch: 0,
@@ -755,8 +760,9 @@ func TestRunPersistsAcrossStoreInstances(t *testing.T) {
 	ctx := context.Background()
 	app := createApp(t, store)
 	run, err := store.CreateRun(ctx, Run{
-		RunID: "run-" + id.New(),
-		AppID: app.AppID,
+		RunID:       "run-" + id.New(),
+		AppID:       app.AppID,
+		RuntimeName: "react1",
 	})
 	if err != nil {
 		t.Fatalf("CreateRun() error = %v", err)
@@ -776,7 +782,7 @@ func TestInvalidEventRejected(t *testing.T) {
 	store := New(testPool(t))
 	ctx := context.Background()
 	app := createApp(t, store)
-	run, _ := store.CreateRun(ctx, Run{RunID: "run-" + id.New(), AppID: app.AppID})
+	run, _ := store.CreateRun(ctx, Run{RunID: "run-" + id.New(), AppID: app.AppID, RuntimeName: "react1"})
 
 	for _, event := range []Event{
 		{RunID: run.RunID, Attempt: 0, Seq: 1, Source: "daemon", Type: "RUN_STATUS"},
@@ -825,13 +831,13 @@ func TestAppendMWEventUsesReservedSeq(t *testing.T) {
 	ctx := context.Background()
 	app := createApp(t, store)
 	run, err := store.CreateRun(ctx, Run{
-		RunID:    "run-" + id.New(),
-		AppID:    app.AppID,
-		Runtime:  "normal",
-		Strategy: "echo",
-		Params:   json.RawMessage(`{}`),
-		Model:    json.RawMessage(`{"provider":"anthropic","model":"claude-test"}`),
-		TraceID:  "trace-mw",
+		RunID:       "run-" + id.New(),
+		AppID:       app.AppID,
+		Runtime:     "normal",
+		RuntimeName: "echo1",
+		Params:      json.RawMessage(`{}`),
+		Model:       json.RawMessage(`{"provider":"anthropic","model":"claude-test"}`),
+		TraceID:     "trace-mw",
 	})
 	if err != nil {
 		t.Fatalf("CreateRun() error = %v", err)

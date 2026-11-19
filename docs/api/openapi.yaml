@@ -562,15 +562,6 @@ components:
           type: string
         name:
           type: string
-    StrategyRequest:
-      type: object
-      required: [name]
-      properties:
-        name:
-          type: string
-        params:
-          type: object
-          additionalProperties: true
     ModelRequest:
       type: object
       required: [provider, model]
@@ -596,15 +587,16 @@ components:
           minimum: 0
     CreateRunRequest:
       type: object
-      required: [runtime, strategy, input, model]
+      required: [runtime_name, input]
       properties:
         app_id:
           type: string
-        runtime:
+        runtime_name:
           type: string
-          enum: [normal, sandbox, longterm]
-        strategy:
-          $ref: '#/components/schemas/StrategyRequest'
+          description: App-facing runtime routing name such as react1.
+        params:
+          type: object
+          additionalProperties: true
         input:
           type: array
           items:
@@ -629,16 +621,14 @@ components:
           type: string
     RunView:
       type: object
-      required: [run_id, app_id, runtime, strategy, status, attempt, created_at, updated_at]
+      required: [run_id, app_id, runtime_name, status, attempt, created_at, updated_at]
       properties:
         run_id:
           type: string
         app_id:
           type: string
-        runtime:
+        runtime_name:
           type: string
-        strategy:
-          $ref: '#/components/schemas/StrategyRequest'
         status:
           type: string
         attempt:
@@ -843,7 +833,7 @@ components:
           format: date-time
     AdminRunView:
       type: object
-      required: [run_id, app_id, runtime, strategy, status, attempt, created_at, updated_at]
+      required: [run_id, app_id, runtime, runtime_name, status, attempt, created_at, updated_at]
       properties:
         run_id:
           type: string
@@ -851,7 +841,7 @@ components:
           type: string
         runtime:
           type: string
-        strategy:
+        runtime_name:
           type: string
         status:
           type: string
@@ -904,9 +894,11 @@ components:
             $ref: '#/components/schemas/AdminTaskView'
     AdminDaemonView:
       type: object
-      required: [daemon_id, status, runtime_type, max_concurrent_runs, running, reserved, available, healthy, connected_at, last_heartbeat]
+      required: [daemon_id, runtime_name, status, runtime_type, max_concurrent_runs, running, reserved, available, healthy, connected_at, last_heartbeat]
       properties:
         daemon_id:
+          type: string
+        runtime_name:
           type: string
         status:
           type: string
@@ -922,10 +914,6 @@ components:
           type: integer
         healthy:
           type: boolean
-        supported_strategies:
-          type: array
-          items:
-            type: string
         connected_at:
           type: string
           format: date-time

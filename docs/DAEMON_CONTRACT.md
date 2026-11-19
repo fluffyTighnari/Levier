@@ -36,7 +36,7 @@ daemon_id             预分配 ID
 auth_token            预分配 token
 runtime_type          normal / sandbox / longterm
 max_concurrent_runs   容量
-supported_strategies  react / echo / 自定义
+runtime_name          稳定路由名，例如 react1
 version               daemon 版本
 labels                pool / region 等调度标签
 running_runs          重连时仍在执行的 Run
@@ -48,7 +48,7 @@ Levier 会用它做对账，并下发 `Reconcile`。
 ## 4. TaskAssign
 
 ```text
-run_id / app_id / strategy / strategy_params
+run_id / app_id / params
 input                 ChatMessage[]
 tools                 ToolManifest[]
 mcp_bindings          McpBinding[]
@@ -76,7 +76,7 @@ correlation_id = TaskAssign.msg_id
 
 ```text
 accepted = false
-reason = "capacity" / "unsupported strategy" / ...
+reason = "capacity" / "runtime mismatch" / ...
 ```
 
 Levier 会换 daemon 或重试。
@@ -168,7 +168,7 @@ cpu_load / mem_mb（可选）
 
 ```text
 max_concurrent_runs  超过时 Levier 不会继续分配
-supported_strategies 未声明的策略不会分配
+runtime_name 不匹配的 Runtime 不会分配
 labels               参与 placement
 ```
 
@@ -223,5 +223,5 @@ daemon_id 已在 Levier 配置中预分配
 4. terminal 状态后又发 RUN_STATUS
 5. Cancel 后继续发事件
 6. 不上报 running_runs，重连后无法对账
-7. 不声明 supported_strategies，永远拿不到任务
+7. Hello.runtime_name 不匹配，永远拿不到任务
 ```

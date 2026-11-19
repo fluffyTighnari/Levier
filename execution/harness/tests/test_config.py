@@ -15,6 +15,7 @@ middleware:
   address: "127.0.0.1:9090"
 daemon:
   id: "daemon-1"
+  runtime_name: "react1"
   auth_token: "secret-token"
   max_concurrent_runs: 4
 logging:
@@ -35,6 +36,7 @@ class ConfigTest(unittest.TestCase):
         settings = load_settings(self.write_config(VALID_YAML))
         self.assertEqual(settings.daemon.id, "daemon-1")
         self.assertEqual(settings.daemon.auth_token.get_secret_value(), "secret-token")
+        self.assertEqual(settings.daemon.runtime_name, "react1")
         self.assertEqual(settings.daemon.max_concurrent_runs, 4)
         self.assertNotIn("secret-token", str(settings.summary()))
 
@@ -44,8 +46,8 @@ class ConfigTest(unittest.TestCase):
             environ={
                 "HARNESS_LEVIER_ADDRESS": "mw:9443",
                 "HARNESS_DAEMON_ID": "daemon-env",
+                "HARNESS_RUNTIME_NAME": "react2",
                 "HARNESS_DAEMON_MAX_CONCURRENT_RUNS": "8",
-                "HARNESS_DAEMON_STRATEGIES": "react,echo",
                 "HARNESS_DAEMON_LABELS": "pool=test,region=cn1",
                 "HARNESS_LOGGING_LEVEL": "debug",
             },
@@ -53,7 +55,7 @@ class ConfigTest(unittest.TestCase):
         self.assertEqual(settings.middleware.address, "mw:9443")
         self.assertEqual(settings.daemon.id, "daemon-env")
         self.assertEqual(settings.daemon.max_concurrent_runs, 8)
-        self.assertEqual(settings.daemon.strategies, ["react", "echo"])
+        self.assertEqual(settings.daemon.runtime_name, "react2")
         self.assertEqual(settings.daemon.labels["region"], "cn1")
         self.assertEqual(settings.logging.level, "debug")
 
@@ -63,15 +65,15 @@ class ConfigTest(unittest.TestCase):
             environ={
                 "LEVIER_HARNESS_ADDRESS": "levier:9443",
                 "LEVIER_HARNESS_DAEMON_ID": "daemon-new",
+                "LEVIER_HARNESS_RUNTIME_NAME": "echo2",
                 "LEVIER_HARNESS_DAEMON_MAX_CONCURRENT_RUNS": "6",
-                "LEVIER_HARNESS_DAEMON_STRATEGIES": "echo",
                 "LEVIER_HARNESS_LOG_LEVEL": "debug",
             },
         )
         self.assertEqual(settings.middleware.address, "levier:9443")
         self.assertEqual(settings.daemon.id, "daemon-new")
         self.assertEqual(settings.daemon.max_concurrent_runs, 6)
-        self.assertEqual(settings.daemon.strategies, ["echo"])
+        self.assertEqual(settings.daemon.runtime_name, "echo2")
         self.assertEqual(settings.logging.level, "debug")
 
     def test_auth_token_file(self) -> None:

@@ -27,12 +27,12 @@ func mustNew(t *testing.T, payload any, opts ...Option) *runtimev1.Envelope {
 
 func validHello() *runtimev1.Hello {
 	return &runtimev1.Hello{
-		DaemonId:            "daemon-1",
-		AuthToken:           "token",
-		RuntimeType:         runtimev1.RuntimeType_NORMAL,
-		MaxConcurrentRuns:   4,
-		SupportedStrategies: []string{"react"},
-		Version:             "0.1.0",
+		DaemonId:          "daemon-1",
+		RuntimeName:       "react1",
+		AuthToken:         "token",
+		RuntimeType:       runtimev1.RuntimeType_NORMAL,
+		MaxConcurrentRuns: 4,
+		Version:           "0.1.0",
 		RunningRuns: []*runtimev1.RunningRun{
 			{RunId: "run-1", LeaseEpoch: 1},
 		},
@@ -41,9 +41,8 @@ func validHello() *runtimev1.Hello {
 
 func validTaskAssign(runID string) *runtimev1.TaskAssign {
 	return &runtimev1.TaskAssign{
-		RunId:    runID,
-		AppId:    "app-1",
-		Strategy: "react",
+		RunId: runID,
+		AppId: "app-1",
 		Input: []*runtimev1.ChatMessage{
 			{Role: "user", Content: "hello"},
 		},
@@ -175,6 +174,7 @@ func TestValidateRejectsInvalidEnvelopes(t *testing.T) {
 		{"bad msg id", &runtimev1.Envelope{}, "msg_id"},
 		{"no payload", &runtimev1.Envelope{MsgId: id.New(), TsMs: 1}, "payload is required"},
 		{"hello with run", withRun(base, "run-1"), "hello must not carry run_id"},
+		{"hello missing runtime name", mutateHello(base, func(h *runtimev1.Hello) { h.RuntimeName = "" }), "runtime_name"},
 		{"assign missing app", mutateAssign(assign, func(a *runtimev1.TaskAssign) { a.AppId = "" }), "app_id"},
 		{"assign duplicate tool", mutateAssign(assign, func(a *runtimev1.TaskAssign) {
 			a.Tools = append(a.Tools, &runtimev1.ToolManifest{Name: "echo", InputSchemaJson: "{}"})
@@ -251,6 +251,12 @@ func TestNewRejectsUnknownPayload(t *testing.T) {
 func withRun(env *runtimev1.Envelope, runID string) *runtimev1.Envelope {
 	clone := cloneEnvelope(env)
 	clone.RunId = runID
+	return clone
+}
+
+func mutateHello(env *runtimev1.Envelope, mutate func(*runtimev1.Hello)) *runtimev1.Envelope {
+	clone := cloneEnvelope(env)
+	mutate(clone.GetHello())
 	return clone
 }
 

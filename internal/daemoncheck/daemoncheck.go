@@ -22,13 +22,13 @@ import (
 
 // Config describes one daemon conformance check.
 type Config struct {
-	GRPCAddr   string
-	HTTPURL    string
-	DaemonID   string
-	Token      string
-	AdminToken string
-	Strategy   string
-	Timeout    time.Duration
+	GRPCAddr    string
+	HTTPURL     string
+	DaemonID    string
+	Token       string
+	AdminToken  string
+	RuntimeName string
+	Timeout     time.Duration
 }
 
 // HTTPError reports a non-2xx HTTP response from the Levier control plane.
@@ -61,8 +61,8 @@ func Run(cfg Config) (map[string]string, error) {
 	if cfg.DaemonID == "" {
 		cfg.DaemonID = "daemon-local-1"
 	}
-	if cfg.Strategy == "" {
-		cfg.Strategy = "echo"
+	if cfg.RuntimeName == "" {
+		cfg.RuntimeName = "echo1"
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), cfg.Timeout*3)
 	defer cancel()
@@ -70,15 +70,15 @@ func Run(cfg Config) (map[string]string, error) {
 
 	// Phase 1: accept a task, ack, emit a completed run.
 	d1, err := fakedaemon.Dial(ctx, cfg.GRPCAddr, fakedaemon.Config{
-		DaemonID:            cfg.DaemonID,
-		AuthToken:           cfg.Token,
-		MaxConcurrentRuns:   2,
-		SupportedStrategies: []string{cfg.Strategy},
-		Version:             "daemon-check",
-		Labels:              map[string]string{"pool": "daemon-check"},
-		Accept:              true,
-		AutoEcho:            true,
-		HeartbeatInterval:   2 * time.Second,
+		DaemonID:          cfg.DaemonID,
+		AuthToken:         cfg.Token,
+		RuntimeName:       cfg.RuntimeName,
+		MaxConcurrentRuns: 2,
+		Version:           "daemon-check",
+		Labels:            map[string]string{"pool": "daemon-check"},
+		Accept:            true,
+		AutoEcho:          true,
+		HeartbeatInterval: 2 * time.Second,
 	})
 	if err != nil {
 		return checks, fmt.Errorf("dial daemon: %w", err)
@@ -95,7 +95,7 @@ func Run(cfg Config) (map[string]string, error) {
 	}
 	httpClient.appKey = app.Key
 
-	run1, err := httpClient.createRun(cfg.Strategy)
+	run1, err := httpClient.createRun(cfg.RuntimeName)
 	if err != nil {
 		return checks, fmt.Errorf("create run: %w", err)
 	}
@@ -108,9 +108,7 @@ func Run(cfg Config) (map[string]string, error) {
 	if assign.GetTaskAssign().GetRunId() != run1 {
 		return checks, fmt.Errorf("assigned run %s, want %s", assign.GetTaskAssign().GetRunId(), run1)
 	}
-	if assign.GetTaskAssign().GetStrategy() != cfg.Strategy {
-		return checks, fmt.Errorf("assigned strategy %q", assign.GetTaskAssign().GetStrategy())
-	}
+
 	checks["ack"] = "accepted"
 	if err := httpClient.waitStatus(run1, "completed", cfg.Timeout); err != nil {
 		return checks, err
@@ -123,14 +121,14 @@ func Run(cfg Config) (map[string]string, error) {
 	assignments := make(chan *runtimev1.Envelope, 4)
 	cancels := make(chan *runtimev1.Envelope, 4)
 	d2, err := fakedaemon.Dial(ctx, cfg.GRPCAddr, fakedaemon.Config{
-		DaemonID:            cfg.DaemonID,
-		AuthToken:           cfg.Token,
-		MaxConcurrentRuns:   2,
-		SupportedStrategies: []string{cfg.Strategy},
-		Version:             "daemon-check",
-		Labels:              map[string]string{"pool": "daemon-check"},
-		Accept:              true,
-		HeartbeatInterval:   2 * time.Second,
+		DaemonID:          cfg.DaemonID,
+		AuthToken:         cfg.Token,
+		RuntimeName:       cfg.RuntimeName,
+		MaxConcurrentRuns: 2,
+		Version:           "daemon-check",
+		Labels:            map[string]string{"pool": "daemon-check"},
+		Accept:            true,
+		HeartbeatInterval: 2 * time.Second,
 	})
 	if err != nil {
 		return checks, fmt.Errorf("dial daemon (cancel phase): %w", err)
@@ -168,7 +166,7 @@ func Run(cfg Config) (map[string]string, error) {
 		return nil
 	})
 
-	run2, err := httpClient.createRun(cfg.Strategy)
+	run2, err := httpClient.createRun(cfg.RuntimeName)
 	if err != nil {
 		return checks, fmt.Errorf("create run (cancel phase): %w", err)
 	}
@@ -281,16 +279,16 @@ func (c *apiClient) createApp(name string) (appCredentials, error) {
 	return appCredentials{ID: created.App.AppID, Key: key}, nil
 }
 
-func (c *apiClient) createRun(strategy string) (string, error) {
+func (c *apiClient) createRun(runtimeName string) (string, error) {
 	var created struct {
 		RunID string `json:"run_id"`
 	}
 	status, err := c.do(http.MethodPost, "/api/v1/runs", c.appKey, map[string]any{
-		"runtime":  "normal",
-		"strategy": map[string]any{"name": strategy, "params": map[string]any{"max_steps": 2}},
-		"input":    []map[string]any{{"role": "user", "content": "daemon-check"}},
-		"model":    map[string]any{"provider": "anthropic", "model": "claude-test"},
-		"timeouts": map[string]any{"run_ms": 30000, "tool_ms": 10000},
+		"runtime_name": runtimeName,
+		"params":       map[string]any{"max_steps": 2},
+		"input":        []map[string]any{{"role": "user", "content": "daemon-check"}},
+		"model":        map[string]any{"provider": "anthropic", "model": "claude-test"},
+		"timeouts":     map[string]any{"run_ms": 30000, "tool_ms": 10000},
 	}, &created)
 	if err != nil || status >= 300 {
 		return "", &HTTPError{Status: status, Err: err}

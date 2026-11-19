@@ -45,10 +45,14 @@ func (s *Server) handleCreateRun(w http.ResponseWriter, r *http.Request) {
 		writeErrorCode(w, errs.CodeBadRequest, err.Error(), false)
 		return
 	}
+	runtimeType := request.Runtime
+	if runtimeType == "" {
+		runtimeType = RuntimeNormal
+	}
 
-	params, err := json.Marshal(emptyMap(request.Strategy.Params))
+	params, err := json.Marshal(emptyMap(request.Params))
 	if err != nil {
-		writeErrorCode(w, errs.CodeBadRequest, "invalid strategy params", false)
+		writeErrorCode(w, errs.CodeBadRequest, "invalid params", false)
 		return
 	}
 	input, err := json.Marshal(request.Input)
@@ -56,10 +60,14 @@ func (s *Server) handleCreateRun(w http.ResponseWriter, r *http.Request) {
 		writeErrorCode(w, errs.CodeBadRequest, "invalid input", false)
 		return
 	}
-	model, err := json.Marshal(request.Model)
-	if err != nil {
-		writeErrorCode(w, errs.CodeBadRequest, "invalid model", false)
-		return
+	var model json.RawMessage = []byte(`{}`)
+	if request.Model != nil {
+		encoded, err := json.Marshal(request.Model)
+		if err != nil {
+			writeErrorCode(w, errs.CodeBadRequest, "invalid model", false)
+			return
+		}
+		model = encoded
 	}
 
 	runTimeout := request.Timeouts.RunMS
@@ -76,8 +84,8 @@ func (s *Server) handleCreateRun(w http.ResponseWriter, r *http.Request) {
 		AppID:          appID,
 		IdempotencyKey: strings.TrimSpace(r.Header.Get("Idempotency-Key")),
 		RequestHash:    requestHash(body),
-		Runtime:        string(request.Runtime),
-		Strategy:       request.Strategy.Name,
+		Runtime:        string(runtimeType),
+		RuntimeName:    request.RuntimeName,
 		Params:         params,
 		Input:          input,
 		Model:          model,
@@ -186,21 +194,16 @@ func (s *Server) handleGetRun(w http.ResponseWriter, r *http.Request) {
 		writeErrorCode(w, errs.CodeRunNotFound, "run not found", false)
 		return
 	}
-	strategyParams := map[string]any{}
-	if len(run.Params) > 0 {
-		_ = json.Unmarshal(run.Params, &strategyParams)
-	}
 	writeJSON(w, http.StatusOK, RunView{
-		RunID:     run.RunID,
-		AppID:     run.AppID,
-		Runtime:   RuntimeType(run.Runtime),
-		Strategy:  StrategyRequest{Name: run.Strategy, Params: strategyParams},
-		Status:    RunStatus(run.Status),
-		Attempt:   int32(run.Attempt),
-		SessionID: run.SessionID,
-		TraceID:   run.TraceID,
-		CreatedAt: run.CreatedAt,
-		UpdatedAt: run.UpdatedAt,
+		RunID:       run.RunID,
+		AppID:       run.AppID,
+		RuntimeName: run.RuntimeName,
+		Status:      RunStatus(run.Status),
+		Attempt:     int32(run.Attempt),
+		SessionID:   run.SessionID,
+		TraceID:     run.TraceID,
+		CreatedAt:   run.CreatedAt,
+		UpdatedAt:   run.UpdatedAt,
 	})
 }
 

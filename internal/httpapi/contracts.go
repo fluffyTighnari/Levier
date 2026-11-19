@@ -56,12 +56,6 @@ type ChatMessage struct {
 	Name    string `json:"name,omitempty"`
 }
 
-// StrategyRequest selects a strategy and its parameters.
-type StrategyRequest struct {
-	Name   string         `json:"name"`
-	Params map[string]any `json:"params,omitempty"`
-}
-
 // ModelRequest selects a model provider and model.
 type ModelRequest struct {
 	Provider string            `json:"provider"`
@@ -77,13 +71,16 @@ type TimeoutRequest struct {
 
 // CreateRunRequest is the POST /runs body.
 type CreateRunRequest struct {
-	AppID     string          `json:"app_id,omitempty"`
-	Runtime   RuntimeType     `json:"runtime"`
-	Strategy  StrategyRequest `json:"strategy"`
-	Input     []ChatMessage   `json:"input"`
-	SessionID string          `json:"session_id,omitempty"`
-	Model     ModelRequest    `json:"model"`
-	Timeouts  TimeoutRequest  `json:"timeouts,omitempty"`
+	AppID       string `json:"app_id,omitempty"`
+	RuntimeName string `json:"runtime_name"`
+	// Runtime is an optional compatibility field. New App callers should only
+	// choose RuntimeName; the control plane defaults to normal.
+	Runtime   RuntimeType    `json:"runtime,omitempty"`
+	Params    map[string]any `json:"params,omitempty"`
+	Input     []ChatMessage  `json:"input"`
+	SessionID string         `json:"session_id,omitempty"`
+	Model     *ModelRequest  `json:"model,omitempty"`
+	Timeouts  TimeoutRequest `json:"timeouts,omitempty"`
 }
 
 // CreateRunResponse is returned after accepting a run.
@@ -96,16 +93,15 @@ type CreateRunResponse struct {
 
 // RunView is the App-visible run projection.
 type RunView struct {
-	RunID     string          `json:"run_id"`
-	AppID     string          `json:"app_id"`
-	Runtime   RuntimeType     `json:"runtime"`
-	Strategy  StrategyRequest `json:"strategy"`
-	Status    RunStatus       `json:"status"`
-	Attempt   int32           `json:"attempt"`
-	SessionID string          `json:"session_id,omitempty"`
-	TraceID   string          `json:"trace_id,omitempty"`
-	CreatedAt time.Time       `json:"created_at"`
-	UpdatedAt time.Time       `json:"updated_at"`
+	RunID       string    `json:"run_id"`
+	AppID       string    `json:"app_id"`
+	RuntimeName string    `json:"runtime_name"`
+	Status      RunStatus `json:"status"`
+	Attempt     int32     `json:"attempt"`
+	SessionID   string    `json:"session_id,omitempty"`
+	TraceID     string    `json:"trace_id,omitempty"`
+	CreatedAt   time.Time `json:"created_at"`
+	UpdatedAt   time.Time `json:"updated_at"`
 }
 
 // RunEventView is one persisted run event.

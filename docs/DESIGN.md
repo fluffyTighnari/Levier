@@ -123,7 +123,7 @@ App POST /api/v1/runs
 RUN_DISPATCH 被 worker claim
   → control.Handle
   → 组装 TaskAssign（工具、MCP binding、模型、超时）
-  → PickHealthy(runtime, strategy, labels)
+  → PickHealthy(runtime, runtime_name, labels)
   → AssignRun（attempt+1, lease_epoch+1）
   → 发送 TaskAssign
   → 等 TaskAck（默认 5s）

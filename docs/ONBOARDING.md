@@ -128,7 +128,7 @@ WebSocket 生命周期交给 `levier_app`。保持它运行，然后在另一个
 ```sh
 LEVIER_CREDENTIALS=~/.config/levier/counter-agent.json \
   levier run submit \
-  --strategy react \
+  --runtime react1 \
   --prompt "Add 2, then add 3, then read the counter." \
   --watch
 ```
@@ -140,7 +140,7 @@ LEVIER_CREDENTIALS=~/.config/levier/counter-agent.json \
 ```sh
 levier run submit \
   --credentials ~/.config/levier/counter-agent.json \
-  --strategy echo \
+  --runtime echo1 \
   --prompt "hello" \
   --watch
 ```

@@ -245,7 +245,7 @@ POST /admin/apps/{app_id}/rotate-key
 ```text
 --credentials <path>
 --prompt <text>
---strategy react|echo
+--runtime <name>
 --provider deepseek
 --model deepseek-flash
 --max-steps 8
@@ -330,7 +330,7 @@ POST /api/v1/runs/{id}/cancel
 --daemon-id <id>
 --token <token>
 --admin-token <token>
---strategy <name>
+--runtime <name>
 --timeout <duration>
 --json
 ```
@@ -505,7 +505,7 @@ cmd/levier/run_test.go
 命令：
 
 ```text
-levier run submit --prompt ... [--strategy react] [--watch]
+levier run submit --prompt ... [--runtime react1] [--watch]
 levier run watch --run-id ...
 levier run cancel --run-id ... --yes
 ```

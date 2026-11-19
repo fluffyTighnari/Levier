@@ -1,4 +1,4 @@
-"""Levier — echo strategy tests.
+"""Levier - standalone echo runtime tests.
 
 Copyright 2026 The Levier Authors.
 """
@@ -12,7 +12,7 @@ from middleware.runtime.v1 import runtime_pb2
 
 from levier_harness.channel.envelope import new_envelope, response_envelope
 from levier_harness.runtime import ManagerConfig, RunManager
-from levier_harness.strategies import EchoStrategy
+from levier_harness.echo import EchoRuntime
 
 
 class FakeSender:
@@ -30,19 +30,18 @@ def assign_envelope(content: str = "hello") -> runtime_pb2.Envelope:
     assign = runtime_pb2.TaskAssign(
         run_id="run-echo",
         app_id="app-1",
-        strategy="echo",
         input=[runtime_pb2.ChatMessage(role="user", content=content)],
     )
     return new_envelope(assign, "task_assign", run_id="run-echo", attempt=1, lease_epoch=1)
 
 
-class EchoStrategyTest(unittest.IsolatedAsyncioTestCase):
+class EchoRuntimeTest(unittest.IsolatedAsyncioTestCase):
     async def test_echo_sequence(self) -> None:
         sender = FakeSender()
         manager = RunManager(
             sender,
-            ManagerConfig(supported_strategies=("echo",)),
-            EchoStrategy(),
+            ManagerConfig(runtime_name="echo1"),
+            EchoRuntime(),
         )
         try:
             await manager.handle(assign_envelope("hello"))
@@ -72,8 +71,8 @@ class EchoStrategyTest(unittest.IsolatedAsyncioTestCase):
         sender = FakeSender()
         manager = RunManager(
             sender,
-            ManagerConfig(supported_strategies=("echo",)),
-            EchoStrategy(),
+            ManagerConfig(runtime_name="echo1"),
+            EchoRuntime(),
         )
         try:
             await manager.handle(assign_envelope(""))
