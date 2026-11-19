@@ -13,7 +13,7 @@ import os
 from dataclasses import replace
 from typing import AsyncIterator, Sequence
 
-from levier_react_runtime.llm.base import (
+from levier_runtime.llm.base import (
     DeltaCallback,
     LLMError,
     LLMResponse,
@@ -22,7 +22,7 @@ from levier_react_runtime.llm.base import (
     ToolCall,
     ToolSpec,
 )
-from levier_react_runtime.llm.http import (
+from levier_runtime.llm.http import (
     HTTPRequest,
     HTTPTransport,
     HTTPTransportError,

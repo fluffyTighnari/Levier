@@ -964,26 +964,25 @@ log:
 middleware:
   address: "127.0.0.1:9090"
   tls: false
+  auth_token: "change-me"
 
 mcp_runtime:
   socket: "/tmp/levier-mcp.sock"
 
-daemon:
-  id: "daemon-local-1"
-  auth_token: "change-me"
-  runtime_type: "normal"
+runtime:
+  name: "react1"
+  instance_id: "daemon-local-1"
+  type: "normal"
   max_concurrent_runs: 4
-  runtime_name: "react1"
   labels:
     pool: "local"
 
 logging:
   level: "info"
-  format: "json"
 ```
 
-`daemon_id` 与 token 必须先在 Levier 配置里预分配；React Runtime 不能自助注册。
-React Runtime 在 `Hello.runtime_name` 中声明自己的路由名；App 只按名字提交 Run。
+`middleware.auth_token` and `runtime.instance_id` identify the runtime to the control plane. The React Runtime uses the standard Runtime SDK config shape; `mcp_runtime.socket` is read by the React entry point.
+The runtime reports `runtime.name` in Hello; apps dispatch runs by that name.
 
 ### 7.4 Compose 默认值
 

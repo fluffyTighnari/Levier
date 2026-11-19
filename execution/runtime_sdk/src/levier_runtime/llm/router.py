@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from typing import Sequence
 
-from levier_react_runtime.llm.base import (
+from levier_runtime.llm.base import (
     DeltaCallback,
     LLMError,
     LLMProvider,
@@ -18,8 +18,8 @@ from levier_react_runtime.llm.base import (
     ModelConfig,
     ToolSpec,
 )
-from levier_react_runtime.llm.anthropic import AnthropicProvider
-from levier_react_runtime.llm.openai import OpenAICompatibleProvider
+from levier_runtime.llm.anthropic import AnthropicProvider
+from levier_runtime.llm.openai import OpenAICompatibleProvider
 
 
 class ProviderRouter:

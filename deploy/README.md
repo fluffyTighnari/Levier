@@ -184,7 +184,7 @@ levier stopped
 POSTGRES_PASSWORD       change-me
 LEVIER_ADMIN_TOKEN      admin-change-me（仅 host 初始化 / 控制面）
 LEVIER_APP_NAME         counter-agent（仅测试 App 初始化）
-LEVIER_REACT_RUNTIME_TOKEN  change-me
+LEVIER_RUNTIME_TOKEN  change-me
 ```
 
 开发配置样例是根目录 `levier.example.yaml`。

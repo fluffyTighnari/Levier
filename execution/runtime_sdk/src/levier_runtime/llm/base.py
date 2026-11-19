@@ -25,7 +25,7 @@ class ToolSpec:
 
     @classmethod
     def from_manifest(cls, manifest: runtime_pb2.ToolManifest) -> "ToolSpec":
-        """Convert a TaskAssign tool manifest into a provider-facing spec."""
+        """Convert a runtime tool manifest into a provider-facing spec."""
         return cls(
             name=manifest.name,
             description=manifest.description,
@@ -55,7 +55,7 @@ class Message:
 
     @classmethod
     def from_proto(cls, message: runtime_pb2.ChatMessage) -> "Message":
-        """Convert a TaskAssign input message."""
+        """Convert a runtime input message."""
         return cls(role=message.role, content=message.content, name=message.name)
 
 
@@ -71,7 +71,7 @@ class ModelConfig:
 
     @classmethod
     def from_profile(cls, profile: runtime_pb2.ModelProfile) -> "ModelConfig":
-        """Convert a TaskAssign model profile."""
+        """Convert a runtime model profile."""
         return cls(
             provider=profile.provider,
             model=profile.model,

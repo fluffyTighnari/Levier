@@ -31,8 +31,8 @@ services:
 
   react-runtime:
     environment:
-      LEVIER_REACT_RUNTIME_TOKEN: ""
-      LEVIER_REACT_RUNTIME_TOKEN_FILE: /run/secrets/levier_react_runtime_daemon_token
+      LEVIER_RUNTIME_TOKEN: ""
+      LEVIER_RUNTIME_TOKEN_FILE: /run/secrets/levier_react_runtime_daemon_token
     volumes:
       - ./deploy/secrets/levier_react_runtime_daemon_token:/run/secrets/levier_react_runtime_daemon_token:ro
 

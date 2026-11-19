@@ -11,7 +11,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Protocol, Sequence
 
-from levier_react_runtime.llm.base import ToolCall, ToolSpec
+from levier_runtime.llm.base import ToolCall, ToolSpec
 
 if TYPE_CHECKING:
     from levier_runtime import RunContext

@@ -3,19 +3,25 @@
 Copyright 2026 The Levier Authors.
 """
 
+import os
 import tempfile
 import unittest
 from contextlib import redirect_stderr, redirect_stdout
 from io import StringIO
 from pathlib import Path
+from unittest.mock import patch
 
 from levier_react_runtime.__main__ import main
 
 VALID_YAML = """
-daemon:
-  id: "daemon-cli"
-  runtime_name: "react1"
+middleware:
+  address: "127.0.0.1:9090"
   auth_token: "token"
+
+runtime:
+  name: "react1"
+  instance_id: "daemon-cli"
+  type: "normal"
 """
 
 
@@ -31,7 +37,30 @@ class CLITest(unittest.TestCase):
             code = main(["--config", str(path), "--check"])
 
         self.assertEqual(code, 0)
+        self.assertIn("react1", output.getvalue())
         self.assertIn("daemon-cli", output.getvalue())
+
+    def test_legacy_env_names_are_mapped(self) -> None:
+        directory = tempfile.TemporaryDirectory()
+        self.addCleanup(directory.cleanup)
+        path = Path(directory.name) / "config.yaml"
+        path.write_text(VALID_YAML, encoding="utf-8")
+
+        output = StringIO()
+        with patch.dict(
+            os.environ,
+            {
+                "LEVIER_REACT_RUNTIME_INSTANCE_ID": "legacy-instance",
+                "LEVIER_REACT_RUNTIME_NAME": "legacy-runtime",
+            },
+            clear=False,
+        ):
+            with redirect_stdout(output):
+                code = main(["--config", str(path), "--check"])
+
+        self.assertEqual(code, 0)
+        self.assertIn("legacy-runtime", output.getvalue())
+        self.assertIn("legacy-instance", output.getvalue())
 
     def test_invalid_config(self) -> None:
         error = StringIO()

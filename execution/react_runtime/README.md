@@ -1,35 +1,76 @@
-<!-- Levier - built-in React Runtime. -->
-
 # React Runtime
 
-## 单元卡
+React is the built-in ReAct Runtime and the reference composition layer for
+runtime authors. The package is intentionally thin: it loads configuration,
+wires the optional `levier_runtime.react` helper to the shared MCP client, and
+serves `run(ctx)` through the Runtime SDK.
 
-| 项 | 内容 |
+```text
+execution/react_runtime/
+  react.example.yaml
+  src/levier_react_runtime/
+    __init__.py
+    __main__.py       # ~150 lines: config + composition
+```
+
+## What lives where
+
+| Layer | Owner |
 |---|---|
-| 职责 | 单次 Run 的 Agent 循环、模型适配、工具桥 |
-| 入口 | `python -m levier_react_runtime --config react.example.yaml` |
-| 输入 / 输出 | TaskAssign（gRPC）；事件 / ToolCallRequest（gRPC） |
-| 依赖 | `levier_agent_core`、生成的 proto、模型 API、MCP client |
-| 不负责 | HTTP API、App 注册、数据库、工具真实实现 |
-| 测试 | `make react-runtime-test` |
+| RuntimeChannel, lifecycle, events, cancellation, tool transport | `levier-runtime` |
+| ReAct loop, provider router, tool router, checkpoint codec | optional `levier_runtime.react` / `.llm` / `.tools` |
+| Shared MCP process and socket | `execution/mcp_runtime` |
+| Configuration and process entry point | this package |
 
-The React Runtime is a thin built-in runtime on top of `levier-runtime`.
-It owns the ReAct loop, LLM adapters, and React checkpointing. The shared MCP
-client lives in the Runtime SDK optional module.
-RuntimeChannel, lifecycle, event sequencing, and `RunContext` come from
-`levier-runtime` (the independent Runtime SDK). The MCP runtime is a separate process under
-`execution/mcp_runtime/`; it is not part of this package.
+The ReAct helper is optional. A custom runtime can use the SDK alone, or import
+`ReactAgent` when it wants the same loop.
 
-The React runtime provides:
+## Configuration
 
-- configuration loading with `LEVIER_REACT_RUNTIME_*` overrides (legacy `HARNESS_*` fallback)
-- JSON/text structured logging
-- health state snapshot
-- ReAct, LLM providers, MCP tools, and React checkpointing
+`react.example.yaml` uses the standard Runtime SDK shape:
 
-## Environment
+```yaml
+middleware:
+  address: "127.0.0.1:9090"
+  auth_token: "change-me"
 
-The React Runtime owns its own virtual environment. From `execution/react_runtime/`:
+mcp_runtime:
+  socket: "/tmp/levier-mcp.sock"
+
+runtime:
+  name: "react1"
+  instance_id: "daemon-local-1"
+  type: "normal"
+  max_concurrent_runs: 4
+
+logging:
+  level: "info"
+```
+
+The SDK reads `middleware`, `runtime`, and `logging`. The React entry point
+reads `mcp_runtime.socket`; it can be overridden with
+`LEVIER_REACT_RUNTIME_MCP_SOCKET`.
+
+Legacy `LEVIER_REACT_RUNTIME_*` environment names are mapped to the SDK's
+`LEVIER_MIDDLEWARE_*` / `LEVIER_RUNTIME_*` names. The canonical names are:
+
+```text
+LEVIER_RUNTIME_CONFIG
+LEVIER_MIDDLEWARE_ADDRESS
+LEVIER_MIDDLEWARE_TLS
+LEVIER_RUNTIME_TOKEN
+LEVIER_RUNTIME_TOKEN_FILE
+LEVIER_RUNTIME_NAME
+LEVIER_RUNTIME_INSTANCE_ID
+LEVIER_RUNTIME_TYPE
+LEVIER_RUNTIME_MAX_CONCURRENT_RUNS
+LEVIER_RUNTIME_LABELS
+LEVIER_RUNTIME_LOG_LEVEL
+```
+
+## Install
+
+From `execution/react_runtime/`:
 
 ```sh
 uv sync --locked
@@ -40,8 +81,6 @@ or with the standard library:
 ```sh
 python3 -m venv .venv
 .venv/bin/python -m ensurepip
-# levier-agent-core is a local workspace package; pip does not read
-# [tool.uv.sources], so install it first when not using uv.
 .venv/bin/python -m pip install -e ../agent_core
 .venv/bin/python -m pip install -e ../runtime_sdk
 .venv/bin/python -m pip install -e .
@@ -52,22 +91,28 @@ python3 -m venv .venv
 From `execution/react_runtime/`:
 
 ```sh
-PYTHONPATH=src:../runtime_sdk/src .venv/bin/python -m levier_react_runtime \
+PYTHONPATH=src:../runtime_sdk/src:../agent_core/src .venv/bin/python -m levier_react_runtime \
   --config react.example.yaml --check
 ```
 
-or start the React runtime:
-
 ```sh
-PYTHONPATH=src:../runtime_sdk/src .venv/bin/python -m levier_react_runtime \
+PYTHONPATH=src:../runtime_sdk/src:../agent_core/src .venv/bin/python -m levier_react_runtime \
   --config react.example.yaml
 ```
 
-The React Runtime is now built on top of `levier-runtime`. The
-standalone MCP runtime is a separate process; start it with:
+Start the shared MCP Runtime separately when MCP bindings are used:
 
 ```sh
 cd ../mcp_runtime
-uv sync --locked
 PYTHONPATH=src .venv/bin/python -m levier_mcp_runtime --socket /tmp/levier-mcp.sock
 ```
+
+## Tests
+
+```sh
+make react-runtime-test
+make runtime-sdk-test
+```
+
+`runtime-sdk-test` covers the optional ReAct/LLM/tool helpers; the React test
+suite covers the thin CLI composition layer.

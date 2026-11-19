@@ -11,7 +11,7 @@ import unittest
 from typing import AsyncIterator
 from unittest.mock import patch
 
-from levier_react_runtime.llm import (
+from levier_runtime.llm import (
     HTTPRequest,
     HTTPResponse,
     HTTPTransportError,

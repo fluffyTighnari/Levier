@@ -13,7 +13,7 @@ from typing import AsyncIterator
 from middleware.runtime.v1 import runtime_pb2
 
 from levier_runtime.channel.envelope import new_envelope, response_envelope
-from levier_react_runtime.llm import (
+from levier_runtime.llm import (
     AnthropicProvider,
     HTTPRequest,
     HTTPResponse,
@@ -24,7 +24,7 @@ from levier_react_runtime.llm import (
     ToolSpec,
 )
 from levier_runtime.manager import ManagerConfig, RunManager
-from levier_react_runtime.runtime.react import ReactRuntime
+from levier_runtime.react import ReactAgent
 
 
 class FakeTransport:
@@ -293,7 +293,7 @@ class AnthropicReactIntegrationTest(unittest.IsolatedAsyncioTestCase):
         manager = RunManager(
             sender,
             ManagerConfig(runtime_name="react1"),
-            ReactRuntime(provider),
+            ReactAgent(provider),
         )
         assign = runtime_pb2.TaskAssign(
             run_id="run-1",

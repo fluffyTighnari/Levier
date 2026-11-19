@@ -13,7 +13,7 @@ from levier_runtime.types import Message, Timeouts
 
 
 class FakeChannel:
-    def __init__(self, result: runtime_pb2.ToolResult | None = None) -> None:
+    def __init__(self, result: runtime_pb2.ToolCallResult | None = None) -> None:
         self.result = result or runtime_pb2.ToolCallResult(ok=True, result_json="42")
         self.sent: list[runtime_pb2.Envelope] = []
         self.requests: list[tuple[runtime_pb2.ToolCallRequest, dict]] = []
@@ -92,6 +92,13 @@ class ContextTest(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(event.type, runtime_pb2.EventType.ERROR)
         self.assertEqual(event.data.fields["code"].string_value, "MODEL_TIMEOUT")
         self.assertTrue(event.data.fields["retryable"].bool_value)
+
+    async def test_logger_carries_run_context(self) -> None:
+        ctx = make_context(FakeChannel())
+        self.assertEqual(ctx.logger.extra["run_id"], "run-1")
+        self.assertEqual(ctx.logger.extra["app_id"], "app-1")
+        self.assertEqual(ctx.logger.extra["runtime_name"], "test1")
+        self.assertEqual(ctx.logger.extra["trace_id"], "trace")
 
     async def test_checkpoint_requires_session(self) -> None:
         ctx = make_context(FakeChannel())

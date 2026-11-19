@@ -16,7 +16,7 @@ from middleware.runtime.v1 import runtime_pb2
 
 @dataclass(frozen=True)
 class Message:
-    """One conversation message supplied in a TaskAssign."""
+    """One conversation message supplied in a run."""
 
     role: str
     content: str = ""

@@ -39,7 +39,7 @@ Levier 控制面
   internal/config + levier.example.yaml + LEVIER_* 环境变量
 
 React Runtime
-  execution/react_runtime/react.example.yaml + HARNESS_* 环境变量
+  execution/react_runtime/react.example.yaml + LEVIER_REACT_RUNTIME_* / LEVIER_* environment variables
 
 MCP Runtime
   命令行参数 + MCP_RUNTIME_* + LEVIER_SECRET_*
@@ -188,38 +188,51 @@ retention 默认关闭
 
 ---
 
-## 4. React Runtime 配置
+## 4. React Runtime configuration
 
-文件：`execution/react_runtime/react.example.yaml`
-代码：`execution/react_runtime/src/levier_react_runtime/config.py`
+The React Runtime uses the standard Runtime SDK configuration shape. It does
+not have a private `daemon:` parser.
 
-| YAML / 参数 | 环境变量 | 类型 | 默认 | 必填 | 秘密 |
-|---|---|---|---|---|---|
-| CLI `--config` | `LEVIER_REACT_RUNTIME_CONFIG` / 旧 `HARNESS_CONFIG` | path | 内置 example | 否 | 否 |
-| `middleware.address` | `LEVIER_REACT_RUNTIME_ADDRESS` / 旧 `HARNESS_LEVIER_ADDRESS` / `HARNESS_MIDDLEWARE_ADDRESS` | host:port | `127.0.0.1:9090` | 是 | 否 |
-| `middleware.tls` | `LEVIER_REACT_RUNTIME_TLS` / 旧 `HARNESS_LEVIER_TLS` / `HARNESS_MIDDLEWARE_TLS` | bool | `false` | 否 | 否 |
-| `daemon.id` | `LEVIER_REACT_RUNTIME_INSTANCE_ID` / 旧 `HARNESS_DAEMON_ID` | string | 空 | 是 | 否 |
-| `daemon.auth_token` | `LEVIER_REACT_RUNTIME_TOKEN` / 旧 `HARNESS_DAEMON_AUTH_TOKEN` | string | 空 | 是* | **是** |
-| `daemon.auth_token_file` | `LEVIER_REACT_RUNTIME_TOKEN_FILE` / 旧 `HARNESS_DAEMON_AUTH_TOKEN_FILE` | path | 空 | 否 | **是** |
-| `daemon.runtime_type` | `LEVIER_REACT_RUNTIME_TYPE` / 旧 `HARNESS_DAEMON_RUNTIME_TYPE` | enum | `normal` | 是 | 否 |
-| `daemon.max_concurrent_runs` | `LEVIER_REACT_RUNTIME_MAX_CONCURRENT_RUNS` / 旧 `HARNESS_DAEMON_MAX_CONCURRENT_RUNS` | int | `4` | 是 | 否 |
-| `daemon.runtime_name` | `LEVIER_REACT_RUNTIME_NAME` / 旧 `HARNESS_RUNTIME_NAME` | string | 必填，例如 `react1` | 是 | 否 |
-| `daemon.labels` | `LEVIER_REACT_RUNTIME_LABELS` / 旧 `HARNESS_DAEMON_LABELS` | map | 空 | 否 | 否 |
-| `mcp_runtime.socket` | `LEVIER_REACT_RUNTIME_MCP_SOCKET` / 旧 `HARNESS_MCP_RUNTIME_SOCKET` | path | 空 | 否 | 否 |
-| `logging.level` | `LEVIER_REACT_RUNTIME_LOG_LEVEL` / 旧 `HARNESS_LOGGING_LEVEL` | enum | `info` | 是 | 否 |
-| `logging.format` | `LEVIER_REACT_RUNTIME_LOG_FORMAT` / 旧 `HARNESS_LOGGING_FORMAT` | enum | `json` | 是 | 否 |
-| 运行时模型 key | `DEEPSEEK_API_KEY` | string | 空 | react 时需要 | **是** |
-| 运行时模型地址 | `DEEPSEEK_BASE_URL` | URL | `https://api.deepseek.com` | 否 | 否 |
-| 运行时模型名 | `DEEPSEEK_MODEL` | string | `deepseek-flash` | 否 | 否 |
+```yaml
+middleware:
+  address: "127.0.0.1:9090"
+  auth_token: "change-me"
 
-`*` `auth_token` 与 `auth_token_file` 至少提供一个。
+mcp_runtime:
+  socket: "/tmp/levier-mcp.sock"
 
-注意：
+runtime:
+  name: "react1"
+  instance_id: "daemon-local-1"
+  type: "normal"
+  max_concurrent_runs: 4
+
+logging:
+  level: "info"
+```
+
+The SDK reads `middleware`, `runtime`, and `logging`. The React entry point
+reads `mcp_runtime.socket` and supports `LEVIER_REACT_RUNTIME_MCP_SOCKET`.
+
+Canonical environment variables:
 
 ```text
-HARNESS_* 旧名仍兼容；新配置使用 LEVIER_REACT_RUNTIME_*
-DEEPSEEK_* 由 LLM provider 直接读取，不在 React Runtime YAML 中
+LEVIER_RUNTIME_CONFIG
+LEVIER_MIDDLEWARE_ADDRESS
+LEVIER_MIDDLEWARE_TLS
+LEVIER_RUNTIME_TOKEN
+LEVIER_RUNTIME_TOKEN_FILE
+LEVIER_RUNTIME_NAME
+LEVIER_RUNTIME_INSTANCE_ID
+LEVIER_RUNTIME_TYPE
+LEVIER_RUNTIME_MAX_CONCURRENT_RUNS
+LEVIER_RUNTIME_LABELS
+LEVIER_RUNTIME_LOG_LEVEL
 ```
+
+Legacy `LEVIER_REACT_RUNTIME_*` names are mapped to the equivalent SDK names
+for Compose compatibility. `DEEPSEEK_*` remains an LLM-provider concern and is
+not part of Runtime configuration.
 
 ---
 
@@ -291,9 +304,9 @@ updated_at
 | `LEVIER_HTTP_ADMIN_TOKEN` | levier | `admin-change-me` | **是** | 来自 `LEVIER_ADMIN_TOKEN`，仅开发 |
 | `LEVIER_VERSION` / `LEVIER_COMMIT` / `LEVIER_BUILD_TIME` | levier build args | dev | 否 | 构建元数据 |
 | `LEVIER_LOG_LEVEL` / `LEVIER_LOG_FORMAT` | levier | info/json | 否 | 日志 |
-| `LEVIER_REACT_RUNTIME_ADDRESS` | react-runtime | `levier:9090` | 否 | 连接地址 |
-| `LEVIER_REACT_RUNTIME_INSTANCE_ID` | react-runtime | `daemon-local-1` | 否 | daemon 身份 |
-| `LEVIER_REACT_RUNTIME_TOKEN` | react-runtime | `change-me` | **是** | 仅开发 |
+| `LEVIER_MIDDLEWARE_ADDRESS` | react-runtime | `levier:9090` | 否 | 连接地址 |
+| `LEVIER_RUNTIME_INSTANCE_ID` | react-runtime | `daemon-local-1` | 否 | daemon 身份 |
+| `LEVIER_RUNTIME_TOKEN` | react-runtime | `change-me` | **是** | 仅开发 |
 | `LEVIER_REACT_RUNTIME_MCP_SOCKET` | react-runtime | socket path | 否 | MCP socket |
 | `LEVIER_APP_URL` | agent / smoke | `http://levier:8080` | 否 | HTTP 地址 |
 | `LEVIER_APP_CREDENTIALS` | agent | `/data/credentials.json` | 文件秘密 | 由 host `levier app init` 写入 `data/agent` |
@@ -360,7 +373,7 @@ http.admin_token
 http.bearer_token
 grpc.daemon_tokens.*
 database.url（含密码）
-LEVIER_REACT_RUNTIME_TOKEN
+LEVIER_RUNTIME_TOKEN
 LEVIER_SECRET_* / MCP secrets file
 DEEPSEEK_API_KEY
 LEVIER_ADMIN_TOKEN（仅 app init / rotate / 测试初始化）

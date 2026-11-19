@@ -1,24 +1,23 @@
-# Levier ? React Runtime example configuration.
+# Levier - React Runtime example configuration.
 # Copyright 2026 The Levier Authors.
 
 middleware:
   address: "127.0.0.1:9090"
   tls: false
+  auth_token: "change-me"
+  # Production: prefer auth_token_file or LEVIER_RUNTIME_TOKEN.
+  # auth_token_file: "/run/secrets/levier_react_runtime_daemon_token"
 
 mcp_runtime:
   socket: "/tmp/levier-mcp.sock"
 
-daemon:
-  id: "daemon-local-1"
-  runtime_name: "react1"
-  auth_token: "change-me"
-  # Production: prefer auth_token_file or LEVIER_REACT_RUNTIME_TOKEN.
-  # auth_token_file: "/run/secrets/levier_react_runtime_daemon_token"
-  runtime_type: "normal"
+runtime:
+  name: "react1"
+  instance_id: "daemon-local-1"
+  type: "normal"
   max_concurrent_runs: 4
   labels:
     pool: "local"
 
 logging:
   level: "info"
-  format: "json"

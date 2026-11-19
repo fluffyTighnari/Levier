@@ -1,7 +1,7 @@
-"""Levier — ReAct runtime runner.
+"""Optional ReAct agent for Levier runtimes.
 
 The loop lives in `levier_agent_core`; this module only translates between
-Levier/TaskAssign types and the loop contract.
+RunContext and the loop contract.
 
 Copyright 2026 The Levier Authors.
 """
@@ -32,8 +32,8 @@ from levier_agent_core.events import (
     ToolStarted,
     UsageEvent,
 )
-from levier_react_runtime.ids import new_ulid
-from levier_react_runtime.llm.base import (
+from levier_runtime.ids import new_ulid
+from levier_runtime.llm.base import (
     DeltaCallback,
     LLMError,
     LLMProvider,
@@ -43,16 +43,16 @@ from levier_react_runtime.llm.base import (
     ToolCall,
     ToolSpec,
 )
-from levier_react_runtime.runtime.checkpoint import CheckpointError, CheckpointState, capture
-from levier_react_runtime.tools.base import ToolProvider, as_tool_provider
+from levier_runtime.react.checkpoint import CheckpointError, CheckpointState, capture
+from levier_runtime.tools.base import ToolProvider, as_tool_provider
 
 _DEFAULT_MAX_STEPS = 32
 _DEFAULT_STEP_TIMEOUT_MS = 120_000
 _DEFAULT_TOOL_TIMEOUT_MS = 60_000
 
 
-class ReactRuntime:
-    """Alternate model completions and tool calls until a terminal answer."""
+class ReactAgent:
+    """Implement the standard ReAct loop for a Levier Runtime."""
 
     def __init__(
         self,
@@ -68,7 +68,7 @@ class ReactRuntime:
         self.default_tool_timeout_ms = default_tool_timeout_ms
 
     async def run(self, ctx: RunContext) -> str:
-        """Adapt one TaskAssign to the agent core loop."""
+        """Adapt one RunContext to the agent core loop."""
         max_steps = max(1, _int_param(ctx.params, "max_steps", _DEFAULT_MAX_STEPS))
         step_timeout_ms = _int_param(
             ctx.params,
@@ -108,10 +108,10 @@ class ReactRuntime:
             tools = [_tool_from_context(tool) for tool in ctx.tools]
             model = _model_from_context(ctx.model)
             if model is None:
-                await self._emit_error(ctx, "MODEL_REQUIRED", "TaskAssign has no model")
+                await self._emit_error(ctx, "MODEL_REQUIRED", "run input has no model")
                 return "failed"
         except Exception as exc:
-            await self._emit_error(ctx, "INVALID_TASK_ASSIGN", str(exc))
+            await self._emit_error(ctx, "INVALID_RUN_INPUT", str(exc))
             return "failed"
 
         result = None
@@ -208,7 +208,7 @@ class ReactRuntime:
         await ctx.checkpoint(state.encode())
 
     async def __call__(self, ctx: RunContext) -> str:
-        """Allow the runtime to be used as a RunManager runner."""
+        """Allow the agent to be used as a RunManager runner."""
         return await self.run(ctx)
 
     async def _emit_error(
@@ -219,10 +219,7 @@ class ReactRuntime:
         *,
         retryable: bool = False,
     ) -> None:
-        await ctx.emit(
-            "ERROR",
-            {"code": code, "message": message, "retryable": retryable},
-        )
+        await ctx.error(code, message, retryable=retryable)
 
 
 class _CtxAbort:

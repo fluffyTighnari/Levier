@@ -1,9 +1,8 @@
-"""Levier - built-in React Runtime.
+"""Levier - thin built-in React Runtime.
 
-This package is the React runtime for the Levier control plane. It owns the
-ReAct loop, LLM adapters, MCP provider, and React checkpointing. The
-RuntimeChannel, RunContext, and lifecycle come from levier_runtime. Echo is the
-standalone example in execution/echo_runtime.
+The protocol lifecycle and RunContext live in `levier_runtime`. The ReAct loop
+is composed from the optional `levier_runtime.react` helper. This package only
+owns configuration and process composition.
 
 Copyright 2026 The Levier Authors.
 """

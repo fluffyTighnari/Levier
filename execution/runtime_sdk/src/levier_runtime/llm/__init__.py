@@ -1,10 +1,10 @@
-"""Levier - built-in React Runtime.
+"""Levier - optional LLM providers.
 
 Copyright 2026 The Levier Authors.
 """
 
-from levier_react_runtime.llm.anthropic import AnthropicProvider
-from levier_react_runtime.llm.base import (
+from levier_runtime.llm.anthropic import AnthropicProvider
+from levier_runtime.llm.base import (
     DeltaCallback,
     LLMError,
     LLMProvider,
@@ -14,9 +14,9 @@ from levier_react_runtime.llm.base import (
     ToolCall,
     ToolSpec,
 )
-from levier_react_runtime.llm.openai import OpenAICompatibleProvider
-from levier_react_runtime.llm.router import ProviderRouter
-from levier_react_runtime.llm.http import (
+from levier_runtime.llm.openai import OpenAICompatibleProvider
+from levier_runtime.llm.router import ProviderRouter
+from levier_runtime.llm.http import (
     HTTPRequest,
     HTTPResponse,
     HTTPTransport,

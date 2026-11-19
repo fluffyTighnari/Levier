@@ -12,9 +12,9 @@ from middleware.runtime.v1 import runtime_pb2
 
 from levier_runtime.channel.envelope import new_envelope, response_envelope
 from levier_runtime.manager import ManagerConfig, RunManager
-from levier_react_runtime.llm.base import LLMResponse, Message, ModelConfig, ToolSpec
-from levier_react_runtime.runtime.checkpoint import CheckpointState
-from levier_react_runtime.runtime.react import ReactRuntime
+from levier_runtime.llm.base import LLMResponse, Message, ModelConfig, ToolSpec
+from levier_runtime.react.checkpoint import CheckpointState
+from levier_runtime.react import ReactAgent
 
 
 class FakeSender:
@@ -71,7 +71,7 @@ class CheckpointResumeTest(unittest.IsolatedAsyncioTestCase):
         manager = RunManager(
             sender,
             ManagerConfig(runtime_name="react1"),
-            ReactRuntime(provider),
+            ReactAgent(provider),
         )
         try:
             await manager.handle(envelope)
@@ -126,7 +126,7 @@ class CheckpointResumeTest(unittest.IsolatedAsyncioTestCase):
         manager = RunManager(
             sender,
             ManagerConfig(runtime_name="react1"),
-            ReactRuntime(ScriptedProvider("normal")),
+            ReactAgent(ScriptedProvider("normal")),
         )
         try:
             await manager.handle(assign(session_id="", attempt=1))
@@ -151,7 +151,7 @@ class CheckpointResumeTest(unittest.IsolatedAsyncioTestCase):
         manager = RunManager(
             sender,
             ManagerConfig(runtime_name="react1"),
-            ReactRuntime(ScriptedProvider("never")),
+            ReactAgent(ScriptedProvider("never")),
         )
         try:
             await manager.handle(assign(resume=b"{bad", attempt=2))
@@ -186,7 +186,7 @@ class CheckpointResumeTest(unittest.IsolatedAsyncioTestCase):
         manager = RunManager(
             sender,
             ManagerConfig(runtime_name="react1"),
-            ReactRuntime(ScriptedProvider("never")),
+            ReactAgent(ScriptedProvider("never")),
         )
         try:
             await manager.handle(assign(resume=checkpoint.encode(), attempt=2))

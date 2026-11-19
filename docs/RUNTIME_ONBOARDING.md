@@ -1,29 +1,32 @@
-# Runtime 接入
+# Runtime onboarding
 
-> 目标：Runtime 作者只写 `runtime_name`、`run(ctx)` 和可选能力。
+> A runtime is one process with one `runtime_name` and one `run(ctx)` function.
 >
-> Runtime SDK 负责 RuntimeChannel、心跳、重连、Ack、事件序号、取消和
-> tool bridge。Runtime 作者不需要理解 gRPC、protobuf、lease_epoch 或 event seq。
+> The Runtime SDK owns RuntimeChannel, Hello, heartbeat, reconnect, Ack,
+> cancellation, event sequencing, tool transport, and graceful shutdown.
+> Runtime authors write only the loop and the business decisions.
 
 ---
 
-## 1. 最小 Runtime
+## 1. Minimal runtime
 
 ```python
 from levier_runtime import RunContext, Runtime
+
 
 async def run(ctx: RunContext) -> str:
     await ctx.reply("echo")
     return "completed"
 
+
 if __name__ == "__main__":
     Runtime.from_config("runtime.yaml").run(run)
 ```
 
-`Runtime.from_config()` 是唯一入口；也可以用 `LEVIER_RUNTIME_CONFIG`
-指定配置文件。
+`Runtime.from_config()` reads the path passed at runtime, or
+`LEVIER_RUNTIME_CONFIG`.
 
-## 2. 配置
+## 2. Configuration
 
 ```yaml
 middleware:
@@ -43,15 +46,15 @@ logging:
   level: "info"
 ```
 
-- `runtime.name`：App 路由键
-- `runtime.instance_id`：实例标识；同一个 name 可以有多个实例
-- `runtime.type`：控制面/部署属性
-- capacity 和 labels 由 Runtime 声明
-- 不要在 Runtime 配置里写 strategy
+- `runtime.name` is the dispatch target used by apps.
+- `runtime.instance_id` is this process's identity.
+- `runtime.type` is `normal`, `sandbox`, or `longterm`.
+- Capacity and labels are runtime-owned.
+- Configuration has no `strategy` field.
 
 ## 3. `RunContext`
 
-### 核心字段
+### Core
 
 ```text
 ctx.runtime_name
@@ -62,7 +65,7 @@ ctx.timeouts
 ctx.cancelled
 ```
 
-### 可选字段
+### Optional inputs
 
 ```text
 ctx.model
@@ -72,7 +75,7 @@ ctx.session_id
 ctx.resume_from
 ```
 
-### 核心方法
+### Operations
 
 ```text
 await ctx.reply(text)
@@ -80,63 +83,108 @@ await ctx.call_tool(name, arguments, timeout_ms=...)
 await ctx.error(code, message, retryable=False)
 ```
 
-`ctx.call_tool` 默认自动发 `TOOL_CALL_BEGIN` / `TOOL_CALL_END`，Runtime 作者
-不需要自己维护 invocation id、耗时或工具错误事件。自定义循环如果已经
-自行发这些事件，可传 `emit_events=False`。
+`ctx.call_tool` emits `TOOL_CALL_BEGIN` / `TOOL_CALL_END` automatically. It owns
+the invocation id, duration, result, and tool failure fields. A runtime that
+already emits these events itself can pass `emit_events=False`.
 
-SDK 还会把未捕获的 `run(ctx)` 异常统一映射为 `ERROR` + failed terminal
-状态；`ctx.logger` 自动带 run 上下文。
+The SDK maps an uncaught `run(ctx)` exception to `ERROR` plus a failed terminal
+run. `ctx.error` is the explicit error event entry point.
 
-### 可选方法
+`ctx.logger` automatically carries run, app, runtime, attempt, and trace fields.
+
+### Optional operations
 
 ```text
 await ctx.emit(event_type, data, ephemeral=False)
 await ctx.checkpoint(state)
 ```
 
-`ctx.reply` 由 SDK 生成消息 ID 和事件序号。`ctx.call_tool` 返回普通
-`ToolResult`，不暴露 protobuf。
+`ctx.reply` generates message IDs and event sequence numbers in the SDK.
+`ctx.call_tool` returns a plain `ToolResult`, not protobuf.
 
-## 4. 可选能力
+## 4. Optional inputs
 
-- **Model**：读取 `ctx.model`，自行调用 LLM；SDK 不包含 LLM。
-- **Tools**：读取 `ctx.tools`，通过 `ctx.call_tool` 调用。
-- **MCP**：读取 `ctx.mcp_bindings`，由 Runtime 自己决定是否打开 MCP 会话。
-- **Longterm**：读取 `ctx.session_id` / `ctx.resume_from`，按需调用
-  `ctx.checkpoint`。
-- **Streaming**：按需使用 `ctx.emit("MESSAGE_DELTA", ...)`。
+- **Model**: read `ctx.model`; call your own LLM or an optional provider.
+- **Tools**: read `ctx.tools`; call them through `ctx.call_tool`.
+- **MCP**: read `ctx.mcp_bindings`; open sessions via `levier_runtime.mcp` or
+  your own client.
+- **Longterm**: use `ctx.session_id` / `ctx.resume_from`, and save state with
+  `ctx.checkpoint`.
+- **Streaming**: use `ctx.emit("MESSAGE_DELTA", ...)`.
 
-## 5. 启动和验证
+## 5. Custom ReAct loop
 
-```sh
-PYTHONPATH=execution/runtime_sdk/src:execution/echo_runtime/src \
-  python -m levier_echo_runtime \
-  --config execution/echo_runtime/runtime.yaml
+A custom loop can be written without React, an LLM framework, or the SDK's
+optional helpers:
+
+```python
+async def run(ctx: RunContext) -> str:
+    while not ctx.cancelled:
+        answer = await call_your_model(ctx)
+        if answer.tool_name:
+            result = await ctx.call_tool(
+                answer.tool_name,
+                answer.arguments,
+            )
+            if not result.ok:
+                await ctx.error(result.error_code, result.error_message)
+                return "failed"
+            continue
+        await ctx.reply(answer.text)
+        return "completed"
+    return "cancelled"
 ```
 
-最小验证：
+The SDK guarantees the transport and observability baseline; the loop remains
+yours.
 
-```sh
-levier run submit \
-  --runtime echo1 \
-  --prompt "hello" \
-  --watch
-```
+## 6. Optional authoring helpers
 
-> `model` 可选；Echo Runtime 不需要 model。
-
-## 6. 边界
-
-Runtime SDK 不包含：
+The core does not import these:
 
 ```text
-LLM
+levier_runtime.react    ReactAgent and React checkpoint codec
+levier_runtime.llm      provider protocol and HTTP providers
+levier_runtime.tools    ToolProvider / ToolRouter
+levier_runtime.mcp      shared MCP Runtime client
+```
+
+The built-in React Runtime is the composition example:
+
+```python
+from levier_runtime.llm import ProviderRouter
+from levier_runtime.react import ReactAgent
+from levier_runtime.tools import ToolRouter
+
+runtime = Runtime.from_config("react.example.yaml")
+runtime.run(ReactAgent(ProviderRouter(), ToolRouter(mcp)))
+```
+
+## 7. Verify a custom runtime
+
+The SDK conformance test in
+`execution/runtime_sdk/tests/test_custom_runtime.py` demonstrates a runtime
+with no React import. It verifies:
+
+- automatic tool-call events
+- event ordering
+- terminal status
+- manager-level error fallback
+
+A custom runtime should not need to reimplement any of those protocol
+mechanics to conform.
+
+## 8. Non-goals
+
+The Runtime SDK core does not include:
+
+```text
+LLM providers
 ReAct loop
 MCP client
 ToolRouter
 Strategy / StrategyRouter
 Runtime Admin API
-多语言 SDK
 ```
 
-`agent_core` 是可选循环辅助库，不是 Runtime Core。
+`agent_core` remains an optional loop library, not the Runtime core.

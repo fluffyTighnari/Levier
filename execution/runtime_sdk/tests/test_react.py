@@ -12,10 +12,10 @@ import unittest
 from middleware.runtime.v1 import runtime_pb2
 
 from levier_runtime.channel.envelope import new_envelope, response_envelope
-from levier_react_runtime.llm.base import LLMResponse, Message, ModelConfig, ToolCall, ToolSpec
+from levier_runtime.llm.base import LLMResponse, Message, ModelConfig, ToolCall, ToolSpec
 from levier_runtime.manager import ManagerConfig, RunManager
-from levier_react_runtime.runtime.react import ReactRuntime
-from levier_react_runtime.tools.base import ToolResult
+from levier_runtime.react import ReactAgent
+from levier_runtime.tools.base import ToolResult
 
 
 class FakeSender:
@@ -116,7 +116,7 @@ def payload_type(envelope: runtime_pb2.Envelope) -> str:
     return envelope.WhichOneof("payload")
 
 
-class ReactRuntimeTest(unittest.IsolatedAsyncioTestCase):
+class ReactAgentTest(unittest.IsolatedAsyncioTestCase):
     async def asyncTearDown(self) -> None:
         if hasattr(self, "manager"):
             await self.manager.close()
@@ -130,7 +130,7 @@ class ReactRuntimeTest(unittest.IsolatedAsyncioTestCase):
 
     async def start(self, provider, tools=None, **kwargs) -> FakeSender:
         sender = FakeSender()
-        runner = ReactRuntime(provider, tools)
+        runner = ReactAgent(provider, tools)
         self.manager = RunManager(
             sender,
             ManagerConfig(runtime_name="react1"),
@@ -324,7 +324,7 @@ class ReactRuntimeTest(unittest.IsolatedAsyncioTestCase):
     async def test_react_cancel_interrupts(self) -> None:
         provider = BlockingProvider()
         sender = FakeSender()
-        runner = ReactRuntime(provider)
+        runner = ReactAgent(provider)
         self.manager = RunManager(
             sender,
             ManagerConfig(runtime_name="react1"),

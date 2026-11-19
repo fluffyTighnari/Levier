@@ -1,6 +1,6 @@
 # App / Runtime 接入面简化讨论稿
 
-> 状态：0 步骤、Runtime SDK 与 React Runtime 迁移已实施；App SDK 公开表面收敛待做。
+> ???Runtime SDK ? React Runtime ????ReactAgent / LLM / ToolRouter ????? helper?App SDK ?????????
 >
 > 目标不是继续增加抽象，而是把“接入方真正要写什么”压缩到最小。
 

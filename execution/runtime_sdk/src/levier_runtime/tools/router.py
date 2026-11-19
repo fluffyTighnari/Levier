@@ -1,7 +1,7 @@
 """Route MCP tools to the MCP runtime and all other tools to the SDK bridge.
 
-This is a React-runtime helper, not part of the Runtime SDK. It deliberately
-uses the plain `RunContext` exposed by `levier_runtime`.
+This is an optional runtime-author helper, not part of the Runtime SDK core.
+It deliberately uses only the plain `RunContext` exposed by `levier_runtime`.
 
 Copyright 2026 The Levier Authors.
 """
@@ -14,9 +14,10 @@ from typing import Sequence
 
 from levier_runtime import RunContext
 
-from levier_react_runtime.llm.base import ToolCall, ToolSpec
+from levier_runtime.llm.base import ToolCall, ToolSpec
 from levier_runtime.mcp import McpRuntimeClient, McpRuntimeError
-from levier_react_runtime.tools.base import ToolResult
+from levier_runtime.tools.base import ToolResult
+
 
 @dataclass
 class _RunToolState:
@@ -35,7 +36,7 @@ class ToolRouter:
         logger: logging.Logger | None = None,
     ) -> None:
         self.mcp = mcp
-        self.logger = logger or logging.getLogger("levier_react_runtime.tools")
+        self.logger = logger or logging.getLogger("levier_runtime.tools")
         self._states: dict[str, _RunToolState] = {}
 
     async def open(self, ctx: RunContext) -> Sequence[ToolSpec]:
@@ -173,7 +174,4 @@ class ToolRouter:
         message: str,
         retryable: bool,
     ) -> None:
-        await ctx.emit(
-            "ERROR",
-            {"code": code, "message": message, "retryable": retryable},
-        )
+        await ctx.error(code, message, retryable=retryable)

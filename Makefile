@@ -85,7 +85,7 @@ react-runtime-test:
 	PYTHONPATH="$(CONTRACT_PYTHONPATH)" $(PYTHON) -m unittest discover -s execution/react_runtime/tests -v
 
 runtime-sdk-test:
-	PYTHONPATH="execution/runtime_sdk/src" $(PYTHON) -m unittest discover -s execution/runtime_sdk/tests -v
+	PYTHONPATH="execution/agent_core/src$(PYTHONPATH_SEP)execution/runtime_sdk/src" $(PYTHON) -m unittest discover -s execution/runtime_sdk/tests -v
 
 mcp-runtime-test:
 	PYTHONPATH="execution/mcp_runtime/src" $(MCP_PYTHON) -m unittest discover -s execution/mcp_runtime/tests -v

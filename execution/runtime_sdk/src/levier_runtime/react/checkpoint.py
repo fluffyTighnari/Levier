@@ -1,7 +1,7 @@
 """Levier — longterm checkpoint encoding.
 
-Checkpoint payloads are opaque to middleware. The React Runtime owns the schema,
-versioning, and restore compatibility checks.
+Checkpoint payloads are opaque to middleware. The optional React helper owns
+the schema, versioning, and restore compatibility checks.
 
 Copyright 2026 The Levier Authors.
 """
@@ -13,7 +13,7 @@ from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from typing import Any
 
-from levier_react_runtime.llm.base import Message, ToolCall
+from levier_runtime.llm.base import Message, ToolCall
 
 CHECKPOINT_VERSION = 1
 

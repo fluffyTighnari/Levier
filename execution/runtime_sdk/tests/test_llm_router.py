@@ -8,7 +8,7 @@ from __future__ import annotations
 import unittest
 from typing import Sequence
 
-from levier_react_runtime.llm import (
+from levier_runtime.llm import (
     DeltaCallback,
     LLMError,
     LLMResponse,

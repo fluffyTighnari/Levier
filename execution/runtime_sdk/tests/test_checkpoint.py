@@ -10,8 +10,8 @@ import unittest
 
 from middleware.runtime.v1 import runtime_pb2
 
-from levier_react_runtime.llm.base import Message, ToolCall
-from levier_react_runtime.runtime.checkpoint import (
+from levier_runtime.llm.base import Message, ToolCall
+from levier_runtime.react.checkpoint import (
     CheckpointError,
     CheckpointState,
     capture,
