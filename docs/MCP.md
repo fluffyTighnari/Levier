@@ -19,13 +19,13 @@ mcp_runtime（独立进程）
   按 allowed_tools 过滤
   按 Run 持有 session，结束即关闭
 
-Harness
+React Runtime
   每个 Run 通过本地 JSON-RPC 打开 binding
   把 mcp__<server>__<tool> 合并进模型工具清单
   调用结果回填给模型
 
 MW 事件
-  只能看到 Harness 发出的 TOOL_CALL_BEGIN / END
+  只能看到 React Runtime 发出的 TOOL_CALL_BEGIN / END
   没有 tool_invocations 行（MCP 不经过 Gateway）
 ```
 
@@ -115,7 +115,7 @@ socket 文件 0600
 日志只记录 server / session / 工具数 / 耗时
 ```
 
-Harness 必须指向同一个 socket（`execution/harness/levier.example.yaml` 的 `mcp_runtime.socket`）。
+React Runtime 必须指向同一个 socket（`execution/react_runtime/react.example.yaml` 的 `mcp_runtime.socket`）。
 
 ## 5. 工具命名与过滤
 
@@ -154,7 +154,7 @@ server e2e-echo → mcp__e2e_echo__echo_token
 ```text
 总控 DB：只存占位符
 TaskAssign：只带占位符
-Harness：不见明文
+React Runtime：不见明文
 Runtime：解析后只放在内存/子进程环境
 日志：不打印 config / env / header 值
 ```
@@ -168,7 +168,7 @@ make mcp-e2e
 它会：
 
 ```text
-启动 MW + runtime + Harness + App
+启动 MW + runtime + React Runtime + App
 注册 e2e-echo（stdio，${secret:e2e_token}）
 设置 App mcp_refs
 跑一次真实模型调用

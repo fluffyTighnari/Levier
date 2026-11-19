@@ -2,7 +2,7 @@
 
 # Daemon 接入契约
 
-面向任何要接入 Levier 的执行侧 daemon（Harness 或自定义 runtime）。
+面向任何要接入 Levier 的执行侧 daemon（React Runtime 或自定义 runtime）。
 
 ## 1. 传输与身份
 
@@ -211,7 +211,7 @@ Hello
 
 ```text
 daemon_id 已在 Levier 配置中预分配
-该 daemon_id 当前空闲；真实 Harness 占用的 id 会返回 AlreadyExists
+该 daemon_id 当前空闲；真实 React Runtime 占用的 id 会返回 AlreadyExists
 ```
 
 ## 13. 常见错误

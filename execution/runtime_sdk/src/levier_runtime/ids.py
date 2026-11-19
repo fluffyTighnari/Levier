@@ -1,4 +1,4 @@
-"""Levier — harness identifier helpers.
+"""Levier ? Runtime SDK identifier helpers.
 
 Generates ULIDs locally so the runtime can create valid message IDs
 without an extra dependency.

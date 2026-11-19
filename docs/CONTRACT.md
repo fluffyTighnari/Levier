@@ -62,7 +62,7 @@ buf lint
 buf build
 buf breaking --against '.git#branch=main'
 go test ./internal/protocol -run TestContractGolden
-PYTHONPATH=execution/runtime_sdk/src:execution/harness/src python3 tests/contract/test_contract.py -v
+PYTHONPATH=execution/runtime_sdk/src:execution/react_runtime/src python3 tests/contract/test_contract.py -v
 ```
 
 黄金样本必须同时被 Go 和 Python 解析；任何一侧失败都视为契约破坏。

@@ -10,7 +10,7 @@
 ```text
 一个 Levier 进程
 一个 PostgreSQL
-一个 Harness 进程
+一个 React Runtime 进程
 一个 App 进程
 runtime = normal
 ```
@@ -22,7 +22,7 @@ Run 能创建、排队、调度、完成
 工具调用能经过 App WebSocket 闭环
 事件能落库，并可按 cursor 回放
 取消、Run/Step/Tool 超时能收敛
-Harness 断线后 Run 能重排
+React Runtime 断线后 Run 能重排
 MW 重启后 queued/active Run 能恢复
 ```
 
@@ -30,7 +30,7 @@ MVP 不承诺：
 
 ```text
 工具 exactly-once
-多 Harness 竞争下的最优放置
+多 React Runtime 竞争下的最优放置
 sandbox 隔离
 longterm checkpoint 续跑
 多 MW / 多实例 / HA
@@ -42,7 +42,7 @@ longterm checkpoint 续跑
 当前 normal runtime 是 **at-least-once**：
 
 ```text
-Harness 在 Run 中途崩溃
+React Runtime 在 Run 中途崩溃
 → MW 把 Run 重新排队
 → 新 attempt 从头执行
 → 已执行过的 local 工具可能再次执行
@@ -86,7 +86,7 @@ DEEPSEEK_MODEL
 
 ```sh
 make build
-(cd execution/harness && uv sync --locked)
+(cd execution/react_runtime && uv sync --locked)
 ```
 
 ### 3.3 PostgreSQL
@@ -112,7 +112,7 @@ make mvp-demo
 
 ```text
 MW 启动
-Harness 连接
+React Runtime 连接
 App init + SDK 工具注册 + WS 连接
 提交 echo Run
 Run completed
@@ -128,8 +128,8 @@ make fault-matrix
 覆盖：
 
 ```text
-Harness kill -9 中途 → requeue → attempt 2 完成
-MW 重启中途 → Harness 重连 → Run 完成
+React Runtime kill -9 中途 → requeue → attempt 2 完成
+MW 重启中途 → React Runtime 重连 → Run 完成
 App 断线 → 工具调用失败 → App 重启后新 Run 完成
 取消 → cancelled + source=mw 事件 + 无 active task
 超时 → timeout + source=mw 事件 + 无 active task
@@ -176,7 +176,7 @@ mvp-demo: PASS
 3. levier migrate up
 4. levier serve（启动时检查 pending migration）
 5. 等 /healthz
-6. 启动 harness
+6. 启动 react-runtime
 7. 用 `levier app init` 创建一个唯一 App
 8. 启动 `examples/counter_agent/app.py`（SDK 注册工具 + 连 WS）
 9. 用 `levier run submit` 提交 Run
@@ -191,7 +191,7 @@ mvp-demo: PASS
 ```text
 data/mvp-demo/<时间>-<mode>/
   middleware.log
-  harness.log
+  react-runtime.log
   serve.log
   bootstrap.json
   submit_run.json
@@ -243,7 +243,7 @@ R20 控制面终态事件 + timeout 清理
 R13 关键事件保护
 R14 Gateway panic 兜底
 R12 有界 replay / close-send
-R21 Harness 退避与出站背压
+R21 React Runtime 退避与出站背压
 R19b CreateRun + Enqueue 同事务
 R2  /readyz
 R8  密钥扫描
@@ -256,7 +256,7 @@ R22 成功请求访问日志
 Docker Compose 真实构建/启动（配置已提供，需在有 Docker 的环境执行）
 PostgreSQL 整体停机演练
 40s 长工具真实 E2E
-多 Harness / 多 MW / HA
+多 React Runtime / 多 MW / HA
 sandbox / longterm
 ```
 

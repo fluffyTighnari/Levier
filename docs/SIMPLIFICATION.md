@@ -170,7 +170,7 @@ CreateRun:
 
 ### 0.6 Harness / Runtime
 
-- [ ] 删除 `execution/harness/src/levier_harness/strategies/`
+- [ ] 删除 `execution/react_runtime/src/levier_react_runtime/strategies/`
   - `base.py`
   - `echo.py`
   - `react.py`

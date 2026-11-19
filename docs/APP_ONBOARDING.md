@@ -25,7 +25,7 @@ App      ：业务函数 + 工具元数据 + 一条 WebSocket 通道
 Levier：注册表、调度、工具路由、幂等、事件流
           （不执行你的业务代码）
 
-Harness  ：ReAct 循环 + 模型调用
+React Runtime  ：ReAct 循环 + 模型调用
           （只通过 Levier 请求工具）
 ```
 
@@ -33,14 +33,14 @@ Harness  ：ReAct 循环 + 模型调用
 
 ```text
 App 提交 Run
-  → MW 调度到某台 Harness
-  → Harness 调模型
+  → MW 调度到某台 React Runtime
+  → React Runtime 调模型
   → 模型返回 tool_call
-  → Harness 发 ToolCallRequest
+  → React Runtime 发 ToolCallRequest
   → MW 路由到该 App 的 WebSocket
   → App 执行，回 local_tool_result
-  → MW 落库并回给 Harness
-  → Harness 把结果加入下一轮模型输入
+  → MW 落库并回给 React Runtime
+  → React Runtime 把结果加入下一轮模型输入
   → Run 终态
 ```
 

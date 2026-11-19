@@ -29,7 +29,7 @@ P3  GUI onboarding wizard                      延后
 ```
 
 Python SDK 的第一版产物在 `sdk/python/`，契约见
-`docs/APP_ADAPTER_CONTRACT.md`。当前明确不修改 Harness、MCP Runtime 或其他
+`docs/APP_ADAPTER_CONTRACT.md`。当前明确不修改 React Runtime、MCP Runtime 或其他
 运行侧组件；先把 App 接入代码收敛为业务 handler、工具 schema 和凭据。
 
 ---

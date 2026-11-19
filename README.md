@@ -7,7 +7,7 @@ Levier 是一个 **Agent Run 控制面**：你把业务能力声明成工具，�
 ```text
 你的 App      业务函数 + 工具声明 + 一条 WebSocket
 Levier    注册、调度、租约、工具路由、事件持久化
-Harness       单次 Run 的 Agent 循环（当前 Python）
+React Runtime       单次 Run 的 Agent 循环（当前 Python）
 MCP Runtime   独立的 MCP 连接/凭据进程（可选）
 PostgreSQL    App、工具、Run、事件、任务、调用记录
 ```
@@ -15,8 +15,8 @@ PostgreSQL    App、工具、Run、事件、任务、调用记录
 > **仓库导航：`docs/MAP.md`；文档索引：`docs/README.md`。**
 >
 > **当前状态：单机 MVP。**
-> 只支持 `runtime=normal`，单 Levier + 单 PostgreSQL + 单 Harness + 单 App。
-> 调度语义是 **at-least-once**：Harness 崩溃后 Run 会从头重跑，本地工具可能重复执行。
+> 只支持 `runtime=normal`，单 Levier + 单 PostgreSQL + 单 React Runtime + 单 App。
+> 调度语义是 **at-least-once**：React Runtime 崩溃后 Run 会从头重跑，本地工具可能重复执行。
 > `sandbox`、`longterm`、多实例 / HA、工具 exactly-once 均不在当前范围内。
 
 ## 目录
@@ -57,12 +57,12 @@ Levier 不是模型 SDK 的替代品，它解决的是 **“谁来跑循环、�
 ## 2. 架构与一次 Run
 
 ```text
-App 后端 ── 1. 提交 Run（HTTP）──▶ Levier ── 2. 调度（gRPC）──▶ Harness
+App 后端 ── 1. 提交 Run（HTTP）──▶ Levier ── 2. 调度（gRPC）──▶ React Runtime
    ▲                                    │                           │
    │                                    │                           ├─ 3. 调模型
    │◀── 5. local_tool_call（WS）─────────┘                           └─ 4. 返回 tool_call
    ├─ 6. 执行业务函数
-   └── 7. local_tool_result（WS）──▶ Levier ── 8. 回填──────────▶ Harness
+   └── 7. local_tool_result（WS）──▶ Levier ── 8. 回填──────────▶ React Runtime
                                                                      │
                                                              9. Run 终态
 ```
@@ -73,7 +73,7 @@ App 后端 ── 1. 提交 Run（HTTP）──▶ Levier ── 2. 调度（gRP
 |---|---|---|
 | App | 业务函数、工具声明、一条 WebSocket、提交 Run | 不跑模型循环，不决定工具调用顺序 |
 | Levier | 注册表、调度、租约、工具路由、幂等、事件持久化 | 不执行 App 业务代码，不代理 MCP 调用 |
-| Harness | 单次 Run 的 ReAct 循环、模型适配、工具桥 | 不接触 App 明文密钥，不持久化业务数据 |
+| React Runtime | 单次 Run 的 ReAct 循环、模型适配、工具桥 | 不接触 App 明文密钥，不持久化业务数据 |
 | MCP Runtime | MCP 连接、会话、stdio 子进程、凭据解析 | 不直连 Levier，不写 Run 事件 |
 | PostgreSQL | App、工具、Run、事件、任务、调用记录 | 不承担业务数据存储 |
 
@@ -81,12 +81,12 @@ App 后端 ── 1. 提交 Run（HTTP）──▶ Levier ── 2. 调度（gRP
 
 1. App 用 App key 提交 Run。
 2. Levier 在一个事务里创建 Run 和调度/超时任务，返回 `202` 和 `run_id`。
-3. 调度器把 Run 分配给一台声明了对应策略的 Harness。
-4. Harness 调用模型。
-5. 模型返回工具调用，Harness 把请求交回 Levier。
+3. 调度器把 Run 分配给一台声明了对应 runtime_name 的 React Runtime。
+4. React Runtime 调用模型。
+5. 模型返回工具调用，React Runtime 把请求交回 Levier。
 6. Levier 按 `app_id` 把调用路由到该 App 的 WebSocket。
 7. App 执行原有业务函数，把结果回给 Levier。
-8. Levier 落库并回填给 Harness，模型进入下一轮。
+8. Levier 落库并回填给 React Runtime，模型进入下一轮。
 9. Run 到达终态，事件可查询、可回放，也可通过 WebSocket 实时推送。
 
 ### 2.3 三种工具路径
@@ -95,7 +95,7 @@ App 后端 ── 1. 提交 Run（HTTP）──▶ Levier ── 2. 调度（gRP
 |---|---|---|---|---|
 | `local` | App，经 WebSocket | 业务系统内部函数、数据库读写、租户内操作 | 是 | `tool_invocations` |
 | `global` | Levier 的 http/webhook executor | 通用 HTTP 接口、跨 App 的公共能力 | 是 | `tool_invocations` |
-| `MCP` | 独立 `mcp_runtime` 连接的 MCP Server | GitHub、文件系统、第三方 MCP 工具 | 否 | 只有 Harness 事件 |
+| `MCP` | 独立 `mcp_runtime` 连接的 MCP Server | GitHub、文件系统、第三方 MCP 工具 | 否 | 只有 React Runtime 事件 |
 
 大多数业务接入只需要 `local`。已有 MCP Server 时优先走 MCP，不必为它改 App 代码。
 
@@ -128,7 +128,7 @@ postgres 就绪
 → levier 执行 migrate up，然后 serve
   （serve 启动时检查 pending migration）
 → mcp-runtime 创建 /run/levier/mcp.sock
-→ harness 注册为 daemon-local-1 / react1；echo-runtime 注册为 echo-local-1 / echo1
+→ react-runtime 注册为 daemon-local-1 / react1；echo-runtime 注册为 echo-local-1 / echo1
 → agent 等待 /readyz 和凭据文件，启动 SDK App，注册工具，建立 WebSocket
 ```
 
@@ -144,7 +144,7 @@ docker compose --profile smoke run --rm smoke
 docker-smoke: PASS
 ```
 
-它覆盖了：Levier 健康检查、Harness 注册、App 凭据、App WebSocket、MCP runtime socket、提交一个 echo Run 并到达 `completed`。
+它覆盖了：Levier 健康检查、React Runtime 注册、App 凭据、App WebSocket、MCP runtime socket、提交一个 echo Run 并到达 `completed`。
 
 跑真实模型 + 本地工具：
 
@@ -189,7 +189,7 @@ cp -n .env.example .env
 # 跑 react 模式再加 DEEPSEEK_API_KEY / DEEPSEEK_BASE_URL / DEEPSEEK_MODEL
 
 make build
-(cd execution/harness && uv sync --locked)
+(cd execution/react_runtime && uv sync --locked)
 ```
 
 启动 PostgreSQL（示例为本机 Homebrew，端口 5433；请让 `.env` 的 DSN 指向实际端口）：
@@ -244,8 +244,8 @@ go run ./cmd/levier migrate up -config levier.example.yaml
 # 2. 启动 Levier（HTTP :8080，gRPC :9090）
 bin/levier serve -config levier.example.yaml
 
-# 3. 启动 Harness
-(cd execution/harness && PYTHONPATH=src:../runtime_sdk/src .venv/bin/python -m levier_harness \
+# 3. 启动 React Runtime
+(cd execution/react_runtime && PYTHONPATH=src:../runtime_sdk/src .venv/bin/python -m levier_react_runtime \
   --config levier.example.yaml)
 
 # 4. 可选：启动 MCP runtime
@@ -286,7 +286,7 @@ levier_daemon_capacity{daemon="daemon-local-1",...}
 levier_ws_connections{app="app_..."} 1
 ```
 
-前者说明 Harness 已注册，后者说明 App 的长连接在线。
+前者说明 React Runtime 已注册，后者说明 App 的长连接在线。
 
 ### 3.5 日常 CLI
 
@@ -383,7 +383,7 @@ HTTP/WebSocket/重连/工具分发代码收敛为业务 handler；上面的最�
              └─ 循环到模型停止
 
 改造后
-用户请求 → 你的 App 后端 ──提交 Run──▶ Levier ──▶ Harness ──▶ 模型
+用户请求 → 你的 App 后端 ──提交 Run──▶ Levier ──▶ React Runtime ──▶ 模型
              ▲                                         │
              │◀──── local_tool_call（WebSocket）────────┘
              └─ 执行原有业务函数 ──▶ local_tool_result
@@ -394,8 +394,8 @@ HTTP/WebSocket/重连/工具分发代码收敛为业务 handler；上面的最�
 | 原有代码 | 怎么处理 |
 |---|---|
 | 业务 service / domain 函数 | **保留**，它就是工具的真实实现 |
-| 模型 SDK 调用、API key 管理 | **移除**，模型调用和 key 都在 Harness / 部署环境 |
-| ReAct / function-calling 循环 | **移除**，由 Harness 的 `react` 策略承担 |
+| 模型 SDK 调用、API key 管理 | **移除**，模型调用和 key 都在 React Runtime / 部署环境 |
+| ReAct / function-calling 循环 | **移除**，由 React Runtime 承担 |
 | prompt 拼装、system message | **保留**，放到提交 Run 的 `input` 里 |
 | 工具 schema / function 定义 | **保留**，改成 Levier 的工具注册格式 |
 | 工具执行的 switch / router | **保留**，改成从 WebSocket 消息分发 |
@@ -430,7 +430,7 @@ HTTP/WebSocket/重连/工具分发代码收敛为业务 handler；上面的最�
 需要人类确认的支付/删除/审批 → 拆成 prepare + confirm 两步
 超过工具超时的长任务         → 先返回 job_id，再提供查询工具
 返回巨大对象                → 分页、摘要、只返回必要字段
-需要模型推理的步骤           → 留在 Harness，不要塞进工具
+需要模型推理的步骤           → 留在 React Runtime，不要塞进工具
 ```
 
 每个工具至少声明：
@@ -605,7 +605,7 @@ Idempotency-Key: {可选但建议}
 | `runtime_name` | App 选择的 Runtime 路由名，例如 `react1` |
 | `params` | Runtime 专属参数；ReAct Runtime 支持 `max_steps` |
 | `input` | 把原有 system prompt 和对话历史原样放进 messages |
-| `model` | 由后端选择；模型凭据在 Harness 部署环境，不在请求里 |
+| `model` | 由后端选择；模型凭据在 React Runtime 部署环境，不在请求里 |
 | `timeouts.run_ms` | 整个 Run 的预算，默认 30 分钟 |
 | `timeouts.tool_ms` | 单次工具调用上限，默认 60 秒，最大 240 秒 |
 | `Idempotency-Key` | 同一次用户操作重试时复用；内容不同会 `409` |
@@ -651,7 +651,7 @@ POST {LEVIER_URL}/api/v1/runs/{run_id}/cancel
 
 #### 第 8 步：灰度、对照、回滚
 
-1. 先用 `echo` 策略验证注册、连接、提交、终态，不消耗模型额度。
+1. 先用 Echo Runtime 验证注册、连接、提交、终态，不消耗模型额度。
 2. 再用真实模型跑固定脚本，对比改造前的工具调用顺序和结果。
 3. 按租户或用户灰度切流，保留旧路径。
 4. 观察 `TOOL_CALL_BEGIN` / `TOOL_CALL_END` 是否成对、`ERROR` 是否为 0、Run 是否稳定到达 `completed`。
@@ -676,7 +676,7 @@ POST {LEVIER_URL}/api/v1/runs/{run_id}/cancel
 同一次调用被重复投递 / App 重复回包
   → Levier 按 invocation_id 去重
 
-Harness 崩溃后 Run 从头重跑
+React Runtime 崩溃后 Run 从头重跑
   → 新 attempt、新的工具调用、新的 invocation_id
   → 业务副作用可能再次发生
 ```
@@ -917,7 +917,7 @@ Run 终态会以 `run_completed` 推送，`status` 为 `completed / failed / can
 | `LEVIER_TEST_DATABASE_URL` | 测试库 DSN |
 | `LEVIER_ADMIN_TOKEN` | Admin token，必须与配置里的 `http.admin_token` 一致 |
 | `LEVIER_APP_NAME` | `app init` / `make docker-up` 创建的测试 App 名称 |
-| `DEEPSEEK_API_KEY` | Harness 调用 DeepSeek 的 key |
+| `DEEPSEEK_API_KEY` | React Runtime 调用 DeepSeek 的 key |
 | `DEEPSEEK_BASE_URL` | 模型网关地址 |
 | `DEEPSEEK_MODEL` | 默认模型名 |
 | `POSTGRES_PASSWORD` | Compose 中 PostgreSQL 密码 |
@@ -958,7 +958,7 @@ log:
 
 生产部署前必须替换 `change-me` 类占位符，并为每个 daemon 分配独立 token。
 
-### 7.3 Harness 配置（`execution/harness/levier.example.yaml`）
+### 7.3 React Runtime 配置（`execution/react_runtime/react.example.yaml`）
 
 ```yaml
 middleware:
@@ -982,8 +982,8 @@ logging:
   format: "json"
 ```
 
-`daemon_id` 与 token 必须先在 Levier 配置里预分配；Harness 不能自助注册。
-Harness 在 `Hello.runtime_name` 中声明自己的路由名；App 只按名字提交 Run。
+`daemon_id` 与 token 必须先在 Levier 配置里预分配；React Runtime 不能自助注册。
+React Runtime 在 `Hello.runtime_name` 中声明自己的路由名；App 只按名字提交 Run。
 
 ### 7.4 Compose 默认值
 
@@ -1007,7 +1007,7 @@ Harness 在 `Hello.runtime_name` 中声明自己的路由名；App 只按名字�
 postgres      PostgreSQL 16
 levier        Go 控制面（8080 HTTP / 9090 gRPC）
 mcp-runtime   MCP 连接进程（共享 /run/levier/mcp.sock）
-harness       React Runtime（daemon-local-1 / react1）
+react-runtime React Runtime（daemon-local-1 / react1）
 echo-runtime  Echo Runtime（echo-local-1 / echo1）
 agent         counter_agent 参考 App
 smoke         一次性 smoke 容器（profile）
@@ -1017,7 +1017,7 @@ smoke         一次性 smoke 容器（profile）
 
 ```sh
 docker build -f deploy/levier.Dockerfile -t levier:dev .
-docker build -f deploy/harness.Dockerfile -t levier-harness:dev .
+docker build -f deploy/runtime.Dockerfile -t levier-runtime:dev .
 docker build -f deploy/mcp-runtime.Dockerfile -t levier-mcp-runtime:dev .
 docker build -f deploy/agent.Dockerfile -t levier-agent:dev .
 ```
@@ -1028,7 +1028,7 @@ Compose 使用两个命名卷和一个 host 凭据目录：
 
 ```text
 pgdata        PostgreSQL 数据
-mcp_socket    mcp-runtime 与 harness 共享的 unix socket
+mcp_socket    mcp-runtime 与 react-runtime 共享的 unix socket
 data/agent    App 凭据（host bind mount，0600）
 ```
 
@@ -1071,7 +1071,7 @@ Authorization: Bearer {LEVIER_ADMIN_TOKEN}
 {"name": "my-app", "mcp_refs": ["github"]}
 ```
 
-3. 启动 `mcp_runtime`，并让 Harness 的 `mcp_runtime.socket` 指向同一个 socket。
+3. 启动 `mcp_runtime`，并让 React Runtime 的 `mcp_runtime.socket` 指向同一个 socket。
 
 工具在模型侧的名字是 `mcp__<server>__<tool>`；`allowed_tools` 由 runtime 强制。
 `mcp_runtime` 的部署与 secret 细节见 `docs/MCP.md`。
@@ -1105,13 +1105,13 @@ levier_workflow_*（claim / lease / reaper）
 | 现象 | 原因 | 处理 |
 |---|---|---|
 | `/readyz` 503 | 数据库不可用 | 检查 PostgreSQL、DSN、迁移 |
-| Harness 一直不接任务 | daemon 未注册 / token 不匹配 / 策略未声明 | 看 middleware 日志与 `levier_daemon_capacity` |
+| React Runtime 一直不接任务 | daemon 未注册 / token 不匹配 / runtime_name 不匹配 | 看 middleware 日志与 `levier_daemon_capacity` |
 | App 收不到工具调用 | WebSocket 未连上 / 多实例抢连接 | 看 `levier_ws_connections`，确认只有一个逻辑连接 |
 | 工具总是 `TOOL_TIMEOUT` | 工具执行过慢或 `tool_ms` 太小 | 优化工具或调大超时（≤ 240s） |
 | `TOOL_NOT_FOUND` | 注册列表与调用名不一致 | 重新注册完整工具列表 |
 | `APP_UNREACHABLE` | 回包前连接断开 | 保持连接常驻，断线退避重连 |
-| Run 一直 `queued` | 没有匹配的 Harness 或容量不足 | 检查 daemon 容量、策略、标签 |
-| Run 反复 requeue | Harness 崩溃或事件缓冲满 | 看 Harness 日志、`levier_events_dropped_total` |
+| Run 一直 `queued` | 没有匹配的 React Runtime 或容量不足 | 检查 daemon 容量、runtime_name、标签 |
+| Run 反复 requeue | React Runtime 崩溃或事件缓冲满 | 看 React Runtime 日志、`levier_events_dropped_total` |
 | `409` 创建 Run | 同一个 `Idempotency-Key` 但请求内容不同 | 换 key，或复用完全相同的请求 |
 | 启动报 `already serving` | 8080 上已有旧进程 | 停掉旧进程或换端口 |
 
@@ -1124,8 +1124,8 @@ make fault-matrix
 已覆盖：
 
 ```text
-Harness kill -9 中途 → requeue → 新 attempt 完成
-Levier 重启      → Harness 重连 → Run 完成
+React Runtime kill -9 中途 → requeue → 新 attempt 完成
+Levier 重启      → React Runtime 重连 → Run 完成
 App 断线             → pending 工具失败 → Run 收敛
 取消                 → cancelled + MW 终态事件 + 任务取消
 超时                 → timeout + MW 终态事件 + 任务取消
@@ -1150,7 +1150,7 @@ make structure-check
 make deps-check
 make build
 make agent-core-test
-make harness-test
+make react-runtime-test
 make runtime-sdk-test
 make mcp-runtime-test
 make sdk-test
@@ -1169,7 +1169,7 @@ LEVIER_TEST_POSTGRES=1 go test -race -count=1 ./...
 make mvp-demo        # echo，不需要模型 key
 make mvp-demo-react  # 真实 DeepSeek + local tools
 make fault-matrix    # 故障与恢复
-make retrofit-e2e    # 真实 Harness + DeepSeek + local tools
+make retrofit-e2e    # 真实 React Runtime + DeepSeek + local tools
 make mcp-e2e         # MCP runtime + 凭据解析
 ```
 
@@ -1203,12 +1203,12 @@ public/           对外可依赖的 schema 与示例
 proto/            gRPC 契约
 gen/              proto 生成的 Go 代码
 execution/agent_core/       语言无关的 Agent 循环与 conformance fixtures
-execution/harness/          React Runtime（基于 levier_runtime）
+execution/react_runtime/          React Runtime（基于 levier_runtime）
 execution/runtime_sdk/       Python Runtime SDK（channel + run(ctx) + RunContext）
 execution/mcp_runtime/      独立 MCP 连接进程
 sdk/python/       Python App adapter（levier_app）
 examples/         counter_agent、HTTP/Node 接入示例
-examples/echo_runtime/       最小 Echo Runtime（仅依赖 levier_runtime）
+execution/echo_runtime/       最小 Echo Runtime（仅依赖 levier_runtime）
 tests/            单元/契约/E2E 与检查脚本
 scripts/          发布构建、安装、备份恢复脚本
 docs/             设计、契约、接入、迁移、运维文档
@@ -1236,7 +1236,7 @@ deploy/           容器镜像与 Compose
 | `docs/RELEASE.md` | release 构建、checksums 与发布流程 |
 | `docs/TODO.md` | 公开前检查清单与当前阶段计划 |
 | `docs/ARCHITECTURE.md` | 一页架构与依赖方向 |
-| `docs/DAEMON_CONTRACT.md` | Daemon / Harness 协议 |
+| `docs/DAEMON_CONTRACT.md` | Daemon / React Runtime 协议 |
 | `docs/MCP.md` | MCP 接入与运行 |
 | `docs/AGENT_CORE_CONTRACT.md` | Agent Core v1 契约 |
 | `docs/api/openapi.yaml` | HTTP 契约（OpenAPI 3.1） |
@@ -1261,7 +1261,7 @@ examples/http_client         只验证 HTTP：认证、创建、查询、取消
 ```text
 [runtime]     只支持 normal
 [sandbox]     未实现
-[longterm]    checkpoint 协议在 Harness 侧已有，Levier 侧未闭环
+[longterm]    checkpoint 协议在 React Runtime 侧已有，Levier 侧未闭环
 [多实例/HA]   不在 MVP 范围
 [exactly-once] 不保证；按业务键幂等或接受重复
 [压测]        不在 MVP 范围

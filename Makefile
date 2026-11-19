@@ -3,10 +3,10 @@
 
 SHELL := /bin/sh
 GO ?= go
-PYTHON ?= $(if $(wildcard execution/harness/.venv/bin/python),execution/harness/.venv/bin/python,$(if $(wildcard execution/harness/.venv/Scripts/python.exe),execution/harness/.venv/Scripts/python.exe,python3))
+PYTHON ?= $(if $(wildcard execution/react_runtime/.venv/bin/python),execution/react_runtime/.venv/bin/python,$(if $(wildcard execution/react_runtime/.venv/Scripts/python.exe),execution/react_runtime/.venv/Scripts/python.exe,python3))
 MCP_PYTHON ?= $(if $(wildcard execution/mcp_runtime/.venv/bin/python),execution/mcp_runtime/.venv/bin/python,$(if $(wildcard execution/mcp_runtime/.venv/Scripts/python.exe),execution/mcp_runtime/.venv/Scripts/python.exe,python3))
 PYTHONPATH_SEP ?= $(if $(filter Windows_NT,$(OS)),;,:)
-CONTRACT_PYTHONPATH := execution/agent_core/src$(PYTHONPATH_SEP)execution/runtime_sdk/src$(PYTHONPATH_SEP)execution/harness/src
+CONTRACT_PYTHONPATH := execution/agent_core/src$(PYTHONPATH_SEP)execution/runtime_sdk/src$(PYTHONPATH_SEP)execution/react_runtime/src
 BUF ?= $(shell command -v buf 2>/dev/null || printf '%s\n' "$(HOME)/go/bin/buf")
 PROTOC_BIN ?= $(HOME)/go/bin
 
@@ -22,7 +22,7 @@ LDFLAGS := -X github.com/fluffyTighnari/levier/internal/version.Version=$(VERSIO
 	-X github.com/fluffyTighnari/levier/internal/version.Commit=$(COMMIT) \
 	-X github.com/fluffyTighnari/levier/internal/version.Built=$(BUILD_TIME)
 
-.PHONY: all build test lint fmt fmt-check vet run clean dev-up dev-down migrate proto proto-check proto-lint contract-check harness-test runtime-sdk-test mcp-runtime-test sdk-test image-harness image-mcp-runtime counter-agent counter-agent-test http-smoke retrofit-e2e mcp-e2e deps-check structure-check scripts-check size-report daemon-check agent-core-test mvp-demo mvp-demo-react fault-matrix secrets-check docker-up docker-down docker-smoke docker-logs docker-reset release-dist
+.PHONY: all build test lint fmt fmt-check vet run clean dev-up dev-down migrate proto proto-check proto-lint contract-check react-runtime-test runtime-sdk-test mcp-runtime-test sdk-test image-runtime image-mcp-runtime counter-agent counter-agent-test http-smoke retrofit-e2e mcp-e2e deps-check structure-check scripts-check size-report daemon-check agent-core-test mvp-demo mvp-demo-react fault-matrix secrets-check docker-up docker-down docker-smoke docker-logs docker-reset release-dist
 
 all: build
 
@@ -81,8 +81,8 @@ contract-check: proto-lint
 	$(GO) test ./internal/protocol -run TestContractGolden -v
 	PYTHONPATH="$(CONTRACT_PYTHONPATH)" $(PYTHON) tests/contract/test_contract.py -v
 
-harness-test:
-	PYTHONPATH="$(CONTRACT_PYTHONPATH)" $(PYTHON) -m unittest discover -s execution/harness/tests -v
+react-runtime-test:
+	PYTHONPATH="$(CONTRACT_PYTHONPATH)" $(PYTHON) -m unittest discover -s execution/react_runtime/tests -v
 
 runtime-sdk-test:
 	PYTHONPATH="execution/runtime_sdk/src" $(PYTHON) -m unittest discover -s execution/runtime_sdk/tests -v
@@ -93,8 +93,8 @@ mcp-runtime-test:
 sdk-test:
 	PYTHONPATH="sdk/python/src" $(PYTHON) -m unittest discover -s sdk/python/tests -v
 
-image-harness:
-	docker build -f deploy/harness.Dockerfile -t levier-harness:dev .
+image-runtime:
+	docker build -f deploy/runtime.Dockerfile -t levier-runtime:dev .
 
 image-mcp-runtime:
 	docker build -f deploy/mcp-runtime.Dockerfile -t levier-mcp-runtime:dev .
@@ -142,7 +142,7 @@ secrets-check:
 	python3 tests/checks/check_secrets.py
 
 docker-up:
-	docker compose up --build -d postgres levier mcp-runtime harness echo-runtime
+	docker compose up --build -d postgres levier mcp-runtime react-runtime echo-runtime
 	@mkdir -p data/agent
 	@if [ ! -f data/agent/credentials.json ]; then \
 		for i in $$(seq 1 100); do \

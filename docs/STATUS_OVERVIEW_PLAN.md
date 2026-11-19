@@ -387,7 +387,7 @@ levier status --json
 go test ./...
 make lint
 make contract-check
-make harness-test
+make react-runtime-test
 make mcp-runtime-test
 make counter-agent-test
 docker compose config --quiet

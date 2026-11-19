@@ -16,15 +16,15 @@
 `mcp_runtime` is an independent execution-side process. It owns MCP server
 connections, stdio child processes, tool discovery, and tool calls.
 
-It is **not** part of the Python Harness package and **not** part of the Go
-middleware. A Harness connects to it through the local `McpRuntimeClient`;
+It is **not** part of the Runtime SDK and **not** part of the Go middleware.
+A runtime connects to it through `levier_runtime.mcp.McpRuntimeClient`;
 the middleware only stores MCP catalog/ACL/bindings.
 
 ## Boundary
 
 ```text
-Harness McpRuntimeClient  ── local JSON-RPC ──►  mcp_runtime  ──► MCP servers
-Levier Register/Control  ── TaskAssign.mcp_bindings ──► Harness
+Runtime McpRuntimeClient  -- local JSON-RPC -->  mcp_runtime  --> MCP servers
+Levier Register/Control  -- TaskAssign.mcp_bindings -->  Runtime
 ```
 
 - The middleware never opens MCP connections.

@@ -63,7 +63,7 @@ GUI 控制台（以后考虑）
 | 边界 | 内容 | 当前决定 |
 |---|---|---|
 | 产品边界 | 用户到底在用什么 | 控制面 + 随附默认组件，不包含参考示例 |
-| 进程边界 | 哪些东西跑在不同进程 | 控制面进程、`harness`、`mcp_runtime`、App 各自独立 |
+| 进程边界 | 哪些东西跑在不同进程 | 控制面进程、`react-runtime`、`mcp_runtime`、App 各自独立 |
 | 契约边界 | 升级时不能随便变的东西 | AppPort：HTTP / WS v1；DaemonPort：gRPC v1 |
 | 部署边界 | 什么算一个部署单元 | MVP 用 Compose；后续单二进制 + 外部 PostgreSQL |
 
@@ -71,15 +71,15 @@ GUI 控制台（以后考虑）
 
 ## 4. 责任矩阵
 
-| 能力 | Levier | App | Harness | 出问题时先看 |
+| 能力 | Levier | App | React Runtime | 出问题时先看 |
 |---|---|---|---|---|
 | Run 生命周期 | 负责（控制面） | — | — | Run 状态、事件、任务表 |
 | 调度与租约 | 负责（控制面） | — | 上报容量 | daemon 注册、任务队列 |
 | 工具路由 | 负责（控制面） | 执行 local 工具 | 发起工具调用 | 调用记录、App 连接 |
 | global 工具执行 | 负责（控制面） | — | 发起工具调用 | executor 日志、调用记录 |
 | 业务工具 | 不负责 | 负责 | — | App 日志、工具返回 |
-| 模型循环 | 负责（默认 runtime） | — | 使用 | Harness 日志、ERROR 事件 |
-| 模型凭据 | 负责（默认 runtime 环境） | — | 使用 | Harness 配置 |
+| 模型循环 | 负责（默认 runtime） | — | 使用 | React Runtime 日志、ERROR 事件 |
+| 模型凭据 | 负责（默认 runtime 环境） | — | 使用 | React Runtime 配置 |
 | MCP 连接 | 负责（默认 MCP runtime） | — | 使用 | `mcp_runtime` 日志 |
 | MCP Server | 不负责 | — | — | 第三方 server 日志 |
 | App 认证 | 负责（控制面） | 持有 App key | — | 401、request_id |
@@ -94,7 +94,7 @@ GUI 控制台（以后考虑）
 
 ```text
 execution/agent_core/       语言无关的循环核心
-execution/harness/          Python 执行侧默认 runtime
+execution/react_runtime/          Python 执行侧默认 runtime
 execution/mcp_runtime/      MCP 默认连接进程
 ```
 
@@ -117,7 +117,7 @@ docs/api/openapi.yaml        HTTP 契约源
 
 这条边界很重要：**默认组件可以替换，契约不能随便改。**
 
-> `execution/agent_core/`、`execution/harness/`、`execution/mcp_runtime/` 已按执行侧归位；这不改变本文的责任划分。
+> `execution/agent_core/`、`execution/react_runtime/`、`execution/mcp_runtime/` 已按执行侧归位；这不改变本文的责任划分。
 
 ---
 
@@ -137,7 +137,7 @@ MCP Server 实现
 
 ```text
 接入新的 App
-接入新的 Harness
+接入新的 React Runtime
 Adapter / Sidecar SDK（已立项，见 docs/ADAPTER_ROADMAP.md）
 多 Daemon / 多 Levier / HA
 sandbox runtime
@@ -167,8 +167,8 @@ AppPort 与 DaemonPort 都有版本号
 
 ```text
 1. 换掉 App，Levier 控制面需要改吗？                    不需要
-2. 换掉默认 Harness，App 需要改吗？                      不需要
-3. 升级 Levier 控制面，App / Harness 只依赖版本化契约吗？  是
+2. 换掉默认 React Runtime，App 需要改吗？                      不需要
+3. 升级 Levier 控制面，App / React Runtime 只依赖版本化契约吗？  是
 ```
 
 三个答案都是“是”，边界才是干净的。

@@ -90,11 +90,11 @@ class TypeTest(unittest.TestCase):
 
 
 class ImportBoundaryTest(unittest.TestCase):
-    def test_core_has_no_harness_or_mcp_imports(self) -> None:
+    def test_core_has_no_runtime_or_mcp_imports(self) -> None:
         root = Path(__file__).resolve().parents[1] / "src" / "levier_agent_core"
         forbidden = (
-            "levier_harness",
-            "middleware_harness",
+            "levier_react_runtime",
+            "levier_react_runtime",
             "levier_mcp_runtime",
             "mcp_runtime",
             "middleware.runtime",

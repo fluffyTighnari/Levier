@@ -1,6 +1,6 @@
 """Levier — bounded model/tool loop.
 
-The core never imports Levier, Harness, MCP runtime, or protobuf.
+The core never imports Levier, runtime, MCP runtime, or protobuf.
 Adapters supply the provider, tools, event sink, and abort signal.
 
 Copyright 2026 The Levier Authors.

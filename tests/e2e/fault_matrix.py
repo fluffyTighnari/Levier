@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """Levier — single-node MVP fault matrix.
 
-Runs real Levier, real Harness, and the Counter App, then injects:
+Runs real Levier, real React Runtime, and the Counter App, then injects:
 
-  1. Harness kill -9 mid-run
+  1. React Runtime kill -9 mid-run
   2. Levier restart mid-run
   3. App WebSocket unavailable, then recover
   4. Cancel
@@ -42,8 +42,8 @@ def _env(name: str, legacy: str, default: str = "") -> str:
 
 MW_URL = _env("LEVIER_URL", "MW_URL", "http://127.0.0.1:8080")
 CONFIG = _env("LEVIER_CONFIG", "MIDDLEWARE_CONFIG", "levier.example.yaml")
-HARNESS_CONFIG = os.environ.get("HARNESS_CONFIG", "execution/harness/levier.example.yaml")
-HARNESS_PYTHON = ROOT / os.environ.get("HARNESS_PYTHON", "execution/harness/.venv/bin/python")
+REACT_RUNTIME_CONFIG = os.environ.get("REACT_RUNTIME_CONFIG", "execution/react_runtime/react.example.yaml")
+REACT_RUNTIME_PYTHON = ROOT / os.environ.get("REACT_RUNTIME_PYTHON", "execution/react_runtime/.venv/bin/python")
 APP_PYTHON = os.environ.get("APP_PYTHON", sys.executable)
 LEVIER_BIN = os.environ.get("LEVIER_BIN", str(ROOT / "bin" / "levier"))
 ADMIN_TOKEN = _env("LEVIER_ADMIN_TOKEN", "MW_ADMIN_TOKEN", "admin-change-me")
@@ -298,14 +298,14 @@ def start_middleware() -> None:
     wait_http("/healthz", 10)
 
 
-def start_harness() -> None:
+def start_react_runtime() -> None:
     env = {
-        "PYTHONPATH": "execution/agent_core/src:execution/runtime_sdk/src:execution/harness/src",
-        "HARNESS_LEVIER_ADDRESS": "127.0.0.1:9090",
-        "HARNESS_DAEMON_ID": "daemon-local-1",
-        "HARNESS_DAEMON_AUTH_TOKEN": DAEMON_TOKEN,
+        "PYTHONPATH": "execution/agent_core/src:execution/runtime_sdk/src:execution/react_runtime/src",
+        "LEVIER_REACT_RUNTIME_ADDRESS": "127.0.0.1:9090",
+        "LEVIER_REACT_RUNTIME_INSTANCE_ID": "daemon-local-1",
+        "LEVIER_REACT_RUNTIME_TOKEN": DAEMON_TOKEN,
     }
-    start("harness", [str(HARNESS_PYTHON), "-m", "levier_harness", "--config", HARNESS_CONFIG], env=env)
+    start("react-runtime", [str(REACT_RUNTIME_PYTHON), "-m", "levier_react_runtime", "--config", REACT_RUNTIME_CONFIG], env=env)
     wait_metric('daemon="daemon-local-1"', 10)
 
 
@@ -334,19 +334,19 @@ def bootstrap() -> None:
         raise FaultError(f"app init failed: {result.stderr.strip()}")
 
 
-def scenario_harness_kill() -> str:
+def scenario_react_runtime_kill() -> str:
     for _ in range(3):
         run_id = submit("react1", "Add 2, then add 3, then read the counter. Use the counter tools.", 120_000)
         try:
             wait_status(run_id, {"running"}, 20)
         except FaultError:
             continue
-        stop("harness", sig=signal.SIGKILL)
+        stop("react-runtime", sig=signal.SIGKILL)
         wait_status(run_id, {"queued"}, 20)
-        start_harness()
+        start_react_runtime()
         final = wait_terminal(run_id, 180)
         if final.get("status") != "completed":
-            raise FaultError(f"run {run_id} after harness kill: {final.get('status')}")
+            raise FaultError(f"run {run_id} after React Runtime kill: {final.get('status')}")
         if int(final.get("attempt", 0)) < 2:
             raise FaultError(f"run {run_id} was not retried: attempt={final.get('attempt')}")
         daemon_seq_ok(run_id)
@@ -428,8 +428,8 @@ def main() -> int:
     if not DATABASE_URL:
         print("fault-matrix: LEVIER_DATABASE_URL is required", file=sys.stderr)
         return 2
-    if not HARNESS_PYTHON.exists():
-        print(f"fault-matrix: harness Python not found: {HARNESS_PYTHON}", file=sys.stderr)
+    if not REACT_RUNTIME_PYTHON.exists():
+        print(f"fault-matrix: React Runtime Python not found: {REACT_RUNTIME_PYTHON}", file=sys.stderr)
         return 2
     if http_ready():
         print(f"fault-matrix: {MW_URL} is already serving", file=sys.stderr)
@@ -451,11 +451,11 @@ def main() -> int:
 
     try:
         start_middleware()
-        start_harness()
+        start_react_runtime()
         bootstrap()
         start_app()
         scenarios = [
-            ("harness_kill", scenario_harness_kill),
+            ("react_runtime_kill", scenario_react_runtime_kill),
             ("mw_restart", scenario_mw_restart),
             ("app_disconnect", scenario_app_disconnect),
             ("cancel", scenario_cancel),

@@ -1,7 +1,7 @@
 """Levier — MCP runtime secret resolution.
 
 Bindings travel from the control plane with ${secret:name} placeholders.
-Only the runtime resolves them, so TaskAssign and the Harness never see
+Only the runtime resolves them, so TaskAssign and the runtime never see
 plaintext credentials.
 
 Copyright 2026 The Levier Authors.

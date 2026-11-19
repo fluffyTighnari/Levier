@@ -25,7 +25,7 @@ MW
 禁止：
 
 ```text
-core import MW / harness / mcp_runtime / protobuf
+core import MW / react-runtime / mcp_runtime / protobuf
 core 持久化
 core 调度
 core 重试

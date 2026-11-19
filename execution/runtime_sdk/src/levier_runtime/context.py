@@ -11,6 +11,8 @@ from __future__ import annotations
 
 import asyncio
 import json
+import logging
+import time
 from datetime import datetime, timezone
 from typing import Any, Mapping
 
@@ -80,6 +82,16 @@ class RunContext:
         self._events = events
         self._attempt = attempt
         self._lease_epoch = lease_epoch
+        self.logger = logging.LoggerAdapter(
+            logging.getLogger("levier_runtime.run"),
+            {
+                "run_id": run_id,
+                "app_id": app_id,
+                "runtime_name": runtime_name,
+                "attempt": attempt,
+                "trace_id": trace_id,
+            },
+        )
 
     @property
     def cancelled(self) -> bool:
@@ -116,8 +128,14 @@ class RunContext:
         arguments: Mapping[str, Any] | str | None = None,
         *,
         timeout_ms: int | None = None,
+        emit_events: bool = True,
     ) -> ToolResult:
-        """Call one tool through the middleware tool bridge."""
+        """Call one tool through the middleware tool bridge.
+
+        By default the SDK emits TOOL_CALL_BEGIN/END and owns tool-call
+        observability. Runtimes that already emit those events can pass
+        ``emit_events=False`` to avoid duplicates.
+        """
         if not name:
             raise RuntimeUsageError("tool name is required")
         if isinstance(arguments, Mapping):
@@ -133,11 +151,23 @@ class RunContext:
         else:
             raise RuntimeUsageError("tool arguments must be a mapping or JSON string")
 
+        invocation_id = new_ulid()
+        if emit_events:
+            await self._emit_safe(
+                "TOOL_CALL_BEGIN",
+                {
+                    "invocation_id": invocation_id,
+                    "tool_name": name,
+                    "arguments_json": arguments_json,
+                },
+            )
+
+        started = time.monotonic()
         timeout = timeout_ms or self.timeouts.tool_ms or 60_000
         try:
             response = await self._channel.request(
                 runtime_pb2.ToolCallRequest(
-                    invocation_id=new_ulid(),
+                    invocation_id=invocation_id,
                     tool_name=name,
                     arguments_json=arguments_json,
                     timeout_ms=timeout,
@@ -148,14 +178,58 @@ class RunContext:
                 lease_epoch=self._lease_epoch,
                 timeout=max(timeout / 1000.0 + 1.0, 1.0),
             )
+            result = ToolResult.from_proto(response.tool_call_result)
         except Exception as exc:
-            return ToolResult(
+            result = ToolResult(
                 ok=False,
                 error_code="TOOL_TRANSPORT_ERROR",
                 error_message=str(exc),
                 retryable=True,
             )
-        return ToolResult.from_proto(response.tool_call_result)
+
+        if emit_events:
+            data: dict[str, Any] = {
+                "invocation_id": invocation_id,
+                "tool_name": name,
+                "ok": result.ok,
+                "duration_ms": int((time.monotonic() - started) * 1000),
+            }
+            if result.ok:
+                data["result_json"] = result.result_json
+            else:
+                data["error_code"] = result.error_code
+                data["error_message"] = result.error_message
+                data["retryable"] = result.retryable
+            await self._emit_safe("TOOL_CALL_END", data)
+        return result
+
+    async def error(
+        self,
+        code: str,
+        message: str,
+        *,
+        retryable: bool = False,
+        data: dict[str, Any] | None = None,
+    ) -> None:
+        """Emit one normalized ERROR event."""
+        payload: dict[str, Any] = {
+            "code": code,
+            "message": message,
+            "retryable": retryable,
+        }
+        if data:
+            payload.update(data)
+        await self.emit("ERROR", payload)
+
+    async def _emit_safe(self, event_type: str, data: dict[str, Any]) -> None:
+        """Emit an SDK observability event without failing the run itself."""
+        try:
+            await self.emit(event_type, data)
+        except Exception as exc:  # noqa: BLE001 - observability must not mask run
+            self.logger.warning("runtime event emission failed", extra={
+                "event_type": event_type,
+                "error": str(exc),
+            })
 
     async def checkpoint(self, state: bytes | Mapping[str, Any]) -> None:
         """Send an opaque checkpoint for this session.

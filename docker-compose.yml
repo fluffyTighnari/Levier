@@ -4,7 +4,7 @@
 #   postgres      PostgreSQL 16
 #   levier        Go control plane
 #   mcp-runtime   independent MCP runtime (runtime 1)
-#   harness       React runtime (runtime 2)
+#   react-runtime React runtime (runtime 2)
 #   echo-runtime  minimal Echo runtime (runtime 3)
 #   agent         counter_agent App
 #
@@ -76,17 +76,17 @@ services:
     stop_grace_period: 20s
     restart: unless-stopped
 
-  harness:
+  react-runtime:
     build:
       context: .
-      dockerfile: deploy/harness.Dockerfile
+      dockerfile: deploy/runtime.Dockerfile
     init: true
     environment:
-      LEVIER_HARNESS_ADDRESS: levier:9090
-      LEVIER_HARNESS_DAEMON_ID: daemon-local-1
-      LEVIER_HARNESS_DAEMON_AUTH_TOKEN: ${LEVIER_HARNESS_DAEMON_AUTH_TOKEN:-${HARNESS_DAEMON_AUTH_TOKEN:-change-me}}
-      LEVIER_HARNESS_MCP_RUNTIME_SOCKET: /run/levier/mcp.sock
-      LEVIER_HARNESS_LOG_FORMAT: json
+      LEVIER_REACT_RUNTIME_ADDRESS: levier:9090
+      LEVIER_REACT_RUNTIME_INSTANCE_ID: daemon-local-1
+      LEVIER_REACT_RUNTIME_TOKEN: ${LEVIER_REACT_RUNTIME_TOKEN:-${LEVIER_HARNESS_DAEMON_AUTH_TOKEN:-${HARNESS_DAEMON_AUTH_TOKEN:-change-me}}}
+      LEVIER_REACT_RUNTIME_MCP_SOCKET: /run/levier/mcp.sock
+      LEVIER_REACT_RUNTIME_LOG_FORMAT: json
       DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY:-}
       DEEPSEEK_BASE_URL: ${DEEPSEEK_BASE_URL:-https://api.deepseek.com}
       DEEPSEEK_MODEL: ${DEEPSEEK_MODEL:-deepseek-flash}
@@ -103,10 +103,10 @@ services:
   echo-runtime:
     build:
       context: .
-      dockerfile: deploy/harness.Dockerfile
+      dockerfile: deploy/runtime.Dockerfile
     init: true
-    entrypoint: ["python", "/app/examples/echo_runtime/app.py"]
-    command: ["--config", "/app/examples/echo_runtime/runtime.yaml"]
+    entrypoint: ["python", "-m", "levier_echo_runtime"]
+    command: ["--config", "/app/echo_runtime/runtime.yaml"]
     environment:
       LEVIER_MIDDLEWARE_ADDRESS: levier:9090
       LEVIER_RUNTIME_INSTANCE_ID: echo-local-1
@@ -152,7 +152,7 @@ services:
         condition: service_healthy
       mcp-runtime:
         condition: service_healthy
-      harness:
+      react-runtime:
         condition: service_started
       echo-runtime:
         condition: service_started

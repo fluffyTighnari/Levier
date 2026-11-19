@@ -4,7 +4,6 @@
 
 ```text
 counter_agent/        推荐：Python SDK 薄 App（业务 handler + schema）
-echo_runtime/       最小 Runtime SDK 示例（仅 run(ctx)）
 http_client/          只验证 HTTP 的最小客户端
 node_counter_agent/   Node.js 原生 WebSocket 参考 App
 ```

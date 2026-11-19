@@ -100,8 +100,8 @@ jobs:
         include:
           - image: levier
             file: deploy/levier.Dockerfile
-          - image: levier-harness
-            file: deploy/harness.Dockerfile
+          - image: levier-runtime
+            file: deploy/runtime.Dockerfile
           - image: levier-mcp-runtime
             file: deploy/mcp-runtime.Dockerfile
           - image: levier-agent

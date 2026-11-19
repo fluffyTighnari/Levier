@@ -5,7 +5,7 @@
 | 项目 | 内容 |
 |---|---|
 | 状态 | 单机 MVP 实现基线 |
-| 范围 | 单 Levier、单 PostgreSQL、单 Harness、单 App |
+| 范围 | 单 Levier、单 PostgreSQL、单 React Runtime、单 App |
 | Runtime | `normal` |
 | 语义 | Run 调度 at-least-once；工具可能重复执行 |
 | 详细契约 | `CONTRACT.md`、`DAEMON_CONTRACT.md`、`APP_ONBOARDING.md`、`MCP.md`、`AGENT_CORE_CONTRACT.md` |
@@ -21,7 +21,7 @@
 ```text
 App 通过 HTTP/WS 接入，不需要自己写 Agent 循环
 Levier 负责注册、调度、租约、工具路由、事件持久化
-Harness 负责单次 Run 的模型/工具循环
+React Runtime 负责单次 Run 的模型/工具循环
 MCP 连接与凭据由独立 runtime 进程负责
 Run 能排队、执行、取消、超时、恢复
 ```
@@ -41,7 +41,7 @@ longterm checkpoint 续跑
 
 ```text
 normal runtime 没有 checkpoint 续跑
-Harness 中途死亡 → Run 重新排队 → 新 attempt 从头执行
+React Runtime 中途死亡 → Run 重新排队 → 新 attempt 从头执行
 因此 local 工具是 at-least-once
 ```
 
@@ -54,7 +54,7 @@ Harness 中途死亡 → Run 重新排队 → 新 attempt 从头执行
 ```text
 App          业务函数 + 工具元数据 + 一条 WebSocket
 Levier   控制面：注册、调度、租约、事件、工具路由
-Harness      单次 Run 的 Agent 循环（当前 Python）
+React Runtime      单次 Run 的 Agent 循环（当前 Python）
 MCP Runtime  独立进程：MCP 连接、session、凭据解析
 PostgreSQL   目录、Run、事件、任务、调用记录
 ```
@@ -64,9 +64,9 @@ PostgreSQL   目录、Run、事件、任务、调用记录
 ```text
 Levier 不执行 App 业务代码
 Levier 不代理 MCP 工具调用
-Harness 不见 MCP 明文凭据
+React Runtime 不见 MCP 明文凭据
 App 不见模型凭据
-Agent Core 不依赖 Levier/Harness/MCP/protobuf
+Agent Core 不依赖 Levier/React Runtime/MCP/protobuf
 ```
 
 ---
@@ -139,14 +139,14 @@ Ack 超时/拒绝：
 ### 4.3 执行
 
 ```text
-Harness 发送 RUN_STATUS running
+React Runtime 发送 RUN_STATUS running
   → MW 置 running
-Harness 调模型
+React Runtime 调模型
   → 工具调用经 RuntimeChannel 回 MW
   → MW 路由到 App/global executor/MCP runtime
-Harness 发送 MESSAGE/USAGE/TOOL/ERROR 事件
+React Runtime 发送 MESSAGE/USAGE/TOOL/ERROR 事件
   → MW 持久化并推送给 App
-Harness 发送 RUN_STATUS terminal
+React Runtime 发送 RUN_STATUS terminal
   → MW CAS 到 completed/failed/cancelled/timeout
   → 取消剩余 tasks
 ```
@@ -310,12 +310,12 @@ WS subscribe(last_attempt, last_seq)
 ### 8.1 local
 
 ```text
-Harness → ToolCallRequest
+React Runtime → ToolCallRequest
   → Gateway 幂等/single-flight
   → AppHub 广播到 App 连接
   → App 回 local_tool_result(correlation_id, invocation_id)
   → Gateway 落 tool_invocations
-  → 返回 Harness
+  → 返回 React Runtime
 ```
 
 约束：
@@ -328,7 +328,7 @@ App 多连接时会广播；App 必须按 invocation_id 幂等
 ### 8.2 global
 
 ```text
-Harness → Gateway → executor(http/webhook)
+React Runtime → Gateway → executor(http/webhook)
 同一 invocation_id 幂等
 结果落 tool_invocations
 ```
@@ -336,14 +336,14 @@ Harness → Gateway → executor(http/webhook)
 ### 8.3 MCP
 
 ```text
-Harness → mcp_runtime（本地 JSON-RPC）
+React Runtime → mcp_runtime（本地 JSON-RPC）
   → MCP server
 ```
 
 ```text
 不经过 MW Gateway
 不写 tool_invocations
-Harness 只拿到 runtime 解析后的连接描述
+React Runtime 只拿到 runtime 解析后的连接描述
 凭据不出 runtime
 allowed_tools 由 runtime 强制
 ```
@@ -395,7 +395,7 @@ levier_daemon_capacity
 
 ```text
 execution/agent_core/  语言无关的循环、工具编排、事件、取消
-execution/harness/     适配层：TaskAssign ↔ RunSpec、CoreEvent ↔ MW Event、工具桥
+execution/react_runtime/     适配层：TaskAssign ↔ RunSpec、CoreEvent ↔ MW Event、工具桥
 ```
 
 规则：
@@ -404,7 +404,7 @@ execution/harness/     适配层：TaskAssign ↔ RunSpec、CoreEvent ↔ MW Eve
 core 默认工具串行
 core 不做重试
 checkpoint 由 MW/adapter 持有
-core 不 import Levier/Harness/MCP/protobuf
+core 不 import Levier/React Runtime/MCP/protobuf
 ```
 
 Conformance fixtures：`execution/agent_core/conformance/fixtures/*.json`。
@@ -417,8 +417,8 @@ Conformance fixtures：`execution/agent_core/conformance/fixtures/*.json`。
 
 | 故障 | 行为 |
 |---|---|
-| Harness kill -9 | Run requeue，新 attempt 完成 |
-| MW 重启 | Harness 重连，Run 完成 |
+| React Runtime kill -9 | Run requeue，新 attempt 完成 |
+| MW 重启 | React Runtime 重连，Run 完成 |
 | App 断线 | pending tool 失败，Run 收敛；App 恢复后新 Run 正常 |
 | cancel | cancelled + MW 事件 + 任务取消 |
 | timeout | timeout + MW 事件 + 任务取消 |
@@ -432,7 +432,7 @@ Conformance fixtures：`execution/agent_core/conformance/fixtures/*.json`。
 ```text
 PostgreSQL 整体停机演练
 40s 长工具真实 E2E
-多 Harness / 多 MW
+多 React Runtime / 多 MW
 Docker Compose 真实构建（配置见 `deploy/README.md`，需在有 Docker 的环境执行）
 ```
 
@@ -449,7 +449,7 @@ make fault-matrix
 make retrofit-e2e
 make mcp-e2e
 make agent-core-test
-make harness-test
+make react-runtime-test
 make mcp-runtime-test
 make counter-agent-test
 

@@ -14,7 +14,7 @@
   contracts/ + proto/ + gen/ + docs/api/
 
 执行侧（默认组件）
-  execution/agent_core/ + execution/harness/ + execution/mcp_runtime/
+  execution/agent_core/ + execution/react_runtime/ + execution/mcp_runtime/
 
 App SDK
   sdk/python/
@@ -43,7 +43,7 @@ App SDK
 | `proto/` | gRPC 契约 | `proto/middleware/runtime/v1/runtime.proto` | `buf lint`、`make proto-lint` |
 | `gen/` | proto 生成的 Go 代码 | `gen/middleware/runtime/v1` | 不手改，`make proto` |
 | `execution/agent_core/` | 语言无关循环核心 | `levier_agent_core` | `make agent-core-test` |
-| `execution/harness/` | 默认执行侧 runtime | `python -m levier_harness` | `make harness-test` |
+| `execution/react_runtime/` | 默认执行侧 runtime | `python -m levier_react_runtime` | `make react-runtime-test` |
 | `execution/mcp_runtime/` | 默认 MCP 连接进程 | `python -m levier_mcp_runtime` | `make mcp-runtime-test` |
 | `sdk/python/` | Python App 适配器（C0/C1） | `levier_app` | `make sdk-test` |
 | `examples/` | 参考 App / 客户端 | `counter_agent`、`http_client`、`node_counter_agent` | `make sdk-test`、`make counter-agent-test` |
@@ -74,7 +74,7 @@ App SDK
 | 备份 / 恢复 / 卷 / secret 轮换 | `docs/LIFECYCLE.md` + `scripts/backup.sh`、`scripts/restore.sh` |
 | 运行操作面 | `docs/RUNTIME_OPS.md` + `cmd/levier/ops*.go` |
 | 引导 / App 凭据管理 | `docs/ONBOARDING.md`、`docs/ONBOARDING_CREDENTIALS_PLAN.md` |
-| Harness / Agent 循环 | `execution/harness/` |
+| React Runtime / Agent ?? | `execution/react_runtime/` |
 | Agent Core 契约 | `execution/agent_core/` + `docs/AGENT_CORE_CONTRACT.md` |
 | MCP 连接 / 会话 | `execution/mcp_runtime/` + `docs/MCP.md` |
 | Daemon 协议自检 | `internal/daemoncheck/` + `cmd/levier/daemon.go` |
@@ -93,8 +93,8 @@ register  → runstore
 runstore  → 无 internal 依赖
 contract  → 无 internal 依赖
 
-agent_core → 不依赖 harness / mcp_runtime / protobuf
-harness    → agent_core / generated proto / mcp client
+agent_core → 不依赖 runtime_sdk / mcp_runtime / protobuf
+react_runtime → runtime_sdk / agent_core / mcp client
 mcp_runtime → 不直连控制面
 sdk/python → 标准库 HTTP/WebSocket，不依赖 internal
 ```
@@ -129,7 +129,7 @@ make structure-check
 顶层目录必须存在，旧顶层目录不能复活
 每个顶层单元必须有 README.md
 internal / cmd / execution 不能引用 examples/
-agent_core 不能 import harness / MCP / protobuf
+agent_core 不能 import runtime_sdk / MCP / protobuf
 cmd/* 只放 package main
 gen/*.go 必须标记为生成代码
 operational 文件不能引用搬迁前的旧路径

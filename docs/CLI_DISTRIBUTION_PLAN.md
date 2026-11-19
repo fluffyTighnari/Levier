@@ -317,7 +317,7 @@ checksum 错误时安装失败
 ```text
 ghcr.io/<org>/levier:v0.1.0
 ghcr.io/<org>/levier:latest
-ghcr.io/<org>/levier-harness:v0.1.0
+ghcr.io/<org>/levier-runtime:v0.1.0
 ghcr.io/<org>/levier-mcp-runtime:v0.1.0
 ghcr.io/<org>/levier-agent:v0.1.0
 ```
@@ -339,7 +339,7 @@ permissions:
 
 ```text
 levier
-levier-harness
+levier-runtime
 levier-mcp-runtime
 levier-agent
 ```
@@ -896,7 +896,7 @@ docs/RELEASE.md                增加 GHCR 镜像章节
 
 ```text
 ghcr.io/<owner>/levier:v0.1.0
-ghcr.io/<owner>/levier-harness:v0.1.0
+ghcr.io/<owner>/levier-runtime:v0.1.0
 ghcr.io/<owner>/levier-mcp-runtime:v0.1.0
 ghcr.io/<owner>/levier-agent:v0.1.0
 ```

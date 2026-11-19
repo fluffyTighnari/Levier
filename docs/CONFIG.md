@@ -38,8 +38,8 @@
 Levier 控制面
   internal/config + levier.example.yaml + LEVIER_* 环境变量
 
-Harness
-  execution/harness/levier.example.yaml + HARNESS_* 环境变量
+React Runtime
+  execution/react_runtime/react.example.yaml + HARNESS_* 环境变量
 
 MCP Runtime
   命令行参数 + MCP_RUNTIME_* + LEVIER_SECRET_*
@@ -167,7 +167,7 @@ config check / config print
 6C/6D 已补齐：
 
 ```text
-Harness / MCP / Agent 配置命名统一
+React Runtime / MCP / Agent 配置命名统一
 Compose 默认 secret 清理
 生产式 Compose secret 文件挂载
 ```
@@ -188,26 +188,26 @@ retention 默认关闭
 
 ---
 
-## 4. Harness 配置
+## 4. React Runtime 配置
 
-文件：`execution/harness/levier.example.yaml`
-代码：`execution/harness/src/levier_harness/config.py`
+文件：`execution/react_runtime/react.example.yaml`
+代码：`execution/react_runtime/src/levier_react_runtime/config.py`
 
 | YAML / 参数 | 环境变量 | 类型 | 默认 | 必填 | 秘密 |
 |---|---|---|---|---|---|
-| CLI `--config` | `LEVIER_HARNESS_CONFIG` / 旧 `HARNESS_CONFIG` | path | 内置 example | 否 | 否 |
-| `middleware.address` | `LEVIER_HARNESS_ADDRESS` / 旧 `HARNESS_LEVIER_ADDRESS` / `HARNESS_MIDDLEWARE_ADDRESS` | host:port | `127.0.0.1:9090` | 是 | 否 |
-| `middleware.tls` | `LEVIER_HARNESS_TLS` / 旧 `HARNESS_LEVIER_TLS` / `HARNESS_MIDDLEWARE_TLS` | bool | `false` | 否 | 否 |
-| `daemon.id` | `LEVIER_HARNESS_DAEMON_ID` / 旧 `HARNESS_DAEMON_ID` | string | 空 | 是 | 否 |
-| `daemon.auth_token` | `LEVIER_HARNESS_DAEMON_AUTH_TOKEN` / 旧 `HARNESS_DAEMON_AUTH_TOKEN` | string | 空 | 是* | **是** |
-| `daemon.auth_token_file` | `LEVIER_HARNESS_DAEMON_AUTH_TOKEN_FILE` / 旧 `HARNESS_DAEMON_AUTH_TOKEN_FILE` | path | 空 | 否 | **是** |
-| `daemon.runtime_type` | `LEVIER_HARNESS_DAEMON_RUNTIME_TYPE` / 旧 `HARNESS_DAEMON_RUNTIME_TYPE` | enum | `normal` | 是 | 否 |
-| `daemon.max_concurrent_runs` | `LEVIER_HARNESS_DAEMON_MAX_CONCURRENT_RUNS` / 旧 `HARNESS_DAEMON_MAX_CONCURRENT_RUNS` | int | `4` | 是 | 否 |
-| `daemon.runtime_name` | `LEVIER_HARNESS_RUNTIME_NAME` / 旧 `HARNESS_RUNTIME_NAME` | string | 必填，例如 `react1` | 是 | 否 |
-| `daemon.labels` | `LEVIER_HARNESS_DAEMON_LABELS` / 旧 `HARNESS_DAEMON_LABELS` | map | 空 | 否 | 否 |
-| `mcp_runtime.socket` | `LEVIER_HARNESS_MCP_RUNTIME_SOCKET` / 旧 `HARNESS_MCP_RUNTIME_SOCKET` | path | 空 | 否 | 否 |
-| `logging.level` | `LEVIER_HARNESS_LOG_LEVEL` / 旧 `HARNESS_LOGGING_LEVEL` | enum | `info` | 是 | 否 |
-| `logging.format` | `LEVIER_HARNESS_LOG_FORMAT` / 旧 `HARNESS_LOGGING_FORMAT` | enum | `json` | 是 | 否 |
+| CLI `--config` | `LEVIER_REACT_RUNTIME_CONFIG` / 旧 `HARNESS_CONFIG` | path | 内置 example | 否 | 否 |
+| `middleware.address` | `LEVIER_REACT_RUNTIME_ADDRESS` / 旧 `HARNESS_LEVIER_ADDRESS` / `HARNESS_MIDDLEWARE_ADDRESS` | host:port | `127.0.0.1:9090` | 是 | 否 |
+| `middleware.tls` | `LEVIER_REACT_RUNTIME_TLS` / 旧 `HARNESS_LEVIER_TLS` / `HARNESS_MIDDLEWARE_TLS` | bool | `false` | 否 | 否 |
+| `daemon.id` | `LEVIER_REACT_RUNTIME_INSTANCE_ID` / 旧 `HARNESS_DAEMON_ID` | string | 空 | 是 | 否 |
+| `daemon.auth_token` | `LEVIER_REACT_RUNTIME_TOKEN` / 旧 `HARNESS_DAEMON_AUTH_TOKEN` | string | 空 | 是* | **是** |
+| `daemon.auth_token_file` | `LEVIER_REACT_RUNTIME_TOKEN_FILE` / 旧 `HARNESS_DAEMON_AUTH_TOKEN_FILE` | path | 空 | 否 | **是** |
+| `daemon.runtime_type` | `LEVIER_REACT_RUNTIME_TYPE` / 旧 `HARNESS_DAEMON_RUNTIME_TYPE` | enum | `normal` | 是 | 否 |
+| `daemon.max_concurrent_runs` | `LEVIER_REACT_RUNTIME_MAX_CONCURRENT_RUNS` / 旧 `HARNESS_DAEMON_MAX_CONCURRENT_RUNS` | int | `4` | 是 | 否 |
+| `daemon.runtime_name` | `LEVIER_REACT_RUNTIME_NAME` / 旧 `HARNESS_RUNTIME_NAME` | string | 必填，例如 `react1` | 是 | 否 |
+| `daemon.labels` | `LEVIER_REACT_RUNTIME_LABELS` / 旧 `HARNESS_DAEMON_LABELS` | map | 空 | 否 | 否 |
+| `mcp_runtime.socket` | `LEVIER_REACT_RUNTIME_MCP_SOCKET` / 旧 `HARNESS_MCP_RUNTIME_SOCKET` | path | 空 | 否 | 否 |
+| `logging.level` | `LEVIER_REACT_RUNTIME_LOG_LEVEL` / 旧 `HARNESS_LOGGING_LEVEL` | enum | `info` | 是 | 否 |
+| `logging.format` | `LEVIER_REACT_RUNTIME_LOG_FORMAT` / 旧 `HARNESS_LOGGING_FORMAT` | enum | `json` | 是 | 否 |
 | 运行时模型 key | `DEEPSEEK_API_KEY` | string | 空 | react 时需要 | **是** |
 | 运行时模型地址 | `DEEPSEEK_BASE_URL` | URL | `https://api.deepseek.com` | 否 | 否 |
 | 运行时模型名 | `DEEPSEEK_MODEL` | string | `deepseek-flash` | 否 | 否 |
@@ -217,8 +217,8 @@ retention 默认关闭
 注意：
 
 ```text
-HARNESS_* 旧名仍兼容；新配置使用 LEVIER_HARNESS_*
-DEEPSEEK_* 由 LLM provider 直接读取，不在 Harness YAML 中
+HARNESS_* 旧名仍兼容；新配置使用 LEVIER_REACT_RUNTIME_*
+DEEPSEEK_* 由 LLM provider 直接读取，不在 React Runtime YAML 中
 ```
 
 ---
@@ -291,14 +291,14 @@ updated_at
 | `LEVIER_HTTP_ADMIN_TOKEN` | levier | `admin-change-me` | **是** | 来自 `LEVIER_ADMIN_TOKEN`，仅开发 |
 | `LEVIER_VERSION` / `LEVIER_COMMIT` / `LEVIER_BUILD_TIME` | levier build args | dev | 否 | 构建元数据 |
 | `LEVIER_LOG_LEVEL` / `LEVIER_LOG_FORMAT` | levier | info/json | 否 | 日志 |
-| `LEVIER_HARNESS_ADDRESS` | harness | `levier:9090` | 否 | 连接地址 |
-| `LEVIER_HARNESS_DAEMON_ID` | harness | `daemon-local-1` | 否 | daemon 身份 |
-| `LEVIER_HARNESS_DAEMON_AUTH_TOKEN` | harness | `change-me` | **是** | 仅开发 |
-| `LEVIER_HARNESS_MCP_RUNTIME_SOCKET` | harness | socket path | 否 | MCP socket |
+| `LEVIER_REACT_RUNTIME_ADDRESS` | react-runtime | `levier:9090` | 否 | 连接地址 |
+| `LEVIER_REACT_RUNTIME_INSTANCE_ID` | react-runtime | `daemon-local-1` | 否 | daemon 身份 |
+| `LEVIER_REACT_RUNTIME_TOKEN` | react-runtime | `change-me` | **是** | 仅开发 |
+| `LEVIER_REACT_RUNTIME_MCP_SOCKET` | react-runtime | socket path | 否 | MCP socket |
 | `LEVIER_APP_URL` | agent / smoke | `http://levier:8080` | 否 | HTTP 地址 |
 | `LEVIER_APP_CREDENTIALS` | agent | `/data/credentials.json` | 文件秘密 | 由 host `levier app init` 写入 `data/agent` |
-| `DEEPSEEK_API_KEY` | harness / baseline | 空 | **是** | 模型 key |
-| `DEEPSEEK_BASE_URL` / `DEEPSEEK_MODEL` | harness | DeepSeek 默认 | 否 | 模型配置 |
+| `DEEPSEEK_API_KEY` | react-runtime / baseline | 空 | **是** | 模型 key |
+| `DEEPSEEK_BASE_URL` / `DEEPSEEK_MODEL` | react-runtime | DeepSeek 默认 | 否 | 模型配置 |
 
 生产式 overlay（`docker-compose.prod.yml`）：
 
@@ -308,10 +308,10 @@ updated_at
 | `deploy/secrets/levier_admin_token` | Levier HTTP admin（测试 App 由 host 上的 `levier app init` 创建） |
 | `deploy/secrets/levier_daemon_tokens.json` | Levier gRPC daemon tokens |
 | `deploy/secrets/levier_database_url` | Levier 数据库 DSN |
-| `deploy/secrets/levier_harness_daemon_token` | Harness daemon token |
+| `deploy/secrets/levier_react_runtime_daemon_token` | React Runtime daemon token |
 | `deploy/secrets/levier_mcp_secrets.json` | MCP Runtime |
 
-`levier_admin_token` 同时供控制面与 Agent 使用；Harness 的 daemon token 必须与
+`levier_admin_token` 同时供控制面与 Agent 使用；React Runtime 的 daemon token 必须与
 `levier_daemon_tokens.json` 中对应 daemon 的值一致；`levier_database_url` 中的密码
 必须与 `levier_postgres_password` 一致。
 
@@ -360,7 +360,7 @@ http.admin_token
 http.bearer_token
 grpc.daemon_tokens.*
 database.url（含密码）
-LEVIER_HARNESS_DAEMON_AUTH_TOKEN
+LEVIER_REACT_RUNTIME_TOKEN
 LEVIER_SECRET_* / MCP secrets file
 DEEPSEEK_API_KEY
 LEVIER_ADMIN_TOKEN（仅 app init / rotate / 测试初始化）
@@ -397,7 +397,7 @@ LEVIER_TEST_DATABASE_URL（测试）
 
 - [x] `HARNESS_*`、`MCP_RUNTIME_*`、`DEEPSEEK_*`、`COUNTER_*` 命名不统一
 - [x] `MW_*` / `MIDDLEWARE_*` 兼容策略不一致
-- [ ] Harness / MCP / Agent 配置校验风格不一致
+- [ ] React Runtime / MCP / Agent 配置校验风格不一致
 - [x] 缺少配置项总表
 
 ### P2 后续
@@ -414,7 +414,7 @@ LEVIER_TEST_DATABASE_URL（测试）
 ```text
 Levier 产品命名空间：LEVIER_
 控制面：LEVIER_HTTP_* / LEVIER_GRPC_* / LEVIER_DATABASE_* / LEVIER_WORKFLOW_* / LEVIER_LOG_*
-Harness：目标 LEVIER_HARNESS_*，保留 HARNESS_* fallback
+React Runtime：目标 LEVIER_REACT_RUNTIME_*，保留 HARNESS_* fallback
 MCP：目标 LEVIER_MCP_*，保留 MCP_RUNTIME_* fallback
 Agent：目标 LEVIER_APP_*，保留 LEVIER_* / MW_* fallback
 ```
@@ -436,8 +436,8 @@ config print（脱敏）
 6C 已采用：
 
 ```text
-Harness 支持 LEVIER_HARNESS_*，保留 HARNESS_* / HARNESS_MIDDLEWARE_* fallback
-Harness 支持 daemon.auth_token_file
+React Runtime 支持 LEVIER_REACT_RUNTIME_*，保留 HARNESS_* / HARNESS_MIDDLEWARE_* fallback
+React Runtime 支持 daemon.auth_token_file
 MCP 支持 LEVIER_MCP_*，保留 MCP_RUNTIME_* fallback
 MCP secrets-file 在 Unix 上检查 0600
 Agent 只读取 LEVIER_APP_CREDENTIALS / LEVIER_CREDENTIALS
@@ -469,7 +469,7 @@ Compose smoke：本地开发栈已通过
 ```text
 1. 在 YAML 顶层加入 config_version: 1 和 environment
 2. 控制面环境变量改用 LEVIER_*；旧 MIDDLEWARE_* 仍兼容一个版本
-3. Harness / MCP / Agent 改用 LEVIER_HARNESS_* / LEVIER_MCP_* / LEVIER_APP_*
+3. React Runtime / MCP / Agent 改用 LEVIER_REACT_RUNTIME_* / LEVIER_MCP_* / LEVIER_APP_*
 4. 生产环境把 token / DSN 移到 0600 secret 文件，YAML 只保留 *_file 路径
 5. 启动前运行 config check；生产再加 --production
 ```
@@ -495,7 +495,7 @@ database:
 ```text
 config print 是否输出来源（file/env/default）
 配置热更新（当前建议不做）
-Harness / MCP / Agent 内部校验代码风格进一步统一
+React Runtime / MCP / Agent 内部校验代码风格进一步统一
 ```
 
 ---
@@ -503,7 +503,7 @@ Harness / MCP / Agent 内部校验代码风格进一步统一
 ## 12. 6A 验收
 
 - [x] 控制面配置盘点
-- [x] Harness 配置盘点
+- [x] React Runtime 配置盘点
 - [x] MCP Runtime 配置盘点
 - [x] Agent 配置盘点
 - [x] Compose / 部署变量盘点

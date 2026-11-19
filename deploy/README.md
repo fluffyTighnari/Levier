@@ -19,7 +19,7 @@
 postgres      PostgreSQL 16
 levier        Go 控制面
 mcp-runtime   runtime 1：MCP 连接/会话/凭据
-harness       runtime 2：Agent 循环
+react-runtime       runtime 2：Agent 循环
 agent         counter_agent App
 ```
 
@@ -49,7 +49,7 @@ docker compose ps
 levier 等 PostgreSQL → migrate up → serve
   （serve 启动时检查 pending migration）
 mcp-runtime 创建 /run/levier/mcp.sock
-harness 连接 levier，注册 daemon-local-1
+react-runtime 连接 levier，注册 daemon-local-1
 agent 等 /readyz 和 credentials 文件 → 启动 SDK 薄 App → 连 WebSocket
 ```
 
@@ -68,7 +68,7 @@ smoke 检查：
 /healthz、/readyz
 /meta
 /status
-Harness 已注册
+React Runtime 已注册
 App 凭据已创建并建立 WebSocket
 MCP runtime socket 可连接，mcp.health = ok
 提交一个 echo Run，最终 completed
@@ -151,7 +151,7 @@ Compose 配置了：
 
 ```text
 levier / postgres   stop_grace_period: 30s
-harness / mcp / agent stop_grace_period: 20s
+react-runtime / mcp-runtime / agent stop_grace_period: 20s
 ```
 
 停止 Levier 并查看生命周期日志：
@@ -174,7 +174,7 @@ levier stopped
 ```
 
 如果超过停止宽限期，Docker 会发送 SIGKILL；这只应出现在异常进程或未响应的子进程。
-`mcp-runtime`、`harness`、`agent` 使用 `init: true`，由容器 init 回收子进程。
+`mcp-runtime`、`react-runtime`、`agent` 使用 `init: true`，由容器 init 回收子进程。
 
 ## 5. 开发默认值
 
@@ -184,7 +184,7 @@ levier stopped
 POSTGRES_PASSWORD       change-me
 LEVIER_ADMIN_TOKEN      admin-change-me（仅 host 初始化 / 控制面）
 LEVIER_APP_NAME         counter-agent（仅测试 App 初始化）
-LEVIER_HARNESS_DAEMON_AUTH_TOKEN  change-me
+LEVIER_REACT_RUNTIME_TOKEN  change-me
 ```
 
 开发配置样例是根目录 `levier.example.yaml`。
@@ -217,12 +217,12 @@ deploy/secrets/levier_postgres_password
 deploy/secrets/levier_admin_token
 deploy/secrets/levier_daemon_tokens.json
 deploy/secrets/levier_database_url
-deploy/secrets/levier_harness_daemon_token
+deploy/secrets/levier_react_runtime_daemon_token
 deploy/secrets/levier_mcp_secrets.json
 ```
 
 `levier_admin_token` 同时供控制面与 Agent 使用，避免同一 Admin token 出现两份来源。
-Harness 的 daemon token 必须与 `levier_daemon_tokens.json` 中对应 daemon 的值一致。
+React Runtime 的 daemon token 必须与 `levier_daemon_tokens.json` 中对应 daemon 的值一致。
 
 启动：
 
@@ -240,7 +240,7 @@ levier 使用 LEVIER_ENV=production
 admin token 从 /run/secrets/levier_admin_token 读取
 daemon tokens 从 /run/secrets/levier_daemon_tokens.json 读取
 数据库 DSN 从 /run/secrets/levier_database_url 读取
-harness daemon token 从 secret 文件读取
+React Runtime daemon token 从 secret 文件读取
 MCP secrets 从 secret 文件读取
 agent Admin token 复用同一个 admin secret
 PostgreSQL 密码从 secret 文件读取
@@ -294,7 +294,7 @@ Admin token、daemon token、App key 和 PostgreSQL 密码的轮换步骤见
 
 ```sh
 docker build -f deploy/levier.Dockerfile -t levier:dev .
-docker build -f deploy/harness.Dockerfile -t levier-harness:dev .
+docker build -f deploy/runtime.Dockerfile -t levier-runtime:dev .
 docker build -f deploy/mcp-runtime.Dockerfile -t levier-mcp-runtime:dev .
 docker build -f deploy/agent.Dockerfile -t levier-agent:dev .
 ```

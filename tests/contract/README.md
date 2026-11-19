@@ -15,5 +15,5 @@ Validation:
 
 ```sh
 go test ./internal/protocol -run TestContractGolden
-PYTHONPATH=execution/runtime_sdk/src:execution/harness/src python3 tests/contract/test_contract.py -v
+PYTHONPATH=execution/runtime_sdk/src:execution/react_runtime/src python3 tests/contract/test_contract.py -v
 ```

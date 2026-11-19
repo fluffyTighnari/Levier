@@ -23,7 +23,7 @@
 
 普通 CLI 用户优先使用安装器。
 Go 开发者可以使用 `go install`。
-需要运行 Levier + Harness + MCP Runtime 时使用容器。
+需要运行 Levier + React Runtime + MCP Runtime 时使用容器。
 
 ---
 
@@ -353,7 +353,7 @@ Expand-Archive .\levier_v0.1.0_windows_amd64.zip -DestinationPath .
 
 ```text
 ghcr.io/<owner>/levier:v0.1.0
-ghcr.io/<owner>/levier-harness:v0.1.0
+ghcr.io/<owner>/levier-runtime:v0.1.0
 ghcr.io/<owner>/levier-mcp-runtime:v0.1.0
 ghcr.io/<owner>/levier-agent:v0.1.0
 ```
@@ -362,7 +362,7 @@ ghcr.io/<owner>/levier-agent:v0.1.0
 
 ```text
 ghcr.io/<owner>/levier:latest
-ghcr.io/<owner>/levier-harness:latest
+ghcr.io/<owner>/levier-runtime:latest
 ghcr.io/<owner>/levier-mcp-runtime:latest
 ghcr.io/<owner>/levier-agent:latest
 ```

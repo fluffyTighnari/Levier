@@ -1,16 +1,16 @@
 #!/usr/bin/env bash
 # Levier — one-command single-node MVP demo.
 #
-# Starts PostgreSQL-backed Levier, the real Harness, and the Counter App;
+# Starts PostgreSQL-backed Levier, the real React Runtime, and the Counter App;
 # submits one run; waits for a terminal status; prints a redacted summary.
 #
 # Modes:
-#   echo    no model call, proves MW + Harness + App transport
+#   echo    no model call, proves MW + React Runtime + App transport
 #   react   real DeepSeek model call + counter tools
 #
 # Requirements:
 #   - PostgreSQL reachable via LEVIER_DATABASE_URL
-#   - execution/harness/.venv (see README)
+#   - execution/react_runtime/.venv (see README)
 #   - react mode: DEEPSEEK_API_KEY in .env
 #
 # Usage:
@@ -41,19 +41,20 @@ case "$MODE" in
 esac
 
 if [ "$MODE" = "echo" ]; then
-  RUNTIME_CONFIG="${RUNTIME_CONFIG:-examples/echo_runtime/runtime.yaml}"
-  RUNTIME_APP="${RUNTIME_APP:-examples/echo_runtime/app.py}"
-  RUNTIME_PYTHONPATH="execution/runtime_sdk/src"
+  RUNTIME_CONFIG="${RUNTIME_CONFIG:-execution/echo_runtime/runtime.yaml}"
+  RUNTIME_MODULE="${RUNTIME_MODULE:-levier_echo_runtime}"
+  RUNTIME_PYTHONPATH="execution/runtime_sdk/src:execution/echo_runtime/src"
   RUNTIME_NAME="${RUNTIME_NAME:-echo1}"
 else
-  RUNTIME_CONFIG="${RUNTIME_CONFIG:-execution/harness/levier.example.yaml}"
-  RUNTIME_PYTHONPATH="execution/agent_core/src:execution/runtime_sdk/src:execution/harness/src"
+  RUNTIME_CONFIG="${RUNTIME_CONFIG:-execution/react_runtime/react.example.yaml}"
+  RUNTIME_MODULE="${RUNTIME_MODULE:-levier_react_runtime}"
+  RUNTIME_PYTHONPATH="execution/agent_core/src:execution/runtime_sdk/src:execution/react_runtime/src"
   RUNTIME_NAME="${RUNTIME_NAME:-react1}"
 fi
 
 LEVIER_BIN="${LEVIER_BIN:-${MIDDLEWARE_BIN:-bin/levier}}"
 LEVIER_CONFIG="${LEVIER_CONFIG:-${MIDDLEWARE_CONFIG:-levier.example.yaml}}"
-HARNESS_PYTHON="${HARNESS_PYTHON:-execution/harness/.venv/bin/python}"
+RUNTIME_PYTHON="${RUNTIME_PYTHON:-execution/react_runtime/.venv/bin/python}"
 LEVIER_URL="${LEVIER_URL:-${MW_URL:-http://127.0.0.1:8080}}"
 ADMIN_TOKEN="${LEVIER_ADMIN_TOKEN:-${MW_ADMIN_TOKEN:-admin-change-me}}"
 DATABASE_URL="${LEVIER_DATABASE_URL:-${MIDDLEWARE_DATABASE_URL:-}}"
@@ -74,16 +75,16 @@ if [ -z "$DATABASE_URL" ]; then
 fi
 command -v curl >/dev/null 2>&1 || fail "curl is required"
 command -v python3 >/dev/null 2>&1 || fail "python3 is required"
-[ -x "$HARNESS_PYTHON" ] || fail "harness Python not found: $HARNESS_PYTHON (cd execution/harness && uv sync --locked)"
+[ -x "$RUNTIME_PYTHON" ] || fail "runtime Python not found: $RUNTIME_PYTHON (cd execution/react_runtime && uv sync --locked)"
 
 mkdir -p "$OUT"
 chmod 700 "$OUT"
 MW_PID=""
-HARNESS_PID=""
+RUNTIME_PID=""
 SERVE_PID=""
 
 cleanup() {
-  for pid in "$SERVE_PID" "$HARNESS_PID" "$MW_PID"; do
+  for pid in "$SERVE_PID" "$RUNTIME_PID" "$MW_PID"; do
     if [ -n "$pid" ]; then
       kill -TERM "$pid" 2>/dev/null || true
       wait "$pid" 2>/dev/null || true
@@ -119,13 +120,13 @@ done
 
 echo "== start Runtime =="
 if [ "$MODE" = "echo" ]; then
-  PYTHONPATH="$RUNTIME_PYTHONPATH" "$HARNESS_PYTHON" "$RUNTIME_APP" \
-    --config "$RUNTIME_CONFIG" >"$OUT/harness.log" 2>&1 &
+  PYTHONPATH="$RUNTIME_PYTHONPATH" "$RUNTIME_PYTHON" -m levier_echo_runtime \
+    --config "$RUNTIME_CONFIG" >"$OUT/runtime.log" 2>&1 &
 else
-  PYTHONPATH="$RUNTIME_PYTHONPATH" "$HARNESS_PYTHON" -m levier_harness \
-    --config "$RUNTIME_CONFIG" >"$OUT/harness.log" 2>&1 &
+  PYTHONPATH="$RUNTIME_PYTHONPATH" "$RUNTIME_PYTHON" -m levier_react_runtime \
+    --config "$RUNTIME_CONFIG" >"$OUT/runtime.log" 2>&1 &
 fi
-HARNESS_PID=$!
+RUNTIME_PID=$!
 sleep 2
 
 echo "== create App =="

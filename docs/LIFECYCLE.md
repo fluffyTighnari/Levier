@@ -151,11 +151,11 @@ sh scripts/restore.sh \
 ```text
 校验备份格式和 SHA256
 确保 postgres 正在运行
-停止 levier / harness / agent，停止写入
+停止 levier / react-runtime / agent，停止写入
 清理该数据库的残留连接
 pg_restore --clean --if-exists --no-owner --no-privileges
 可选恢复 agent 凭据目录
-重新启动 levier / harness / agent
+重新启动 levier / react-runtime / agent
 读取 migrate status
 ```
 
@@ -186,7 +186,7 @@ migration current 与 manifest 兼容
 pending = 0
 /readyz 为 ready
 App 可连接 WebSocket
-Harness daemon 已注册
+React Runtime daemon 已注册
 MCP runtime socket 正常
 一个 echo Run 可以完成
 ```
@@ -298,7 +298,7 @@ curl -fsS -H "Authorization: Bearer $LEVIER_ADMIN_TOKEN" \
 
 ```text
 Levier gRPC daemon 认证
-Harness 的 daemon auth token
+React Runtime 的 daemon auth token
 其他 daemon 客户端
 ```
 
@@ -312,20 +312,20 @@ openssl rand -hex 32 > /secure/new-daemon-token
 #    deploy/secrets/levier_daemon_tokens.json
 #    例如：{"daemon-local-1":"<新 token>"}
 
-# 3. 更新 Harness 使用的同一个 token
+# 3. 更新 React Runtime 使用的同一个 token
 install -m 0600 /secure/new-daemon-token \
-  deploy/secrets/levier_harness_daemon_token
+  deploy/secrets/levier_react_runtime_daemon_token
 
-# 4. 重新创建 Levier 和 Harness
+# 4. 重新创建 Levier 和 React Runtime
 docker compose \
   -f docker-compose.yml \
   -f docker-compose.prod.yml \
-  up -d --force-recreate levier harness
+  up -d --force-recreate levier react-runtime
 
 # 5. 检查注册和主动链路
 docker compose exec levier /app/levier selfcheck --deep \
   --admin-token "$(cat deploy/secrets/levier_admin_token)" \
-  --daemon-token "$(cat deploy/secrets/levier_harness_daemon_token)"
+  --daemon-token "$(cat deploy/secrets/levier_react_runtime_daemon_token)"
 ```
 
 JSON 中每个 daemon 的 token 必须和对应客户端一致。只轮换一个 daemon 时，
@@ -430,7 +430,7 @@ docker compose --profile smoke run --rm smoke
 [ ] 备份包含当前 migration version
 [ ] 已单独保存并限制 deploy/secrets 权限
 [ ] restore --dry-run 通过
-[ ] 恢复后 postgres / levier / harness / agent 正常
+[ ] 恢复后 postgres / levier / react-runtime / agent 正常
 [ ] migrate status pending = 0
 [ ] App WebSocket 和 echo Run 正常
 [ ] 轮换后的新凭据可用，旧凭据已失效

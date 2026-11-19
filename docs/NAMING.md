@@ -71,7 +71,7 @@ Docker Hub：levier
 | 示例环境变量 | `MW_URL` / `MW_ADMIN_TOKEN` / `MW_APP_NAME` | `LEVIER_URL` / `LEVIER_ADMIN_TOKEN` / `LEVIER_APP_NAME` | 1B | 旧名兼容一个版本 |
 | Harness 环境变量 | `HARNESS_*` | `HARNESS_*` | 不变 | 组件级前缀，保留 |
 | Python 发行名 | `middleware-harness` 等 | `levier-harness` 等 | 1C | 新包名，旧包名保留一个版本 |
-| Python import | `middleware_harness` 等 | `levier_harness` 等 | 1C | 旧包名作为 shim |
+| Python import | `middleware_harness` 等 | `levier_react_runtime` 等 | 1C | 旧包名作为 shim |
 | Docker 镜像 | `middleware-harness` 等 | `levier/harness` 等 | 1B | 旧镜像名保留一个版本 |
 | Dockerfile | `middleware.Dockerfile` | `levier.Dockerfile` | 1B | 旧文件名保留一个版本 |
 | 配置文件名 | `config.example.yaml` | `levier.example.yaml` | 1B | 旧文件保留一个版本 |
@@ -125,7 +125,7 @@ Python import 包名
 make lint
 make build
 make test
-make harness-test
+make react-runtime-test
 make mcp-runtime-test
 make agent-core-test
 docker compose --profile smoke run --rm smoke
@@ -140,7 +140,7 @@ middleware-harness      → levier-harness
 middleware-agent-core   → levier-agent-core
 middleware-mcp-runtime  → levier-mcp-runtime
 
-import middleware_harness      → levier_harness
+import middleware_harness      → levier_react_runtime
 import agent_core              → levier_agent_core
 import mcp_runtime             → levier_mcp_runtime
 ```
@@ -158,7 +158,7 @@ Dockerfile 使用新发行名
 
 ```sh
 cd harness && uv sync --locked
-make harness-test
+make react-runtime-test
 make mcp-runtime-test
 make agent-core-test
 make docker-smoke
@@ -348,7 +348,7 @@ docker compose build middleware
   容器的 go mod download 访问 proxy.golang.org 被当前网络拒绝；
   这是环境问题，不是代码问题，需在有外网/代理的机器上复验。
 
-make harness-test
+make react-runtime-test
   Windows 的 PYTHONPATH 分隔符与 Makefile 的冒号写法不兼容；
   已用正确 Windows 路径验证 middleware.runtime.v1 可以导入。
 ```
@@ -473,7 +473,7 @@ HARNESS_MIDDLEWARE_TLS                → HARNESS_LEVIER_TLS（旧名兼容）
 ```text
 docker-compose.yml 的 Dockerfile 路径与 Harness 地址变量
 Makefile、cmd/levier、cmd/migrate 的默认配置路径
-deploy/levier.Dockerfile、deploy/harness.Dockerfile
+deploy/levier.Dockerfile、deploy/runtime.Dockerfile
 tests/e2e 的配置默认路径
 README、deploy、MCP、harness 文档
 ```
@@ -512,7 +512,7 @@ import 包：
 
 ```text
 agent_core        → levier_agent_core
-middleware_harness → levier_harness
+middleware_harness → levier_react_runtime
 mcp_runtime       → levier_mcp_runtime
 ```
 
@@ -529,7 +529,7 @@ mcp_runtime/src/mcp_runtime/__init__.py
 ```text
 三个 pyproject.toml
 harness/uv.lock
-deploy/harness.Dockerfile
+deploy/runtime.Dockerfile
 deploy/mcp-runtime.Dockerfile
 Makefile、tests/e2e、harness/mcp_runtime 测试
 README、AGENT_CORE_CONTRACT、MCP、deploy 文档
@@ -615,7 +615,7 @@ python -m compileall       PASS
 
 ```text
 git mv agent_core  execution/agent_core
-git mv harness     execution/harness
+git mv harness     execution/react_runtime
 git mv mcp_runtime execution/mcp_runtime
 ```
 
@@ -633,7 +633,7 @@ Compose / 数据库 / 指标
 .github/workflows/ci.yml
 Makefile
 buf.gen.yaml
-deploy/harness.Dockerfile、deploy/mcp-runtime.Dockerfile
+deploy/runtime.Dockerfile、deploy/mcp-runtime.Dockerfile
 tests/e2e、tests/checks、tests/contract
 docs/MAP.md、SCOPE.md、DESIGN.md、ARCHITECTURE.md、CONTRACT.md、MCP.md、README.md
 execution/*/README.md

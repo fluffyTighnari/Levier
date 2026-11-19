@@ -1,14 +1,14 @@
 #!/usr/bin/env bash
 # Levier — MCP end-to-end regression (catalog → TaskAssign → runtime).
 #
-# Starts Levier, the MCP runtime, the Harness and an App, registers a
+# Starts Levier, the MCP runtime, the React Runtime and an App, registers a
 # stdio MCP server with a ${secret:...} placeholder, and runs one real tool
 # call through the model.
 #
 # Requirements:
 #   - PostgreSQL reachable via LEVIER_DATABASE_URL
 #   - DEEPSEEK_API_KEY in the environment
-#   - bin/levier built, execution/harness/.venv and execution/mcp_runtime/.venv present
+#   - bin/levier built, execution/react_runtime/.venv and execution/mcp_runtime/.venv present
 set -euo pipefail
 
 cd "$(dirname "$0")/../.."
@@ -27,8 +27,8 @@ done
 
 LEVIER_BIN="${LEVIER_BIN:-${MIDDLEWARE_BIN:-bin/levier}}"
 LEVIER_CONFIG="${LEVIER_CONFIG:-${MIDDLEWARE_CONFIG:-levier.example.yaml}}"
-HARNESS_CONFIG="${HARNESS_CONFIG:-execution/harness/levier.example.yaml}"
-HARNESS_PYTHON="${HARNESS_PYTHON:-execution/harness/.venv/bin/python}"
+REACT_RUNTIME_CONFIG="${REACT_RUNTIME_CONFIG:-execution/react_runtime/react.example.yaml}"
+REACT_RUNTIME_PYTHON="${REACT_RUNTIME_PYTHON:-execution/react_runtime/.venv/bin/python}"
 RUNTIME_PYTHON="${RUNTIME_PYTHON:-execution/mcp_runtime/.venv/bin/python}"
 MCP_SOCKET="${MCP_SOCKET:-/tmp/levier-mcp.sock}"
 LEVIER_URL="${LEVIER_URL:-${MW_URL:-http://127.0.0.1:8080}}"
@@ -50,7 +50,7 @@ fail() {
 command -v psql >/dev/null 2>&1 || fail "psql is required"
 command -v curl >/dev/null 2>&1 || fail "curl is required"
 command -v python3 >/dev/null 2>&1 || fail "python3 is required"
-[ -x "$HARNESS_PYTHON" ] || fail "harness Python not found: $HARNESS_PYTHON"
+[ -x "$REACT_RUNTIME_PYTHON" ] || fail "React Runtime Python not found: $REACT_RUNTIME_PYTHON"
 [ -x "$RUNTIME_PYTHON" ] || fail "mcp_runtime Python not found: $RUNTIME_PYTHON"
 [ -f "$FIXTURE" ] || fail "MCP fixture not found: $FIXTURE"
 if [ ! -x "$LEVIER_BIN" ]; then
@@ -61,11 +61,11 @@ mkdir -p "$OUT"
 chmod 700 "$OUT"
 CREDENTIALS="$OUT/credentials.json"
 MW_PID=""
-HARNESS_PID=""
+REACT_RUNTIME_PID=""
 RUNTIME_PID=""
 
 cleanup() {
-  for pid in "$HARNESS_PID" "$RUNTIME_PID" "$MW_PID"; do
+  for pid in "$REACT_RUNTIME_PID" "$RUNTIME_PID" "$MW_PID"; do
     if [ -n "$pid" ]; then
       kill -TERM "$pid" 2>/dev/null || true
       wait "$pid" 2>/dev/null || true
@@ -107,10 +107,10 @@ for _ in $(seq 1 100); do
 done
 [ -S "$MCP_SOCKET" ] || fail "MCP runtime did not listen"
 
-echo "== start Harness =="
-PYTHONPATH="execution/agent_core/src:execution/runtime_sdk/src:execution/harness/src" "$HARNESS_PYTHON" -m levier_harness \
-  --config "$HARNESS_CONFIG" >"$OUT/harness.log" 2>&1 &
-HARNESS_PID=$!
+echo "== start React Runtime =="
+PYTHONPATH="execution/agent_core/src:execution/runtime_sdk/src:execution/react_runtime/src" "$REACT_RUNTIME_PYTHON" -m levier_react_runtime \
+  --config "$REACT_RUNTIME_CONFIG" >"$OUT/react_runtime.log" 2>&1 &
+REACT_RUNTIME_PID=$!
 sleep 2
 
 echo "== register catalog and app =="
@@ -188,8 +188,8 @@ FINAL_HIT="$(psql_run "SELECT count(*) FROM run_events WHERE run_id='$RUN_ID' AN
 [ "$GATEWAY_ROWS" = "0" ] || fail "MCP call wrote $GATEWAY_ROWS tool_invocations rows"
 [ "$ERRORS" = "0" ] || fail "run emitted $ERRORS ERROR events"
 [ "$FINAL_HIT" -ge 1 ] || fail "final message did not reference the tool result"
-grep -q '"mcp_binding_count":1' "$OUT/harness.log" || fail "TaskAssign did not carry one MCP binding"
-grep -q '"server_name":"e2e-echo"' "$OUT/harness.log" || fail "TaskAssign binding missing server name"
+grep -q '"mcp_binding_count":1' "$OUT/react_runtime.log" || fail "TaskAssign did not carry one MCP binding"
+grep -q '"server_name":"e2e-echo"' "$OUT/react_runtime.log" || fail "TaskAssign binding missing server name"
 grep -q "mcp session opened" "$OUT/runtime.log" || fail "runtime did not open a session"
 
 {

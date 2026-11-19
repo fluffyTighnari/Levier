@@ -146,7 +146,7 @@ workflow 会重新构建并覆盖同名 release assets
 
 ```text
 ghcr.io/<owner>/levier:v0.1.0
-ghcr.io/<owner>/levier-harness:v0.1.0
+ghcr.io/<owner>/levier-runtime:v0.1.0
 ghcr.io/<owner>/levier-mcp-runtime:v0.1.0
 ghcr.io/<owner>/levier-agent:v0.1.0
 ```

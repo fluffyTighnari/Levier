@@ -43,7 +43,7 @@ package workflow
 ## 3. Python
 
 ```python
-"""Levier — harness RuntimeChannel client.
+"""Levier — react-runtime RuntimeChannel client.
 
 Owns the gRPC stream, Hello/Heartbeat, and reconnect loop.
 
@@ -94,10 +94,10 @@ JSON 不支持注释。JSON fixture/数据文件不强制顶部注释，但必�
 `make structure-check` 检查以下规则：
 
 ```text
-顶层目录必须存在；agent_core/、harness/、mcp_runtime/ 不能回到根目录
+顶层目录必须存在；agent_core/、react-runtime/、mcp_runtime/ 不能回到根目录
 每个顶层单元必须有 README.md
 internal / cmd / execution 不能引用 examples/
-agent_core 不能 import harness / MCP / protobuf
+agent_core 不能 import react-runtime / MCP / protobuf
 cmd/* 只放 package main
 gen/*.go 必须标记为生成代码
 operational 文件不能引用搬迁前的旧路径

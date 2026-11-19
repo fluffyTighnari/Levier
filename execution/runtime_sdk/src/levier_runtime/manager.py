@@ -176,10 +176,12 @@ class RunManager:
     async def _execute(self, ctx: RunContext) -> None:
         status = "failed"
         reason = ""
+        error_code = ""
         try:
             status = await self.runner(ctx)
             if status not in TERMINAL_STATUSES:
                 reason = f"runtime returned invalid status {status!r}"
+                error_code = "INVALID_RUNTIME_STATUS"
                 status = "failed"
             if ctx.cancelled:
                 status = "cancelled"
@@ -188,11 +190,14 @@ class RunManager:
         except Exception as exc:  # runtime failures become a failed run
             status = "failed"
             reason = str(exc)
+            error_code = "RUNTIME_ERROR"
             self.logger.error("runtime run failed", extra={
                 "run_id": ctx.run_id,
                 "error": str(exc),
             })
 
+        if error_code and not ctx.cancelled:
+            await self._emit_error(ctx, error_code, reason)
         if ctx.cancelled:
             status = "cancelled"
         ctx.outcome = status
@@ -208,6 +213,15 @@ class RunManager:
             })
         finally:
             self.active.pop(ctx.run_id, None)
+
+    async def _emit_error(self, ctx: RunContext, code: str, message: str) -> None:
+        try:
+            await ctx.error(code, message)
+        except Exception as exc:
+            self.logger.error("runtime error event failed", extra={
+                "run_id": ctx.run_id,
+                "error": str(exc),
+            })
 
     async def _handle_cancel(self, envelope: runtime_pb2.Envelope) -> None:
         self._cancel_run(envelope.run_id)

@@ -68,6 +68,30 @@ class ContextTest(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(request.tool_name, "add")
         self.assertEqual(json.loads(request.arguments_json), {"a": 1})
         self.assertEqual(kwargs["run_id"], "run-1")
+        events = [
+            item.event for item in channel.sent
+            if item.WhichOneof("payload") == "event"
+        ]
+        self.assertEqual(
+            [event.type for event in events],
+            [
+                runtime_pb2.EventType.TOOL_CALL_BEGIN,
+                runtime_pb2.EventType.TOOL_CALL_END,
+            ],
+        )
+        self.assertEqual(
+            events[1].data.fields["result_json"].string_value,
+            "42",
+        )
+
+    async def test_error_emits_normalized_error_event(self) -> None:
+        channel = FakeChannel()
+        ctx = make_context(channel)
+        await ctx.error("MODEL_TIMEOUT", "model timed out", retryable=True)
+        event = channel.sent[0].event
+        self.assertEqual(event.type, runtime_pb2.EventType.ERROR)
+        self.assertEqual(event.data.fields["code"].string_value, "MODEL_TIMEOUT")
+        self.assertTrue(event.data.fields["retryable"].bool_value)
 
     async def test_checkpoint_requires_session(self) -> None:
         ctx = make_context(FakeChannel())

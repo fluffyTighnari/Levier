@@ -115,7 +115,7 @@ middleware 不执行 Agent 的推理循环。它把 Run 分配给一个 Python H
 ```text
 harness/
 ├── pyproject.toml
-├── src/levier_harness/
+├── src/levier_react_runtime/
 │   ├── __main__.py
 │   ├── config.py
 │   ├── logging.py

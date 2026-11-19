@@ -9,7 +9,7 @@
 ```text
 go      make lint / test / build
 proto   make proto-lint / proto-check
-python  harness / contract 测试
+python  runtime / contract 测试
 ```
 
 不负责：本地开发脚本、部署、运行时配置。
@@ -22,5 +22,5 @@ make test
 make build
 make proto-lint
 make proto-check
-make harness-test
+make react-runtime-test
 ```

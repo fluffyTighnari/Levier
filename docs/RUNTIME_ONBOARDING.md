@@ -77,7 +77,15 @@ ctx.resume_from
 ```text
 await ctx.reply(text)
 await ctx.call_tool(name, arguments, timeout_ms=...)
+await ctx.error(code, message, retryable=False)
 ```
+
+`ctx.call_tool` 默认自动发 `TOOL_CALL_BEGIN` / `TOOL_CALL_END`，Runtime 作者
+不需要自己维护 invocation id、耗时或工具错误事件。自定义循环如果已经
+自行发这些事件，可传 `emit_events=False`。
+
+SDK 还会把未捕获的 `run(ctx)` 异常统一映射为 `ERROR` + failed terminal
+状态；`ctx.logger` 自动带 run 上下文。
 
 ### 可选方法
 
@@ -101,9 +109,9 @@ await ctx.checkpoint(state)
 ## 5. 启动和验证
 
 ```sh
-PYTHONPATH=execution/runtime_sdk/src \
-  python examples/echo_runtime/app.py \
-  --config examples/echo_runtime/runtime.yaml
+PYTHONPATH=execution/runtime_sdk/src:execution/echo_runtime/src \
+  python -m levier_echo_runtime \
+  --config execution/echo_runtime/runtime.yaml
 ```
 
 最小验证：

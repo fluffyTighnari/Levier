@@ -21,7 +21,11 @@ sequence numbers, cancellation, tool-call transport, and graceful shutdown.
 
 - core: `runtime_name`, `run_id`, `input`, `params`, `timeouts`, `cancelled`
 - optional: `model`, `tools`, `mcp_bindings`, `session_id`, `resume_from`
-- operations: `reply`, `call_tool`; optional `emit`, `checkpoint`
+- operations: `reply`, `call_tool`, `error`; optional `emit`, `checkpoint`
+- `ctx.logger` automatically carries run/app/runtime/attempt/trace fields
+- `ctx.call_tool` automatically emits `TOOL_CALL_BEGIN` / `TOOL_CALL_END`
+- uncaught `run(ctx)` exceptions become `ERROR` + a failed terminal run
 
-The SDK intentionally does not contain an LLM, ReAct loop, MCP client, or tool
-router. A runtime chooses those capabilities itself.
+The SDK intentionally does not contain an LLM, ReAct loop, or tool router.
+The MCP runtime is an independent shared process; its optional client lives at
+`levier_runtime.mcp` so every runtime can reuse the same protocol implementation.

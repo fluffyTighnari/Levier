@@ -179,7 +179,7 @@ levier status
 levier doctor --credentials ./demo.json
 ```
 
-`echo` 不依赖模型；`react` 需要 Harness、模型配置和工具。
+`echo` 不依赖模型；`react` 需要 React Runtime、模型配置和工具。
 
 ---
 
@@ -1224,7 +1224,7 @@ levier daemon check \
 这是诊断命令，不是只读命令
 会创建临时 App 和 Run
 必须使用预分配且空闲的 daemon id/token
-同一 daemon id 已有真实 Harness 时，服务端返回 AlreadyExists
+同一 daemon id 已有真实 React Runtime 时，服务端返回 AlreadyExists
 ```
 
 退出码：
@@ -1301,15 +1301,15 @@ serve 检测到 pending migration
 ### `daemon "..." already has an active stream`
 
 ```text
-daemon check 使用的 id 正被真实 Harness 占用
-换一个预分配的空闲 id，或临时停止该 Harness
+daemon check 使用的 id 正被真实 React Runtime 占用
+换一个预分配的空闲 id，或临时停止该 React Runtime
 ```
 
 ### `run watch timed out`
 
 ```text
 Run 未在 --timeout / --watch-timeout 内进入终态
-检查 Harness、模型和工具调用，必要时用 levier status / doctor
+检查 React Runtime、模型和工具调用，必要时用 levier status / doctor
 ```
 
 ---

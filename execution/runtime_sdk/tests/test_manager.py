@@ -166,8 +166,43 @@ class RunManagerTest(unittest.IsolatedAsyncioTestCase):
         await manager.handle(assign_envelope())
         await self.wait_done(manager)
         events = [item for item in sender.sent if item.WhichOneof("payload") == "event"]
+        self.assertEqual(
+            [event.event.type for event in events],
+            [
+                runtime_pb2.EventType.RUN_STATUS,
+                runtime_pb2.EventType.MESSAGE_COMPLETED,
+                runtime_pb2.EventType.ERROR,
+                runtime_pb2.EventType.RUN_STATUS,
+            ],
+        )
         self.assertEqual(events[-1].event.data.fields["status"].string_value, "failed")
         self.assertIn("invalid status", events[-1].event.data.fields["reason"].string_value)
+        self.assertEqual(events[-2].event.data.fields["code"].string_value, "INVALID_RUNTIME_STATUS")
+
+    async def test_uncaught_exception_emits_error_and_failed(self) -> None:
+        sender = FakeSender()
+
+        async def runner(ctx):
+            raise RuntimeError("boom")
+
+        manager = RunManager(
+            sender,
+            ManagerConfig(runtime_name="echo1"),
+            runner,
+        )
+        await manager.handle(assign_envelope())
+        await self.wait_done(manager)
+        events = [item for item in sender.sent if item.WhichOneof("payload") == "event"]
+        self.assertEqual(
+            [event.event.type for event in events],
+            [
+                runtime_pb2.EventType.RUN_STATUS,
+                runtime_pb2.EventType.ERROR,
+                runtime_pb2.EventType.RUN_STATUS,
+            ],
+        )
+        self.assertEqual(events[-2].event.data.fields["code"].string_value, "RUNTIME_ERROR")
+        self.assertEqual(events[-1].event.data.fields["status"].string_value, "failed")
 
 
 if __name__ == "__main__":

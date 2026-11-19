@@ -10,7 +10,7 @@
 ```text
 App           业务函数 + 工具元数据 + WebSocket
 Levier    注册、调度、路由、事件、持久化
-Harness       单次 Run 的 Agent 循环（当前 Python）
+React Runtime       单次 Run 的 Agent 循环（当前 Python）
 MCP Runtime   独立进程：MCP 连接、会话、凭据解析
 PostgreSQL    目录、运行、事件、任务、调用记录
 ```
@@ -53,8 +53,8 @@ App POST /runs
   → control.Handle（control/schedule.go）
       → register.AssembleTaskMaterials
       → AssignRun(attempt/lease_epoch)
-      → TaskAssign → Harness
-  → Harness events
+      → TaskAssign → React Runtime
+  → React Runtime events
       → control.handleEvent（control/events.go）
       → runstore.AppendEvent
       → appHub.Publish（订阅者）
@@ -66,13 +66,13 @@ App POST /runs
 ## 4. 三种工具路径
 
 ```text
-local    Harness → ToolCallRequest → gateway.Invoker → AppHub → App WS
-global   Harness → ToolCallRequest → gateway.Invoker → executor (http/webhook)
-MCP      Harness → mcp_runtime（本地 JSON-RPC）→ MCP server
+local    React Runtime → ToolCallRequest → gateway.Invoker → AppHub → App WS
+global   React Runtime → ToolCallRequest → gateway.Invoker → executor (http/webhook)
+MCP      React Runtime → mcp_runtime（本地 JSON-RPC）→ MCP server
 ```
 
 - local/global 经过 Gateway，有 `tool_invocations`。
-- MCP 不经过 Gateway，只有 Harness 事件。
+- MCP 不经过 Gateway，只有 React Runtime 事件。
 - MCP 凭据由 runtime 解析，不进入 TaskAssign 明文。
 
 ## 5. 加东西的位置
@@ -82,7 +82,7 @@ MCP      Harness → mcp_runtime（本地 JSON-RPC）→ MCP server
 | 新 App | 不改代码；按 `APP_ONBOARDING.md` |
 | 新 Daemon | `DAEMON_CONTRACT.md` + `make daemon-check` |
 | 新 HTTP 路由 | `httpapi/` 对应文件 + `openapi.yaml` |
-| 新事件字段 | `internal/contract/events.go`（Go）并与 Harness 对齐 |
+| 新事件字段 | `internal/contract/events.go`（Go）并与 React Runtime 对齐 |
 | 新错误码 | `internal/errs/errors.go` |
 | 新 MCP transport | `execution/mcp_runtime/` + 测试 |
 | 新存储查询 | 对应 `runstore/*.go` |
@@ -91,11 +91,11 @@ MCP      Harness → mcp_runtime（本地 JSON-RPC）→ MCP server
 
 ```text
 execution/agent_core/  循环、工具编排、CoreEvent、取消（无 MW 依赖）
-harness adapter      TaskAssign ↔ RunSpec、CoreEvent ↔ MW Event、工具桥
+react-runtime adapter      TaskAssign ↔ RunSpec、CoreEvent ↔ MW Event、工具桥
 ```
 
 契约：`docs/AGENT_CORE_CONTRACT.md`。
-harness 只保留 TaskAssign/事件/工具适配。
+react-runtime 只保留 TaskAssign/事件/工具适配。
 
 ## 7. 明确不做的事
 
@@ -103,7 +103,7 @@ harness 只保留 TaskAssign/事件/工具适配。
 不引入 DI / 六边形 / 通用领域层
 不为行数强制拆函数
 不让 Levier 代理 MCP 调用
-不让 Harness 见 MCP 凭据
+不让 React Runtime 见 MCP 凭据
 不新增第二套事件/错误模型
 ```
 

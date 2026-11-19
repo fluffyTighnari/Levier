@@ -1,7 +1,7 @@
 """Levier — agent core data types.
 
 These are the only structures shared with adapters. They must not import
-Levier, Harness, or MCP runtime code.
+Levier, runtime, or MCP runtime code.
 
 Copyright 2026 The Levier Authors.
 """
