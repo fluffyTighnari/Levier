@@ -65,6 +65,7 @@
 | 公开前检查 / 下一阶段 | `docs/TODO.md` |
 | 配置盘点 / 环境变量 | `docs/CONFIG.md` |
 | 备份 / 恢复 / 卷 / secret 轮换 | `docs/LIFECYCLE.md` + `scripts/backup.sh`、`scripts/restore.sh` |
+| 引导 / App 凭据管理规划 | `docs/ONBOARDING_CREDENTIALS_PLAN.md` |
 | Harness / Agent 循环 | `execution/harness/` |
 | Agent Core 契约 | `execution/agent_core/` + `docs/AGENT_CORE_CONTRACT.md` |
 | MCP 连接 / 会话 | `execution/mcp_runtime/` + `docs/MCP.md` |

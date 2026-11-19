@@ -43,11 +43,12 @@ MAP.md          仓库地图
 | `CLI_DISTRIBUTION_PLAN.md` | CLI 操作面与分发安装计划 |
 | `CLI_ACTIONS.md` | 动作型 CLI：app / run / migrate / daemon 设计 |
 | `RELEASE.md` | release 构建、checksums、tag 与发布流程 |
-| `TODO.md` | 公开前最终检查清单 + 6 配置外部化 / 7 服务自描述 / 8 状态总览 / 9 逐跳自检 / 10 生命周期计划 |
+| `TODO.md` | 公开前最终检查清单 + 6 配置外部化 / 7 服务自描述 / 8 状态总览 / 9 逐跳自检 / 10 生命周期 / 11 引导与凭据计划 |
 | `SELF_DESCRIPTION_PLAN.md` | 7 服务自描述改造计划（内部开发文档） |
 | `STATUS_OVERVIEW_PLAN.md` | 8 状态总览改造计划（内部开发文档） |
 | `HOP_CHECK_PLAN.md` | 9 逐跳自检改造计划（内部开发文档） |
 | `LIFECYCLE_PLAN.md` | 10 生命周期（进程与数据）改造计划（内部开发文档） |
+| `ONBOARDING_CREDENTIALS_PLAN.md` | 11 引导与凭据管理计划（内部开发文档） |
 | `adr/` | 历史架构决策记录 |
 | `api/openapi.yaml` | HTTP API 契约 |
 
@@ -56,6 +57,7 @@ MAP.md          仓库地图
 ```text
 SCOPE → MAP → 你的任务对应文档
 接 App        → APP_ONBOARDING.md
+引导计划      → ONBOARDING_CREDENTIALS_PLAN.md
 用 CLI        → CLI_REFERENCE.md
 安装 CLI      → INSTALL.md
 发布          → RELEASE.md

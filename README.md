@@ -1194,6 +1194,7 @@ deploy/           容器镜像与 Compose
 | `docs/DESIGN.md` | 核心设计（当前实现） |
 | `docs/CONFIG.md` | 配置盘点、环境变量矩阵与外部化契约 |
 | `docs/LIFECYCLE.md` | 备份、恢复、Docker volume 与 secret 轮换 |
+| `docs/ONBOARDING_CREDENTIALS_PLAN.md` | 引导与 App 凭据管理计划 |
 | `docs/MVP.md` | 单机 MVP 的边界、启动、验收与限制 |
 | `docs/CLI_REFERENCE.md` | CLI 命令、参数、环境变量、JSON、退出码 |
 | `docs/INSTALL.md` | CLI 安装、升级、卸载、checksum、镜像/离线 |

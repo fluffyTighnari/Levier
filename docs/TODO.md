@@ -4,7 +4,7 @@
 
 > 当前决策：**暂不公开仓库，不创建正式 `v0.1.0`**。
 > 5 CLI 与分发进入冻结状态；下一阶段是 **6 配置外部化**。
-> 最后更新：2026-11-18。
+> 最后更新：2026-11-19。
 
 ---
 
@@ -492,7 +492,15 @@ Levier  负责启动、就绪、优雅停止和恢复语义
 
 ---
 
-## 8. 相关文档
+## 8. 下一阶段：11 引导与凭据管理
+
+计划文档：`docs/ONBOARDING_CREDENTIALS_PLAN.md`
+
+目标是让第一次使用 Levier 的人从启动、创建 App、拿到凭据、验证接入到完成第一个 Run，只需要遵循一条清晰路径；同时统一 App 凭据的文件格式、权限、指纹和轮换行为。部署级 Admin / daemon / 数据库 / MCP 凭据继续沿用 10D 的边界和轮换方式。
+
+本阶段开始实现前，先确认计划中的默认目录、凭据文件字段、App 列表范围和轮换语义。
+
+## 9. 相关文档
 
 ```text
 docs/CLI_REFERENCE.md
@@ -505,4 +513,5 @@ docs/SELF_DESCRIPTION_PLAN.md
 docs/STATUS_OVERVIEW_PLAN.md
 docs/HOP_CHECK_PLAN.md
 docs/LIFECYCLE_PLAN.md
+docs/ONBOARDING_CREDENTIALS_PLAN.md
 ```
