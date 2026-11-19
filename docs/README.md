@@ -78,3 +78,5 @@ SCOPE → MAP → 你的任务对应文档
 备份 / 轮换   → LIFECYCLE.md
 迁移          → MIGRATION-1D.md
 ```
+
+- [`PLAN_EXECUTE.md`](PLAN_EXECUTE.md) - Counter App plan/execute walkthrough.
