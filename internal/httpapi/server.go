@@ -63,6 +63,21 @@ type Canceller interface {
 	CancelRun(ctx context.Context, runID, reason string) (runstore.Run, error)
 }
 
+// RunLister is the optional operator run-listing subset.
+type RunLister interface {
+	ListRuns(ctx context.Context, filter runstore.RunFilter) (runstore.RunPage, error)
+}
+
+// TaskLister is the optional operator task-listing subset.
+type TaskLister interface {
+	ListTasks(ctx context.Context, filter workflow.TaskFilter) ([]workflow.Task, error)
+}
+
+// DaemonSource supplies connected daemon snapshots for the admin view.
+type DaemonSource interface {
+	List() []connection.DaemonInfo
+}
+
 // StatusProvider supplies the runtime status overview.
 type StatusProvider interface {
 	Snapshot(ctx context.Context) statuspkg.Snapshot
@@ -88,6 +103,7 @@ type Config struct {
 	MaxBodyBytes         int64
 	WSTokenTTL           time.Duration
 	AppHub               *connection.AppHub
+	Daemons              DaemonSource
 	ReadinessCheck       func(context.Context) error
 	Canceller            Canceller
 	Metrics              *observe.Registry
@@ -179,6 +195,11 @@ func (s *Server) routes() {
 	s.mux.HandleFunc("POST "+APIPrefix+"/ws-token", s.handleIssueWSToken)
 	s.mux.HandleFunc("POST /admin/apps", s.handleAdminCreateApp)
 	s.mux.HandleFunc("GET /admin/apps", s.handleAdminListApps)
+	s.mux.HandleFunc("GET /admin/runs", s.handleAdminListRuns)
+	s.mux.HandleFunc("GET /admin/runs/{run_id}", s.handleAdminGetRun)
+	s.mux.HandleFunc("POST /admin/runs/{run_id}/cancel", s.handleAdminCancelRun)
+	s.mux.HandleFunc("GET /admin/daemons", s.handleAdminListDaemons)
+	s.mux.HandleFunc("GET /admin/tasks", s.handleAdminListTasks)
 	s.mux.HandleFunc("POST /admin/mcp", s.handleAdminUpsertMCP)
 	s.mux.HandleFunc("GET /admin/mcp", s.handleAdminListMCP)
 	s.mux.HandleFunc("DELETE /admin/mcp/{name}", s.handleAdminDeleteMCP)

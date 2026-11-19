@@ -291,8 +291,9 @@ func runServer(args []string) {
 			MaxToolTimeoutMS:     selfdesc.DefaultMaxToolTimeoutMS,
 			WSTokenTTL:           cfg.HTTP.WSTokenTTL.Std(),
 		}),
-		Status: statusService,
-		AppHub: appHub,
+		Status:  statusService,
+		AppHub:  appHub,
+		Daemons: hub,
 		ReadinessCheck: func(ctx context.Context) error {
 			return db.Health(ctx, pool, cfg.Database.HealthTimeout.Std())
 		},

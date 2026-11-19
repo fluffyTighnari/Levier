@@ -41,6 +41,67 @@ type wsTokenResponse struct {
 	ExpiresIn int64  `json:"expires_in"`
 }
 
+type adminTaskView struct {
+	TaskID         string `json:"task_id"`
+	RunID          string `json:"run_id"`
+	TaskType       string `json:"task_type"`
+	Status         string `json:"status"`
+	Attempt        int    `json:"attempt"`
+	MaxAttempts    int    `json:"max_attempts"`
+	AvailableAt    string `json:"available_at"`
+	LeaseOwner     string `json:"lease_owner,omitempty"`
+	LeaseExpiresAt string `json:"lease_expires_at,omitempty"`
+	LastError      string `json:"last_error,omitempty"`
+	CreatedAt      string `json:"created_at"`
+	UpdatedAt      string `json:"updated_at"`
+}
+
+type adminRunView struct {
+	RunID            string          `json:"run_id"`
+	AppID            string          `json:"app_id"`
+	Runtime          string          `json:"runtime"`
+	Strategy         string          `json:"strategy"`
+	Status           string          `json:"status"`
+	Attempt          int             `json:"attempt"`
+	SessionID        string          `json:"session_id,omitempty"`
+	TraceID          string          `json:"trace_id,omitempty"`
+	AssignedDaemonID string          `json:"assigned_daemon_id,omitempty"`
+	LeaseEpoch       int64           `json:"lease_epoch"`
+	AssignedAt       string          `json:"assigned_at,omitempty"`
+	LastEventAttempt int             `json:"last_event_attempt"`
+	LastEventSeq     int64           `json:"last_event_seq"`
+	CreatedAt        string          `json:"created_at"`
+	UpdatedAt        string          `json:"updated_at"`
+	Tasks            []adminTaskView `json:"tasks,omitempty"`
+}
+
+type adminRunListResponse struct {
+	Runs       []adminRunView `json:"runs"`
+	NextCursor string         `json:"next_cursor,omitempty"`
+}
+
+type adminTaskListResponse struct {
+	Tasks []adminTaskView `json:"tasks"`
+}
+
+type adminDaemonView struct {
+	DaemonID            string   `json:"daemon_id"`
+	Status              string   `json:"status"`
+	RuntimeType         string   `json:"runtime_type"`
+	MaxConcurrentRuns   int32    `json:"max_concurrent_runs"`
+	Running             int32    `json:"running"`
+	Reserved            int32    `json:"reserved"`
+	Available           int32    `json:"available"`
+	Healthy             bool     `json:"healthy"`
+	SupportedStrategies []string `json:"supported_strategies,omitempty"`
+	ConnectedAt         string   `json:"connected_at"`
+	LastHeartbeat       string   `json:"last_heartbeat"`
+}
+
+type adminDaemonListResponse struct {
+	Daemons []adminDaemonView `json:"daemons"`
+}
+
 type strategyRequest struct {
 	Name   string         `json:"name"`
 	Params map[string]any `json:"params,omitempty"`
@@ -243,6 +304,38 @@ func (c *apiClient) listApps(ctx context.Context) ([]appView, error) {
 func (c *apiClient) issueWSToken(ctx context.Context) (wsTokenResponse, error) {
 	var response wsTokenResponse
 	err := c.do(ctx, http.MethodPost, "/api/v1/ws-token", nil, &response)
+	return response, err
+}
+
+func (c *apiClient) listAdminRuns(ctx context.Context, query url.Values) (adminRunListResponse, error) {
+	var response adminRunListResponse
+	err := c.do(ctx, http.MethodGet, "/admin/runs?"+query.Encode(), nil, &response)
+	return response, err
+}
+
+func (c *apiClient) getAdminRun(ctx context.Context, runID string) (adminRunView, error) {
+	var response adminRunView
+	err := c.do(ctx, http.MethodGet, "/admin/runs/"+url.PathEscape(runID), nil, &response)
+	return response, err
+}
+
+func (c *apiClient) cancelAdminRun(ctx context.Context, runID, reason string) (cancelRunResponse, error) {
+	var response cancelRunResponse
+	err := c.do(ctx, http.MethodPost, "/admin/runs/"+url.PathEscape(runID)+"/cancel", map[string]string{
+		"reason": reason,
+	}, &response)
+	return response, err
+}
+
+func (c *apiClient) listAdminDaemons(ctx context.Context) (adminDaemonListResponse, error) {
+	var response adminDaemonListResponse
+	err := c.do(ctx, http.MethodGet, "/admin/daemons", nil, &response)
+	return response, err
+}
+
+func (c *apiClient) listAdminTasks(ctx context.Context, query url.Values) (adminTaskListResponse, error) {
+	var response adminTaskListResponse
+	err := c.do(ctx, http.MethodGet, "/admin/tasks?"+query.Encode(), nil, &response)
 	return response, err
 }
 

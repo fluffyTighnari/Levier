@@ -99,6 +99,33 @@ func (f *fakeStore) ListSessionEvents(_ context.Context, _ string, afterAttempt 
 	return f.sessionEvents, nil
 }
 
+func (f *fakeStore) ListRuns(_ context.Context, filter runstore.RunFilter) (runstore.RunPage, error) {
+	page := runstore.RunPage{Runs: []runstore.Run{}}
+	for _, run := range f.runs {
+		if len(filter.Statuses) > 0 {
+			matched := false
+			for _, status := range filter.Statuses {
+				if run.Status == status {
+					matched = true
+					break
+				}
+			}
+			if !matched {
+				continue
+			}
+		}
+		if filter.AppID != "" && run.AppID != filter.AppID {
+			continue
+		}
+		page.Runs = append(page.Runs, run)
+	}
+	limit := filter.Limit
+	if limit > 0 && len(page.Runs) > limit {
+		page.Runs = page.Runs[:limit]
+	}
+	return page, nil
+}
+
 type fakeCanceller struct {
 	run    runstore.Run
 	reason string
@@ -132,6 +159,29 @@ func (f *fakeQueue) Enqueue(_ context.Context, task workflow.Task) (workflow.Tas
 	}
 	f.tasks = append(f.tasks, task)
 	return task, nil
+}
+
+func (f *fakeQueue) ListTasks(_ context.Context, filter workflow.TaskFilter) ([]workflow.Task, error) {
+	result := make([]workflow.Task, 0, len(f.tasks))
+	for _, task := range f.tasks {
+		if filter.RunID != "" && task.RunID != filter.RunID {
+			continue
+		}
+		if len(filter.Statuses) > 0 {
+			matched := false
+			for _, status := range filter.Statuses {
+				if task.Status == status {
+					matched = true
+					break
+				}
+			}
+			if !matched {
+				continue
+			}
+		}
+		result = append(result, task)
+	}
+	return result, nil
 }
 
 const validBody = `{

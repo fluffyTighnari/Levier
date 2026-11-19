@@ -44,6 +44,8 @@ func runCLI(args []string, stdout, stderr io.Writer) int {
 		return runApp(args[1:], stdout, stderr)
 	case "run":
 		return runRun(args[1:], stdout, stderr)
+	case "ops":
+		return runOps(args[1:], stdout, stderr)
 	case "migrate":
 		return runMigrate(args[1:], stdout, stderr)
 	case "maintenance":
@@ -123,6 +125,7 @@ func printUsage(out io.Writer) {
 	fmt.Fprintln(out, "  levier status [--server url] [--json]")
 	fmt.Fprintln(out, "  levier app init|show|check|list|rotate-key")
 	fmt.Fprintln(out, "  levier run submit|watch|cancel")
+	fmt.Fprintln(out, "  levier ops runs|daemons|tasks")
 	fmt.Fprintln(out, "  levier migrate status|up")
 	fmt.Fprintln(out, "  levier maintenance status|prune")
 	fmt.Fprintln(out, "  levier config check|print")

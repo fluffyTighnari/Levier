@@ -66,6 +66,7 @@
 | 公开前检查 / 下一阶段 | `docs/TODO.md` |
 | 配置盘点 / 环境变量 | `docs/CONFIG.md` |
 | 备份 / 恢复 / 卷 / secret 轮换 | `docs/LIFECYCLE.md` + `scripts/backup.sh`、`scripts/restore.sh` |
+| 运行操作面 | `docs/RUNTIME_OPS.md` + `cmd/levier/ops*.go` |
 | 引导 / App 凭据管理 | `docs/ONBOARDING.md`、`docs/ONBOARDING_CREDENTIALS_PLAN.md` |
 | Harness / Agent 循环 | `execution/harness/` |
 | Agent Core 契约 | `execution/agent_core/` + `docs/AGENT_CORE_CONTRACT.md` |
@@ -103,8 +104,9 @@ mcp_runtime → 不直连控制面
 5. docs/DESIGN.md          控制面设计
 6. docs/ARCHITECTURE.md    依赖与分层
 7. deploy/README.md        部署
-8. docs/LIFECYCLE.md       备份/恢复/轮换
-9. docs/MIGRATION-1D.md    命名/有状态迁移
+8. docs/RUNTIME_OPS.md     运行操作面
+9. docs/LIFECYCLE.md       备份/恢复/轮换
+10. docs/MIGRATION-1D.md   命名/有状态迁移
 ```
 
 ## 6. 结构护栏

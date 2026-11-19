@@ -75,6 +75,11 @@ func TestSubcommandHelp(t *testing.T) {
 		{name: "run submit", run: runRunSubmit},
 		{name: "run watch", run: runRunWatch},
 		{name: "run cancel", run: runRunCancel},
+		{name: "ops runs list", run: runOpsRunsList},
+		{name: "ops runs show", run: runOpsRunsShow},
+		{name: "ops runs cancel", run: runOpsRunsCancel},
+		{name: "ops daemons", run: runOpsDaemons},
+		{name: "ops tasks", run: runOpsTasks},
 		{name: "migrate status", run: runMigrateStatus},
 		{name: "migrate up", run: runMigrateUp},
 		{name: "maintenance status", run: runMaintenanceStatus},
@@ -108,6 +113,18 @@ func TestSubcommandBadFlag(t *testing.T) {
 	}
 	if !strings.Contains(stderr.String(), "usage: levier doctor") {
 		t.Fatalf("stderr usage = %s", stderr.String())
+	}
+}
+
+func TestRunOpsHelp(t *testing.T) {
+	var stdout, stderr bytes.Buffer
+	if code := runOps([]string{"help"}, &stdout, &stderr); code != 0 {
+		t.Fatalf("ops help = %d", code)
+	}
+	for _, want := range []string{"ops runs", "ops daemons", "ops tasks"} {
+		if !strings.Contains(stdout.String(), want) {
+			t.Fatalf("ops help missing %q: %s", want, stdout.String())
+		}
 	}
 }
 

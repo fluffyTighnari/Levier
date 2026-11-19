@@ -290,6 +290,8 @@ levier doctor --credentials /path/to/app.json
 levier app show --credentials /path/to/app.json
 levier app check --credentials /path/to/app.json
 levier app list
+levier ops runs list
+levier ops daemons
 levier run submit --credentials /path/to/app.json --strategy echo --prompt "hello" --watch
 levier maintenance status
 levier maintenance prune --dry-run
@@ -748,6 +750,11 @@ B. 接受重复，并提供人工或自动补偿
 | `GET` | `/status` | 无 | 运行状态总览（daemon、App、Run、workflow） |
 | `POST` | `/admin/apps` | Admin token | 创建 App，返回一次性 key |
 | `GET` | `/admin/apps` | Admin token | 只读 App 列表，不返回 key |
+| `GET` | `/admin/runs` | Admin token | 运行列表，支持过滤和分页 |
+| `GET` | `/admin/runs/{run_id}` | Admin token | 运行详情和任务 |
+| `POST` | `/admin/runs/{run_id}/cancel` | Admin token | 运维取消单个 Run |
+| `GET` | `/admin/daemons` | Admin token | daemon 容量和健康视图 |
+| `GET` | `/admin/tasks` | Admin token | workflow task / dead letter 视图 |
 | `POST` | `/admin/apps/{app_id}/rotate-key` | Admin token | 轮换 App key |
 | `GET` | `/api/v1/apps/{app_id}` | App key | 验证身份与状态 |
 | `POST` | `/api/v1/apps` | App key | 全量更新工具 / MCP 引用 |
@@ -1174,7 +1181,7 @@ python3 tests/app/app_check.py --credentials /path/to/app.json \
 ## 11. 目录与文档
 
 ```text
-cmd/              levier（serve / app / run / migrate / maintenance / daemon check）/ migrate
+cmd/              levier（serve / app / run / ops / migrate / maintenance / daemon check）/ migrate
 internal/         控制面、存储、调度、网关、HTTP/WS
 contracts/        HTTP / WS 机器可读契约
 proto/            gRPC 契约
@@ -1200,6 +1207,7 @@ deploy/           容器镜像与 Compose
 | `docs/DESIGN.md` | 核心设计（当前实现） |
 | `docs/CONFIG.md` | 配置盘点、环境变量矩阵与外部化契约 |
 | `docs/LIFECYCLE.md` | 备份、恢复、Docker volume 与 secret 轮换 |
+| `docs/RUNTIME_OPS.md` | 运维运行列表、Run 取消、daemon 和任务视图 |
 | `docs/ONBOARDING_CREDENTIALS_PLAN.md` | 引导与 App 凭据管理设计与实现记录 |
 | `docs/MVP.md` | 单机 MVP 的边界、启动、验收与限制 |
 | `docs/CLI_REFERENCE.md` | CLI 命令、参数、环境变量、JSON、退出码 |

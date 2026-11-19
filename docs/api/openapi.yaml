@@ -130,6 +130,151 @@ paths:
                     type: string
         default:
           $ref: '#/components/responses/Error'
+  /admin/runs:
+    get:
+      summary: List runs for operators
+      operationId: listAdminRuns
+      security:
+        - adminToken: []
+      parameters:
+        - name: status
+          in: query
+          description: Comma-separated run statuses
+          schema:
+            type: string
+        - name: app_id
+          in: query
+          schema:
+            type: string
+        - name: daemon_id
+          in: query
+          schema:
+            type: string
+        - name: session_id
+          in: query
+          schema:
+            type: string
+        - name: cursor
+          in: query
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 200
+            default: 50
+      responses:
+        "200":
+          description: Run page
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminRunListResponse'
+        default:
+          $ref: '#/components/responses/Error'
+  /admin/runs/{run_id}:
+    get:
+      summary: Get one run with workflow tasks
+      operationId: getAdminRun
+      security:
+        - adminToken: []
+      parameters:
+        - $ref: '#/components/parameters/RunID'
+      responses:
+        "200":
+          description: Run detail
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminRunView'
+        default:
+          $ref: '#/components/responses/Error'
+  /admin/runs/{run_id}/cancel:
+    post:
+      summary: Cancel a run as an operator
+      operationId: cancelAdminRun
+      security:
+        - adminToken: []
+      parameters:
+        - $ref: '#/components/parameters/RunID'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                reason:
+                  type: string
+      responses:
+        "200":
+          description: Run cancellation result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CancelRunResponse'
+        default:
+          $ref: '#/components/responses/Error'
+  /admin/daemons:
+    get:
+      summary: List connected daemon capacity
+      operationId: listAdminDaemons
+      security:
+        - adminToken: []
+      responses:
+        "200":
+          description: Daemon list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminDaemonListResponse'
+        default:
+          $ref: '#/components/responses/Error'
+  /admin/tasks:
+    get:
+      summary: List workflow tasks for operators
+      operationId: listAdminTasks
+      security:
+        - adminToken: []
+      parameters:
+        - name: status
+          in: query
+          description: Comma-separated task statuses
+          schema:
+            type: string
+        - name: type
+          in: query
+          description: Comma-separated task types
+          schema:
+            type: string
+        - name: run_id
+          in: query
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 500
+            default: 100
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+      responses:
+        "200":
+          description: Task list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminTaskListResponse'
+        default:
+          $ref: '#/components/responses/Error'
   /apps:
     post:
       summary: Update the authenticated App
@@ -664,3 +809,134 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/AppView'
+    AdminTaskView:
+      type: object
+      required: [task_id, run_id, task_type, status, attempt, max_attempts, available_at, created_at, updated_at]
+      properties:
+        task_id:
+          type: string
+        run_id:
+          type: string
+        task_type:
+          type: string
+        status:
+          type: string
+        attempt:
+          type: integer
+        max_attempts:
+          type: integer
+        available_at:
+          type: string
+          format: date-time
+        lease_owner:
+          type: string
+        lease_expires_at:
+          type: string
+          format: date-time
+        last_error:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+    AdminRunView:
+      type: object
+      required: [run_id, app_id, runtime, strategy, status, attempt, created_at, updated_at]
+      properties:
+        run_id:
+          type: string
+        app_id:
+          type: string
+        runtime:
+          type: string
+        strategy:
+          type: string
+        status:
+          type: string
+        attempt:
+          type: integer
+        session_id:
+          type: string
+        trace_id:
+          type: string
+        assigned_daemon_id:
+          type: string
+        lease_epoch:
+          type: integer
+          format: int64
+        assigned_at:
+          type: string
+          format: date-time
+        last_event_attempt:
+          type: integer
+        last_event_seq:
+          type: integer
+          format: int64
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        tasks:
+          type: array
+          items:
+            $ref: '#/components/schemas/AdminTaskView'
+    AdminRunListResponse:
+      type: object
+      required: [runs]
+      properties:
+        runs:
+          type: array
+          items:
+            $ref: '#/components/schemas/AdminRunView'
+        next_cursor:
+          type: string
+    AdminTaskListResponse:
+      type: object
+      required: [tasks]
+      properties:
+        tasks:
+          type: array
+          items:
+            $ref: '#/components/schemas/AdminTaskView'
+    AdminDaemonView:
+      type: object
+      required: [daemon_id, status, runtime_type, max_concurrent_runs, running, reserved, available, healthy, connected_at, last_heartbeat]
+      properties:
+        daemon_id:
+          type: string
+        status:
+          type: string
+        runtime_type:
+          type: string
+        max_concurrent_runs:
+          type: integer
+        running:
+          type: integer
+        reserved:
+          type: integer
+        available:
+          type: integer
+        healthy:
+          type: boolean
+        supported_strategies:
+          type: array
+          items:
+            type: string
+        connected_at:
+          type: string
+          format: date-time
+        last_heartbeat:
+          type: string
+          format: date-time
+    AdminDaemonListResponse:
+      type: object
+      required: [daemons]
+      properties:
+        daemons:
+          type: array
+          items:
+            $ref: '#/components/schemas/AdminDaemonView'

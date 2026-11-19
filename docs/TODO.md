@@ -509,7 +509,22 @@ Levier  负责启动、就绪、优雅停止和恢复语义
 
 本阶段仍不做 App archive/delete、多 key 重叠和新的 Secret Manager。
 
-## 9. 相关文档
+## 9. 12 运行操作面（第一版）
+
+- [x] Admin Run 列表、详情和过滤分页
+- [x] Admin 单 Run 取消和操作日志
+- [x] Admin daemon 只读视图
+- [x] Admin workflow task 只读视图
+- [x] `levier ops` CLI
+- [x] `/admin` 路由与 OpenAPI
+- [ ] daemon drain / resume
+- [ ] Dead Letter 重试
+- [ ] 批量操作
+- [ ] Web 控制台
+
+第一版只读视图和单 Run 取消已完成；高风险操作留到 12B。
+
+## 10. 相关文档
 
 ```text
 docs/CLI_REFERENCE.md
@@ -523,4 +538,5 @@ docs/STATUS_OVERVIEW_PLAN.md
 docs/HOP_CHECK_PLAN.md
 docs/LIFECYCLE_PLAN.md
 docs/ONBOARDING_CREDENTIALS_PLAN.md
+docs/RUNTIME_OPS.md
 ```

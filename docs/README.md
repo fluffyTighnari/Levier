@@ -34,6 +34,7 @@ MAP.md          仓库地图
 | `INSTALL.md` | CLI 安装、升级、卸载、checksum、镜像/离线 |
 | `MVP.md` | 单机 MVP 启动、验收、限制 |
 | `LIFECYCLE.md` | 备份、恢复、Docker volume 与 secret 轮换 |
+| `RUNTIME_OPS.md` | 运维运行列表、Run 取消、daemon 和任务视图 |
 | `MIGRATION-1D.md` | Compose / 数据库 / 指标改名迁移 |
 
 ## 路线与待办
@@ -44,7 +45,7 @@ MAP.md          仓库地图
 | `CLI_DISTRIBUTION_PLAN.md` | CLI 操作面与分发安装计划 |
 | `CLI_ACTIONS.md` | 动作型 CLI：app / run / migrate / daemon 设计 |
 | `RELEASE.md` | release 构建、checksums、tag 与发布流程 |
-| `TODO.md` | 公开前最终检查清单 + 6 配置外部化 / 7 服务自描述 / 8 状态总览 / 9 逐跳自检 / 10 生命周期 / 11 引导与凭据计划 |
+| `TODO.md` | 公开前最终检查清单 + 6 配置外部化 / 7 服务自描述 / 8 状态总览 / 9 逐跳自检 / 10 生命周期 / 11 引导与凭据 / 12 运行操作面 |
 | `SELF_DESCRIPTION_PLAN.md` | 7 服务自描述改造计划（内部开发文档） |
 | `STATUS_OVERVIEW_PLAN.md` | 8 状态总览改造计划（内部开发文档） |
 | `HOP_CHECK_PLAN.md` | 9 逐跳自检改造计划（内部开发文档） |
@@ -69,6 +70,7 @@ SCOPE → MAP → 你的任务对应文档
 改 Harness    → AGENT_CORE_CONTRACT.md + execution/harness/README.md
 改 MCP        → MCP.md
 部署          → deploy/README.md
+运行操作      → RUNTIME_OPS.md
 备份 / 轮换   → LIFECYCLE.md
 迁移          → MIGRATION-1D.md
 ```

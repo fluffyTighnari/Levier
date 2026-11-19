@@ -123,9 +123,9 @@ LEVIER_CREDENTIALS
 | `LEVIER_CONFIG` | `serve`、`doctor`、`migrate`、`maintenance`、`config` | YAML 配置路径 |
 | `LEVIER_ENV` | `serve`、`config` | `development` 或 `production` |
 | `MIDDLEWARE_CONFIG` | `serve` | 旧名兼容；`LEVIER_CONFIG` 优先 |
-| `LEVIER_SERVER` | `doctor`、`status`、`app`、`run`、`daemon check` | HTTP 地址 |
+| `LEVIER_SERVER` | `doctor`、`status`、`app`、`run`、`ops`、`daemon check` | HTTP 地址 |
 | `LEVIER_CREDENTIALS` | `app init/show/check/rotate-key`、`run`、`doctor` | 凭据文件路径 |
-| `LEVIER_ADMIN_TOKEN` | `app init`、`app rotate-key`、`app list`、`daemon check`、`doctor` | Admin token |
+| `LEVIER_ADMIN_TOKEN` | `app init`、`app rotate-key`、`app list`、`ops`、`daemon check`、`doctor` | Admin token |
 | `LEVIER_APP_NAME` | `app init` | App 名称 |
 | `LEVIER_GRPC` | `daemon check` | gRPC 地址 |
 | `LEVIER_DAEMON_ID` | `daemon check` | 预分配 daemon id |
@@ -309,7 +309,7 @@ JSON 结构：
     {
       "name": "migrations",
       "status": "ok",
-      "message": "version 10 (10 applied)"
+      "message": "version 11 (11 applied)"
     }
   ]
 }
@@ -1017,9 +1017,79 @@ JSON：
 
 ---
 
-## 8. 迁移命令
+## 8. Ops 命令
 
-### 8.1 `levier migrate status`
+```sh
+levier ops runs list
+levier ops runs show --run-id <id>
+levier ops runs cancel --run-id <id> --reason "..." --yes
+levier ops daemons
+levier ops tasks --status DEAD
+```
+
+所有命令使用 Admin token：
+
+```text
+--admin-token 或 LEVIER_ADMIN_TOKEN
+```
+
+### 8.1 `levier ops runs list`
+
+```sh
+levier ops runs list [--status running] [--app-id id] [--daemon-id id] \
+  [--session-id id] [--limit 50] [--cursor value] [--json]
+```
+
+列表按创建时间倒序，返回 `next_cursor` 时传给 `--cursor` 获取下一页。
+
+### 8.2 `levier ops runs show`
+
+```sh
+levier ops runs show --run-id <id> [--json]
+```
+
+显示 Run 状态、App、assigned daemon、attempt、最后事件位置和 RunTask。任务输出不包含 payload。
+
+### 8.3 `levier ops runs cancel`
+
+```sh
+levier ops runs cancel --run-id <id> [--reason text] --yes [--json]
+```
+
+终态 Run 返回原状态；非终态 Run 走已有 CancelRun 流程。没有 `--yes` 不发送取消请求。
+
+### 8.4 `levier ops daemons`
+
+```sh
+levier ops daemons [--json]
+```
+
+只读显示 daemon 容量、running/reserved/available、健康状态和最后心跳。
+
+### 8.5 `levier ops tasks`
+
+```sh
+levier ops tasks [--status DEAD] [--type RUN_DISPATCH] [--run-id id] \
+  [--limit 100] [--offset 0] [--json]
+```
+
+默认查看 `DEAD`。不返回 Task payload；本版不支持重试。
+
+Admin API：
+
+```text
+GET  /admin/runs
+GET  /admin/runs/{run_id}
+POST /admin/runs/{run_id}/cancel
+GET  /admin/daemons
+GET  /admin/tasks
+```
+
+---
+
+## 9. 迁移命令
+
+### 9.1 `levier migrate status`
 
 ```sh
 levier migrate status [--config path] [--json]
@@ -1037,8 +1107,8 @@ levier migrate status [--config path] [--json]
 
 ```text
 database: postgres://user:change-me@host:5432/levier?sslmode=disable
-current: 10
-applied: 10
+current: 11
+applied: 11
 pending: 0
 ```
 
@@ -1048,7 +1118,7 @@ JSON：
 {
   "database": "postgres://user:change-me@host:5432/levier?sslmode=disable",
   "current": 10,
-  "applied": 10,
+  "applied": 11,
   "pending": []
 }
 ```
@@ -1065,7 +1135,7 @@ JSON：
 
 退出码：`0` 成功（即使有 pending）；`1` 数据库 / 查询失败；`2` 配置或参数错误。
 
-### 8.2 `levier migrate up`
+### 9.2 `levier migrate up`
 
 ```sh
 levier migrate up [--config path] [--json]
@@ -1112,7 +1182,7 @@ serve 启动时只检查 pending，不自动迁移
 
 ---
 
-## 9. `levier daemon check`
+## 10. `levier daemon check`
 
 ```sh
 levier daemon check \
@@ -1176,7 +1246,7 @@ go run ./cmd/mw-daemon-check --grpc 127.0.0.1:9090 --http http://127.0.0.1:8080
 
 ---
 
-## 10. 兼容入口
+## 11. 兼容入口
 
 ```text
 levier [--config path]       等同于 levier serve
@@ -1186,7 +1256,7 @@ cmd/migrate                  旧迁移入口，保留兼容；新路径用 levie
 
 ---
 
-## 11. 尚未实现
+## 12. 尚未实现
 
 以下出现在路线图中，但当前版本**没有**实现：
 
@@ -1201,7 +1271,7 @@ levier upgrade
 
 ---
 
-## 12. 常见错误
+## 13. 常见错误
 
 ### `credentials path is required`
 
@@ -1244,7 +1314,7 @@ Run 未在 --timeout / --watch-timeout 内进入终态
 
 ---
 
-## 13. 退出码汇总
+## 14. 退出码汇总
 
 | 命令 | 0 | 1 | 2 | 3 | 4 | 5 |
 |---|---|---|---|---|---|---|
@@ -1260,6 +1330,10 @@ Run 未在 --timeout / --watch-timeout 内进入终态
 | `run submit` | 成功 / completed | failed | 参数 | 认证 | 网络 | cancelled / timeout |
 | `run watch` | completed | failed | 参数 | 认证 | 网络 | cancelled / timeout |
 | `run cancel` | 取消成功 | 其他错误 | 参数 / 凭据 | 认证 | 网络 | 终态 / 确认拒绝 |
+| `ops runs list/show` | 成功 | 服务端错误 | 参数 / 过滤 | 认证 | 网络 | - |
+| `ops runs cancel` | 取消成功 | 服务端错误 | 参数 | 认证 | 网络 | 确认拒绝 |
+| `ops daemons` | 成功 | 服务端错误 | 参数 | 认证 | 网络 | - |
+| `ops tasks` | 成功 | 服务端错误 | 参数 / 过滤 | 认证 | 网络 | - |
 | `migrate status` | 成功 | 数据库错误 | 配置 / 参数 | - | - | - |
 | `migrate up` | 成功 | 迁移错误 | 配置 / 参数 | - | - | - |
 | `maintenance status` | 成功 | 数据库错误 | 配置 / 参数 | - | - | - |
@@ -1268,7 +1342,7 @@ Run 未在 --timeout / --watch-timeout 内进入终态
 
 ---
 
-## 14. 维护约定
+## 15. 维护约定
 
 CLI 文档与代码同步位置：
 
