@@ -88,6 +88,8 @@ class FakeRuntime:
 
 class McpRuntimeClientTest(unittest.IsolatedAsyncioTestCase):
     async def asyncSetUp(self) -> None:
+        if not hasattr(asyncio, "start_unix_server"):
+            self.skipTest("Unix domain sockets are not available on this platform")
         self.directory = tempfile.TemporaryDirectory()
         self.addCleanup(self.directory.cleanup)
         self.socket_path = str(Path(self.directory.name) / "mcp.sock")

@@ -3,9 +3,11 @@
 
 SHELL := /bin/sh
 GO ?= go
-PYTHON ?= $(if $(wildcard execution/harness/.venv/bin/python),execution/harness/.venv/bin/python,python3)
-MCP_PYTHON ?= $(if $(wildcard execution/mcp_runtime/.venv/bin/python),execution/mcp_runtime/.venv/bin/python,python3)
-BUF ?= $(HOME)/go/bin/buf
+PYTHON ?= $(if $(wildcard execution/harness/.venv/bin/python),execution/harness/.venv/bin/python,$(if $(wildcard execution/harness/.venv/Scripts/python.exe),execution/harness/.venv/Scripts/python.exe,python3))
+MCP_PYTHON ?= $(if $(wildcard execution/mcp_runtime/.venv/bin/python),execution/mcp_runtime/.venv/bin/python,$(if $(wildcard execution/mcp_runtime/.venv/Scripts/python.exe),execution/mcp_runtime/.venv/Scripts/python.exe,python3))
+PYTHONPATH_SEP ?= $(if $(filter Windows_NT,$(OS)),;,:)
+CONTRACT_PYTHONPATH := execution/agent_core/src$(PYTHONPATH_SEP)execution/harness/src/gen$(PYTHONPATH_SEP)execution/harness/src
+BUF ?= $(shell command -v buf 2>/dev/null || printf '%s\n' "$(HOME)/go/bin/buf")
 PROTOC_BIN ?= $(HOME)/go/bin
 
 # Optional local-only overrides (git-ignored).
@@ -77,13 +79,13 @@ proto-lint:
 
 contract-check: proto-lint
 	$(GO) test ./internal/protocol -run TestContractGolden -v
-	PYTHONPATH=execution/agent_core/src:execution/harness/src/gen:execution/harness/src $(PYTHON) tests/contract/test_contract.py -v
+	PYTHONPATH="$(CONTRACT_PYTHONPATH)" $(PYTHON) tests/contract/test_contract.py -v
 
 harness-test:
-	PYTHONPATH=execution/agent_core/src:execution/harness/src/gen:execution/harness/src $(PYTHON) -m unittest discover -s execution/harness/tests -v
+	PYTHONPATH="$(CONTRACT_PYTHONPATH)" $(PYTHON) -m unittest discover -s execution/harness/tests -v
 
 mcp-runtime-test:
-	PYTHONPATH=execution/mcp_runtime/src $(MCP_PYTHON) -m unittest discover -s execution/mcp_runtime/tests -v
+	PYTHONPATH="execution/mcp_runtime/src" $(MCP_PYTHON) -m unittest discover -s execution/mcp_runtime/tests -v
 
 image-harness:
 	docker build -f deploy/harness.Dockerfile -t levier-harness:dev .

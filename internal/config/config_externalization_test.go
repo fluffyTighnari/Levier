@@ -8,6 +8,9 @@ import (
 )
 
 func TestParseSecretFiles(t *testing.T) {
+	// Keep the test independent from a developer's local .env.local values.
+	t.Setenv("LEVIER_DATABASE_URL", "")
+	t.Setenv("MIDDLEWARE_DATABASE_URL", "")
 	dir := t.TempDir()
 	adminPath := filepath.Join(dir, "admin-token")
 	daemonPath := filepath.Join(dir, "daemon-tokens.json")

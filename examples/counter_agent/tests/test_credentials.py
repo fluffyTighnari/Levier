@@ -25,7 +25,8 @@ class CredentialsTest(unittest.TestCase):
                 api_key=Secret("mw_secret"),
             )
             save_credentials(path, credentials)
-            self.assertEqual(stat.S_IMODE(path.stat().st_mode), 0o600)
+            if os.name != "nt":
+                self.assertEqual(stat.S_IMODE(path.stat().st_mode), 0o600)
             loaded = load_credentials(path)
             self.assertEqual(loaded.app_id, "app-1")
             self.assertEqual(loaded.app_name, "counter-app")
@@ -33,6 +34,7 @@ class CredentialsTest(unittest.TestCase):
             self.assertNotIn("mw_secret", repr(loaded))
             self.assertNotIn("mw_secret", str(loaded.summary()))
 
+    @unittest.skipIf(os.name == "nt", "POSIX file mode enforcement is not available on Windows")
     def test_p3_3_rejects_group_readable_file(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "app.json"

@@ -127,6 +127,10 @@ def check_unit_cards() -> None:
             fail("unit-card", f"missing unit card: {name}", f"add {name}")
 
 
+def is_virtualenv_path(path: Path) -> bool:
+    return any(part == ".venv" or part.startswith(".venv") for part in path.parts)
+
+
 def check_examples_isolation() -> None:
     patterns = [
         'levier/examples',
@@ -137,6 +141,8 @@ def check_examples_isolation() -> None:
     ]
     for base in ("internal", "cmd", "execution"):
         for path in (ROOT / base).rglob("*"):
+            if is_virtualenv_path(path):
+                continue
             if not path.is_file() or path.suffix not in {".go", ".py"}:
                 continue
             text = read_text(path)
@@ -150,6 +156,8 @@ def check_examples_isolation() -> None:
 def check_agent_core_boundary() -> None:
     base = ROOT / "execution/agent_core/src/levier_agent_core"
     for path in base.rglob("*.py"):
+        if is_virtualenv_path(path):
+            continue
         text = read_text(path)
         for token in AGENT_CORE_FORBIDDEN:
             if token in text:

@@ -2,7 +2,7 @@
 
 # 10. 生命周期（进程与数据）
 
-> 状态：10B 进程优雅停止已实现；10C 数据维护已实现；10D 备份/恢复/轮换已实现；10E 验收待开始。
+> 状态：10B 进程优雅停止已实现；10C 数据维护已实现；10D 备份/恢复/轮换已实现；10E 验收已完成。
 > 本文位于 `docs/`，属于内部开发文档，不进入镜像、release、HTTP 响应或对外分发。
 > 计划新增的运行状态或维护命令契约放在 `public/service-lifecycle/v1/`（如最终需要对外暴露）。
 
@@ -478,6 +478,10 @@ docker compose --profile smoke run --rm smoke
 selfcheck
 ```
 
+Windows 本机运行 Python 测试时，Unix domain socket 相关集成测试和 POSIX 文件权限
+测试会自动 skip；Linux CI 仍执行完整覆盖。Go、契约、MCP 非 socket 测试和
+Compose smoke 不受影响。
+
 ---
 
 ## 9. 测试矩阵
@@ -512,7 +516,7 @@ selfcheck
 [x] 备份/恢复文档可执行
 [x] secret/API key 轮换步骤明确
 [x] Docker volume 删除风险明确
-[ ] smoke / selfcheck / CI 通过
+[x] smoke / selfcheck / CI 通过
 ```
 
 ---
