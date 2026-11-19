@@ -85,7 +85,7 @@ class CLITest(unittest.TestCase):
         with redirect_stderr(error):
             code = main(["--config", "/nonexistent/config.yaml", "--check"])
         self.assertEqual(code, 1)
-        self.assertIn("react runtime config error", error.getvalue())
+        self.assertIn("levier-react-runtime config error", error.getvalue())
 
 
 if __name__ == "__main__":

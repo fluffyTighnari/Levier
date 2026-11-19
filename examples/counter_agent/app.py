@@ -9,10 +9,9 @@ Copyright 2026 The Levier Authors.
 
 from __future__ import annotations
 
-import sys
 from typing import Any
 
-from levier_app import CredentialsError, LevierApp
+from levier_app import LevierApp
 
 from tools import Counter
 
@@ -51,15 +50,9 @@ def register_tools(app: LevierApp, counter: Counter) -> None:
 
 
 def main() -> int:
-    try:
-        # LEVIER_APP_MCP_REFS=github,e2e-echo is read by the SDK.
-        app = LevierApp.from_credentials()
-    except CredentialsError as exc:
-        print(f"credentials error: {exc}", file=sys.stderr)
-        print("set LEVIER_CREDENTIALS or pass a credential file from levier app init", file=sys.stderr)
-        return 2
-    register_tools(app, Counter())
-    return app.run()
+    # The SDK owns credentials, argparse, logging, reconnect, and serving.
+    # LEVIER_APP_MCP_REFS=github,e2e-echo is also read by the SDK.
+    return LevierApp.run_cli(lambda app: register_tools(app, Counter()))
 
 
 if __name__ == "__main__":

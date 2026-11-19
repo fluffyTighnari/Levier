@@ -134,31 +134,32 @@ Linux/macOS 使用 `.venv/bin/python`。
 ```python
 from levier_app import LevierApp
 
-app = LevierApp.from_credentials()
+counter = {"value": 0}
 
 
-@app.tool(
-    "counter_add",
-    description="Add an integer to the counter.",
-    schema={
-        "type": "object",
-        "properties": {"delta": {"type": "integer"}},
-        "required": ["delta"],
-        "additionalProperties": False,
-    },
-    timeout_ms=10000,
-)
-def counter_add(arguments):
-    return {"value": arguments["delta"]}
+def register_tools(app):
+    @app.tool(
+        "counter_add",
+        description="Add an integer to the counter.",
+        schema={
+            "type": "object",
+            "properties": {"delta": {"type": "integer"}},
+            "required": ["delta"],
+            "additionalProperties": False,
+        },
+        timeout_ms=10000,
+    )
+    def counter_add(arguments):
+        counter["value"] += arguments["delta"]
+        return {"value": counter["value"]}
 
-
-@app.tool("counter_get", schema={"type": "object", "properties": {}})
-def counter_get(_arguments):
-    return {"value": current_value}
+    @app.tool("counter_get", schema={"type": "object", "properties": {}})
+    def counter_get(_arguments):
+        return {"value": counter["value"]}
 
 
 if __name__ == "__main__":
-    raise SystemExit(app.run())
+    raise SystemExit(LevierApp.run_cli(register_tools))
 ```
 
 SDK 负责：

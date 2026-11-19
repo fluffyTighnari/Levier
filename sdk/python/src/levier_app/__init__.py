@@ -20,6 +20,7 @@ Copyright 2026 The Levier Authors.
 """
 
 from .app import LevierApp, PROTOCOL_VERSION, SDK_VERSION, ToolSpec
+from .cli import run_app
 from .credentials import (
     Credentials,
     CredentialsError,
@@ -51,6 +52,7 @@ __all__ = [
     "LevierClient",
     "LevierError",
     "PROTOCOL_VERSION",
+    "run_app",
     "ProtocolError",
     "SDK_VERSION",
     "Secret",

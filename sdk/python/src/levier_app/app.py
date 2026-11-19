@@ -165,6 +165,19 @@ class LevierApp:
         if active is not None:
             active.close()
 
+    @classmethod
+    def run_cli(
+        cls,
+        register: "Callable[[LevierApp], None] | None" = None,
+        *,
+        argv: list[str] | None = None,
+        prog: str = "levier-app",
+    ) -> int:
+        """Run the standard App CLI; the only user hook is tool registration."""
+        from .cli import run_app
+
+        return run_app(register, argv=argv, prog=prog)
+
     def run(
         self,
         *,

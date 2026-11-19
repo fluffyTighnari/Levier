@@ -4,6 +4,9 @@ import json
 import unittest
 from pathlib import Path
 
+from contextlib import redirect_stdout
+from io import StringIO
+
 from levier_app import Credentials, LevierApp, Secret, ToolExecutionError
 from levier_app.app import PROTOCOL_VERSION, SDK_VERSION, hello_message
 
@@ -94,6 +97,13 @@ class AppToolTest(unittest.TestCase):
             mcp_refs=["github"],
         )
         self.assertEqual(app.mcp_refs, ["github"])
+
+    def test_app_cli_version_does_not_require_credentials(self) -> None:
+        output = StringIO()
+        with redirect_stdout(output):
+            code = LevierApp.run_cli(argv=["--version"])
+        self.assertEqual(code, 0)
+        self.assertIn("levier-app", output.getvalue())
 
     def test_duplicate_tool_is_rejected(self) -> None:
         app = self.app()

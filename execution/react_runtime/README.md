@@ -10,7 +10,7 @@ execution/react_runtime/
   react.example.yaml
   src/levier_react_runtime/
     __init__.py
-    __main__.py       # ~150 lines: config + composition
+    __main__.py       # common CLI shell + ReactAgent composition
 ```
 
 ## What lives where

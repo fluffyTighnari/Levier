@@ -9,25 +9,31 @@ reconnects, tool registration, and the `local_tool_call` /
 ```python
 from levier_app import LevierApp
 
-app = LevierApp.from_credentials()
+counter = {"value": 0}
 
 
-@app.tool(
-    "counter_add",
-    description="Add an integer to the counter.",
-    schema={
-        "type": "object",
-        "properties": {"delta": {"type": "integer"}},
-        "required": ["delta"],
-        "additionalProperties": False,
-    },
-)
-def counter_add(arguments):
-    return {"value": arguments["delta"]}
+def register_tools(app):
+    @app.tool(
+        "counter_add",
+        description="Add an integer to the counter.",
+        schema={
+            "type": "object",
+            "properties": {"delta": {"type": "integer"}},
+            "required": ["delta"],
+            "additionalProperties": False,
+        },
+    )
+    def counter_add(arguments):
+        counter["value"] += arguments["delta"]
+        return {"value": counter["value"]}
+
+    @app.tool("counter_get", schema={"type": "object", "properties": {}})
+    def counter_get(_arguments):
+        return {"value": counter["value"]}
 
 
 if __name__ == "__main__":
-    raise SystemExit(app.run())
+    raise SystemExit(LevierApp.run_cli(register_tools))
 ```
 
 Install locally:
@@ -35,6 +41,10 @@ Install locally:
 ```sh
 pip install -e ./sdk/python
 ```
+
+`LevierApp.run_cli(register_tools)` owns credential loading, argparse, logging,
+signals, and reconnect settings. Use `--credentials`, `--server`, `--mcp-ref`,
+and the standard runtime options instead of writing a bootstrap script.
 
 Run with the credentials created by `levier app init`:
 

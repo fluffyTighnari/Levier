@@ -1,27 +1,27 @@
 """Thin built-in React Runtime entry point.
 
-Almost all ReAct behavior lives in the optional `levier_runtime.react` helper.
-This package is the composition layer: configuration, MCP socket, and run(ctx).
+The Runtime SDK owns configuration, lifecycle, events, cancellation, and the
+common CLI. This package only composes the optional ReactAgent helper with the
+shared MCP client.
 
 Copyright 2026 The Levier Authors.
 """
 
 from __future__ import annotations
 
+import os
 import argparse
 import asyncio
-import logging
-import os
-import sys
 from pathlib import Path
-from typing import Sequence
 
 import yaml
 
-from levier_runtime import Runtime, __version__ as RUNTIME_VERSION
+from levier_runtime import __version__ as RUNTIME_VERSION
+from levier_runtime.cli import run_cli
 from levier_runtime.llm import ProviderRouter
 from levier_runtime.mcp import McpRuntimeClient
 from levier_runtime.react import ReactAgent
+from levier_runtime.runtime import Runtime
 from levier_runtime.tools import ToolRouter
 
 _DEFAULT_CONFIG = Path(__file__).resolve().parents[2] / "react.example.yaml"
@@ -40,22 +40,18 @@ _LEGACY_ENV = {
 }
 
 
-def _apply_legacy_env() -> None:
-    """Keep existing Compose/deploy variable names working."""
-    for old, new in _LEGACY_ENV.items():
-        value = os.environ.get(old)
-        if value is not None and new not in os.environ:
-            os.environ[new] = value
+def _add_arguments(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument("--mcp-socket", default="", help="override MCP Runtime socket")
 
 
-def _mcp_socket(config_path: str, override: str = "") -> str:
+def _mcp_socket(config_path: str, override: str) -> str:
     """Read the optional shared MCP socket without coupling it to RuntimeConfig."""
     if override:
         return override
     for name in ("LEVIER_REACT_RUNTIME_MCP_SOCKET", "LEVIER_MCP_RUNTIME_SOCKET"):
-        override = os.environ.get(name)
-        if override:
-            return override
+        value = os.environ.get(name)
+        if value:
+            return value
     try:
         data = yaml.safe_load(Path(config_path).read_text(encoding="utf-8"))
     except (OSError, yaml.YAMLError):
@@ -69,67 +65,8 @@ def _mcp_socket(config_path: str, override: str = "") -> str:
     return socket if isinstance(socket, str) else ""
 
 
-def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(prog="levier-react-runtime")
-    parser.add_argument(
-        "--config",
-        default=os.environ.get("LEVIER_REACT_RUNTIME_CONFIG")
-        or os.environ.get("LEVIER_RUNTIME_CONFIG")
-        or str(_DEFAULT_CONFIG),
-        help="path to React Runtime YAML configuration",
-    )
-    parser.add_argument("--check", action="store_true", help="validate configuration")
-    parser.add_argument("--print-config", action="store_true", help="print redacted configuration")
-    parser.add_argument("--version", action="store_true", help="print version")
-    parser.add_argument("--log-level", default="", help="override log level")
-    parser.add_argument("--mcp-socket", default="", help="override MCP Runtime socket")
-    return parser
-
-
-def main(argv: Sequence[str] | None = None) -> int:
-    args = build_parser().parse_args(argv)
-    if args.version:
-        print(f"levier-react-runtime {RUNTIME_VERSION}")
-        return 0
-    _apply_legacy_env()
-    if args.log_level:
-        os.environ["LEVIER_RUNTIME_LOG_LEVEL"] = args.log_level
-    try:
-        runtime = Runtime.from_config(args.config)
-    except Exception as exc:
-        print(f"react runtime config error: {exc}", file=sys.stderr)
-        return 1
-
-    level = getattr(logging, runtime.config.log_level.upper(), logging.INFO)
-    logging.basicConfig(level=level)
-    if args.check:
-        print(f"runtime {runtime.config.runtime_name} / {runtime.config.instance_id}")
-        return 0
-    if args.print_config:
-        print_effective_config(runtime, _mcp_socket(args.config, args.mcp_socket))
-        return 0
-
-    try:
-        asyncio.run(_serve(runtime, _mcp_socket(args.config, args.mcp_socket)))
-    except KeyboardInterrupt:
-        pass
-    return 0
-
-
-def print_effective_config(runtime: Runtime, mcp_socket: str) -> None:
-    config = runtime.config
-    print(f"runtime: {config.runtime_name}")
-    print(f"instance_id: {config.instance_id}")
-    print(f"runtime_type: {config.runtime_type}")
-    print(f"middleware_address: {config.middleware.address}")
-    print(f"middleware_tls: {str(config.middleware.tls).lower()}")
-    print("middleware_auth_token: ***" if config.middleware.auth_token else "middleware_auth_token: (empty)")
-    print(f"mcp_socket: {mcp_socket or '(disabled)'}")
-    print(f"max_concurrent_runs: {config.max_concurrent_runs}")
-    print(f"log_level: {config.log_level}")
-
-
-async def _serve(runtime: Runtime, mcp_socket: str) -> None:
+async def _serve(runtime: Runtime, args: argparse.Namespace) -> None:
+    mcp_socket = _mcp_socket(args.config, args.mcp_socket)
     mcp = McpRuntimeClient(mcp_socket) if mcp_socket else None
     tools = ToolRouter(mcp=mcp)
     try:
@@ -137,6 +74,24 @@ async def _serve(runtime: Runtime, mcp_socket: str) -> None:
     finally:
         if mcp is not None:
             await mcp.close()
+
+
+def _print_extra(runtime: Runtime, args: argparse.Namespace) -> list[str]:
+    return [f"mcp_socket: {_mcp_socket(args.config, args.mcp_socket) or '(disabled)'}"]
+
+
+def main(argv: list[str] | None = None) -> int:
+    return run_cli(
+        prog="levier-react-runtime",
+        version=RUNTIME_VERSION,
+        default_config=_DEFAULT_CONFIG,
+        config_env=("LEVIER_REACT_RUNTIME_CONFIG", "LEVIER_RUNTIME_CONFIG"),
+        serve=_serve,
+        add_arguments=_add_arguments,
+        env_aliases=_LEGACY_ENV,
+        print_config_extra=_print_extra,
+        argv=argv,
+    )
 
 
 if __name__ == "__main__":
