@@ -43,7 +43,7 @@
 | `execution/mcp_runtime/` | 默认 MCP 连接进程 | `python -m levier_mcp_runtime` | `make mcp-runtime-test` |
 | `examples/` | 参考 App / 客户端 | `counter_agent`、`http_client`、`node_counter_agent` | `make counter-agent-test` |
 | `deploy/` | 镜像、Compose、smoke | `docker-compose.yml`、`deploy/*.Dockerfile` | `docker compose config`、smoke |
-| `scripts/` | 发布与安装脚本 | `scripts/build-release.sh`、`scripts/install.sh`、`scripts/install.ps1` | `make release-dist`、本地安装 smoke |
+| `scripts/` | 发布、安装与生命周期脚本 | `scripts/build-release.sh`、`scripts/install.sh`、`scripts/backup.sh`、`scripts/restore.sh` | `make release-dist`、`make lint`、备份/恢复演练 |
 | `tests/` | 跨单元测试与检查 | `tests/contract`、`tests/e2e`、`tests/app`、`tests/checks` | 对应 make target |
 | `docs/` | 设计、范围、迁移、接入 | `docs/SCOPE.md`、`docs/MAP.md` | 链接检查 |
 | `bin/` | 本地构建产物 | `bin/levier` | 不提交 |
@@ -64,6 +64,7 @@
 | CLI 安装 / 校验 / 镜像 | `scripts/install.sh`、`scripts/install.ps1` + `docs/INSTALL.md` |
 | 公开前检查 / 下一阶段 | `docs/TODO.md` |
 | 配置盘点 / 环境变量 | `docs/CONFIG.md` |
+| 备份 / 恢复 / 卷 / secret 轮换 | `docs/LIFECYCLE.md` + `scripts/backup.sh`、`scripts/restore.sh` |
 | Harness / Agent 循环 | `execution/harness/` |
 | Agent Core 契约 | `execution/agent_core/` + `docs/AGENT_CORE_CONTRACT.md` |
 | MCP 连接 / 会话 | `execution/mcp_runtime/` + `docs/MCP.md` |
@@ -99,7 +100,8 @@ mcp_runtime → 不直连控制面
 4. docs/DESIGN.md          控制面设计
 5. docs/ARCHITECTURE.md    依赖与分层
 6. deploy/README.md        部署
-7. docs/MIGRATION-1D.md    命名/有状态迁移
+7. docs/LIFECYCLE.md       备份/恢复/轮换
+8. docs/MIGRATION-1D.md    命名/有状态迁移
 ```
 
 ## 6. 结构护栏

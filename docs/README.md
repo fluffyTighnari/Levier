@@ -32,6 +32,7 @@ MAP.md          仓库地图
 | `CLI_REFERENCE.md` | 当前 CLI 命令、参数、环境变量、JSON、退出码 |
 | `INSTALL.md` | CLI 安装、升级、卸载、checksum、镜像/离线 |
 | `MVP.md` | 单机 MVP 启动、验收、限制 |
+| `LIFECYCLE.md` | 备份、恢复、Docker volume 与 secret 轮换 |
 | `MIGRATION-1D.md` | Compose / 数据库 / 指标改名迁移 |
 
 ## 路线与待办
@@ -64,5 +65,6 @@ SCOPE → MAP → 你的任务对应文档
 改 Harness    → AGENT_CORE_CONTRACT.md + execution/harness/README.md
 改 MCP        → MCP.md
 部署          → deploy/README.md
+备份 / 轮换   → LIFECYCLE.md
 迁移          → MIGRATION-1D.md
 ```

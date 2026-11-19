@@ -20,7 +20,7 @@ LDFLAGS := -X github.com/fluffyTighnari/levier/internal/version.Version=$(VERSIO
 	-X github.com/fluffyTighnari/levier/internal/version.Commit=$(COMMIT) \
 	-X github.com/fluffyTighnari/levier/internal/version.Built=$(BUILD_TIME)
 
-.PHONY: all build test lint fmt fmt-check vet run clean dev-up dev-down migrate proto proto-check proto-lint contract-check harness-test mcp-runtime-test image-harness image-mcp-runtime counter-agent counter-agent-test http-smoke retrofit-e2e mcp-e2e deps-check structure-check size-report daemon-check agent-core-test mvp-demo mvp-demo-react fault-matrix secrets-check docker-up docker-down docker-smoke docker-logs docker-reset release-dist
+.PHONY: all build test lint fmt fmt-check vet run clean dev-up dev-down migrate proto proto-check proto-lint contract-check harness-test mcp-runtime-test image-harness image-mcp-runtime counter-agent counter-agent-test http-smoke retrofit-e2e mcp-e2e deps-check structure-check scripts-check size-report daemon-check agent-core-test mvp-demo mvp-demo-react fault-matrix secrets-check docker-up docker-down docker-smoke docker-logs docker-reset release-dist
 
 all: build
 
@@ -34,7 +34,7 @@ release-dist:
 test:
 	$(GO) test ./...
 
-lint: fmt-check vet secrets-check structure-check
+lint: fmt-check vet secrets-check structure-check scripts-check
 
 fmt-check:
 	@files="$$(gofmt -l $(GO_FILES))"; \
@@ -108,6 +108,9 @@ deps-check:
 
 structure-check:
 	bash tests/checks/check_structure.sh
+
+scripts-check:
+	@for script in scripts/*.sh; do sh -n "$$script"; done
 
 size-report:
 	./tests/checks/size_report.sh

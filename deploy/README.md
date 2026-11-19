@@ -238,7 +238,43 @@ secret 文件必须是宿主机上的 `0600` 文件；生产目标为 Linux。Do
 从本地开发栈切换到生产式 overlay 时，如果 PostgreSQL 卷已存在，需要让
 `levier_database_url` 与卷内已有密码匹配，或使用新卷重新初始化。
 
-## 7. 单独构建镜像
+## 7. 备份、恢复与轮换
+
+备份和恢复使用显式脚本，不自动执行：
+
+```sh
+sh scripts/backup.sh --output data/backups/levier-prod
+sh scripts/restore.sh --backup data/backups/levier-prod --dry-run
+sh scripts/restore.sh --backup data/backups/levier-prod --yes
+```
+
+生产式 overlay：
+
+```sh
+COMPOSE_FILE=docker-compose.yml:docker-compose.prod.yml \
+  sh scripts/backup.sh --output data/backups/levier-prod
+```
+
+备份包含 PostgreSQL custom dump、可选的 `agent_data.tar`、manifest 和
+SHA256 校验；不包含 `deploy/secrets/`。备份文件和 secret 都要限制权限，
+不要提交到 Git。
+
+默认卷名：
+
+```text
+levier-mvp_pgdata        PostgreSQL 数据
+levier-mvp_agent_data    Agent credentials
+levier-mvp_mcp_socket    运行时 socket，不需要长期备份
+```
+
+`docker compose down` 保留 volume；`docker compose down -v` 删除数据卷，只在
+明确确认数据不再需要或已恢复成功后使用。
+
+Admin token、daemon token、App key 和 PostgreSQL 密码的轮换步骤见
+[`docs/LIFECYCLE.md`](../docs/LIFECYCLE.md)。所有轮换都需要先备份，并保留
+回滚用的旧 secret；不要自动轮换。
+
+## 8. 单独构建镜像
 
 ```sh
 docker build -f deploy/levier.Dockerfile -t levier:dev .

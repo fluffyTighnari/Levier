@@ -2,7 +2,7 @@
 
 # 10. 生命周期（进程与数据）
 
-> 状态：10B 进程优雅停止已实现；10C 数据维护已实现；10D 备份/轮换待开始。
+> 状态：10B 进程优雅停止已实现；10C 数据维护已实现；10D 备份/恢复/轮换已实现；10E 验收待开始。
 > 本文位于 `docs/`，属于内部开发文档，不进入镜像、release、HTTP 响应或对外分发。
 > 计划新增的运行状态或维护命令契约放在 `public/service-lifecycle/v1/`（如最终需要对外暴露）。
 
@@ -311,20 +311,20 @@ selfcheck / daemon-check 创建的临时 App 需要可识别名称和清理策�
 
 ### 5.6 备份与恢复
 
-不把备份做成隐式行为。建议：
+不把备份做成隐式行为。实现：
 
 ```sh
-pg_dump ... > backup.sql
-pg_restore ... < backup.sql
+sh scripts/backup.sh --output data/backups/<name>
+sh scripts/restore.sh --backup data/backups/<name> --dry-run
+sh scripts/restore.sh --backup data/backups/<name> --yes
 ```
 
-提供：
-
 ```text
-docs/LIFECYCLE.md 中的备份/恢复步骤
-scripts/backup.sh / restore.sh（可选）
-备份前检查 migration version
-恢复后运行 migrate status / selfcheck
+PostgreSQL 使用 pg_dump / pg_restore
+备份包含 migration version、manifest、SHA256
+可选备份 agent_data
+deploy/secrets 不进入普通备份，必须单独加密保存
+恢复后运行 migrate status / smoke / selfcheck
 ```
 
 Docker volume：
@@ -338,13 +338,14 @@ mcp_socket    → 仅运行时 socket，不需要长期备份
 ### 5.7 Secret / API key 轮换
 
 ```text
-Admin token      修改 secret 后重启 levier + agent
+Admin token      修改 secret 后重启 levier + agent，旧 token 验证失效
 daemon token     修改 JSON + harness secret 后重启对应服务
 App key          app rotate-key，更新 Agent credentials
-数据库密码       修改 postgres secret + DSN，按 PostgreSQL 实际密码流程
+数据库密码       交互式修改 PostgreSQL role，更新 secret + DSN，重建 Levier
 ```
 
-所有轮换都必须有步骤、影响范围、回滚说明。
+所有轮换都必须有步骤、影响范围、回滚说明。完整 runbook：
+`docs/LIFECYCLE.md`。
 
 ---
 
@@ -417,6 +418,10 @@ cmd/levier/maintenance.go
   levier maintenance status
   levier maintenance prune --dry-run
   levier maintenance prune --yes
+
+scripts/backup.sh
+scripts/restore.sh
+docs/LIFECYCLE.md
 ```
 
 可选：`levier lifecycle status` 或在 `levier status` 中显示 lifecycle。
@@ -452,10 +457,11 @@ cmd/levier/maintenance.go
 
 ### 10D：备份、恢复、轮换
 
-- 备份/恢复脚本或文档
-- Docker volume 指南
+- `scripts/backup.sh`：PostgreSQL dump、可选 agent_data、manifest、SHA256
+- `scripts/restore.sh`：校验、dry-run、显式 `--yes`、恢复后状态检查
+- `docs/LIFECYCLE.md`：备份/恢复、Docker volume、secret 轮换 runbook
 - Admin / daemon / App key / DB password 轮换步骤
-- 不自动轮换
+- 不自动备份、不自动恢复、不自动轮换
 
 ### 10E：测试与验收
 
@@ -503,9 +509,9 @@ selfcheck
 [x] maintenance prune 默认 dry-run
 [x] 只删除终态数据
 [x] session GC 不删除 active 数据
-[ ] 备份/恢复文档可执行
-[ ] secret/API key 轮换步骤明确
-[ ] Docker volume 删除风险明确
+[x] 备份/恢复文档可执行
+[x] secret/API key 轮换步骤明确
+[x] Docker volume 删除风险明确
 [ ] smoke / selfcheck / CI 通过
 ```
 

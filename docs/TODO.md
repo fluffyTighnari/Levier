@@ -390,9 +390,9 @@ public/     对外契约和示例
 - [x] `maintenance prune --dry-run`
 - [x] retention 默认关闭
 - [x] session 清理 / 终态任务随 Run 级联
-- [ ] 备份 / 恢复流程
-- [ ] Admin / daemon / App key / DB password 轮换
-- [ ] Docker volume 生命周期说明
+- [x] 备份 / 恢复流程
+- [x] Admin / daemon / App key / DB password 轮换
+- [x] Docker volume 生命周期说明
 
 ### 6.1 生命周期边界
 
@@ -479,7 +479,7 @@ Levier  负责启动、就绪、优雅停止和恢复语义
 10C 数据维护（已完成）
   └─ 门禁：maintenance status / prune dry-run / 终态清理测试通过
 
-10D 备份与轮换
+10D 备份与轮换（已完成）
   └─ 门禁：备份恢复和 secret 轮换步骤可执行
 
 10E 验收
