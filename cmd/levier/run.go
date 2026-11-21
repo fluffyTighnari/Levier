@@ -31,6 +31,8 @@ func runRun(args []string, stdout, stderr io.Writer) int {
 	}
 	switch args[0] {
 	case "submit":
+		// Hidden compatibility for automation; the public surface is
+		// `levier run "prompt"`.
 		return runRunSubmit(args[1:], stdout, stderr)
 	case "watch":
 		return runRunWatch(args[1:], stdout, stderr)
@@ -136,7 +138,6 @@ func runRunOnce(args []string, stdout, stderr io.Writer) int {
 func printRunUsage(out io.Writer) {
 	fmt.Fprintln(out, "usage:")
 	fmt.Fprintln(out, "  levier run \"prompt\" [--runtime name] [--provider name] [--model name]")
-	fmt.Fprintln(out, "  levier run submit --runtime <name> --prompt <text> [--watch]")
 	fmt.Fprintln(out, "  levier run watch <id>")
 	fmt.Fprintln(out, "  levier run show <id> [--events]")
 	fmt.Fprintln(out, "  levier run cancel <id> --yes")

@@ -61,6 +61,7 @@ func runCLI(args []string, stdout, stderr io.Writer) int {
 	case "runtime":
 		return runRuntime(args[1:], stdout, stderr)
 	case "stack":
+		// Hidden compatibility; the public lifecycle is up/down/logs/ps.
 		return runStack(args[1:], stdout, stderr)
 	case "admin":
 		return runAdmin(args[1:], stdout, stderr)
@@ -156,6 +157,6 @@ func printUsage(out io.Writer) {
 	fmt.Fprintln(out, "  levier logs [--follow]        stack logs")
 	fmt.Fprintln(out, "  levier down                   stop the local stack")
 	fmt.Fprintln(out)
-	fmt.Fprintln(out, "Advanced commands remain available: app (internal), run submit, mcp, admin.")
+	fmt.Fprintln(out, "Advanced commands remain available: app (internal), mcp, admin.")
 	fmt.Fprintln(out, "Compatibility: levier serve / levier [-config path] starts the server.")
 }
