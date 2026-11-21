@@ -279,14 +279,15 @@ levier model connect ... --json
 levier run "..." --json
 ```
 
-旧命令仍然保留，用于部署、诊断和兼容脚本：
+内部/运维入口保留，但不再作为用户命令：
 
 ```text
-levier app init|show|check|rotate-key
-levier provider add|list|check
-levier run submit|watch|show|cancel
+levier app init|show|check|rotate-key   # 显式凭据路径/轮换
+levier run submit|watch|show|cancel     # 低层 Run 控制
 levier mcp add|list|remove
 levier admin ...
 ```
+
+`provider` 命令已收敛为 `model`。
 
 它们不再出现在主帮助和黄金路径里。

@@ -111,13 +111,14 @@ Runtime.start(run)
 旧命令没有删除，但不再出现在主帮助里：
 
 ```text
-levier app ...
-levier provider ...
+levier app ...                  # 显式凭据路径/轮换
 levier mcp ...
 levier run submit|watch|show|cancel
-levier stack ...
+levier stack ...                # 由 up/down/logs/ps 覆盖
 levier admin ...
 ```
+
+`provider` 命令已删除，统一使用 `levier model`。
 
 它们用于：
 

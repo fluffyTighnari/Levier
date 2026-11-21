@@ -472,8 +472,7 @@ levier setup
 levier version
 levier serve
 levier doctor
-levier app init|show|check|list|rotate-key
-levier provider list|show|add|update|remove|check
+levier app init|show|check|list|rotate-key   # 内部/自动化
 levier mcp list|add|remove
 levier run submit|watch|show|cancel
 levier runtime list
@@ -501,21 +500,22 @@ enabled          是否可用
 default          是否默认 provider
 ```
 
-Provider 管理：
+用户只使用 `model` 命令：
 
 ```sh
-levier provider add \
-  --name deepseek \
-  --adapter openai_compatible \
-  --base-url https://api.deepseek.com \
-  --default-model deepseek-flash \
-  --models deepseek-flash \
-  --secret-ref deepseek_api_key \
+levier model connect \
+  --url https://api.deepseek.com \
+  --key sk-... \
+  --model deepseek-flash \
+  --models deepseek-flash,deepseek-reasoner \
   --default
 
-levier provider list
-levier provider check --name deepseek
+levier model list
+levier model check --name deepseek
 ```
+
+`provider` 是控制面内部术语，不再作为公开命令。`secret_ref`、adapter 和
+managed secret 文件由 `model connect` 自动处理。
 
 ### 6.2 Secret
 
@@ -537,7 +537,7 @@ secret_ref=deepseek_api_key
 -> LEVIER_SECRET_DEEPSEEK_API_KEY
 ```
 
-生产 secret 文件必须是 0600；模型 key 不会通过 `/meta`、provider list、
+生产 secret 文件必须是 0600；模型 key 不会通过 `/meta`、模型列表、
 CLI 输出、Run event 或 checkpoint 暴露。
 
 ### 6.3 选择模型

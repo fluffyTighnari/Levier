@@ -240,7 +240,7 @@ The control plane owns provider metadata and secret references. It never
 stores or returns a plaintext model key.
 
 ```yaml
-# levier provider add ...
+# levier model connect ...
 name: deepseek
 adapter: openai_compatible
 base_url: https://api.deepseek.com

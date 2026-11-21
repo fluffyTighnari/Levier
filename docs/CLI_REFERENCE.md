@@ -27,8 +27,7 @@ help:
 levier setup
 levier doctor
 levier serve
-levier app init|show|check|list|rotate-key
-levier provider list|show|add|update|remove|check
+levier app init|show|check|list|rotate-key   # internal/automation
 levier mcp list|add|remove
 levier run submit|watch|show|cancel
 levier runtime list
@@ -106,7 +105,10 @@ socket, and Compose paths. It does not contain the App API key. Admin and
 runtime tokens are written only when explicitly passed to `--admin-token` /
 `--runtime-token`; omit them to keep using environment variables.
 
-## App
+## App（内部/自动化）
+
+日常使用 `levier init`、`levier dev` 和 `levier run`。以下低层命令只用于显式
+控制凭据路径、轮换和诊断。
 
 ```sh
 levier app init \
@@ -125,26 +127,21 @@ once; rotating it invalidates the previous key immediately. If
 `--credentials-out` is omitted, the file is placed next to the user profile
 and that path becomes the default for later commands.
 
-## Providers
+## Models
 
-Provider records contain metadata and a secret reference, never a plaintext
-key. The key comes from `LEVIER_SECRET_<REF>` or `LEVIER_SECRETS_FILE`.
+用户只使用 `model` 命令；`provider` 是控制面内部术语，不再暴露为公开命令。
 
 ```sh
-levier provider add \
-  --name deepseek \
-  --adapter openai_compatible \
-  --base-url https://api.deepseek.com \
-  --default-model deepseek-flash \
+levier model connect \
+  --url https://api.deepseek.com \
+  --key sk-... \
+  --model deepseek-flash \
   --models deepseek-flash,deepseek-reasoner \
-  --secret-ref deepseek_api_key \
   --default
 
-levier provider list
-levier provider show --name deepseek
-levier provider check --name deepseek
-levier provider update --name deepseek ...
-levier provider remove --name deepseek --yes
+levier model list
+levier model check --name deepseek
+levier model remove --name deepseek --yes
 ```
 
 Supported adapters:

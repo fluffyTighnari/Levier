@@ -134,7 +134,7 @@ levier run submit \
 | Key | Used by | Managed by |
 |---|---|---|
 | App API key `mw_...` | App HTTP/WS | `levier app init` |
-| Model provider key | control plane -> Runtime | `levier provider` + secret file/env |
+| Model provider key | control plane -> Runtime | `levier model connect` + managed secret |
 | Daemon token | Runtime -> control plane | deployment config |
 
 App code never receives the model provider key.

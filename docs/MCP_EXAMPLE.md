@@ -192,7 +192,7 @@ React Runtime 在线
 
 ```powershell
 levier runtime list
-levier provider check --name deepseek
+levier model check --name deepseek
 ```
 
 React Runtime 不再需要自己的 MCP socket 配置；它的 `ctx.toolbox()` 从用户
