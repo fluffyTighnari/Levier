@@ -18,7 +18,7 @@ import (
 
 func runDescribe(args []string, stdout, stderr io.Writer) int {
 	flags := flag.NewFlagSet("describe", flag.ContinueOnError)
-	server := flags.String("server", envOr("LEVIER_SERVER", "http://127.0.0.1:8080"), "Levier HTTP address")
+	server := flags.String("server", defaultServerValue(), "Levier HTTP address")
 	asJSON := flags.Bool("json", false, "print JSON")
 	timeout := flags.Duration("timeout", 5*time.Second, "request timeout")
 	if ok, code := parseFlagSet(flags, args, stdout, stderr); !ok {

@@ -5,6 +5,7 @@
 先看：
 
 ```text
+QUICKSTART.md   五分钟接入（黄金路径）
 SCOPE.md        产品边界与责任
 MAP.md          仓库地图
 ```
@@ -25,7 +26,10 @@ MAP.md          仓库地图
 
 | 文档 | 内容 |
 |---|---|
-| `ONBOARDING.md` | 从启动 Levier 到第一个 Run 的一站式引导 |
+| `QUICKSTART.md` | **黄金路径：安装、启动、模型、App、Run、自己的 Runtime** |
+| `OPERATIONS_SURFACE.md` | **当前 CLI、SDK、HTTP/WS、环境变量逐项清单** |
+| `DX.md` | 操作面设计：默认值、隐藏项、取舍与后续 |
+| `ONBOARDING.md` | 从启动 Levier 到第一个 Run 的详细引导 |
 | `APP_ONBOARDING.md` | App 接入流程与底层协议 |
 | `RUNTIME_ONBOARDING.md` | Runtime 作者最小接入：runtime_name + run(ctx) + 可选能力 |
 | `APP_ADAPTER_CONTRACT.md` | Python App adapter C0/C1 契约（handler、工具、重连、结果） |
@@ -61,7 +65,7 @@ MAP.md          仓库地图
 
 ```text
 SCOPE → MAP → 你的任务对应文档
-第一次接入    → ONBOARDING.md
+第一次接入    → QUICKSTART.md
 接 Python App → examples/counter_agent + sdk/python/README.md + APP_ADAPTER_CONTRACT.md
 底层 App 协议 → APP_ONBOARDING.md
 引导计划      → ONBOARDING_CREDENTIALS_PLAN.md

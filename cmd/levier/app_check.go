@@ -6,7 +6,6 @@ import (
 	"flag"
 	"fmt"
 	"io"
-	"os"
 	"time"
 )
 
@@ -29,7 +28,7 @@ type appCheckResult struct {
 func runAppCheck(args []string, stdout, stderr io.Writer) int {
 	flags := flag.NewFlagSet("app check", flag.ContinueOnError)
 	flags.SetOutput(stderr)
-	credentialsPath := flags.String("credentials", os.Getenv("LEVIER_CREDENTIALS"), "credentials file")
+	credentialsPath := flags.String("credentials", defaultCredentialsValue(), "credentials file")
 	server := flags.String("server", "", "Levier HTTP address")
 	asJSON := flags.Bool("json", false, "print JSON")
 	timeout := flags.Duration("timeout", 10*time.Second, "per-request timeout")
@@ -42,7 +41,7 @@ func runAppCheck(args []string, stdout, stderr io.Writer) int {
 		return 2
 	}
 	if *credentialsPath == "" {
-		fmt.Fprintln(stderr, "credentials path is required: --credentials or LEVIER_CREDENTIALS")
+		fmt.Fprintln(stderr, "credentials path is required: pass --credentials, set LEVIER_CREDENTIALS, or run levier setup --credentials <path>")
 		return 2
 	}
 

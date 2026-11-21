@@ -6,7 +6,6 @@ import (
 	"flag"
 	"fmt"
 	"io"
-	"os"
 	"strings"
 	"time"
 )
@@ -43,24 +42,110 @@ func runRun(args []string, stdout, stderr io.Writer) int {
 		printRunUsage(stdout)
 		return 0
 	default:
-		fmt.Fprintf(stderr, "unknown run command: %s\n\n", args[0])
-		printRunUsage(stderr)
+		// `levier run "prompt"` is the golden path; the subcommands above stay
+		// available for scripts and operators.
+		return runRunOnce(args, stdout, stderr)
+	}
+}
+
+func runRunOnce(args []string, stdout, stderr io.Writer) int {
+	flagArgs, prompt := splitRunArgs(args)
+	flags := flag.NewFlagSet("run", flag.ContinueOnError)
+	flags.SetOutput(stderr)
+	credentialsPath := flags.String("credentials", defaultCredentialsValue(), "credentials file")
+	server := flags.String("server", defaultServerValue(), "Levier HTTP address")
+	runtimeName := flags.String("runtime", defaultRuntimeValue(), "target runtime name")
+	provider := flags.String("provider", "", "provider name (default: control-plane default)")
+	model := flags.String("model", "", "model name (default: provider default)")
+	maxSteps := flags.Int("max-steps", 8, "maximum ReAct steps")
+	runMS := flags.Int64("run-ms", 60000, "run timeout in milliseconds")
+	toolMS := flags.Int64("tool-ms", 10000, "per-tool timeout in milliseconds")
+	noWatch := flags.Bool("no-watch", false, "submit without waiting")
+	_ = flags.Bool("watch", false, "watch until terminal (the default)")
+	withApp := flags.Bool("with-app", false, "start ./app.py while the Run executes")
+	appFile := flags.String("app", "", "App file to start (implies --with-app)")
+	python := flags.String("python", "", "Python executable for --with-app")
+	interval := flags.Duration("interval", 500*time.Millisecond, "watch poll interval")
+	watchTimeout := flags.Duration("watch-timeout", 30*time.Minute, "watch timeout")
+	timeout := flags.Duration("timeout", 10*time.Second, "per-request timeout")
+	asJSON := flags.Bool("json", false, "print JSON")
+	if ok, code := parseFlagSet(flags, flagArgs, stdout, stderr); !ok {
+		return code
+	}
+	if leftovers := strings.TrimSpace(strings.Join(flags.Args(), " ")); leftovers != "" {
+		prompt = strings.TrimSpace(prompt + " " + leftovers)
+	}
+	if prompt == "" {
+		fmt.Fprintln(stderr, "prompt is required: levier run \"what should the agent do?\"")
 		return 2
 	}
+	if *credentialsPath == "" {
+		fmt.Fprintln(stderr, "no App is initialized in this project")
+		fmt.Fprintln(stderr, "run: levier init")
+		return 2
+	}
+	if *withApp || strings.TrimSpace(*appFile) != "" {
+		file, err := resolveProjectFile(*appFile, "app.py", "levier_app.py")
+		if err != nil {
+			fmt.Fprintf(stderr, "run --with-app: %v\n", err)
+			return 2
+		}
+		baseline, _ := appConnections(*server)
+		if baseline > 0 {
+			fmt.Fprintln(stderr, "using the already-connected App")
+		} else {
+			process, err := startAppProcess(file, *python, *server, *credentialsPath, defaultMCPRefsValue())
+			if err != nil {
+				fmt.Fprintf(stderr, "start App: %v\n", err)
+				return 1
+			}
+			defer process.stop()
+			if err := waitForAppConnection(*server, baseline, process, 15*time.Second); err != nil {
+				fmt.Fprintf(stderr, "wait for App: %v\n", err)
+				return 1
+			}
+		}
+	}
+	forwarded := []string{
+		"--credentials", *credentialsPath,
+		"--server", *server,
+		"--prompt", prompt,
+		"--runtime", *runtimeName,
+		"--max-steps", fmt.Sprintf("%d", *maxSteps),
+		"--run-ms", fmt.Sprintf("%d", *runMS),
+		"--tool-ms", fmt.Sprintf("%d", *toolMS),
+		"--interval", interval.String(),
+		"--watch-timeout", watchTimeout.String(),
+		"--timeout", timeout.String(),
+	}
+	if *provider != "" {
+		forwarded = append(forwarded, "--provider", *provider)
+	}
+	if *model != "" {
+		forwarded = append(forwarded, "--model", *model)
+	}
+	if *asJSON {
+		forwarded = append(forwarded, "--json")
+	}
+	if !*noWatch {
+		forwarded = append(forwarded, "--watch")
+	}
+	return runRunSubmit(forwarded, stdout, stderr)
 }
 
 func printRunUsage(out io.Writer) {
 	fmt.Fprintln(out, "usage:")
-	fmt.Fprintln(out, "  levier run submit --runtime <name> --prompt <text> [--provider name] [--model name] [--watch]")
-	fmt.Fprintln(out, "  levier run watch --run-id <id>")
-	fmt.Fprintln(out, "  levier run show --run-id <id> [--events]")
-	fmt.Fprintln(out, "  levier run cancel --run-id <id> --yes")
+	fmt.Fprintln(out, "  levier run \"prompt\" [--runtime name] [--provider name] [--model name]")
+	fmt.Fprintln(out, "  levier run submit --runtime <name> --prompt <text> [--watch]")
+	fmt.Fprintln(out, "  levier run watch <id>")
+	fmt.Fprintln(out, "  levier run show <id> [--events]")
+	fmt.Fprintln(out, "  levier run cancel <id> --yes")
 }
 
 func runRunSubmit(args []string, stdout, stderr io.Writer) int {
 	flags := flag.NewFlagSet("run submit", flag.ContinueOnError)
 	flags.SetOutput(stderr)
-	credentialsPath := flags.String("credentials", os.Getenv("LEVIER_CREDENTIALS"), "credentials file")
+	credentialsPath := flags.String("credentials", defaultCredentialsValue(), "credentials file")
 	server := flags.String("server", "", "Levier HTTP address")
 	prompt := flags.String("prompt", "", "user prompt")
 	runtimeName := flags.String("runtime", "", "target runtime name, e.g. react1")
@@ -80,7 +165,7 @@ func runRunSubmit(args []string, stdout, stderr io.Writer) int {
 		return code
 	}
 	if *credentialsPath == "" {
-		fmt.Fprintln(stderr, "credentials path is required: --credentials or LEVIER_CREDENTIALS")
+		fmt.Fprintln(stderr, "credentials path is required: pass --credentials, set LEVIER_CREDENTIALS, or run levier setup --credentials <path>")
 		return 2
 	}
 	if strings.TrimSpace(*prompt) == "" {
@@ -134,22 +219,29 @@ func runRunSubmit(args []string, stdout, stderr io.Writer) int {
 func runRunWatch(args []string, stdout, stderr io.Writer) int {
 	flags := flag.NewFlagSet("run watch", flag.ContinueOnError)
 	flags.SetOutput(stderr)
-	credentialsPath := flags.String("credentials", os.Getenv("LEVIER_CREDENTIALS"), "credentials file")
+	credentialsPath := flags.String("credentials", defaultCredentialsValue(), "credentials file")
 	server := flags.String("server", "", "Levier HTTP address")
 	runID := flags.String("run-id", "", "run id")
 	interval := flags.Duration("interval", 500*time.Millisecond, "poll interval")
 	watchTimeout := flags.Duration("timeout", 30*time.Minute, "watch timeout")
 	requestTimeout := flags.Duration("request-timeout", 10*time.Second, "per-request timeout")
 	asJSON := flags.Bool("json", false, "print JSON")
-	if ok, code := parseFlagSet(flags, args, stdout, stderr); !ok {
+	flagArgs, positionals := splitArgs(args, map[string]bool{
+		"credentials": true, "server": true, "run-id": true,
+		"interval": true, "timeout": true, "request-timeout": true,
+	})
+	if ok, code := parseFlagSet(flags, flagArgs, stdout, stderr); !ok {
 		return code
 	}
+	if *runID == "" && len(positionals) > 0 {
+		*runID = positionals[0]
+	}
 	if *credentialsPath == "" {
-		fmt.Fprintln(stderr, "credentials path is required: --credentials or LEVIER_CREDENTIALS")
+		fmt.Fprintln(stderr, "credentials path is required: pass --credentials, set LEVIER_CREDENTIALS, or run levier init")
 		return 2
 	}
 	if *runID == "" {
-		fmt.Fprintln(stderr, "run id is required: --run-id")
+		fmt.Fprintln(stderr, "run id is required: levier run watch <run_id>")
 		return 2
 	}
 	credentials, err := readCredentials(*credentialsPath)
@@ -169,6 +261,8 @@ func watchRun(client *apiClient, runID string, interval, timeout time.Duration, 
 	defer cancel()
 
 	lastStatus := ""
+	lastAttempt := 0
+	lastSeq := int64(0)
 	for {
 		run, err := client.getRun(ctx, runID)
 		if err != nil {
@@ -177,6 +271,9 @@ func watchRun(client *apiClient, runID string, interval, timeout time.Duration, 
 				return 5
 			}
 			return reportAPIError(err, stderr)
+		}
+		if !asJSON {
+			printRunProgress(client, runID, &lastAttempt, &lastSeq, stdout)
 		}
 		if !asJSON && run.Status != lastStatus {
 			fmt.Fprintf(stdout, "status: %s\n", run.Status)
@@ -192,6 +289,38 @@ func watchRun(client *apiClient, runID string, interval, timeout time.Duration, 
 			return 5
 		case <-time.After(interval):
 		}
+	}
+}
+
+func printRunProgress(client *apiClient, runID string, lastAttempt *int, lastSeq *int64, stdout io.Writer) {
+	page, err := client.listRunEvents(context.Background(), runID, *lastAttempt, *lastSeq, 100)
+	if err != nil {
+		return
+	}
+	for _, event := range page.Events {
+		switch event.EventType {
+		case "TOOL_CALL_BEGIN":
+			name, _ := event.Data["tool_name"].(string)
+			fmt.Fprintf(stdout, "tool -> %s\n", name)
+		case "TOOL_CALL_END":
+			name, _ := event.Data["tool_name"].(string)
+			if ok, _ := event.Data["ok"].(bool); ok {
+				fmt.Fprintf(stdout, "tool <- %s ok\n", name)
+			} else {
+				code, _ := event.Data["error_code"].(string)
+				fmt.Fprintf(stdout, "tool <- %s %s\n", name, code)
+			}
+		case "ERROR":
+			code, _ := event.Data["code"].(string)
+			message, _ := event.Data["message"].(string)
+			fmt.Fprintf(stdout, "error: %s %s\n", code, message)
+		}
+	}
+	if page.NextAttempt > 0 {
+		*lastAttempt = page.NextAttempt
+	}
+	if page.NextSeq > 0 {
+		*lastSeq = page.NextSeq
 	}
 }
 
@@ -225,27 +354,36 @@ func finishWatch(client *apiClient, run runView, asJSON bool, stdout, stderr io.
 	if result.FinalMessage != "" {
 		fmt.Fprintf(stdout, "final: %s\n", result.FinalMessage)
 	}
+	if run.Status == "failed" {
+		fmt.Fprintln(stdout, "hint: start the App tools with `levier dev`, or inspect `levier run show <id> --events`")
+	}
 	return terminalExitCode(run.Status)
 }
 
 func runRunShow(args []string, stdout, stderr io.Writer) int {
 	flags := flag.NewFlagSet("run show", flag.ContinueOnError)
 	flags.SetOutput(stderr)
-	credentialsPath := flags.String("credentials", os.Getenv("LEVIER_CREDENTIALS"), "credentials file")
+	credentialsPath := flags.String("credentials", defaultCredentialsValue(), "credentials file")
 	server := flags.String("server", "", "Levier HTTP address")
 	runID := flags.String("run-id", "", "run id")
 	events := flags.Bool("events", false, "include run events")
 	timeout := flags.Duration("timeout", 10*time.Second, "per-request timeout")
 	asJSON := flags.Bool("json", false, "print JSON")
-	if ok, code := parseFlagSet(flags, args, stdout, stderr); !ok {
+	flagArgs, positionals := splitArgs(args, map[string]bool{
+		"credentials": true, "server": true, "run-id": true, "timeout": true,
+	})
+	if ok, code := parseFlagSet(flags, flagArgs, stdout, stderr); !ok {
 		return code
 	}
+	if *runID == "" && len(positionals) > 0 {
+		*runID = positionals[0]
+	}
 	if *credentialsPath == "" {
-		fmt.Fprintln(stderr, "credentials path is required: --credentials or LEVIER_CREDENTIALS")
+		fmt.Fprintln(stderr, "credentials path is required: pass --credentials, set LEVIER_CREDENTIALS, or run levier init")
 		return 2
 	}
 	if *runID == "" {
-		fmt.Fprintln(stderr, "run id is required: --run-id")
+		fmt.Fprintln(stderr, "run id is required: levier run show <run_id>")
 		return 2
 	}
 	credentials, err := readCredentials(*credentialsPath)
@@ -291,21 +429,27 @@ func runRunShow(args []string, stdout, stderr io.Writer) int {
 func runRunCancel(args []string, stdout, stderr io.Writer) int {
 	flags := flag.NewFlagSet("run cancel", flag.ContinueOnError)
 	flags.SetOutput(stderr)
-	credentialsPath := flags.String("credentials", os.Getenv("LEVIER_CREDENTIALS"), "credentials file")
+	credentialsPath := flags.String("credentials", defaultCredentialsValue(), "credentials file")
 	server := flags.String("server", "", "Levier HTTP address")
 	runID := flags.String("run-id", "", "run id")
 	yes := flags.Bool("yes", false, "confirm cancellation")
 	timeout := flags.Duration("timeout", 10*time.Second, "per-request timeout")
 	asJSON := flags.Bool("json", false, "print JSON")
-	if ok, code := parseFlagSet(flags, args, stdout, stderr); !ok {
+	flagArgs, positionals := splitArgs(args, map[string]bool{
+		"credentials": true, "server": true, "run-id": true, "timeout": true,
+	})
+	if ok, code := parseFlagSet(flags, flagArgs, stdout, stderr); !ok {
 		return code
 	}
+	if *runID == "" && len(positionals) > 0 {
+		*runID = positionals[0]
+	}
 	if *credentialsPath == "" {
-		fmt.Fprintln(stderr, "credentials path is required: --credentials or LEVIER_CREDENTIALS")
+		fmt.Fprintln(stderr, "credentials path is required: pass --credentials, set LEVIER_CREDENTIALS, or run levier init")
 		return 2
 	}
 	if *runID == "" {
-		fmt.Fprintln(stderr, "run id is required: --run-id")
+		fmt.Fprintln(stderr, "run id is required: levier run cancel <run_id>")
 		return 2
 	}
 	credentials, err := readCredentials(*credentialsPath)
@@ -335,6 +479,19 @@ func runRunCancel(args []string, stdout, stderr io.Writer) int {
 	fmt.Fprintf(stdout, "run cancelled: %s\n", cancelled.RunID)
 	fmt.Fprintf(stdout, "status: %s\n", cancelled.Status)
 	return 0
+}
+
+// splitRunArgs allows the prompt to appear before or between flags, which is
+// how people naturally type `levier run "hello" --runtime echo1`.
+func splitRunArgs(args []string) ([]string, string) {
+	flagArgs, promptParts := splitArgs(args, map[string]bool{
+		"credentials": true, "server": true, "runtime": true,
+		"provider": true, "model": true, "max-steps": true,
+		"run-ms": true, "tool-ms": true, "interval": true,
+		"watch-timeout": true, "timeout": true, "app": true,
+		"python": true,
+	})
+	return flagArgs, strings.TrimSpace(strings.Join(promptParts, " "))
 }
 
 func isTerminalStatus(status string) bool {

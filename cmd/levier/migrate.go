@@ -58,7 +58,7 @@ func printMigrateUsage(out io.Writer) {
 func runMigrateStatus(args []string, stdout, stderr io.Writer) int {
 	flags := flag.NewFlagSet("migrate status", flag.ContinueOnError)
 	flags.SetOutput(stderr)
-	configPath := flags.String("config", envOr("LEVIER_CONFIG", "levier.example.yaml"), "path to YAML configuration")
+	configPath := flags.String("config", controlConfigValue(), "path to YAML configuration")
 	asJSON := flags.Bool("json", false, "print JSON")
 	timeout := flags.Duration("timeout", 30*time.Second, "database operation timeout")
 	if ok, code := parseFlagSet(flags, args, stdout, stderr); !ok {
@@ -100,7 +100,7 @@ func runMigrateStatus(args []string, stdout, stderr io.Writer) int {
 func runMigrateUp(args []string, stdout, stderr io.Writer) int {
 	flags := flag.NewFlagSet("migrate up", flag.ContinueOnError)
 	flags.SetOutput(stderr)
-	configPath := flags.String("config", envOr("LEVIER_CONFIG", "levier.example.yaml"), "path to YAML configuration")
+	configPath := flags.String("config", controlConfigValue(), "path to YAML configuration")
 	asJSON := flags.Bool("json", false, "print JSON")
 	timeout := flags.Duration("timeout", 2*time.Minute, "database operation timeout")
 	if ok, code := parseFlagSet(flags, args, stdout, stderr); !ok {

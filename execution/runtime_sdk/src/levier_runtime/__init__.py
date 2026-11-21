@@ -23,6 +23,7 @@ __version__ = "0.1.0"
 from .config import ConfigError, MiddlewareConfig, RuntimeConfig, load_runtime_config
 from .context import RunContext, RuntimeUsageError
 from .runtime import Runtime, RunFunction
+from .toolbox import Tool, Toolbox
 from .types import (
     McpBinding,
     Message,
@@ -32,8 +33,12 @@ from .types import (
     ToolSpec,
 )
 
+# The short name runtime authors see in the docs.
+Context = RunContext
+
 __all__ = [
     "ConfigError",
+    "Context",
     "McpBinding",
     "Message",
     "MiddlewareConfig",
@@ -44,7 +49,9 @@ __all__ = [
     "RuntimeConfig",
     "RuntimeUsageError",
     "Timeouts",
+    "Tool",
     "ToolResult",
     "ToolSpec",
+    "Toolbox",
     "load_runtime_config",
 ]

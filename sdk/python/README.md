@@ -1,8 +1,30 @@
 # Levier Python App SDK
 
-`levier_app` is the App-side SDK. It owns credentials, HTTP, WebSocket,
-reconnects, tool registration, and the `local_tool_call` /
-`local_tool_result` contract. An App owns its own state and tool handlers.
+`levier_app` is the low-level App adapter. The preferred authoring surface is
+the `levier` package, which re-exports `App` and `tool` and infers the JSON
+schema from a normal Python signature:
+
+```python
+from levier import App, tool
+
+counter = {"value": 0}
+
+
+@tool
+def counter_add(delta: int) -> dict:
+    """Add delta to the counter."""
+    counter["value"] += delta
+    return {"value": counter["value"]}
+
+
+app = App(tools=[counter_add], mcp=["github"])
+
+if __name__ == "__main__":
+    app.run()
+```
+
+The sections below document the lower-level `levier_app` adapter, which remains
+available for existing integrations.
 
 ## Minimal App
 
@@ -36,17 +58,30 @@ if __name__ == "__main__":
     raise SystemExit(LevierApp.run_cli(register_tools))
 ```
 
-Install locally:
+Install locally from the repository:
 
 ```sh
 pip install -e ./sdk/python
+```
+
+Or install a release wheel from any directory:
+
+```sh
+pip install levier_app-0.1.0-py3-none-any.whl
 ```
 
 `LevierApp.run_cli(register_tools)` owns credential loading, argparse, logging,
 signals, and reconnect settings. Use `--credentials`, `--server`, `--mcp-ref`,
 and the standard runtime options instead of writing a bootstrap script.
 
-Run with the credentials created by `levier app init`:
+Set the default once, then run from any directory:
+
+```sh
+levier setup --server http://127.0.0.1:8080 --credentials ~/.config/levier/counter-app.json
+python app.py
+```
+
+An explicit `LEVIER_CREDENTIALS` still overrides the profile:
 
 ```sh
 LEVIER_CREDENTIALS=~/.config/levier/counter-app.json python app.py

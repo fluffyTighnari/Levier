@@ -58,7 +58,8 @@ execution/
   agent_core/      optional ReAct loop library
 ```
 
-`runtime_sdk` core has no React, LLM, MCP server, or ToolRouter dependency.
+`runtime_sdk` core has no React or LLM dependency; MCP goes through the
+SDK-owned `ctx.toolbox()` rather than a runtime-specific tool router.
 `react_runtime` depends on `agent_core` and the optional SDK helpers.
 
 ## Run lifecycle

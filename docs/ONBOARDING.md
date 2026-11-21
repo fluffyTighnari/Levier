@@ -1,6 +1,8 @@
 <!-- Levier — onboarding: start the service and connect the first App. -->
 
-# 从启动到第一个 Run
+# 从启动到第一个 Run（详细版）
+
+> 黄金路径见 [`QUICKSTART.md`](QUICKSTART.md)。本文保留为详细解释和排错手册。
 
 这份文档只做两件事：把 Levier 启动起来，以及把一个 App 安全地接入并完成第一个 Run。
 
@@ -117,7 +119,7 @@ app check: PASS
 推荐使用 `examples/counter_agent`（在仓库根目录，无需先安装包）：
 
 ```sh
-PYTHONPATH=sdk/python/src \
+PYTHONPATH=sdk/levier/src:sdk/python/src \
 LEVIER_CREDENTIALS=~/.config/levier/counter-agent.json \
   python3 examples/counter_agent/app.py
 ```

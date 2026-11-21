@@ -198,7 +198,7 @@ class McpRuntimeClient:
             if self._closing:
                 raise McpRuntimeError("MCP_RUNTIME_UNAVAILABLE", "client is closed")
             try:
-                reader, writer = await asyncio.open_unix_connection(self.socket_path)
+                reader, writer = await _open_connection(self.socket_path)
             except OSError as exc:
                 raise McpRuntimeError(
                     "MCP_RUNTIME_UNAVAILABLE",
@@ -257,6 +257,22 @@ class McpRuntimeClient:
         for future in pending:
             if not future.done():
                 future.set_exception(exc)
+
+
+async def _open_connection(endpoint: str):
+    """Open a Unix socket or a TCP endpoint such as tcp://127.0.0.1:9091."""
+    value = endpoint.strip()
+    if value.startswith("tcp://"):
+        value = value[len("tcp://") :]
+        host, _, port = value.rpartition(":")
+        if not host or not port:
+            raise OSError(f"invalid MCP runtime TCP endpoint: {endpoint!r}")
+        return await asyncio.open_connection(host, int(port))
+    if "://" not in value and "/" not in value and "\\" not in value and ":" in value:
+        host, _, port = value.rpartition(":")
+        if host and port.isdigit():
+            return await asyncio.open_connection(host, int(port))
+    return await asyncio.open_unix_connection(value)
 
 
 def _binding_dict(binding: McpBinding) -> dict[str, Any]:

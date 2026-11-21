@@ -5,10 +5,75 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"net/url"
 	"os"
 	"strings"
 	"time"
 )
+
+func runModel(args []string, stdout, stderr io.Writer) int {
+	if len(args) == 0 || args[0] == "help" || args[0] == "-h" || args[0] == "--help" {
+		fmt.Fprintln(stdout, "usage:")
+		fmt.Fprintln(stdout, "  levier model connect --url URL --key KEY --model MODEL [--name name]")
+		fmt.Fprintln(stdout, "  levier model list")
+		fmt.Fprintln(stdout, "  levier model check --name name")
+		fmt.Fprintln(stdout, "  levier model remove --name name --yes")
+		return 0
+	}
+	switch args[0] {
+	case "connect":
+		return runProviderConnect(args[1:], stdout, stderr)
+	case "list":
+		return runModelList(args[1:], stdout, stderr)
+	case "check":
+		return runProviderCheck(args[1:], stdout, stderr)
+	case "remove", "delete":
+		return runProviderRemove(args[1:], stdout, stderr)
+	default:
+		fmt.Fprintf(stderr, "unknown model command: %s\n\n", args[0])
+		fmt.Fprintln(stderr, "usage: levier model connect --url URL --key KEY --model MODEL")
+		return 2
+	}
+}
+
+func runModelList(args []string, stdout, stderr io.Writer) int {
+	flags, server, adminToken, timeout, asJSON := providerFlagSet("model list")
+	if ok, code := parseFlagSet(flags, args, stdout, stderr); !ok {
+		return code
+	}
+	client, ok := providerAdminClient(*server, *adminToken, *timeout, stderr)
+	if !ok {
+		return 2
+	}
+	providers, err := client.listModelProviders(context.Background())
+	if err != nil {
+		return reportAPIError(err, stderr)
+	}
+	if *asJSON {
+		views := make([]map[string]any, 0, len(providers))
+		for _, provider := range providers {
+			views = append(views, map[string]any{
+				"name":          provider.Name,
+				"base_url":      provider.BaseURL,
+				"default_model": provider.DefaultModel,
+				"models":        provider.Models,
+				"default":       provider.Default,
+			})
+		}
+		return encodeJSON(stdout, map[string]any{"providers": views}, stderr)
+	}
+	if len(providers) == 0 {
+		fmt.Fprintln(stdout, "no models connected")
+		fmt.Fprintln(stdout, "next: levier model connect --url URL --key KEY --model MODEL")
+		return 0
+	}
+	fmt.Fprintf(stdout, "%-18s %-20s %-8s %s\n", "name", "model", "default", "base_url")
+	for _, provider := range providers {
+		fmt.Fprintf(stdout, "%-18s %-20s %-8t %s\n",
+			provider.Name, provider.DefaultModel, provider.Default, provider.BaseURL)
+	}
+	return 0
+}
 
 func runProvider(args []string, stdout, stderr io.Writer) int {
 	if len(args) == 0 {
@@ -16,6 +81,8 @@ func runProvider(args []string, stdout, stderr io.Writer) int {
 		return 2
 	}
 	switch args[0] {
+	case "connect":
+		return runProviderConnect(args[1:], stdout, stderr)
 	case "list":
 		return runProviderList(args[1:], stdout, stderr)
 	case "show":
@@ -38,6 +105,7 @@ func runProvider(args []string, stdout, stderr io.Writer) int {
 
 func printProviderUsage(out io.Writer) {
 	fmt.Fprintln(out, "usage:")
+	fmt.Fprintln(out, "  levier provider connect --url <base-url> --key <api-key> --model <model> [--name name]")
 	fmt.Fprintln(out, "  levier provider list [--json]")
 	fmt.Fprintln(out, "  levier provider show --name <name> [--json]")
 	fmt.Fprintln(out, "  levier provider add --name <name> --adapter openai_compatible|anthropic --secret-ref <ref> [options]")
@@ -47,6 +115,191 @@ func printProviderUsage(out io.Writer) {
 	fmt.Fprintln(out, "")
 	fmt.Fprintln(out, "Provider mutations require an Admin token.")
 	fmt.Fprintln(out, "Secret values are supplied through LEVIER_SECRET_<REF> or LEVIER_SECRETS_FILE.")
+}
+
+func runProviderConnect(args []string, stdout, stderr io.Writer) int {
+	flags, server, adminToken, timeout, asJSON := providerFlagSet("provider connect")
+	baseURL := flags.String("url", "", "provider base URL, for example https://api.deepseek.com")
+	apiKey := flags.String("key", "", "provider API key (or LEVIER_MODEL_API_KEY)")
+	model := flags.String("model", "", "default model")
+	name := flags.String("name", "", "provider name (inferred from the URL)")
+	adapter := flags.String("adapter", "auto", "auto, openai_compatible, or anthropic")
+	models := flags.String("models", "", "comma-separated allowed models")
+	defaultProvider := flags.Bool("default", true, "make this the default provider")
+	if ok, code := parseFlagSet(flags, args, stdout, stderr); !ok {
+		return code
+	}
+	if flags.NArg() > 0 {
+		fmt.Fprintf(stderr, "provider connect: unexpected argument: %s\n", flags.Arg(0))
+		return 2
+	}
+	key := strings.TrimSpace(*apiKey)
+	if key == "" {
+		key = strings.TrimSpace(os.Getenv("LEVIER_MODEL_API_KEY"))
+	}
+	if key == "" {
+		key = strings.TrimSpace(os.Getenv("LEVIER_API_KEY"))
+	}
+	if key == "" {
+		fmt.Fprintln(stderr, "API key is required: --key or LEVIER_MODEL_API_KEY")
+		return 2
+	}
+	modelName := strings.TrimSpace(*model)
+	if modelName == "" {
+		fmt.Fprintln(stderr, "model is required: --model")
+		return 2
+	}
+	urlValue := normalizeProviderURL(*baseURL)
+	if urlValue == "" {
+		fmt.Fprintln(stderr, "provider URL is required: --url")
+		return 2
+	}
+	providerName := sanitizeProviderName(*name)
+	if providerName == "" {
+		providerName = inferProviderName(urlValue)
+	}
+	if providerName == "" {
+		fmt.Fprintln(stderr, "could not infer provider name; pass --name")
+		return 2
+	}
+	adapterValue := inferAdapter(*adapter, urlValue)
+	secretRef := providerSecretRef(providerName)
+	modelList := splitCSV(*models)
+	if len(modelList) == 0 {
+		modelList = []string{modelName}
+	}
+	if !containsString(modelList, modelName) {
+		modelList = append([]string{modelName}, modelList...)
+	}
+
+	client, ok := providerAdminClient(*server, *adminToken, *timeout, stderr)
+	if !ok {
+		return 2
+	}
+	ctx := context.Background()
+	provider, err := client.upsertModelProvider(ctx, map[string]any{
+		"name":          providerName,
+		"adapter":       adapterValue,
+		"base_url":      urlValue,
+		"default_model": modelName,
+		"models":        modelList,
+		"secret_ref":    secretRef,
+		"enabled":       true,
+		"default":       *defaultProvider,
+	})
+	if err != nil {
+		return reportAPIError(err, stderr)
+	}
+	provider, err = client.putModelProviderSecret(ctx, providerName, key)
+	if err != nil {
+		fmt.Fprintf(stderr, "provider metadata was saved, but the key could not be stored: %v\n", err)
+		fmt.Fprintln(stderr, "Upgrade the control plane, or set this key on the server and retry:")
+		fmt.Fprintf(stderr, "  LEVIER_SECRET_%s=... (then restart the control plane)\n", strings.ToUpper(secretRef))
+		return reportAPIError(err, stderr)
+	}
+	provider, err = client.checkModelProvider(ctx, providerName)
+	if err != nil {
+		return reportAPIError(err, stderr)
+	}
+	if *asJSON {
+		return encodeJSON(stdout, provider, stderr)
+	}
+	fmt.Fprintf(stdout, "model connected: %s\n", provider.Name)
+	fmt.Fprintf(stdout, "url:              %s\n", provider.BaseURL)
+	fmt.Fprintf(stdout, "model:            %s\n", provider.DefaultModel)
+	fmt.Fprintf(stdout, "default:          %t\n", provider.Default)
+	fmt.Fprintln(stdout, "next:             levier init")
+	return 0
+}
+
+func normalizeProviderURL(value string) string {
+	value = strings.TrimSpace(value)
+	if value == "" {
+		return ""
+	}
+	if !strings.Contains(value, "://") {
+		value = "https://" + value
+	}
+	parsed, err := url.Parse(value)
+	if err != nil || parsed.Hostname() == "" {
+		return ""
+	}
+	host := strings.ToLower(parsed.Hostname())
+	path := strings.TrimRight(parsed.Path, "/")
+	if strings.Contains(host, "anthropic") {
+		if path == "" {
+			path = "/v1/messages"
+		} else if path == "/v1" {
+			path += "/messages"
+		}
+	} else if path == "" && (host == "api.openai.com" || host == "openai.com") {
+		path = "/v1"
+	}
+	parsed.Path = path
+	return parsed.String()
+}
+
+func sanitizeProviderName(value string) string {
+	value = strings.ToLower(strings.TrimSpace(value))
+	var builder strings.Builder
+	for _, r := range value {
+		switch {
+		case r >= 'a' && r <= 'z', r >= '0' && r <= '9', r == '-', r == '_', r == '.':
+			builder.WriteRune(r)
+		default:
+			builder.WriteByte('-')
+		}
+	}
+	return strings.Trim(builder.String(), ".-")
+}
+
+func inferProviderName(value string) string {
+	parsed, err := url.Parse(value)
+	if err != nil {
+		return ""
+	}
+	host := strings.ToLower(parsed.Hostname())
+	if host == "localhost" || host == "127.0.0.1" || host == "::1" {
+		return "local"
+	}
+	parts := strings.Split(host, ".")
+	for len(parts) > 0 && (parts[0] == "www" || parts[0] == "api" || parts[0] == "chat" || parts[0] == "llm") {
+		parts = parts[1:]
+	}
+	if len(parts) == 0 {
+		return ""
+	}
+	if len(parts) >= 2 {
+		return sanitizeProviderName(parts[len(parts)-2])
+	}
+	return sanitizeProviderName(parts[0])
+}
+
+func inferAdapter(value, baseURL string) string {
+	switch strings.ToLower(strings.TrimSpace(value)) {
+	case "anthropic":
+		return "anthropic"
+	case "openai", "openai_compatible", "openai-compatible":
+		return "openai_compatible"
+	}
+	if strings.Contains(strings.ToLower(baseURL), "anthropic") {
+		return "anthropic"
+	}
+	return "openai_compatible"
+}
+
+func providerSecretRef(name string) string {
+	replacer := strings.NewReplacer(".", "_", "-", "_")
+	return replacer.Replace(name) + "_api_key"
+}
+
+func containsString(values []string, target string) bool {
+	for _, value := range values {
+		if value == target {
+			return true
+		}
+	}
+	return false
 }
 
 func providerFlagSet(name string) (*flag.FlagSet, *string, *string, *time.Duration, *bool) {
@@ -60,11 +313,14 @@ func providerFlagSet(name string) (*flag.FlagSet, *string, *string, *time.Durati
 
 func providerAdminClient(server, token string, timeout time.Duration, stderr io.Writer) (*apiClient, bool) {
 	if token == "" {
-		token = os.Getenv("LEVIER_ADMIN_TOKEN")
+		token = defaultAdminTokenValue()
 	}
 	if token == "" {
 		fmt.Fprintln(stderr, "admin token is required: --admin-token or LEVIER_ADMIN_TOKEN")
 		return nil, false
+	}
+	if strings.TrimSpace(server) == "" {
+		server = defaultServerValue()
 	}
 	return newAPIClient(resolveServer(server, nil), token, timeout), true
 }

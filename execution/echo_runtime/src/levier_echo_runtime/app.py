@@ -16,7 +16,12 @@ from levier_runtime import RunContext, __version__ as RUNTIME_VERSION
 from levier_runtime.cli import run_cli
 from levier_runtime.runtime import Runtime
 
-DEFAULT_CONFIG = Path(__file__).resolve().parents[2] / "runtime.yaml"
+_SOURCE_CONFIG = Path(__file__).resolve().parents[2] / "runtime.yaml"
+DEFAULT_CONFIG = (
+    _SOURCE_CONFIG
+    if _SOURCE_CONFIG.is_file()
+    else Path(__file__).with_name("runtime.example.yaml")
+)
 
 
 async def run(ctx: RunContext) -> str:

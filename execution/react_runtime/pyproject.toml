@@ -25,3 +25,6 @@ levier-runtime = { path = "../runtime_sdk", editable = true }
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.setuptools.package-data]
+levier_react_runtime = ["react.example.yaml"]

@@ -5,14 +5,18 @@ The Runtime SDK is the small execution-side counterpart to the App SDK.
 A runtime only needs:
 
 ```python
-from levier_runtime import Runtime, RunContext
+from levier_runtime import Context, Runtime
 
-async def run(ctx: RunContext) -> str:
+async def run(ctx: Context) -> str:
     await ctx.reply("hello")
     return "completed"
 
-Runtime.from_config("runtime.yaml").run(run)
+Runtime.start(run)
 ```
+
+`Runtime.start()` needs no YAML and no explicit runtime token for a local
+`levier up` stack. The higher-level `levier` package exposes the same objects
+as `from levier import Context, Runtime`.
 
 The SDK owns the RuntimeChannel, Hello, heartbeat, reconnect, Ack, event
 sequence numbers, cancellation, tool-call transport, and graceful shutdown.
@@ -22,6 +26,13 @@ sequence numbers, cancellation, tool-call transport, and graceful shutdown.
 - core: `runtime_name`, `run_id`, `input`, `params`, `timeouts`, `cancelled`
 - optional: `model`, `tools`, `mcp_bindings`, `session_id`, `resume_from`
 - operations: `reply`, `call_tool`, `error`; optional `emit`, `checkpoint`
+- one-liners: `await ctx.toolbox()`, `await ctx.chat(...)`,
+  `await ctx.invoke_all(reply, toolbox=...)`
+
+`ctx.toolbox()` merges local App tools and MCP tools into one callable
+sequence. `ctx.chat()` uses the model already resolved for the Run.
+`ctx.invoke_all()` dispatches model tool calls to the right source and emits
+the same tool observability events.
 - `ctx.logger` automatically carries run/app/runtime/attempt/trace fields
 - `ctx.call_tool` automatically emits `TOOL_CALL_BEGIN` / `TOOL_CALL_END`
 - uncaught `run(ctx)` exceptions become `ERROR` + a failed terminal run
@@ -37,12 +48,13 @@ transport-free custom-runtime conformance test.
 
 ## Optional helpers
 
-The SDK core does not depend on an LLM, a ReAct loop, or a tool router.
+The SDK core does not depend on an LLM or a ReAct loop. Tool routing is built
+into `ctx.toolbox()`.
 Optional subpackages are included for runtimes that want them:
 
 ```text
 levier_runtime.llm      provider protocol and HTTP providers
-levier_runtime.tools    ToolProvider / ToolRouter
+levier_runtime.tools    low-level ToolProvider interface
 levier_runtime.react    ReactAgent and React checkpoint codec
 levier_runtime.mcp      shared MCP Runtime client
 ```

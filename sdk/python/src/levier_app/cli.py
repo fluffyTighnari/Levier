@@ -31,7 +31,7 @@ def run_app(
     parser.add_argument(
         "--credentials",
         default="",
-        help="credentials file (or LEVIER_CREDENTIALS)",
+        help="credentials file (or LEVIER_CREDENTIALS / levier setup)",
     )
     parser.add_argument("--server", default="", help="Levier HTTP address")
     parser.add_argument(
@@ -64,7 +64,7 @@ def run_app(
         )
     except CredentialsError as exc:
         print(f"credentials error: {exc}", file=sys.stderr)
-        print("create credentials with: levier app init", file=sys.stderr)
+        print("connect this project with: levier init", file=sys.stderr)
         return 2
     if register is not None:
         register(app)

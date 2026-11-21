@@ -13,6 +13,7 @@ import signal
 from typing import Sequence
 
 from levier_mcp_runtime import __version__
+from levier_mcp_runtime.profile import default_mcp_socket
 from levier_mcp_runtime.server import McpRuntimeServer, serve_stdio
 from levier_mcp_runtime.secrets import ChainResolver, EnvSecretResolver, FileSecretResolver
 from levier_mcp_runtime.sessions import SessionManager
@@ -31,15 +32,29 @@ def _first_env(*names: str) -> str | None:
 def build_parser() -> argparse.ArgumentParser:
     """Build the CLI parser."""
     parser = argparse.ArgumentParser(prog="levier-mcp-runtime")
+    default_endpoint = (
+        _first_env("LEVIER_MCP_SOCKET", "MCP_RUNTIME_SOCKET")
+        or default_mcp_socket()
+        or ""
+    )
     parser.add_argument(
         "--socket",
-        default=_first_env("LEVIER_MCP_SOCKET", "MCP_RUNTIME_SOCKET") or _DEFAULT_SOCKET,
+        default="" if default_endpoint.startswith("tcp://") else (default_endpoint or _DEFAULT_SOCKET),
         help="Unix domain socket path",
+    )
+    parser.add_argument(
+        "--addr",
+        default=(
+            default_endpoint
+            if default_endpoint.startswith("tcp://")
+            else _first_env("LEVIER_MCP_ADDR", "MCP_RUNTIME_ADDR") or ""
+        ),
+        help="TCP listen address, for example 127.0.0.1:9091",
     )
     parser.add_argument(
         "--stdio",
         action="store_true",
-        help="serve one client over stdin/stdout instead of a Unix socket",
+        help="serve one client over stdin/stdout instead of a socket",
     )
     parser.add_argument(
         "--secrets-file",
@@ -71,9 +86,20 @@ def main(argv: Sequence[str] | None = None) -> int:
         asyncio.run(serve_stdio(manager, version=__version__, logger=logger))
         return 0
 
+    socket_path = args.socket
+    tcp_address = args.addr
+    if os.name == "nt" and socket_path == _DEFAULT_SOCKET and not tcp_address:
+        socket_path = ""
+    if socket_path.startswith("tcp://"):
+        tcp_address = socket_path
+        socket_path = ""
+    if not socket_path and not tcp_address and os.name == "nt":
+        tcp_address = "127.0.0.1:9091"
+        socket_path = ""
     server = McpRuntimeServer(
         manager,
-        socket_path=args.socket,
+        socket_path=socket_path,
+        tcp_address=tcp_address,
         version=__version__,
         logger=logger,
     )

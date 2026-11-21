@@ -17,6 +17,8 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"path/filepath"
+	"strings"
 	"syscall"
 	"time"
 
@@ -43,6 +45,9 @@ func runServer(args []string) {
 	defaultConfig := os.Getenv("LEVIER_CONFIG")
 	if defaultConfig == "" {
 		defaultConfig = os.Getenv("MIDDLEWARE_CONFIG")
+	}
+	if defaultConfig == "" {
+		defaultConfig = strings.TrimSpace(loadProfile().ControlConfig)
 	}
 	if defaultConfig == "" {
 		defaultConfig = "levier.example.yaml"
@@ -107,13 +112,33 @@ func runServer(args []string) {
 	metrics := observe.NewRegistry()
 	runs := runstore.New(pool)
 	registry := register.New(pool)
+	resolvers := []register.SecretResolver{register.EnvSecretResolver{}}
 	if secretsPath := os.Getenv("LEVIER_SECRETS_FILE"); secretsPath != "" {
 		resolver, err := register.LoadFileSecretResolver(secretsPath)
 		if err != nil {
 			logger.Error("load control-plane secrets failed", "err", err)
 			os.Exit(1)
 		}
-		registry = register.NewWithSecrets(pool, resolver)
+		resolvers = append(resolvers, resolver)
+	}
+	managedPath := os.Getenv("LEVIER_SECRETS_WRITE_FILE")
+	if managedPath == "" && os.Getenv("LEVIER_SECRETS_FILE") == "" {
+		if dir, err := levierDataDir(); err == nil {
+			managedPath = filepath.Join(dir, "secrets.json")
+		}
+	}
+	var secretWriter register.SecretWriter
+	if managedPath != "" {
+		store, err := register.LoadMutableFileSecretStore(managedPath)
+		if err != nil {
+			logger.Error("load managed provider secrets failed", "err", err)
+			os.Exit(1)
+		}
+		resolvers = append(resolvers, store)
+		secretWriter = store
+	}
+	if len(resolvers) > 1 {
+		registry = register.NewWithSecretsAndWriter(pool, register.ChainResolver{Resolvers: resolvers}, secretWriter)
 	}
 	queue := workflow.NewPostgres(pool)
 	reaperDone := make(chan struct{})
@@ -369,11 +394,16 @@ func runServer(args []string) {
 }
 
 func daemonAuthenticator(tokens map[string]string) connection.Authenticator {
+	shared := tokens["*"]
 	return func(daemonID, token string) bool {
-		expected, ok := tokens[daemonID]
-		if !ok {
-			return false
+		if expected, ok := tokens[daemonID]; ok {
+			return subtle.ConstantTimeCompare([]byte(expected), []byte(token)) == 1
 		}
-		return subtle.ConstantTimeCompare([]byte(expected), []byte(token)) == 1
+		// A shared runtime token lets the local SDK register a fresh runtime
+		// without asking its author to invent a daemon id/token pair.
+		if shared != "" {
+			return subtle.ConstantTimeCompare([]byte(shared), []byte(token)) == 1
+		}
+		return false
 	}
 }

@@ -27,4 +27,4 @@ async def run(ctx: RunContext) -> str:
 ```
 
 The package is also a Runtime SDK integration example. It has no LLM, strategy,
-tool router, or MCP client.
+or MCP client.

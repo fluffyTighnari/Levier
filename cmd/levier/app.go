@@ -62,6 +62,7 @@ func runApp(args []string, stdout, stderr io.Writer) int {
 func printAppUsage(out io.Writer) {
 	fmt.Fprintln(out, "usage:")
 	fmt.Fprintln(out, "  levier app init --name <app> [--credentials-out path] [--mcp-ref name,name]")
+	fmt.Fprintln(out, "  levier app init --name <app> --credentials-out path --rotate --yes   # recover lost credentials")
 	fmt.Fprintln(out, "  levier app show --credentials path")
 	fmt.Fprintln(out, "  levier app check --credentials path")
 	fmt.Fprintln(out, "  levier app rotate-key --credentials path --yes")
@@ -75,7 +76,7 @@ func runAppInit(args []string, stdout, stderr io.Writer) int {
 	credentialsFlag := flags.String("credentials-out", "", "credentials output path")
 	server := flags.String("server", "", "Levier HTTP address")
 	adminToken := flags.String("admin-token", "", "Admin token (or LEVIER_ADMIN_TOKEN)")
-	rotate := flags.Bool("rotate", false, "rotate key if the App already exists")
+	rotate := flags.Bool("rotate", false, "recover/rotate the key if the App already exists")
 	yes := flags.Bool("yes", false, "confirm rotation")
 	force := flags.Bool("force", false, "overwrite an existing credentials file")
 	mcpRefs := flags.String("mcp-ref", "", "comma-separated MCP server names")
@@ -107,7 +108,7 @@ func runAppInit(args []string, stdout, stderr io.Writer) int {
 	}
 	admin := *adminToken
 	if admin == "" {
-		admin = os.Getenv("LEVIER_ADMIN_TOKEN")
+		admin = defaultAdminTokenValue()
 	}
 	if admin == "" {
 		fmt.Fprintln(stderr, "admin token is required: --admin-token or LEVIER_ADMIN_TOKEN")
@@ -139,8 +140,12 @@ func runAppInit(args []string, stdout, stderr io.Writer) int {
 				return writeAppInitResult(stdout, result, true, false)
 			}
 			fmt.Fprintf(stdout, "app exists: %s\n", app.AppID)
-			fmt.Fprintf(stdout, "key was not returned; rotate it with:\n")
-			fmt.Fprintf(stdout, "  levier app rotate-key --credentials %s --yes\n", credentialsPath)
+			if _, statErr := os.Stat(credentialsPath); statErr != nil {
+				fmt.Fprintln(stdout, "credentials file is missing; recover it with:")
+			} else {
+				fmt.Fprintln(stdout, "key was not returned; keep the existing credentials file or rotate it with:")
+			}
+			fmt.Fprintf(stdout, "  levier app init --name %s --credentials-out %s --rotate --yes\n", app.Name, credentialsPath)
 			return 0
 		}
 		if !requireConfirmation(*yes, fmt.Sprintf("Rotate key for %s? The old key stops working immediately.", app.AppID), stdout, stderr) {
@@ -168,6 +173,16 @@ func runAppInit(args []string, stdout, stderr io.Writer) int {
 	if err != nil {
 		fmt.Fprintf(stderr, "write credentials: %v\n", err)
 		return 1
+	}
+	if *credentialsFlag == "" {
+		profile := loadProfile()
+		profile.Credentials = credentialsPath
+		if profile.Server == "" {
+			profile.Server = serverURL
+		}
+		if _, err := saveProfile(profile); err != nil {
+			fmt.Fprintf(stderr, "warning: could not save default credentials path: %v\n", err)
+		}
 	}
 	if _, err := verifyAppKey(ctx, serverURL, app.AppID, key, *timeout); err != nil {
 		fmt.Fprintf(stderr, "credentials were written, but the new app key could not be verified: %v\n", err)
@@ -245,7 +260,7 @@ func writeAppInitResult(stdout io.Writer, result appInitResult, asJSON, dryRun b
 func runAppShow(args []string, stdout, stderr io.Writer) int {
 	flags := flag.NewFlagSet("app show", flag.ContinueOnError)
 	flags.SetOutput(stderr)
-	credentialsPath := flags.String("credentials", os.Getenv("LEVIER_CREDENTIALS"), "credentials file")
+	credentialsPath := flags.String("credentials", defaultCredentialsValue(), "credentials file")
 	server := flags.String("server", "", "Levier HTTP address")
 	asJSON := flags.Bool("json", false, "print JSON")
 	timeout := flags.Duration("timeout", 10*time.Second, "per-request timeout")
@@ -253,12 +268,14 @@ func runAppShow(args []string, stdout, stderr io.Writer) int {
 		return code
 	}
 	if *credentialsPath == "" {
-		fmt.Fprintln(stderr, "credentials path is required: --credentials or LEVIER_CREDENTIALS")
+		fmt.Fprintln(stderr, "credentials path is required: pass --credentials, set LEVIER_CREDENTIALS, or run levier setup --credentials <path>")
 		return 2
 	}
 	credentials, err := readCredentials(*credentialsPath)
 	if err != nil {
 		fmt.Fprintf(stderr, "read credentials: %v\n", err)
+		fmt.Fprintln(stderr, "If the credentials file was lost, recover it with:")
+		fmt.Fprintf(stderr, "  levier app init --name <app-name> --credentials-out %s --rotate --yes\n", *credentialsPath)
 		return 2
 	}
 	serverURL := resolveServer(*server, &credentials)
@@ -309,7 +326,7 @@ func runAppShow(args []string, stdout, stderr io.Writer) int {
 func runAppRotateKey(args []string, stdout, stderr io.Writer) int {
 	flags := flag.NewFlagSet("app rotate-key", flag.ContinueOnError)
 	flags.SetOutput(stderr)
-	credentialsPath := flags.String("credentials", os.Getenv("LEVIER_CREDENTIALS"), "credentials file")
+	credentialsPath := flags.String("credentials", defaultCredentialsValue(), "credentials file")
 	server := flags.String("server", "", "Levier HTTP address")
 	adminToken := flags.String("admin-token", "", "Admin token (or LEVIER_ADMIN_TOKEN)")
 	yes := flags.Bool("yes", false, "confirm rotation")
@@ -319,12 +336,12 @@ func runAppRotateKey(args []string, stdout, stderr io.Writer) int {
 		return code
 	}
 	if *credentialsPath == "" {
-		fmt.Fprintln(stderr, "credentials path is required: --credentials or LEVIER_CREDENTIALS")
+		fmt.Fprintln(stderr, "credentials path is required: pass --credentials, set LEVIER_CREDENTIALS, or run levier setup --credentials <path>")
 		return 2
 	}
 	admin := *adminToken
 	if admin == "" {
-		admin = os.Getenv("LEVIER_ADMIN_TOKEN")
+		admin = defaultAdminTokenValue()
 	}
 	if admin == "" {
 		fmt.Fprintln(stderr, "admin token is required: --admin-token or LEVIER_ADMIN_TOKEN")
@@ -333,6 +350,8 @@ func runAppRotateKey(args []string, stdout, stderr io.Writer) int {
 	credentials, err := readCredentials(*credentialsPath)
 	if err != nil {
 		fmt.Fprintf(stderr, "read credentials: %v\n", err)
+		fmt.Fprintln(stderr, "If the credentials file was lost, recover it with:")
+		fmt.Fprintf(stderr, "  levier app init --name <app-name> --credentials-out %s --rotate --yes\n", *credentialsPath)
 		return 2
 	}
 	serverURL := resolveServer(*server, &credentials)

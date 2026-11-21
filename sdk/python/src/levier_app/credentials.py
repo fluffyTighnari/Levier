@@ -11,6 +11,7 @@ from __future__ import annotations
 import json
 import os
 import stat
+import sys
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -64,12 +65,79 @@ class Credentials:
         }
 
 
+def profile_path() -> Path:
+    """Return the same user profile path used by the Go CLI."""
+    value = os.environ.get("LEVIER_HOME")
+    if value:
+        return Path(value).expanduser() / "config.yaml"
+    if os.name == "nt":
+        base = os.environ.get("APPDATA")
+        if base:
+            return Path(base) / "levier" / "config.yaml"
+    elif sys.platform == "darwin":
+        return Path.home() / "Library" / "Application Support" / "levier" / "config.yaml"
+    else:
+        base = os.environ.get("XDG_CONFIG_HOME")
+        if base:
+            return Path(base) / "levier" / "config.yaml"
+    return Path.home() / ".config" / "levier" / "config.yaml"
+
+
+def profile_values() -> dict[str, str]:
+    """Read the small flat YAML profile without adding a PyYAML dependency."""
+    try:
+        lines = profile_path().read_text(encoding="utf-8").splitlines()
+    except OSError:
+        return {}
+    values: dict[str, str] = {}
+    for raw in lines:
+        line = raw.strip()
+        if not line or line.startswith("#") or ":" not in line:
+            continue
+        key, value = line.split(":", 1)
+        key = key.strip()
+        value = value.strip()
+        if not key:
+            continue
+        if len(value) >= 2 and value[0] == value[-1] and value[0] in {"'", '"'}:
+            value = value[1:-1]
+        values[key] = value
+    return values
+
+
+def project_values() -> dict[str, Any]:
+    """Read the per-project .levier.json written by ``levier init``."""
+    path = Path.cwd() / ".levier.json"
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return {}
+    return payload if isinstance(payload, dict) else {}
+
+
+def default_mcp_refs() -> list[str]:
+    """Return MCP refs from the environment, project config, or profile."""
+    raw = os.environ.get("LEVIER_APP_MCP_REFS", "")
+    if not raw.strip():
+        value = project_values().get("mcp_refs", "")
+        raw = value if isinstance(value, str) else ""
+    if not raw.strip():
+        raw = profile_values().get("mcp_refs", "")
+    return [item.strip() for item in raw.split(",") if item.strip()]
+
+
 def default_credentials_path(app_name: str = "app") -> Path:
-    """Resolve the credentials path from the environment or user config dir."""
+    """Resolve credentials from the environment, project, profile, or config dir."""
     value = os.environ.get("LEVIER_APP_CREDENTIALS") or os.environ.get("LEVIER_CREDENTIALS")
     if value:
         return Path(value).expanduser()
-    return Path.home() / ".config" / "levier" / f"{app_name}.json"
+    configured = project_values().get("credentials", "")
+    if isinstance(configured, str) and configured:
+        return Path(configured).expanduser()
+    configured = profile_values().get("credentials", "")
+    if configured:
+        return Path(configured).expanduser()
+    return profile_path().parent / f"{app_name}.json"
 
 
 def load_credentials(path: str | Path | None = None) -> Credentials:
@@ -121,11 +189,14 @@ def load_credentials(path: str | Path | None = None) -> Credentials:
 
 def resolve_server(credentials: Credentials, override: str | None = None) -> str:
     """Resolve explicit server, CLI/example env vars, stored server, localhost."""
+    project_server = project_values().get("server", "")
     value = (
         override
         or os.environ.get("LEVIER_SERVER")
         or os.environ.get("LEVIER_APP_URL")
         or os.environ.get("LEVIER_URL")
+        or (project_server if isinstance(project_server, str) else "")
+        or profile_values().get("server", "")
         or credentials.server
         or DEFAULT_SERVER
     )

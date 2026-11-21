@@ -198,9 +198,6 @@ middleware:
   address: "127.0.0.1:9090"
   auth_token: "change-me"
 
-mcp_runtime:
-  socket: "/tmp/levier-mcp.sock"
-
 runtime:
   name: "react1"
   instance_id: "daemon-local-1"
@@ -211,8 +208,9 @@ logging:
   level: "info"
 ```
 
-The SDK reads `middleware`, `runtime`, and `logging`. The React entry point
-reads `mcp_runtime.socket` and supports `LEVIER_MCP_RUNTIME_SOCKET`.
+The SDK reads `middleware`, `runtime`, and `logging`. MCP is resolved per run by
+`ctx.toolbox()` from `LEVIER_MCP_RUNTIME_SOCKET`, `LEVIER_MCP_ADDR`, or the user
+profile; there is no React-specific `mcp_runtime` YAML section.
 
 Canonical environment variables:
 
@@ -258,6 +256,7 @@ Secret values come from:
 ```text
 LEVIER_SECRET_<UPPER_REF>
 LEVIER_SECRETS_FILE
+LEVIER_SECRETS_WRITE_FILE      # 0600 managed file, writable via Admin API
 ```
 
 Example:
@@ -281,7 +280,12 @@ GET    /admin/model-providers         Admin catalog with secret_ref status
 POST   /admin/model-providers         Upsert provider metadata
 DELETE /admin/model-providers/{name}
 POST   /admin/model-providers/{name}/check
+PUT    /admin/model-providers/{name}/secret   Store the key in the managed file
 ```
+
+`levier model connect` uses the last endpoint, so App authors only provide URL,
+key, and model. Production may keep using environment variables or a read-only
+secret file.
 
 Provider keys are resolved at dispatch time and placed only in the per-run
 `TaskAssign.ModelProfile`. They are not included in provider list responses,
@@ -294,6 +298,7 @@ events, logs, checkpoints, or `/meta`.
 | 参数 | 环境变量 | 类型 | 默认 | 必填 | 秘密 |
 |---|---|---|---|---|---|
 | `--socket` | `LEVIER_MCP_SOCKET` / 旧 `MCP_RUNTIME_SOCKET` | path | `/tmp/levier-mcp.sock` | 否 | 否 |
+| `--addr` | `LEVIER_MCP_ADDR` | host:port | 空 | 否 | 否 |
 | `--stdio` | 无 | bool | `false` | 否 | 否 |
 | `--secrets-file` | `LEVIER_MCP_SECRETS_FILE` / 旧 `MCP_RUNTIME_SECRETS_FILE` | path | 空 | 否 | 文件内容秘密 |
 | `--log-level` | `LEVIER_MCP_LOG_LEVEL` / 旧 `MCP_RUNTIME_LOG_LEVEL` | enum | `info` | 否 | 否 |
@@ -339,6 +344,42 @@ updated_at
 ```
 
 旧文件只包含 `app_id` / `app_name` / `api_key` 时仍可读取；下一次写入会升级格式。文件必须为 0600。
+
+---
+
+## 6.1 用户级 CLI profile
+
+`levier setup` 写入的 profile 主要描述“去哪里找”。它默认不保存 Admin token
+或 App API key；显式使用 `--admin-token` / `--runtime-token` 时才会把对应值写入
+0600 profile：
+
+```text
+Windows      %APPDATA%\levier\config.yaml
+Linux        ~/.config/levier/config.yaml
+macOS        ~/Library/Application Support/levier/config.yaml
+```
+
+字段：
+
+| 字段 | 对应参数 | 用途 |
+|---|---|---|
+| `server` | `--server` | 默认 HTTP 地址 |
+| `admin_token` | `--admin-token` | 可选，显式保存的 Admin token |
+| `credentials` | `--credentials` | 默认 App 凭据文件 |
+| `app_name` | `--name` | 默认 App 名 |
+| `mcp_refs` | `--mcp-ref` | 默认 MCP 引用 |
+| `runtime` | `--runtime` | 默认目标 runtime |
+| `runtime_token` | `--runtime-token` | 本地 runtime 启动凭据 |
+| `middleware_address` | `--grpc` | 默认 gRPC 地址 |
+| `runtime_config` | `--runtime-config` | 默认 Runtime YAML |
+| `mcp_socket` | `--mcp-socket` | 默认 MCP socket/TCP 地址 |
+| `control_config` | `--control-config` | 控制面 YAML（运维命令） |
+| `stack_file` | `--stack-file` | 默认 `docker-compose.yml` |
+
+`levier init` 还会在当前项目写入 `.levier.json`，保存 App 名、凭据路径、
+server、runtime 和 MCP 引用。它不含 key，并已在仓库 `.gitignore` 中忽略。
+
+`LEVIER_HOME` 可以把整份 profile 和安装数据放到临时目录，适合测试。
 
 ---
 

@@ -1,4 +1,9 @@
-# App onboarding
+# App onboarding（详细版）
+
+> 黄金路径见 [`QUICKSTART.md`](QUICKSTART.md)。首选写法是
+> `from levier import App, tool`，schema 由函数签名自动生成。
+>
+> 本文保留为 `levier_app` 低层适配器和协议细节的参考。
 
 This page is the App-side onboarding guide. The full two-sided walkthrough is
 in the repository [`README.md`](../README.md); the SDK reference is

@@ -164,6 +164,9 @@ func resolveServer(flag string, credentials *appCredentials) string {
 	if value := strings.TrimSpace(os.Getenv("LEVIER_SERVER")); value != "" {
 		return serverBase(value)
 	}
+	if value := strings.TrimSpace(loadProfile().Server); value != "" {
+		return serverBase(value)
+	}
 	if credentials != nil && strings.TrimSpace(credentials.Server) != "" {
 		return serverBase(credentials.Server)
 	}
@@ -171,15 +174,21 @@ func resolveServer(flag string, credentials *appCredentials) string {
 }
 
 func defaultCredentialsPath(name string) (string, error) {
-	if value := os.Getenv("LEVIER_CREDENTIALS"); value != "" {
-		return value, nil
+	filename := safeAppName(name) + ".json"
+	if value := defaultCredentialsValue(); value != "" {
+		if info, err := os.Stat(value); err == nil && info.IsDir() {
+			return filepath.Join(value, filename), nil
+		}
+		if filepath.Base(value) == filename {
+			return value, nil
+		}
+		return filepath.Join(filepath.Dir(value), filename), nil
 	}
-	dir, err := os.UserConfigDir()
+	profile, err := profilePath()
 	if err != nil {
 		return "", err
 	}
-	filename := safeAppName(name) + ".json"
-	return filepath.Join(dir, "levier", filename), nil
+	return filepath.Join(filepath.Dir(profile), filename), nil
 }
 
 func safeAppName(name string) string {

@@ -140,7 +140,7 @@ echo "== create App =="
 APP_ID="$(python3 -c 'import json,sys;print(json.load(open(sys.argv[1]))["app_id"])' "$CREDENTIALS")"
 
 echo "== start App =="
-LEVIER_CREDENTIALS="$CREDENTIALS" PYTHONPATH="sdk/python/src" \
+LEVIER_CREDENTIALS="$CREDENTIALS" PYTHONPATH="sdk/levier/src:sdk/python/src" \
   python3 examples/counter_agent/app.py \
   >"$OUT/serve.log" 2>"$OUT/serve.err" &
 SERVE_PID=$!

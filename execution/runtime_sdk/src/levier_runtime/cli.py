@@ -17,6 +17,7 @@ import sys
 from pathlib import Path
 from typing import Awaitable, Callable, Sequence
 
+from .profile import default_runtime_config
 from .runtime import Runtime
 
 ServeFunction = Callable[[Runtime, argparse.Namespace], Awaitable[None]]
@@ -37,8 +38,17 @@ def run_cli(
 ) -> int:
     """Parse common runtime flags and serve until shutdown."""
     parser = argparse.ArgumentParser(prog=prog)
-    default = _first_env(config_env) or os.environ.get("LEVIER_RUNTIME_CONFIG") or str(default_config)
-    parser.add_argument("--config", default=default, help="path to runtime YAML configuration")
+    default = (
+        _first_env(config_env)
+        or os.environ.get("LEVIER_RUNTIME_CONFIG")
+        or default_runtime_config()
+        or str(default_config)
+    )
+    parser.add_argument(
+        "--config",
+        default=default,
+        help="path to runtime YAML configuration (or LEVIER_RUNTIME_CONFIG / levier setup)",
+    )
     parser.add_argument("--check", action="store_true", help="validate configuration")
     parser.add_argument("--print-config", action="store_true", help="print redacted configuration")
     parser.add_argument("--version", action="store_true", help="print version")

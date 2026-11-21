@@ -14,6 +14,10 @@ func runRuntime(args []string, stdout, stderr io.Writer) int {
 		return 0
 	}
 	switch args[0] {
+	case "start":
+		return runRuntimeStart(args[1:], stdout, stderr)
+	case "init":
+		return runRuntimeInit(args[1:], stdout, stderr)
 	case "list":
 		return runRuntimeList(args[1:], stdout, stderr)
 	default:
@@ -25,7 +29,9 @@ func runRuntime(args []string, stdout, stderr io.Writer) int {
 
 func printRuntimeUsage(out io.Writer) {
 	fmt.Fprintln(out, "usage:")
-	fmt.Fprintln(out, "  levier runtime list [--server url] [--json]")
+	fmt.Fprintln(out, "  levier runtime init [--file runtime.py]")
+	fmt.Fprintln(out, "  levier runtime start [--file runtime.py] [--name name]")
+	fmt.Fprintln(out, "  levier runtime list [--json]")
 }
 
 func runRuntimeList(args []string, stdout, stderr io.Writer) int {

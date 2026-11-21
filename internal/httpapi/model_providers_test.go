@@ -63,6 +63,18 @@ func (f *fakeProviderApps) DeleteModelProvider(_ context.Context, name string) e
 func (f *fakeProviderApps) CheckModelProvider(ctx context.Context, name string) (register.ModelProvider, error) {
 	return f.GetModelProvider(ctx, name)
 }
+func (f *fakeProviderApps) PutModelProviderSecret(ctx context.Context, name, apiKey string) (register.ModelProvider, error) {
+	provider, err := f.GetModelProvider(ctx, name)
+	if err != nil {
+		return register.ModelProvider{}, err
+	}
+	if apiKey == "" {
+		return register.ModelProvider{}, register.ErrModelProviderInvalid
+	}
+	provider.SecretConfigured = true
+	f.providers[name] = provider
+	return provider, nil
+}
 
 func TestModelProviderAdminAndPublicAPI(t *testing.T) {
 	apps := newFakeProviderApps()
@@ -98,6 +110,16 @@ func TestModelProviderAdminAndPublicAPI(t *testing.T) {
 	}
 	if list.Providers[0]["secret_ref"] != "deepseek_api_key" {
 		t.Fatalf("admin view missing secret ref: %+v", list.Providers[0])
+	}
+
+	resp = request(t, http.MethodPut, httpServer.URL+"/admin/model-providers/deepseek/secret", "admin-token", []byte(`{"api_key":"sk-test"}`))
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("secret status = %d", resp.StatusCode)
+	}
+	rawSecret, _ := io.ReadAll(resp.Body)
+	resp.Body.Close()
+	if bytes.Contains(rawSecret, []byte("sk-test")) {
+		t.Fatalf("secret response leaked key: %s", rawSecret)
 	}
 
 	resp = request(t, http.MethodGet, httpServer.URL+"/api/v1/model-providers", "admin-token", nil)

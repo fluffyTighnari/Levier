@@ -25,13 +25,29 @@ func main() {
 
 func runCLI(args []string, stdout, stderr io.Writer) int {
 	if len(args) == 0 {
-		runServer(args)
+		printUsage(stdout)
 		return 0
 	}
 
 	switch args[0] {
 	case "version":
 		return printVersion(args[1:], stdout, stderr)
+	case "up":
+		return runUp(args[1:], stdout, stderr)
+	case "down":
+		return runDown(args[1:], stdout, stderr)
+	case "logs":
+		return runLogs(args[1:], stdout, stderr)
+	case "ps":
+		return runPS(args[1:], stdout, stderr)
+	case "init":
+		return runInit(args[1:], stdout, stderr)
+	case "dev":
+		return runDev(args[1:], stdout, stderr)
+	case "model":
+		return runModel(args[1:], stdout, stderr)
+	case "setup":
+		return runSetup(args[1:], stdout, stderr)
 	case "doctor":
 		return runDoctor(args[1:], stdout, stderr)
 	case "status":
@@ -46,6 +62,8 @@ func runCLI(args []string, stdout, stderr io.Writer) int {
 		return runRun(args[1:], stdout, stderr)
 	case "runtime":
 		return runRuntime(args[1:], stdout, stderr)
+	case "stack":
+		return runStack(args[1:], stdout, stderr)
 	case "admin":
 		return runAdmin(args[1:], stdout, stderr)
 	// Compatibility aliases for deployment scripts and existing operators.
@@ -123,21 +141,23 @@ func printVersion(args []string, stdout, stderr io.Writer) int {
 }
 
 func printUsage(out io.Writer) {
-	fmt.Fprintln(out, "levier — Agent Run control plane")
+	fmt.Fprintln(out, "levier — run your agent, not your infrastructure")
 	fmt.Fprintln(out)
-	fmt.Fprintln(out, "Usage:")
-	fmt.Fprintln(out, "  levier serve [-config path]")
-	fmt.Fprintln(out, "  levier version [--json]")
-	fmt.Fprintln(out, "  levier doctor [--config path] [--server url] [--credentials path] [--json]")
-	fmt.Fprintln(out, "  levier status [--server url] [--json]")
-	fmt.Fprintln(out, "  levier app init|show|check|list|rotate-key")
-	fmt.Fprintln(out, "  levier provider list|show|add|update|remove|check")
-	fmt.Fprintln(out, "  levier mcp list|add|remove")
-	fmt.Fprintln(out, "  levier run submit|watch|show|cancel")
-	fmt.Fprintln(out, "  levier runtime list")
-	fmt.Fprintln(out, "  levier admin ops|migrate|maintenance|config|daemon|describe|selfcheck")
-	fmt.Fprintln(out, "  levier help")
+	fmt.Fprintln(out, "Start:")
+	fmt.Fprintln(out, "  levier up                     start the local Levier stack")
+	fmt.Fprintln(out, "  levier init [name]            connect this project (defaults: current directory)")
+	fmt.Fprintln(out, "  levier model connect --url URL --key KEY --model MODEL")
+	fmt.Fprintln(out, "  levier dev                    serve tools from ./app.py")
+	fmt.Fprintln(out, "  levier run \"prompt\"           submit a Run and watch it")
+	fmt.Fprintln(out, "  levier runtime init           create ./runtime.py")
+	fmt.Fprintln(out, "  levier runtime start          serve ./runtime.py")
 	fmt.Fprintln(out)
-	fmt.Fprintln(out, "Compatibility:")
-	fmt.Fprintln(out, "  levier [-config path]   same as levier serve")
+	fmt.Fprintln(out, "Observe:")
+	fmt.Fprintln(out, "  levier status                 health, runtimes, apps")
+	fmt.Fprintln(out, "  levier run show RUN_ID        inspect one Run")
+	fmt.Fprintln(out, "  levier logs [--follow]        stack logs")
+	fmt.Fprintln(out, "  levier down                   stop the local stack")
+	fmt.Fprintln(out)
+	fmt.Fprintln(out, "Advanced commands remain available: app, provider, run submit, mcp, admin.")
+	fmt.Fprintln(out, "Compatibility: levier serve / levier [-config path] starts the server.")
 }

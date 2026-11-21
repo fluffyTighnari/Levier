@@ -384,6 +384,36 @@ paths:
           description: Deleted
         default:
           $ref: '#/components/responses/Error'
+  /admin/model-providers/{name}/secret:
+    parameters:
+      - name: name
+        in: path
+        required: true
+        schema: {type: string}
+    put:
+      summary: Store a provider key in the control-plane managed secret file
+      operationId: putModelProviderSecret
+      security:
+        - adminToken: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [api_key]
+              properties:
+                api_key: {type: string}
+      responses:
+        "200":
+          description: Provider view with secret_configured=true
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        default:
+          $ref: '#/components/responses/Error'
   /admin/model-providers/{name}/check:
     parameters:
       - name: name

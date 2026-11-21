@@ -30,8 +30,9 @@ const appColumns = `
 
 // Registry owns App registration and API-key authentication.
 type Registry struct {
-	pool    *pgxpool.Pool
-	secrets SecretResolver
+	pool         *pgxpool.Pool
+	secrets      SecretResolver
+	secretWriter SecretWriter
 }
 
 // New returns a PostgreSQL-backed registry.

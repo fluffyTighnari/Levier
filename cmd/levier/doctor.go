@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/fluffyTighnari/levier/internal/config"
@@ -33,27 +34,40 @@ type doctorReport struct {
 func runDoctor(args []string, stdout, stderr io.Writer) int {
 	flags := flag.NewFlagSet("doctor", flag.ContinueOnError)
 	flags.SetOutput(stderr)
-	configPath := flags.String("config", envOr("LEVIER_CONFIG", "levier.example.yaml"), "path to YAML configuration")
-	server := flags.String("server", envOr("LEVIER_SERVER", "http://127.0.0.1:8080"), "Levier HTTP address")
-	credentials := flags.String("credentials", os.Getenv("LEVIER_CREDENTIALS"), "optional App credentials file")
+	configPath := flags.String("config", defaultControlConfigValue(), "path to YAML configuration (optional)")
+	server := flags.String("server", defaultServerValue(), "Levier HTTP address")
+	credentials := flags.String("credentials", defaultCredentialsValue(), "optional App credentials file")
 	asJSON := flags.Bool("json", false, "print JSON")
 	timeout := flags.Duration("timeout", 5*time.Second, "per-request timeout")
 	if ok, code := parseFlagSet(flags, args, stdout, stderr); !ok {
 		return code
 	}
+	credentialsExplicit := defaultCredentialsValue() != "" && os.Getenv("LEVIER_CREDENTIALS") != ""
+	flags.Visit(func(item *flag.Flag) {
+		if item.Name == "credentials" {
+			credentialsExplicit = true
+		}
+	})
 
 	report := doctorReport{Config: *configPath, Server: serverBase(*server)}
 	client := &http.Client{Timeout: *timeout}
 	ctx := context.Background()
 
-	cfg, cfgErr := config.Load(*configPath)
-	if cfgErr != nil {
+	cfg := config.Config{}
+	var cfgErr error
+	configLoaded := strings.TrimSpace(*configPath) != ""
+	if configLoaded {
+		cfg, cfgErr = config.Load(*configPath)
+	}
+	if !configLoaded {
+		report.add("config parse", "skip", "no control-plane config; client-only checks", "use --config for database/migration checks")
+	} else if cfgErr != nil {
 		report.add("config parse", "fail", cfgErr.Error(), "check --config path or LEVIER_CONFIG")
 	} else {
 		report.add("config parse", "ok", *configPath, "")
 	}
 
-	if cfgErr == nil {
+	if configLoaded && cfgErr == nil {
 		pool, err := db.Open(ctx, db.Config{
 			URL:            cfg.Database.URL,
 			MaxConns:       cfg.Database.MaxConns,
@@ -106,11 +120,11 @@ func runDoctor(args []string, stdout, stderr io.Writer) int {
 	report.add(metaCheck.Name, metaCheck.Status, metaCheck.Message, metaCheck.Fix)
 
 	adminToken := os.Getenv("LEVIER_ADMIN_TOKEN")
-	if adminToken == "" && cfgErr == nil {
+	if adminToken == "" && configLoaded && cfgErr == nil {
 		adminToken = cfg.HTTP.AdminToken
 	}
 	if adminToken == "" {
-		report.add("admin auth", "fail", "no admin token", "set LEVIER_ADMIN_TOKEN or http.admin_token")
+		report.add("admin auth", "skip", "no admin token; admin checks not run", "set LEVIER_ADMIN_TOKEN to test admin access")
 	} else if code, _, err := httpGet(ctx, client, report.Server+"/admin/mcp", adminToken); err != nil {
 		report.add("admin auth", "fail", err.Error(), "check --server")
 	} else if code != http.StatusOK {
@@ -122,7 +136,11 @@ func runDoctor(args []string, stdout, stderr io.Writer) int {
 	if *credentials == "" {
 		report.add("app credentials", "skip", "no --credentials / LEVIER_CREDENTIALS", "")
 	} else if app, err := readCredentials(*credentials); err != nil {
-		report.add("app credentials", "fail", err.Error(), "check credentials file")
+		if !credentialsExplicit && os.IsNotExist(err) {
+			report.add("app credentials", "skip", "default credentials not created yet", "run levier app init --name <app>")
+		} else {
+			report.add("app credentials", "fail", err.Error(), "check credentials file")
+		}
 	} else if code, _, err := httpGet(ctx, client, report.Server+"/api/v1/apps/"+url.PathEscape(app.AppID), app.APIKey); err != nil {
 		report.add("app credentials", "fail", err.Error(), "check --server")
 	} else if code != http.StatusOK {

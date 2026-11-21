@@ -49,6 +49,11 @@ services:
       LEVIER_SECRET_DEEPSEEK_API_KEY: ${LEVIER_SECRET_DEEPSEEK_API_KEY:-${DEEPSEEK_API_KEY:-}}
       LEVIER_SECRET_OPENAI_API_KEY: ${LEVIER_SECRET_OPENAI_API_KEY:-}
       LEVIER_SECRET_ANTHROPIC_API_KEY: ${LEVIER_SECRET_ANTHROPIC_API_KEY:-}
+      # `levier model connect` writes provider keys here. The file is 0600
+      # inside the container and persists in ./data/control on the host.
+      LEVIER_SECRETS_WRITE_FILE: /data/secrets.json
+    volumes:
+      - ./data/control:/data
     ports:
       - "8080:8080"
       - "9090:9090"
@@ -67,10 +72,13 @@ services:
     build:
       context: .
       dockerfile: deploy/mcp-runtime.Dockerfile
-    command: ["--socket", "/run/levier/mcp.sock"]
+    command: ["--socket", "/run/levier/mcp.sock", "--addr", "0.0.0.0:9091"]
     init: true
     volumes:
       - mcp_socket:/run/levier
+      - ./examples/mcp_echo:/app/examples/mcp_echo:ro
+    ports:
+      - "127.0.0.1:9091:9091"
     healthcheck:
       test: ["CMD-SHELL", "test -e /run/levier/mcp.sock"]
       interval: 3s

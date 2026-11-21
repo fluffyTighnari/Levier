@@ -2,7 +2,7 @@
 
 Run from the repository root with the SDK on PYTHONPATH:
 
-    PYTHONPATH=sdk/python/src python -m unittest discover -s examples/counter_agent/tests -v
+    PYTHONPATH=sdk/levier/src:sdk/python/src python -m unittest discover -s examples/counter_agent/tests -v
 """
 
 from __future__ import annotations
@@ -12,6 +12,7 @@ import unittest
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[3]
+sys.path.insert(0, str(ROOT / "sdk" / "levier" / "src"))
 sys.path.insert(0, str(ROOT / "sdk" / "python" / "src"))
 sys.path.insert(0, str(ROOT / "examples" / "counter_agent"))
 

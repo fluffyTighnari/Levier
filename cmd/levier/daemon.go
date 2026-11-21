@@ -61,7 +61,7 @@ func runDaemonCheck(args []string, stdout, stderr io.Writer) int {
 	flags.Usage = func() {}
 	cfg := daemoncheck.Config{}
 	flags.StringVar(&cfg.GRPCAddr, "grpc", envOr("LEVIER_GRPC", "127.0.0.1:9090"), "Levier gRPC address")
-	flags.StringVar(&cfg.HTTPURL, "server", envOr("LEVIER_SERVER", "http://127.0.0.1:8080"), "Levier HTTP address")
+	flags.StringVar(&cfg.HTTPURL, "server", defaultServerValue(), "Levier HTTP address")
 	flags.StringVar(&cfg.DaemonID, "daemon-id", envOr("LEVIER_DAEMON_ID", "daemon-local-1"), "pre-provisioned daemon id")
 	flags.StringVar(&cfg.Token, "token", envOr("LEVIER_DAEMON_TOKEN", "change-me"), "daemon auth token")
 	flags.StringVar(&cfg.AdminToken, "admin-token", envOr("LEVIER_ADMIN_TOKEN", "admin-change-me"), "admin token for app bootstrap")

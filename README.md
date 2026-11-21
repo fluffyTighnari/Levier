@@ -17,110 +17,128 @@ Levier 把一个 App 的业务能力和一个 Runtime 的执行能力连接起�
 
 ## 1. 五分钟跑通
 
-### 1.1 启动本地栈
+完整一页版见 [`docs/QUICKSTART.md`](docs/QUICKSTART.md)。黄金路径只有五步。
+
+### 1.1 安装
+
+发布版：
 
 ```sh
-cp .env.example .env
-docker compose up --build -d postgres levier mcp-runtime react-runtime echo-runtime
-bin/levier status
+curl -fsSL https://raw.githubusercontent.com/fluffyTighnari/levier/main/scripts/install.sh | sh
 ```
 
-默认地址：
-
-```text
-HTTP   http://127.0.0.1:8080
-gRPC   127.0.0.1:9090
-```
-
-### 1.2 注册模型服务商
-
-控制面不保存模型 key，只保存 **provider 元数据和 secret ref**。key 由控制面从
-环境变量或 0600 secret 文件解析。
-
-开发环境可以直接放到 `.env`：
+从源码开发：
 
 ```sh
-LEVIER_SECRET_DEEPSEEK_API_KEY=sk-...
+make install
+levier setup --server http://127.0.0.1:8080
 ```
 
-然后注册 provider：
+安装器负责 PATH、Compose 源码包和 Python SDK（`from levier import App, tool, Runtime`）。之后可以在任意业务目录使用 `levier`。
+
+### 1.2 启动
 
 ```sh
-export LEVIER_ADMIN_TOKEN=admin-change-me
-
-levier provider add \
-  --name deepseek \
-  --adapter openai_compatible \
-  --base-url https://api.deepseek.com \
-  --default-model deepseek-flash \
-  --models deepseek-flash,deepseek-reasoner \
-  --secret-ref deepseek_api_key \
-  --default
+levier up
+levier status
 ```
 
-检查：
+`levier up` 启动本地控制面、PostgreSQL、MCP、React 和 Echo Runtime，等待就绪，
+并把 server、默认 runtime 和本地 runtime token 写进用户配置。
+
+### 1.3 配置模型
+
+用户只需要 URL、key 和 model：
 
 ```sh
-levier provider list
-levier provider check --name deepseek
+levier model connect \
+  --url https://api.deepseek.com \
+  --key sk-... \
+  --model deepseek-chat
 ```
 
-生产环境推荐使用：
+provider 名称、adapter、secret ref 和 secret 存储都由命令推断和完成。不需要设置
+`LEVIER_SECRET_*`，也不需要理解 `--secret-ref`。
+
+### 1.4 接入 App
 
 ```sh
-export LEVIER_SECRETS_FILE=/run/secrets/levier_model_secrets.json
+pip install levier
 ```
 
-```json
-{
-  "deepseek_api_key": "sk-...",
-  "openai_api_key": "sk-...",
-  "anthropic_api_key": "sk-..."
-}
-```
+```python
+from levier import App, tool
 
-### 1.3 注册 App
+counter = {"value": 0}
+
+@tool
+def counter_add(delta: int) -> dict:
+    """Add delta to the counter."""
+    counter["value"] += delta
+    return {"value": counter["value"]}
+
+@tool
+def counter_get() -> dict:
+    """Read the counter."""
+    return {"value": counter["value"]}
+
+app = App(tools=[counter_add, counter_get], mcp=[])
+
+if __name__ == "__main__":
+    app.run()
+```
 
 ```sh
-levier app init \
-  --name counter-agent \
-  --server http://127.0.0.1:8080 \
-  --credentials-out ./data/agent/credentials.json
+levier init     # 当前目录成为 App，默认凭据路径和 runtime 自动写入用户配置
+levier dev      # 启动 ./app.py，自动注入凭据、server 和 MCP 引用
 ```
 
-需要 MCP 时：
+不需要 `--credentials-out`、`--credentials`、`--admin-token`，也不需要手写 JSON Schema。
+
+### 1.5 提交并观测 Run
 
 ```sh
-levier app init \
-  --name counter-agent \
-  --mcp-ref e2e-echo \
-  --credentials-out ./data/agent/credentials.json
+levier run "Add 2, then add 3, then read the counter."
 ```
 
-### 1.4 启动 App
+默认使用当前 App、默认 runtime、默认 provider，并观测到终态。高级场景仍可使用
+`levier run submit|watch|show|cancel`。
+
+### 1.6 接入自己的 Runtime
 
 ```sh
-LEVIER_CREDENTIALS=./data/agent/credentials.json \
-  python3 examples/counter_agent/app.py
+levier runtime init
+levier runtime start
 ```
 
-### 1.5 提交一次 Run
+```python
+from levier import Context, Runtime
 
-```sh
-levier run submit \
-  --credentials ./data/agent/credentials.json \
-  --runtime react1 \
-  --prompt "Add 2, then add 3, then read the counter." \
-  --watch
+async def run(ctx: Context) -> str:
+    tools = await ctx.toolbox()                  # 本地 + MCP，一次取齐
+    reply = await ctx.chat(ctx.input, tools=tools)  # 模型已在 ctx.model
+    await ctx.invoke_all(reply, toolbox=tools)   # local/MCP 自动分流
+    await ctx.reply(reply.content or "done")
+    return "completed"
+
+if __name__ == "__main__":
+    Runtime.start(run)
 ```
 
-没传 `--provider` / `--model` 时，控制面使用默认 provider 和它的默认模型。
+不需要 `runtime.yaml`、`runtime_token`、daemon id 或 gRPC 细节。
 
 ---
 
-## 2. App 侧接入
+## 2. App 侧接入（低层参考）
+
+> 首选接入面见 1.4 和 [`docs/QUICKSTART.md`](docs/QUICKSTART.md)。本节保留
+> `levier_app` 低层适配器的完整说明，便于已有集成和排查。
 
 ### 2.1 安装 SDK
+
+首选 `pip install levier`（见 1.4）。下面是从仓库安装低层 `levier_app` 的方式。
+
+从仓库开发：
 
 ```sh
 python3 -m venv .venv
@@ -128,6 +146,15 @@ python3 -m venv .venv
 ```
 
 Linux/macOS 使用 `.venv/bin/python`。
+
+使用 release wheel 时，在任意目录执行：
+
+```sh
+python -m venv .venv
+.venv/bin/python -m pip install levier_app-0.1.0-py3-none-any.whl
+```
+
+App SDK 会读取 `levier setup` 写入的用户级配置，因此业务项目不需要重复保存 server 地址。
 
 ### 2.2 注册工具
 
@@ -258,9 +285,21 @@ App API key 只用于 Levier 鉴权，不等于模型服务商 key。
 
 ---
 
-## 3. Runtime 侧接入
+## 3. Runtime 侧接入（低层参考）
+
+> 首选 Runtime 面见 1.6 和 [`docs/QUICKSTART.md`](docs/QUICKSTART.md)。本节保留
+> runtime SDK、内置 Runtime 和自定义 Runtime 的完整说明。
 
 ### 3.1 使用内置 Echo
+
+从 release wheel 安装后，在任意目录执行：
+
+```sh
+python -m pip install --find-links ./levier-wheels levier-echo-runtime
+python -m levier_echo_runtime --config /path/to/runtime.yaml
+```
+
+从仓库开发时：
 
 ```sh
 PYTHONPATH=execution/runtime_sdk/src:execution/echo_runtime/src \
@@ -269,6 +308,13 @@ PYTHONPATH=execution/runtime_sdk/src:execution/echo_runtime/src \
 ```
 
 ### 3.2 使用内置 React
+
+```sh
+python -m pip install --find-links ./levier-wheels levier-react-runtime
+python -m levier_react_runtime --config /path/to/react.example.yaml
+```
+
+从仓库开发时：
 
 ```sh
 PYTHONPATH=execution/agent_core/src:execution/runtime_sdk/src:execution/react_runtime/src \
@@ -298,8 +344,10 @@ async def run(ctx: RunContext) -> str:
 
 
 if __name__ == "__main__":
-    Runtime.from_config("runtime.yaml").run(run)
+    Runtime.start(run)
 ```
+
+需要显式 YAML 时再用 `Runtime.from_config("runtime.yaml").run(run)`；黄金路径不需要。
 
 SDK 自动处理：
 
@@ -311,20 +359,20 @@ SDK 自动处理：
 - 未捕获异常到 `ERROR` + failed
 - `ctx.logger` 自动带 run 上下文
 
-自定义 Runtime 可以完全不使用 React、LLM 或 ToolRouter。
+自定义 Runtime 可以完全不使用 React、LLM，工具可以直接走 `ctx.toolbox()`。
 
 ### 3.4 想复用 ReAct
 
 ```python
 from levier_runtime.llm import ProviderRouter
 from levier_runtime.react import ReactAgent
-from levier_runtime.tools import ToolRouter
 
-agent = ReactAgent(ProviderRouter(), ToolRouter(mcp=mcp_client))
+agent = ReactAgent(ProviderRouter())
 await runtime.serve(agent)
 ```
 
-ReAct、provider、tool router、checkpoint 都是可选 helper，不是 SDK 核心。
+ReAct、provider、checkpoint 都是可选 helper，不是 SDK 核心。MCP 工具由
+`ctx.toolbox()` 自动接入，不需要单独的 MCP client 或工具路由层。
 
 ### 3.5 Runtime CLI
 
@@ -342,7 +390,6 @@ levier-react-runtime
   --print-config
   --version
   --log-level LEVEL
-  --mcp-socket PATH
 ```
 
 `--print-config` 会隐藏 auth token。
@@ -383,51 +430,59 @@ App 只需要：
 
 Runtime 只需要：
 
-1. 读取 `ctx.tools` / `ctx.mcp_bindings`；
-2. 选择模型和工具；
-3. 通过 `ctx.call_tool` 或 `ToolRouter` 调用；
-4. 用 `ctx.reply` 返回最终文本。
+1. `tools = await ctx.toolbox()` 一次取齐本地和 MCP 工具；
+2. `reply = await ctx.chat(ctx.input, tools=tools)` 调用已解析的模型；
+3. `await ctx.invoke_all(reply, toolbox=tools)` 自动分流 local/MCP；
+4. `await ctx.reply(...)` 返回最终文本。
+
+低层写法（`ctx.tools`、`ctx.mcp_bindings`、`ctx.call_tool`）仍然可用。
 
 ---
 
 ## 5. CLI 操作面
 
-### 5.1 日常使用
+### 5.1 黄金路径
 
 ```text
-levier version
-levier serve
+levier up
+levier init [name]
+levier model connect --url URL --key KEY --model MODEL
+levier dev
+levier run "prompt"
+levier runtime init
+levier runtime start
 levier status
-levier doctor
-levier app init|show|check|list|rotate-key
-levier provider list|show|add|update|remove|check
-levier mcp list|add|remove
-levier run submit|watch|show|cancel
-levier runtime list
+levier logs
+levier down
 ```
 
 示例：
 
 ```sh
 levier status --json
-levier doctor --credentials ./data/agent/credentials.json
-levier runtime list
-levier run show --run-id <id> --events
+levier run "hello" --json
+levier run show <run_id> --events
+levier runtime start --name my-runtime
 ```
 
-### 5.2 运维/内部
+### 5.2 高级 / 兼容
 
 ```text
-levier admin ops runs|daemons|tasks
-levier admin migrate status|up
-levier admin maintenance status|prune
-levier admin config check|print
-levier admin daemon check
-levier admin describe
-levier admin selfcheck [--deep]
+levier setup
+levier version
+levier serve
+levier doctor
+levier app init|show|check|list|rotate-key
+levier provider list|show|add|update|remove|check
+levier mcp list|add|remove
+levier run submit|watch|show|cancel
+levier runtime list
+levier stack up|down|ps|logs
+levier admin ops|migrate|maintenance|config|daemon|describe|selfcheck
 ```
 
-这些命令保留兼容入口，但不再出现在主帮助里。
+这些命令保留兼容入口，但不再出现在主帮助里。完整参考见
+[`docs/CLI_REFERENCE.md`](docs/CLI_REFERENCE.md)。
 
 ---
 
@@ -469,7 +524,11 @@ levier provider check --name deepseek
 ```text
 LEVIER_SECRET_<REF>
 LEVIER_SECRETS_FILE JSON
+LEVIER_SECRETS_WRITE_FILE JSON   # levier model connect 写入的 0600 managed 文件
 ```
+
+`levier model connect` 不要求用户设置前两项；它通过 Admin API 把 key 写入
+managed 文件。生产环境仍可继续使用只读 secret 文件或环境变量。
 
 示例：
 
@@ -500,15 +559,14 @@ CLI 输出、Run event 或 checkpoint 暴露。
 
 ## 7. 配置
 
+首选 `Runtime.start(run)`：不需要 YAML。下面是显式配置文件的高级写法。
+
 Runtime YAML：
 
 ```yaml
 middleware:
   address: "127.0.0.1:9090"
   auth_token: "change-me"
-
-mcp_runtime:
-  socket: "/tmp/levier-mcp.sock"
 
 runtime:
   name: "react1"
@@ -530,7 +588,8 @@ LEVIER_APP_MCP_REFS 逗号分隔的 MCP 引用
 控制面模型密钥：
 
 ```text
-LEVIER_SECRETS_FILE                 0600 JSON secret 文件
+LEVIER_SECRETS_FILE                 0600 JSON 只读 secret 文件
+LEVIER_SECRETS_WRITE_FILE           0600 JSON managed secret 文件
 LEVIER_SECRET_<UPPER_REF>           单密钥环境变量
 ```
 
@@ -584,3 +643,4 @@ execution/agent_core/      可选 ReAct 循环库
 - Runtime 接入：`docs/RUNTIME_ONBOARDING.md`
 - MCP：`docs/MCP.md`
 - CLI：`docs/CLI_REFERENCE.md`
+- 全部操作面：`docs/OPERATIONS_SURFACE.md`

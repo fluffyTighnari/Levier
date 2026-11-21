@@ -2,8 +2,8 @@
 
 React is the built-in ReAct Runtime and the reference composition layer for
 runtime authors. The package is intentionally thin: it loads configuration,
-wires the optional `levier_runtime.react` helper to the shared MCP client, and
-serves `run(ctx)` through the Runtime SDK.
+wires the optional `levier_runtime.react` helper, and serves `run(ctx)` through
+the Runtime SDK. Tool access, including MCP, comes from `ctx.toolbox()`.
 
 ```text
 execution/react_runtime/
@@ -18,8 +18,9 @@ execution/react_runtime/
 | Layer | Owner |
 |---|---|
 | RuntimeChannel, lifecycle, events, cancellation, tool transport | `levier-runtime` |
-| ReAct loop, provider router, tool router, checkpoint codec | optional `levier_runtime.react` / `.llm` / `.tools` |
-| Shared MCP process and socket | `execution/mcp_runtime` |
+| ReAct loop, provider router, checkpoint codec | optional `levier_runtime.react` / `.llm` |
+| Toolbox, local tool bridge, MCP client | Runtime SDK (`ctx.toolbox()`) |
+| Shared MCP process | `execution/mcp_runtime` |
 | Configuration and process entry point | this package |
 
 The ReAct helper is optional. A custom runtime can use the SDK alone, or import
@@ -34,9 +35,6 @@ middleware:
   address: "127.0.0.1:9090"
   auth_token: "change-me"
 
-mcp_runtime:
-  socket: "/tmp/levier-mcp.sock"
-
 runtime:
   name: "react1"
   instance_id: "daemon-local-1"
@@ -47,9 +45,9 @@ logging:
   level: "info"
 ```
 
-The SDK reads `middleware`, `runtime`, and `logging`. The React entry point
-reads `mcp_runtime.socket`; it can be overridden with
-`LEVIER_MCP_RUNTIME_SOCKET`.
+The SDK reads `middleware`, `runtime`, and `logging`. MCP is resolved per run by
+`ctx.toolbox()` from the profile or `LEVIER_MCP_RUNTIME_SOCKET`; there is no
+React-specific MCP configuration.
 
 Use the SDK environment names:
 
@@ -107,7 +105,6 @@ CLI:
 --print-config      print redacted effective config
 --version           print package version
 --log-level LEVEL   override logging level
---mcp-socket PATH   override MCP Runtime socket
 ```
 
 Start the shared MCP Runtime separately when MCP bindings are used:
@@ -116,6 +113,8 @@ Start the shared MCP Runtime separately when MCP bindings are used:
 cd ../mcp_runtime
 PYTHONPATH=src .venv/bin/python -m levier_mcp_runtime --socket /tmp/levier-mcp.sock
 ```
+
+Or let `levier up` provide the local TCP endpoint through the user profile.
 
 ## Tests
 

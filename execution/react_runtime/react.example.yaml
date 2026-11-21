@@ -8,9 +8,6 @@ middleware:
   # Production: prefer auth_token_file or LEVIER_RUNTIME_TOKEN.
   # auth_token_file: "/run/secrets/levier_react_runtime_daemon_token"
 
-mcp_runtime:
-  socket: "/tmp/levier-mcp.sock"
-
 runtime:
   name: "react1"
   instance_id: "daemon-local-1"

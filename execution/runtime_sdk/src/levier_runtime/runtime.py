@@ -27,8 +27,8 @@ RunFunction = Callable[[RunContext], Awaitable[str]]
 class Runtime:
     """One runtime process serving one `runtime_name`."""
 
-    def __init__(self, config: RuntimeConfig, *, logger: logging.Logger | None = None) -> None:
-        self.config = config
+    def __init__(self, config: RuntimeConfig | None = None, *, logger: logging.Logger | None = None) -> None:
+        self.config = config or load_runtime_config()
         self.logger = logger or logging.getLogger("levier_runtime")
         self._stop_event: asyncio.Event | None = None
 
@@ -40,8 +40,24 @@ class Runtime:
         environ: dict[str, str] | None = None,
         logger: logging.Logger | None = None,
     ) -> "Runtime":
-        """Build a runtime from `runtime.yaml` or `LEVIER_RUNTIME_CONFIG`."""
+        """Build a runtime from `runtime.yaml`, the user profile, or defaults."""
         return cls(load_runtime_config(path, environ=environ), logger=logger)
+
+    @classmethod
+    def start(
+        cls,
+        run: RunFunction,
+        *,
+        config: RuntimeConfig | str | Path | None = None,
+        environ: dict[str, str] | None = None,
+        handle_signals: bool = True,
+    ) -> int:
+        """Load defaults (no YAML required) and serve one `run(ctx)`."""
+        if isinstance(config, RuntimeConfig):
+            runtime = cls(config)
+        else:
+            runtime = cls.from_config(config, environ=environ)
+        return runtime.run(run, handle_signals=handle_signals)
 
     def run(self, run: RunFunction, *, handle_signals: bool = True) -> int:
         """Run until SIGINT/SIGTERM or `stop()` is called."""

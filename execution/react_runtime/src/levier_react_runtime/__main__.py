@@ -1,68 +1,32 @@
 """Thin built-in React Runtime entry point.
 
-The Runtime SDK owns configuration, lifecycle, events, cancellation, and the
-common CLI. This package only composes the optional ReactAgent helper with the
-shared MCP client.
+The Runtime SDK owns configuration, lifecycle, events, cancellation, the tool
+toolbox, and the common CLI. This package only composes the optional ReactAgent
+helper with the provider router.
 
 Copyright 2026 The Levier Authors.
 """
 
 from __future__ import annotations
 
-import os
-import argparse
 from pathlib import Path
-
-import yaml
 
 from levier_runtime import __version__ as RUNTIME_VERSION
 from levier_runtime.cli import run_cli
 from levier_runtime.llm import ProviderRouter
-from levier_runtime.mcp import McpRuntimeClient
 from levier_runtime.react import ReactAgent
 from levier_runtime.runtime import Runtime
-from levier_runtime.tools import ToolRouter
 
-_DEFAULT_CONFIG = Path(__file__).resolve().parents[2] / "react.example.yaml"
-
-
-def _add_arguments(parser: argparse.ArgumentParser) -> None:
-    parser.add_argument("--mcp-socket", default="", help="override MCP Runtime socket")
-
-
-def _mcp_socket(config_path: str, override: str) -> str:
-    """Read the optional shared MCP socket without coupling it to RuntimeConfig."""
-    if override:
-        return override
-    value = os.environ.get("LEVIER_MCP_RUNTIME_SOCKET")
-    if value:
-        return value
-    try:
-        data = yaml.safe_load(Path(config_path).read_text(encoding="utf-8"))
-    except (OSError, yaml.YAMLError):
-        return ""
-    if not isinstance(data, dict):
-        return ""
-    mcp = data.get("mcp_runtime")
-    if not isinstance(mcp, dict):
-        return ""
-    socket = mcp.get("socket")
-    return socket if isinstance(socket, str) else ""
+_SOURCE_CONFIG = Path(__file__).resolve().parents[2] / "react.example.yaml"
+_DEFAULT_CONFIG = (
+    _SOURCE_CONFIG
+    if _SOURCE_CONFIG.is_file()
+    else Path(__file__).with_name("react.example.yaml")
+)
 
 
-async def _serve(runtime: Runtime, args: argparse.Namespace) -> None:
-    mcp_socket = _mcp_socket(args.config, args.mcp_socket)
-    mcp = McpRuntimeClient(mcp_socket) if mcp_socket else None
-    tools = ToolRouter(mcp=mcp)
-    try:
-        await runtime.serve(ReactAgent(ProviderRouter(), tools))
-    finally:
-        if mcp is not None:
-            await mcp.close()
-
-
-def _print_extra(runtime: Runtime, args: argparse.Namespace) -> list[str]:
-    return [f"mcp_socket: {_mcp_socket(args.config, args.mcp_socket) or '(disabled)'}"]
+async def _serve(runtime: Runtime, _args) -> None:
+    await runtime.serve(ReactAgent(ProviderRouter()))
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -72,8 +36,6 @@ def main(argv: list[str] | None = None) -> int:
         default_config=_DEFAULT_CONFIG,
         config_env=("LEVIER_RUNTIME_CONFIG",),
         serve=_serve,
-        add_arguments=_add_arguments,
-        print_config_extra=_print_extra,
         argv=argv,
     )
 

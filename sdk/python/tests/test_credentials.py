@@ -5,12 +5,15 @@ import stat
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 from levier_app.credentials import (
     Credentials,
     CredentialsError,
     Secret,
+    default_credentials_path,
     load_credentials,
+    resolve_server,
     save_credentials,
 )
 
@@ -45,6 +48,30 @@ class CredentialsTest(unittest.TestCase):
             self.assertEqual(loaded.app_id, "a")
             self.assertEqual(loaded.credential_version, 1)
             self.assertEqual(loaded.server, "")
+
+    def test_uses_global_profile_for_path_and_server(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            home = Path(directory)
+            (home / "config.yaml").write_text(
+                "server: http://levier.internal:8080\n"
+                f"credentials: {home / 'credentials' / 'demo.json'}\n",
+                encoding="utf-8",
+            )
+            with mock.patch.dict(os.environ, {"LEVIER_HOME": directory}):
+                self.assertEqual(
+                    default_credentials_path("demo"),
+                    home / "credentials" / "demo.json",
+                )
+                credentials = Credentials(
+                    app_id="app-1",
+                    app_name="demo",
+                    api_key=Secret("mw_secret"),
+                    server="http://stale.test:8080",
+                )
+                self.assertEqual(
+                    resolve_server(credentials),
+                    "http://levier.internal:8080",
+                )
 
     @unittest.skipIf(os.name == "nt", "POSIX mode bits are not enforced on Windows")
     def test_rejects_loose_permissions(self) -> None:

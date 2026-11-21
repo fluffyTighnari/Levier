@@ -4,6 +4,10 @@
 Transport details, protobuf messages, sequence numbers, and lease handling stay
 inside the Runtime SDK.
 
+The common loop is three calls: `await ctx.toolbox()` returns local and MCP
+tools, `await ctx.chat(...)` calls the resolved model, and
+`await ctx.invoke_all(reply, toolbox=tools)` dispatches every tool call.
+
 Copyright 2026 The Levier Authors.
 """
 
@@ -82,6 +86,7 @@ class RunContext:
         self._events = events
         self._attempt = attempt
         self._lease_epoch = lease_epoch
+        self._toolbox = None
         self.logger = logging.LoggerAdapter(
             logging.getLogger("levier_runtime.run"),
             {
@@ -121,6 +126,97 @@ class RunContext:
         The SDK assigns sequence numbers and envelope scope.
         """
         await self._events.emit(event_type, data, ephemeral=ephemeral)
+
+    async def toolbox(self) -> "Any":
+        """Return every local and MCP tool as one callable sequence.
+
+        MCP sessions are opened lazily on the first call and closed when the Run
+        ends. Runtime authors do not need to construct an MCP client.
+        """
+        if self._toolbox is None:
+            from .toolbox import Toolbox
+
+            self._toolbox = await Toolbox.open(self)
+        return self._toolbox
+
+    async def chat(
+        self,
+        messages: "list[Any] | None" = None,
+        *,
+        tools: "Any" = None,
+        on_delta: "Any" = None,
+    ) -> "Any":
+        """Call the model already resolved for this Run.
+
+        ``ctx.chat(ctx.input)`` uses every visible tool. The returned provider
+        response has ``content`` and ``tool_calls``. Provider failures become an
+        ERROR event and a failed Run automatically.
+        """
+        if self.model is None:
+            raise RuntimeUsageError("this run has no model; configure a provider and make it the default")
+        from .llm.base import Message as LLMMessage
+        from .llm.base import ModelConfig as LLMModelConfig
+        from .llm.router import ProviderRouter
+
+        values = list(self.input if messages is None else messages)
+        converted = []
+        for message in values:
+            if isinstance(message, LLMMessage):
+                converted.append(message)
+            elif isinstance(message, Mapping):
+                converted.append(
+                    LLMMessage(
+                        role=str(message.get("role", "user")),
+                        content=str(message.get("content", "")),
+                        name=str(message.get("name", "")),
+                        tool_call_id=str(message.get("tool_call_id", "")),
+                    )
+                )
+            else:
+                converted.append(
+                    LLMMessage(
+                        role=str(getattr(message, "role", "user")),
+                        content=str(getattr(message, "content", "")),
+                        name=str(getattr(message, "name", "")),
+                    )
+                )
+
+        if tools is None:
+            tools = await self.toolbox()
+        specs = _tool_specs(tools)
+        model = LLMModelConfig(
+            provider=self.model.provider,
+            model=self.model.model,
+            api_key=self.model.api_key,
+            base_url=self.model.base_url,
+            params=dict(self.model.params),
+        )
+        return await ProviderRouter().complete(converted, specs, model, on_delta=on_delta)
+
+    async def invoke(
+        self,
+        call: "Any",
+        *,
+        toolbox: "Any" = None,
+    ) -> ToolResult:
+        """Parse one model tool call and execute it, local or MCP."""
+        name, arguments = _tool_call(call)
+        active = toolbox if toolbox is not None else await self.toolbox()
+        return await active.call(name, arguments)
+
+    async def invoke_all(
+        self,
+        response: "Any",
+        *,
+        toolbox: "Any" = None,
+    ) -> "list[ToolResult]":
+        """Execute every tool call in one provider response."""
+        calls = getattr(response, "tool_calls", response)
+        active = toolbox if toolbox is not None else await self.toolbox()
+        results: list[ToolResult] = []
+        for call in calls:
+            results.append(await self.invoke(call, toolbox=active))
+        return results
 
     async def call_tool(
         self,
@@ -261,3 +357,53 @@ class RunContext:
                 "event_seq_watermark": watermark,
             },
         )
+
+    async def close_toolbox(self) -> None:
+        """Close any MCP sessions opened by :meth:`toolbox`."""
+        if self._toolbox is None:
+            return
+        await self._toolbox.close()
+        self._toolbox = None
+
+
+def _tool_specs(tools: Any) -> list[Any]:
+    from .llm.base import ToolSpec as LLMToolSpec
+
+    if hasattr(tools, "specs") and callable(tools.specs):
+        return list(tools.specs())
+    result = []
+    for tool in tools:
+        if isinstance(tool, LLMToolSpec):
+            result.append(tool)
+            continue
+        schema = getattr(tool, "schema_json", "") or getattr(tool, "input_schema_json", "")
+        if not schema:
+            schema_value = getattr(tool, "schema", None)
+            if isinstance(schema_value, Mapping):
+                schema = json.dumps(schema_value, ensure_ascii=False, separators=(",", ":"))
+        result.append(
+            LLMToolSpec(
+                name=str(getattr(tool, "name", "")),
+                description=str(getattr(tool, "description", "")),
+                input_schema_json=str(schema or "{}"),
+            )
+        )
+    return result
+
+
+def _tool_call(call: Any) -> tuple[str, str]:
+    if isinstance(call, Mapping):
+        name = str(call.get("name", ""))
+        arguments = call.get("arguments_json", call.get("arguments", "{}"))
+    else:
+        name = str(getattr(call, "name", ""))
+        arguments = getattr(call, "arguments_json", None)
+        if arguments is None:
+            arguments = getattr(call, "arguments", "{}")
+    if not name:
+        raise RuntimeUsageError("tool call has no name")
+    if isinstance(arguments, Mapping):
+        return name, json.dumps(arguments, ensure_ascii=False, separators=(",", ":"))
+    if arguments is None:
+        return name, "{}"
+    return name, str(arguments)

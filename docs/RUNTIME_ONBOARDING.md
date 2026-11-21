@@ -1,5 +1,8 @@
-# Runtime onboarding
+# Runtime onboarding（详细版）
 
+> 黄金路径见 [`QUICKSTART.md`](QUICKSTART.md)。最小写法是
+> `Runtime.start(run)`，不需要 YAML 或显式 runtime token。
+>
 > A runtime is one process with one `runtime_name` and one `run(ctx)` function.
 >
 > The Runtime SDK owns RuntimeChannel, Hello, heartbeat, reconnect, Ack,
@@ -20,11 +23,12 @@ async def run(ctx: RunContext) -> str:
 
 
 if __name__ == "__main__":
-    Runtime.from_config("runtime.yaml").run(run)
+    Runtime.start(run)
 ```
 
-`Runtime.from_config()` reads the path passed at runtime, or
-`LEVIER_RUNTIME_CONFIG`.
+`Runtime.start()` needs no YAML; it uses the user profile written by `levier up`
+and the environment. `Runtime.from_config()` remains available when you want an
+explicit YAML file.
 
 ## 2. Configuration
 
@@ -147,8 +151,8 @@ The core does not import these:
 ```text
 levier_runtime.react    ReactAgent and React checkpoint codec
 levier_runtime.llm      provider protocol and HTTP providers
-levier_runtime.tools    ToolProvider / ToolRouter
-levier_runtime.mcp      shared MCP Runtime client
+levier_runtime.tools    low-level ToolProvider interface
+levier_runtime.mcp      shared MCP Runtime client used by ctx.toolbox()
 ```
 
 The built-in React Runtime is the composition example:
@@ -156,11 +160,14 @@ The built-in React Runtime is the composition example:
 ```python
 from levier_runtime.llm import ProviderRouter
 from levier_runtime.react import ReactAgent
-from levier_runtime.tools import ToolRouter
+from levier_runtime.runtime import Runtime
 
 runtime = Runtime.from_config("react.example.yaml")
-runtime.run(ReactAgent(ProviderRouter(), ToolRouter(mcp)))
+runtime.run(ReactAgent(ProviderRouter()))
 ```
+
+`ReactAgent` uses `ctx.toolbox()` for MCP and `ctx.call_tool` for local tools. It
+does not need an MCP socket, YAML section, or separate tool router.
 
 ## 7. Verify a custom runtime
 
@@ -184,7 +191,6 @@ The Runtime SDK core does not include:
 LLM providers
 ReAct loop
 MCP client
-ToolRouter
 Strategy / StrategyRouter
 Runtime Admin API
 ```

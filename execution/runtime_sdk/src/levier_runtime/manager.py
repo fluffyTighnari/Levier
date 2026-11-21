@@ -212,6 +212,15 @@ class RunManager:
                 "error": str(exc),
             })
         finally:
+            try:
+                await asyncio.shield(ctx.close_toolbox())
+            except asyncio.CancelledError:
+                pass
+            except Exception as exc:
+                self.logger.warning("close run toolbox failed", extra={
+                    "run_id": ctx.run_id,
+                    "error": str(exc),
+                })
             self.active.pop(ctx.run_id, None)
 
     async def _emit_error(self, ctx: RunContext, code: str, message: str) -> None:

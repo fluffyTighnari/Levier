@@ -3,8 +3,8 @@
 
 SHELL := /bin/sh
 GO ?= go
-PYTHON ?= $(if $(wildcard execution/react_runtime/.venv/bin/python),execution/react_runtime/.venv/bin/python,$(if $(wildcard execution/react_runtime/.venv/Scripts/python.exe),execution/react_runtime/.venv/Scripts/python.exe,python3))
-MCP_PYTHON ?= $(if $(wildcard execution/mcp_runtime/.venv/bin/python),execution/mcp_runtime/.venv/bin/python,$(if $(wildcard execution/mcp_runtime/.venv/Scripts/python.exe),execution/mcp_runtime/.venv/Scripts/python.exe,python3))
+PYTHON ?= $(if $(wildcard execution/react_runtime/.venv/bin/python),execution/react_runtime/.venv/bin/python,$(if $(wildcard execution/react_runtime/.venv/Scripts/python.exe),execution/react_runtime/.venv/Scripts/python.exe,$(if $(filter Windows_NT,$(OS)),python,python3)))
+MCP_PYTHON ?= $(if $(wildcard execution/mcp_runtime/.venv/bin/python),execution/mcp_runtime/.venv/bin/python,$(if $(wildcard execution/mcp_runtime/.venv/Scripts/python.exe),execution/mcp_runtime/.venv/Scripts/python.exe,$(if $(filter Windows_NT,$(OS)),python,python3)))
 PYTHONPATH_SEP ?= $(if $(filter Windows_NT,$(OS)),;,:)
 CONTRACT_PYTHONPATH := execution/agent_core/src$(PYTHONPATH_SEP)execution/runtime_sdk/src$(PYTHONPATH_SEP)execution/react_runtime/src
 BUF ?= $(shell command -v buf 2>/dev/null || printf '%s\n' "$(HOME)/go/bin/buf")
@@ -14,7 +14,12 @@ PROTOC_BIN ?= $(HOME)/go/bin
 -include .env.local
 export
 BIN_DIR := bin
+EXE := $(if $(filter Windows_NT,$(OS)),.exe,)
+LEVIER_BIN := $(BIN_DIR)/levier$(EXE)
+GO_FILES := $(shell git ls-files '*.go' --cached --others --exclude-standard 2>/dev/null | grep -v '^workflow_engine/' | grep -v '^vendor/' 2>/dev/null)
+ifeq ($(strip $(GO_FILES)),)
 GO_FILES := $(shell find . -name '*.go' -not -path './workflow_engine/*' -not -path './vendor/*')
+endif
 VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo dev)
 COMMIT ?= $(shell git rev-parse --short HEAD 2>/dev/null || echo unknown)
 BUILD_TIME ?= $(shell date -u +%Y-%m-%dT%H:%M:%SZ)
@@ -22,16 +27,29 @@ LDFLAGS := -X github.com/fluffyTighnari/levier/internal/version.Version=$(VERSIO
 	-X github.com/fluffyTighnari/levier/internal/version.Commit=$(COMMIT) \
 	-X github.com/fluffyTighnari/levier/internal/version.Built=$(BUILD_TIME)
 
-.PHONY: all build test lint fmt fmt-check vet run clean dev-up dev-down migrate proto proto-check proto-lint contract-check react-runtime-test runtime-sdk-test mcp-runtime-test sdk-test image-runtime image-mcp-runtime counter-agent counter-agent-test http-smoke retrofit-e2e mcp-e2e deps-check structure-check scripts-check size-report daemon-check agent-core-test mvp-demo mvp-demo-react fault-matrix secrets-check docker-up docker-down docker-smoke docker-logs docker-reset release-dist
+.PHONY: all build install wheels test lint fmt fmt-check vet run clean dev-up dev-down migrate proto proto-check proto-lint contract-check react-runtime-test runtime-sdk-test mcp-runtime-test sdk-test image-runtime image-mcp-runtime counter-agent counter-agent-test http-smoke retrofit-e2e mcp-e2e global-e2e deps-check structure-check scripts-check size-report daemon-check agent-core-test mvp-demo mvp-demo-react fault-matrix secrets-check docker-up docker-down docker-smoke docker-logs docker-reset release-dist
+
+PREFIX ?= $(HOME)/.local/bin
 
 all: build
 
 build:
 	@mkdir -p $(BIN_DIR)
-	$(GO) build -trimpath -ldflags "$(LDFLAGS)" -o $(BIN_DIR)/levier ./cmd/levier
+	$(GO) build -trimpath -ldflags "$(LDFLAGS)" -o $(LEVIER_BIN) ./cmd/levier
+
+install: build
+	@mkdir -p "$(PREFIX)"
+	@cp "$(LEVIER_BIN)" "$(PREFIX)/levier$(EXE)"
+	@chmod 0755 "$(PREFIX)/levier$(EXE)" 2>/dev/null || true
+	@printf 'installed: %s\n' "$(PREFIX)/levier$(EXE)"
+	@case ":$$PATH:" in *":$(PREFIX):"*) ;; *) printf 'PATH hint:\n  export PATH="%s:$$PATH"\n' "$(PREFIX)" ;; esac
+
+wheels:
+	PYTHON="$(PYTHON)" sh scripts/build-wheels.sh
 
 release-dist:
 	VERSION="$(VERSION)" COMMIT="$(COMMIT)" BUILT="$(BUILD_TIME)" sh scripts/build-release.sh
+	PYTHON="$(PYTHON)" sh scripts/build-wheels.sh
 
 test:
 	$(GO) test ./...
@@ -51,7 +69,7 @@ fmt:
 	gofmt -w $(GO_FILES)
 
 run:
-	$(GO) run ./cmd/levier
+	$(GO) run ./cmd/levier serve
 
 migrate:
 	$(GO) run ./cmd/migrate -config levier.example.yaml
@@ -91,7 +109,8 @@ mcp-runtime-test:
 	PYTHONPATH="execution/mcp_runtime/src" $(MCP_PYTHON) -m unittest discover -s execution/mcp_runtime/tests -v
 
 sdk-test:
-	PYTHONPATH="sdk/python/src" $(PYTHON) -m unittest discover -s sdk/python/tests -v
+	PYTHONPATH="sdk/python/src$(PYTHONPATH_SEP)sdk/levier/src" $(PYTHON) -m unittest discover -s sdk/python/tests -v
+	PYTHONPATH="sdk/levier/src$(PYTHONPATH_SEP)sdk/python/src$(PYTHONPATH_SEP)execution/runtime_sdk/src" $(PYTHON) -m unittest discover -s sdk/levier/tests -v
 
 image-runtime:
 	docker build -f deploy/runtime.Dockerfile -t levier-runtime:dev .
@@ -100,7 +119,7 @@ image-mcp-runtime:
 	docker build -f deploy/mcp-runtime.Dockerfile -t levier-mcp-runtime:dev .
 
 counter-agent:
-	PYTHONPATH="sdk/python/src" $(PYTHON) examples/counter_agent/app.py
+	PYTHONPATH="sdk/levier/src$(PYTHONPATH_SEP)sdk/python/src" $(PYTHON) examples/counter_agent/app.py
 
 http-smoke:
 	$(PYTHON) examples/http_client/client.py
@@ -110,6 +129,9 @@ retrofit-e2e:
 
 mcp-e2e:
 	./tests/e2e/mcp_e2e.sh
+
+global-e2e:
+	sh tests/e2e/global_cli_e2e.sh
 
 deps-check:
 	./tests/checks/check_deps.sh
@@ -171,4 +193,4 @@ docker-reset:
 	docker compose down -v
 
 counter-agent-test:
-	PYTHONPATH="sdk/python/src" python3 -m unittest discover -s examples/counter_agent/tests -p 'test_*.py' -v
+	PYTHONPATH="sdk/levier/src$(PYTHONPATH_SEP)sdk/python/src" $(PYTHON) -m unittest discover -s examples/counter_agent/tests -p 'test_*.py' -v

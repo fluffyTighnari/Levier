@@ -48,7 +48,7 @@ func printConfigUsage(out io.Writer) {
 
 func runConfigCheck(args []string, stdout, stderr io.Writer) int {
 	flags := flag.NewFlagSet("config check", flag.ContinueOnError)
-	path := flags.String("config", envOr("LEVIER_CONFIG", "levier.example.yaml"), "path to YAML configuration")
+	path := flags.String("config", controlConfigValue(), "path to YAML configuration")
 	production := flags.Bool("production", false, "enforce production secret requirements")
 	asJSON := flags.Bool("json", false, "print JSON")
 	if ok, code := parseFlagSet(flags, args, stdout, stderr); !ok {
@@ -96,7 +96,7 @@ func runConfigCheck(args []string, stdout, stderr io.Writer) int {
 
 func runConfigPrint(args []string, stdout, stderr io.Writer) int {
 	flags := flag.NewFlagSet("config print", flag.ContinueOnError)
-	path := flags.String("config", envOr("LEVIER_CONFIG", "levier.example.yaml"), "path to YAML configuration")
+	path := flags.String("config", controlConfigValue(), "path to YAML configuration")
 	asJSON := flags.Bool("json", false, "print JSON")
 	if ok, code := parseFlagSet(flags, args, stdout, stderr); !ok {
 		return code

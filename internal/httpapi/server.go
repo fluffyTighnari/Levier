@@ -207,6 +207,7 @@ func (s *Server) routes() {
 	s.mux.HandleFunc("GET /admin/model-providers", s.handleAdminListModelProviders)
 	s.mux.HandleFunc("POST /admin/model-providers", s.handleAdminUpsertModelProvider)
 	s.mux.HandleFunc("GET /admin/model-providers/{name}", s.handleAdminGetModelProvider)
+	s.mux.HandleFunc("PUT /admin/model-providers/{name}/secret", s.handleAdminPutModelProviderSecret)
 	s.mux.HandleFunc("DELETE /admin/model-providers/{name}", s.handleAdminDeleteModelProvider)
 	s.mux.HandleFunc("POST /admin/model-providers/{name}/check", s.handleAdminCheckModelProvider)
 	s.mux.HandleFunc("POST /admin/apps/{app_id}/rotate-key", s.handleAdminRotateKey)

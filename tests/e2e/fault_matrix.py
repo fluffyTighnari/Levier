@@ -316,7 +316,7 @@ def start_app() -> None:
         "examples/counter_agent/app.py",
     ], env={
         "LEVIER_CREDENTIALS": str(CREDENTIALS),
-        "PYTHONPATH": "sdk/python/src",
+        "PYTHONPATH": "sdk/levier/src:sdk/python/src",
     })
     wait_metric(f'levier_ws_connections{{app="{app_id}"}} 1', 10)
 

@@ -20,12 +20,14 @@
 *.sqlite
 *.sqlite3
 
-# Secrets
+# Secrets and per-project locators
 .env
 .env.*
 !.env.example
+.levier.json
 
 # Python
+build/
 __pycache__/
 *.py[cod]
 *.egg-info/

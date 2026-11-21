@@ -18,69 +18,98 @@ from levier_mcp_runtime.sessions import SessionManager
 
 
 class McpRuntimeServer:
-    """Unix-socket server exposing MCP sessions over JSON-RPC."""
+    """Local server exposing MCP sessions over JSON-RPC.
+
+    It can listen on a Unix socket (Linux/macOS), a TCP address (all
+    platforms), or both. TCP makes the shared MCP Runtime usable from a host
+    runtime when Levier itself runs in Docker.
+    """
 
     def __init__(
         self,
         manager: SessionManager,
-        socket_path: str,
+        socket_path: str = "",
         *,
+        tcp_address: str = "",
         version: str,
         logger: logging.Logger | None = None,
     ) -> None:
         self.manager = manager
         self.socket_path = socket_path
+        self.tcp_address = tcp_address
         self.version = version
         self.logger = logger or logging.getLogger("mcp_runtime.server")
-        self._server: asyncio.AbstractServer | None = None
+        self._servers: list[asyncio.AbstractServer] = []
         self._writers: set[asyncio.StreamWriter] = set()
         self._closed = asyncio.Event()
 
     async def start(self) -> None:
-        """Create the Unix socket and start accepting clients."""
-        path = Path(self.socket_path)
-        path.parent.mkdir(parents=True, exist_ok=True)
-        try:
-            path.unlink()
-        except FileNotFoundError:
-            pass
-        self._server = await asyncio.start_unix_server(
-            self._handle_client,
-            path=self.socket_path,
-        )
-        try:
-            os.chmod(self.socket_path, 0o600)
-        except OSError:
-            pass
-        self.logger.info("mcp runtime listening", extra={"socket": self.socket_path})
+        """Start every configured listener."""
+        if not self.socket_path and not self.tcp_address:
+            raise ValueError("mcp runtime needs --socket or --addr")
+        if self.socket_path:
+            path = Path(self.socket_path)
+            path.parent.mkdir(parents=True, exist_ok=True)
+            try:
+                path.unlink()
+            except FileNotFoundError:
+                pass
+            server = await asyncio.start_unix_server(
+                self._handle_client,
+                path=self.socket_path,
+            )
+            try:
+                os.chmod(self.socket_path, 0o600)
+            except OSError:
+                pass
+            self._servers.append(server)
+            self.logger.info("mcp runtime listening", extra={"socket": self.socket_path})
+        if self.tcp_address:
+            host, port = parse_address(self.tcp_address)
+            server = await asyncio.start_server(self._handle_client, host=host, port=port)
+            self._servers.append(server)
+            self.logger.info("mcp runtime listening", extra={"address": self.tcp_address})
 
     async def serve_forever(self) -> None:
         """Serve until close is called."""
-        if self._server is None:
+        if not self._servers:
             await self.start()
-        assert self._server is not None
-        async with self._server:
-            await self._closed.wait()
+        await self._closed.wait()
 
     async def close(self) -> None:
         """Stop accepting clients and close every session."""
         self._closed.set()
-        if self._server is not None:
-            self._server.close()
+        for server in self._servers:
+            server.close()
             # Close connected clients first: since Python 3.12 wait_closed()
             # also waits for active connections, which would hang shutdown.
             for writer in list(self._writers):
                 writer.close()
             try:
-                await asyncio.wait_for(self._server.wait_closed(), timeout=2)
+                await asyncio.wait_for(server.wait_closed(), timeout=2)
             except asyncio.TimeoutError:
                 self.logger.warning("mcp runtime shutdown timed out")
-            self._server = None
+        self._servers.clear()
         await self.manager.close_all()
-        try:
-            Path(self.socket_path).unlink()
-        except FileNotFoundError:
-            pass
+        if self.socket_path:
+            try:
+                Path(self.socket_path).unlink()
+            except FileNotFoundError:
+                pass
+
+
+def parse_address(value: str) -> tuple[str, int]:
+    """Parse ``host:port`` or ``tcp://host:port``."""
+    address = value.strip()
+    if address.startswith("tcp://"):
+        address = address[len("tcp://") :]
+    if address.startswith("["):
+        host, _, port = address[1:].partition("]:")
+    else:
+        host, _, port = address.rpartition(":")
+    if not host or not port:
+        raise ValueError(f"invalid TCP address: {value!r}")
+    return host, int(port)
 
     async def _handle_client(
         self,

@@ -70,12 +70,13 @@ registration.
 
 ## 3. Runtime
 
-The React Runtime talks to the shared MCP Runtime socket:
+`levier up` exposes the shared MCP Runtime on `tcp://127.0.0.1:9091` for host
+runtimes, and keeps the Unix socket for containers. A runtime does not need to
+choose: `ctx.toolbox()` reads the address from the profile.
 
-```yaml
-mcp_runtime:
-  socket: "/tmp/levier-mcp.sock"
-```
+The built-in React Runtime does not own an MCP socket setting. Its agent uses
+`ctx.toolbox()`, which reads the address from the profile or
+`LEVIER_MCP_RUNTIME_SOCKET` and opens the sessions for each Run.
 
 Start the MCP Runtime:
 

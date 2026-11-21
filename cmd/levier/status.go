@@ -42,7 +42,7 @@ var metricLabelPattern = regexp.MustCompile(`([a-zA-Z_][a-zA-Z0-9_]*)="([^"]*)"`
 func runStatus(args []string, stdout, stderr io.Writer) int {
 	flags := flag.NewFlagSet("status", flag.ContinueOnError)
 	flags.SetOutput(stderr)
-	server := flags.String("server", envOr("LEVIER_SERVER", "http://127.0.0.1:8080"), "Levier HTTP address")
+	server := flags.String("server", defaultServerValue(), "Levier HTTP address")
 	asJSON := flags.Bool("json", false, "print JSON")
 	timeout := flags.Duration("timeout", 5*time.Second, "per-request timeout")
 	if ok, code := parseFlagSet(flags, args, stdout, stderr); !ok {

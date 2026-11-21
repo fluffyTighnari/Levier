@@ -12,14 +12,11 @@ from levier_runtime.tools.base import (
     UnavailableToolProvider,
     as_tool_provider,
 )
-from levier_runtime.tools.router import ToolRouter
-
 __all__ = [
     "ExecutorToolProvider",
     "ToolExecutor",
     "ToolProvider",
     "ToolResult",
-    "ToolRouter",
     "UnavailableToolExecutor",
     "UnavailableToolProvider",
     "as_tool_provider",

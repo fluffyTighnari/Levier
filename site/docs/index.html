@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>文档 — Levier</title>
+  <meta name="description" content="Levier 文档：快速开始、核心概念、App SDK、Runtime SDK、MCP、CLI、架构与排查。">
+  <meta name="theme-color" content="#f1ebdf">
+  <meta name="color-scheme" content="light">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%231c1915'/%3E%3Cpath d='M8 23h16M16 23V10' stroke='%23f3eee4' stroke-width='2.5'/%3E%3Cpath d='M13 23l3-6 3 6' fill='%23a4472c'/%3E%3C/svg%3E">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400&family=Noto+Sans+SC:wght@400;500;700&family=Noto+Serif+SC:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../assets/css/tokens.css">
+  <link rel="stylesheet" href="../assets/css/site.css">
+  <link rel="stylesheet" href="../assets/css/docs.css">
+  <script>document.documentElement.classList.add("js");</script>
+  <noscript>
+    <style>
+      #doc-state,
+      #docs-nav { display: none !important; }
+      .docs-sidebar__foot { display: none; }
+    </style>
+  </noscript>
+</head>
+<body class="docs-body">
+  <a class="skip-link" href="#doc">跳到文档正文</a>
+
+  <header class="docs-topbar">
+    <div class="docs-topbar__inner container">
+      <div class="docs-topbar__start">
+        <button class="docs-menu-btn" id="docs-menu-btn" type="button" aria-expanded="false" aria-controls="docs-sidebar">
+          <span aria-hidden="true">☰</span> 目录
+        </button>
+        <a class="docs-brand" href="../index.html">LEVIER<span>.</span><small>文档</small></a>
+        <a class="docs-back" href="../index.html"><span aria-hidden="true">←</span> 首页</a>
+      </div>
+      <div class="docs-topbar__links">
+        <a href="index.html#/quickstart">快速开始</a>
+        <a href="index.html#/app-sdk">App SDK</a>
+        <a href="https://github.com/fluffyTighnari/levier" target="_blank" rel="noopener">GitHub ↗</a>
+      </div>
+    </div>
+  </header>
+
+  <div class="docs-layout">
+    <aside class="docs-sidebar" id="docs-sidebar" aria-label="文档目录">
+      <div class="docs-sidebar__head">
+        <div class="docs-sidebar__headrow">
+          <span class="docs-sidebar__label">文档</span>
+          <button class="docs-sidebar__close" id="docs-close-btn" type="button" aria-label="关闭目录">×</button>
+        </div>
+        <p class="docs-sidebar__note">MVP · 与仓库同源</p>
+      </div>
+
+      <nav class="docs-nav" id="docs-nav" aria-label="文档导航">
+        <p class="docs-nav__loading">正在载入目录…</p>
+      </nav>
+
+      <div class="docs-sidebar__foot">
+        <p>命令与字段以仓库为准。遇到问题先看<a href="index.html#/troubleshooting">排查</a>。</p>
+      </div>
+    </aside>
+
+    <div class="docs-backdrop" id="docs-backdrop" hidden aria-hidden="true"></div>
+
+    <main class="docs-main">
+      <article class="doc" id="doc">
+        <div class="doc-loading" id="doc-state">正在载入文档…</div>
+        <div id="doc-view" hidden></div>
+      </article>
+      <nav class="doc-pager" id="doc-pager" aria-label="上一篇 / 下一篇" hidden></nav>
+
+      <noscript>
+        <div class="doc-error">
+          <h2>需要启用 JavaScript</h2>
+          <p>文档页在浏览器里读取 Markdown 并渲染目录。未启用脚本时，可以直接打开源文件：</p>
+          <ul>
+            <li><a href="content/quickstart.md">快速开始</a></li>
+            <li><a href="content/concepts.md">核心概念</a></li>
+            <li><a href="content/app-sdk.md">App SDK</a></li>
+            <li><a href="content/runtime-sdk.md">Runtime SDK</a></li>
+            <li><a href="content/mcp.md">MCP</a></li>
+            <li><a href="content/cli.md">CLI 参考</a></li>
+            <li><a href="content/architecture.md">架构</a></li>
+            <li><a href="content/troubleshooting.md">排查</a></li>
+          </ul>
+        </div>
+      </noscript>
+    </main>
+
+    <aside class="doc-toc" id="doc-toc" aria-label="本页目录">
+      <p class="doc-toc__title">本页内容</p>
+      <ul class="doc-toc__list" id="doc-toc-list"></ul>
+    </aside>
+  </div>
+
+  <footer class="docs-foot">
+    <div class="container docs-foot__inner">
+      <p>Levier 文档 · MVP</p>
+      <p>
+        <a href="../index.html">首页</a>
+        <span aria-hidden="true">·</span>
+        <a href="https://github.com/fluffyTighnari/levier" target="_blank" rel="noopener">GitHub ↗</a>
+        <span aria-hidden="true">·</span>
+        <a href="https://github.com/fluffyTighnari/levier/blob/main/docs/SCOPE.md" target="_blank" rel="noopener">SCOPE ↗</a>
+      </p>
+    </div>
+  </footer>
+
+  <script src="../assets/vendor/marked.min.js" defer></script>
+  <script src="../assets/vendor/purify.min.js" defer></script>
+  <script src="../assets/js/docs.js" defer></script>
+</body>
+</html>

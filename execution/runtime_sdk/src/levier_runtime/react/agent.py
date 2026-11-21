@@ -44,7 +44,7 @@ from levier_runtime.llm.base import (
     ToolSpec,
 )
 from levier_runtime.react.checkpoint import CheckpointError, CheckpointState, capture
-from levier_runtime.tools.base import ToolProvider, as_tool_provider
+from levier_runtime.tools.base import ToolProvider, ToolResult, as_tool_provider
 
 _DEFAULT_MAX_STEPS = 32
 _DEFAULT_STEP_TIMEOUT_MS = 120_000
@@ -63,7 +63,8 @@ class ReactAgent:
         default_tool_timeout_ms: int = _DEFAULT_TOOL_TIMEOUT_MS,
     ) -> None:
         self.provider = provider
-        self.tools = as_tool_provider(tools)
+        self._uses_context_tools = tools is None
+        self.tools = _ContextToolProvider() if tools is None else as_tool_provider(tools)
         self.default_step_timeout_ms = default_step_timeout_ms
         self.default_tool_timeout_ms = default_tool_timeout_ms
 
@@ -162,7 +163,11 @@ class ReactAgent:
 
             result = await core.run(
                 spec,
-                lambda event: _emit_core_event(ctx, event),
+                lambda event: _emit_core_event(
+                    ctx,
+                    event,
+                    emit_tool_events=not self._uses_context_tools,
+                ),
                 abort=_CtxAbort(ctx),
                 on_step_end=on_step_end,
                 on_cancel=on_cancel,
@@ -220,6 +225,49 @@ class ReactAgent:
         retryable: bool = False,
     ) -> None:
         await ctx.error(code, message, retryable=retryable)
+
+
+class _ContextToolProvider:
+    """Use the Runtime SDK toolbox for MCP and the bridge for local tools."""
+
+    async def open(self, ctx: RunContext) -> Sequence[ToolSpec]:
+        toolbox = await ctx.toolbox()
+        return [
+            ToolSpec(
+                name=tool.name,
+                description=tool.description,
+                input_schema_json=tool.schema_json,
+            )
+            for tool in toolbox
+            if tool.scope == "mcp"
+        ]
+
+    async def call(
+        self,
+        ctx: RunContext,
+        call: ToolCall,
+        timeout_ms: int,
+    ) -> ToolResult:
+        toolbox = await ctx.toolbox()
+        tool = toolbox.find(call.name)
+        if tool is not None and tool.scope == "mcp":
+            result = await toolbox.call(call.name, call.arguments_json)
+        else:
+            result = await ctx.call_tool(
+                call.name,
+                call.arguments_json,
+                timeout_ms=timeout_ms,
+            )
+        return ToolResult(
+            ok=result.ok,
+            result_json=result.result_json,
+            error_code=result.error_code,
+            error_message=result.error_message,
+            retryable=result.retryable,
+        )
+
+    async def close(self, ctx: RunContext) -> None:
+        await ctx.close_toolbox()
 
 
 class _CtxAbort:
@@ -283,7 +331,12 @@ class _ToolAdapter:
         )
 
 
-async def _emit_core_event(ctx: RunContext, event: Any) -> None:
+async def _emit_core_event(
+    ctx: RunContext,
+    event: Any,
+    *,
+    emit_tool_events: bool = True,
+) -> None:
     if isinstance(event, MessageDelta):
         await ctx.emit(
             "MESSAGE_DELTA",
@@ -315,6 +368,8 @@ async def _emit_core_event(ctx: RunContext, event: Any) -> None:
         await ctx.emit("USAGE", event.usage.to_dict())
         return
     if isinstance(event, ToolStarted):
+        if not emit_tool_events:
+            return
         await ctx.emit(
             "TOOL_CALL_BEGIN",
             {
@@ -325,6 +380,8 @@ async def _emit_core_event(ctx: RunContext, event: Any) -> None:
         )
         return
     if isinstance(event, ToolFinished):
+        if not emit_tool_events:
+            return
         data = {
             "invocation_id": event.invocation_id,
             "tool_name": event.tool_name,

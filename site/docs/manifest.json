@@ -1,0 +1,77 @@
+{
+  "version": 1,
+  "updated": "2026-11-20",
+  "sections": [
+    {
+      "title": "开始",
+      "items": [
+        {
+          "slug": "quickstart",
+          "title": "快速开始",
+          "status": "published",
+          "file": "content/quickstart.md",
+          "description": "用内置 Echo Runtime 跑通第一次 Run，不需要模型 key。约 5 分钟。"
+        },
+        {
+          "slug": "concepts",
+          "title": "核心概念",
+          "status": "published",
+          "file": "content/concepts.md",
+          "description": "四个角色、四条边界，以及一次 Run 的生命周期。"
+        }
+      ]
+    },
+    {
+      "title": "接入",
+      "items": [
+        {
+          "slug": "app-sdk",
+          "title": "App SDK",
+          "status": "published",
+          "file": "content/app-sdk.md",
+          "description": "保留已有业务函数，用一层声明把它交给模型调用。"
+        },
+        {
+          "slug": "runtime-sdk",
+          "title": "Runtime SDK",
+          "status": "published",
+          "file": "content/runtime-sdk.md",
+          "description": "一个 runtime_name，一个 run(ctx)。传输与状态由 SDK 负责。"
+        },
+        {
+          "slug": "mcp",
+          "title": "MCP",
+          "status": "published",
+          "file": "content/mcp.md",
+          "description": "注册 MCP Server、声明 mcp_refs、理解工具命名与凭据占位。"
+        }
+      ]
+    },
+    {
+      "title": "操作与参考",
+      "items": [
+        {
+          "slug": "cli",
+          "title": "CLI 参考",
+          "status": "published",
+          "file": "content/cli.md",
+          "description": "按任务分组的日常命令：status、app、provider、run 与 runtime。"
+        },
+        {
+          "slug": "troubleshooting",
+          "title": "排查",
+          "status": "published",
+          "file": "content/troubleshooting.md",
+          "description": "从 status、run show 与日志三个入口定位问题。"
+        },
+        {
+          "slug": "architecture",
+          "title": "架构",
+          "status": "published",
+          "file": "content/architecture.md",
+          "description": "进程视图、控制面的包、Run 生命周期与三条工具路径。"
+        }
+      ]
+    }
+  ]
+}

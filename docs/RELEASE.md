@@ -17,8 +17,18 @@ levier_v0.1.0_linux_arm64.tar.gz
 levier_v0.1.0_darwin_amd64.tar.gz
 levier_v0.1.0_darwin_arm64.tar.gz
 levier_v0.1.0_windows_amd64.zip
+levier-0.1.0-py3-none-any.whl
+levier_app-0.1.0-py3-none-any.whl
+levier_runtime-0.1.0-py3-none-any.whl
+levier_agent_core-0.1.0-py3-none-any.whl
+levier_echo_runtime-0.1.0-py3-none-any.whl
+levier_react_runtime-0.1.0-py3-none-any.whl
+levier_mcp_runtime-0.1.0-py3-none-any.whl
+levier-python-wheels.tar.gz
 checksums.txt
 ```
+
+Python wheel 由 `scripts/build-wheels.sh` 生成，并追加到同一个 `checksums.txt`。
 
 压缩包根目录只包含：
 
@@ -57,6 +67,13 @@ sh scripts/build-release.sh
 dist/
 ```
 
+`make release-dist` 会同时生成二进制归档和 Python wheels。只运行
+`scripts/build-release.sh` 时不会生成 wheels，需要再执行：
+
+```sh
+sh scripts/build-wheels.sh
+```
+
 脚本要求：
 
 ```text
@@ -64,6 +81,7 @@ go
 tar
 sha256sum 或 shasum
 zip 或 python3（Windows 压缩包）
+python3 + pip（Python wheels）
 ```
 
 ---
@@ -175,7 +193,47 @@ packages: write
 GITHUB_TOKEN 登录 ghcr.io
 ```
 
-### 4.2 go install
+### 4.2 PyPI / TestPyPI
+
+Python wheels 由 `.github/workflows/pypi.yml` 发布，和 GitHub Release 分开：
+
+```text
+workflow_dispatch target=testpypi  -> TestPyPI
+workflow_dispatch target=pypi      -> PyPI
+stable v* tag                      -> PyPI
+prerelease v*-rc.* tag             -> 跳过
+```
+
+首次发布前在 PyPI 创建 token，并在 GitHub 仓库配置：
+
+```text
+TEST_PYPI_API_TOKEN    TestPyPI token
+PYPI_API_TOKEN         正式 PyPI token
+```
+
+如果不使用 token，也可以改用 PyPI Trusted Publishing；workflow 已开启
+`id-token: write`，配置 publisher 后可以删掉 `password` 行。
+
+首次发布顺序建议：
+
+```sh
+# 手工触发 TestPyPI
+gh workflow run pypi.yml -f target=testpypi
+
+# 验证安装
+python -m pip install --index-url https://test.pypi.org/simple/ \
+  --extra-index-url https://pypi.org/simple levier
+
+# 正式发布
+gh workflow run pypi.yml -f target=pypi
+```
+
+PyPI 不允许覆盖同一版本的同一个文件。发布失败后修改内容必须提升版本号，
+例如从 `0.1.0` 升到 `0.1.1`。发布的是 `dist-pypi/` 下的所有 wheel，包括
+`levier`、`levier-app`、`levier-runtime`；后两者必须先有版本，`levier` 的
+精确依赖才能解析。
+
+### 4.3 go install
 
 公开仓库发布后，验证：
 

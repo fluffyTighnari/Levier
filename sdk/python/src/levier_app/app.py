@@ -11,7 +11,6 @@ from __future__ import annotations
 
 import json
 import logging
-import os
 import signal
 import socket
 import threading
@@ -19,7 +18,7 @@ import time
 from dataclasses import dataclass, field
 from typing import Any, Callable, Mapping, Sequence
 
-from .credentials import Credentials, load_credentials, resolve_server
+from .credentials import Credentials, default_mcp_refs, load_credentials, resolve_server
 from .errors import (
     AppInactiveError,
     HTTPError,
@@ -99,6 +98,7 @@ class LevierApp:
         self._tools: dict[str, ToolSpec] = {}
         self._stop_requested = False
         self._active_ws: WebSocketClient | None = None
+        self._connected_event = threading.Event()
 
     @classmethod
     def from_credentials(
@@ -155,6 +155,16 @@ class LevierApp:
 
         return decorator
 
+    def register(self, tool: Any) -> Any:
+        """Register a ``levier.Tool`` without repeating its schema by hand."""
+        self.tool(
+            str(tool.name),
+            description=str(getattr(tool, "description", "")),
+            schema=dict(getattr(tool, "schema", {})),
+            timeout_ms=int(getattr(tool, "timeout_ms", 10000)),
+        )(tool.invoke)
+        return tool
+
     def tools_manifest(self) -> list[dict[str, Any]]:
         return [spec.manifest() for spec in self._tools.values()]
 
@@ -208,6 +218,10 @@ class LevierApp:
         active = self._active_ws
         if active is not None:
             active.close()
+
+    def wait_connected(self, timeout: float = 10.0) -> bool:
+        """Wait until this App has completed its first WebSocket handshake."""
+        return self._connected_event.wait(timeout)
 
     @classmethod
     def run_cli(
@@ -320,6 +334,7 @@ class LevierApp:
             if ws is not None:
                 ws.close()
             self._active_ws = None
+            self._connected_event.clear()
             for signum, previous in old_handlers:
                 signal.signal(signum, previous)
 
@@ -346,6 +361,7 @@ class LevierApp:
         except Exception:
             ws.close()
             raise
+        self._connected_event.set()
         self.logger.info("connected", extra={"app_id": self.credentials.app_id})
         return ws
 
@@ -453,13 +469,11 @@ def _tool_error(
 
 def _parse_mcp_refs(value: Sequence[str] | None) -> list[str] | None:
     if value is None:
-        raw = os.environ.get("LEVIER_APP_MCP_REFS", "")
-        if not raw.strip():
-            return None
-        value = raw.split(",")
-    refs: list[str] = []
+        refs = default_mcp_refs()
+        return refs or None
+    result: list[str] = []
     for item in value:
         name = str(item).strip()
-        if name and name not in refs:
-            refs.append(name)
-    return refs
+        if name and name not in result:
+            result.append(name)
+    return result or None

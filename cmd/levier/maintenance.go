@@ -49,7 +49,7 @@ func printMaintenanceUsage(out io.Writer) {
 
 func runMaintenanceStatus(args []string, stdout, stderr io.Writer) int {
 	flags := flag.NewFlagSet("maintenance status", flag.ContinueOnError)
-	configPath := flags.String("config", envOr("LEVIER_CONFIG", "levier.example.yaml"), "path to YAML configuration")
+	configPath := flags.String("config", controlConfigValue(), "path to YAML configuration")
 	asJSON := flags.Bool("json", false, "print JSON")
 	timeout := flags.Duration("timeout", 15*time.Second, "database operation timeout")
 	if ok, code := parseFlagSet(flags, args, stdout, stderr); !ok {
@@ -115,7 +115,7 @@ func runMaintenanceStatus(args []string, stdout, stderr io.Writer) int {
 
 func runMaintenancePrune(args []string, stdout, stderr io.Writer) int {
 	flags := flag.NewFlagSet("maintenance prune", flag.ContinueOnError)
-	configPath := flags.String("config", envOr("LEVIER_CONFIG", "levier.example.yaml"), "path to YAML configuration")
+	configPath := flags.String("config", controlConfigValue(), "path to YAML configuration")
 	yes := flags.Bool("yes", false, "delete eligible data")
 	dryRun := flags.Bool("dry-run", true, "show candidates without deleting (default)")
 	asJSON := flags.Bool("json", false, "print JSON")

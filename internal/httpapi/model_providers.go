@@ -25,6 +25,16 @@ type ModelProviderRegistry interface {
 	CheckModelProvider(ctx context.Context, name string) (register.ModelProvider, error)
 }
 
+// ModelProviderSecretWriter stores a provider key without exposing it again.
+type ModelProviderSecretWriter interface {
+	PutModelProviderSecret(ctx context.Context, name, apiKey string) (register.ModelProvider, error)
+}
+
+// ModelProviderSecretRequest is the admin PUT secret body.
+type ModelProviderSecretRequest struct {
+	APIKey string `json:"api_key"`
+}
+
 // ModelProviderUpsertRequest is the admin POST body.
 type ModelProviderUpsertRequest struct {
 	Name         string   `json:"name"`
@@ -191,6 +201,32 @@ func (s *Server) handleAdminUpsertModelProvider(w http.ResponseWriter, r *http.R
 		Enabled:      enabled,
 		Default:      defaultProvider,
 	})
+	if err != nil {
+		writeModelProviderError(w, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, modelProviderView(provider))
+}
+
+func (s *Server) handleAdminPutModelProviderSecret(w http.ResponseWriter, r *http.Request) {
+	if !s.isAdmin(r) {
+		writeErrorCode(w, errs.CodeUnauthorized, "admin token is required", false)
+		return
+	}
+	writer, ok := s.apps.(ModelProviderSecretWriter)
+	if !ok {
+		writeErrorCode(w, errs.CodeNotImplemented, "managed provider secrets are not configured", false)
+		return
+	}
+	var request ModelProviderSecretRequest
+	if _, ok := s.readJSONBody(w, r, &request, true); !ok {
+		return
+	}
+	if strings.TrimSpace(request.APIKey) == "" {
+		writeErrorCode(w, errs.CodeBadRequest, "api_key is required", false)
+		return
+	}
+	provider, err := writer.PutModelProviderSecret(r.Context(), r.PathValue("name"), request.APIKey)
 	if err != nil {
 		writeModelProviderError(w, err)
 		return

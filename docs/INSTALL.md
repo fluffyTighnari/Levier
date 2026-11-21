@@ -182,20 +182,85 @@ sh /tmp/levier-install.sh \
 
 ### 5.5 PATH
 
-安装器不会自动修改 shell 配置。如果目录不在 `PATH`，会打印：
+默认情况下，安装器会把安装目录加入当前用户的 shell 配置，并提示你打开新终端：
+
+```text
+PATH updated in /home/you/.bashrc
+```
+
+支持的 shell：
+
+```text
+bash    ~/.bashrc（macOS 为 ~/.bash_profile）
+zsh     ~/.zshrc
+fish    ~/.config/fish/config.fish
+其他    ~/.profile
+```
+
+如果不想修改 shell 配置：
+
+```sh
+sh /tmp/levier-install.sh --no-modify-path
+```
+
+此时需要手动执行：
 
 ```sh
 export PATH="$HOME/.local/bin:$PATH"
 ```
 
-需要持久化时：
+### 5.6 安装后配置
+
+先确认命令来自任意目录都能找到：
 
 ```sh
-# bash
-echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.bashrc
+cd /tmp
+levier version
+```
 
-# zsh
-echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.zshrc
+然后写入全局配置：
+
+```sh
+levier setup --server http://127.0.0.1:8080
+```
+
+默认安装器还会把 Compose 源码包放到：
+
+```text
+Linux   $XDG_DATA_HOME/levier/stack 或 ~/.local/share/levier/stack
+macOS   ~/Library/Application Support/levier/stack
+```
+
+`levier setup` 会自动发现这个目录。之后在任意业务目录执行：
+
+```sh
+levier up
+```
+
+默认安装器还会下载 Python SDK wheel 包，并在找到 Python 时安装
+`levier`（包含 `levier_app` 和 runtime SDK）。如果 Compose 源码包来自镜像，可以用
+`LEVIER_SOURCE_URL` 指定 tar 包地址。wheel 包保留在：
+
+```text
+$XDG_DATA_HOME/levier/python-wheels
+或 ~/.local/share/levier/python-wheels
+```
+
+如果不需要 Compose 源码包，安装时使用 `--no-stack`。
+如果不需要自动安装 Python SDK，使用 `--no-sdk`。
+
+配置文件位置：
+
+```text
+Linux        ~/.config/levier/config.yaml
+macOS        ~/Library/Application Support/levier/config.yaml
+Windows      %APPDATA%\levier\config.yaml
+```
+
+测试或隔离环境可以用 `LEVIER_HOME` 改到任意目录：
+
+```sh
+LEVIER_HOME=/tmp/levier-home levier setup --server http://127.0.0.1:8080
 ```
 
 ---
@@ -249,7 +314,101 @@ powershell -NoProfile -ExecutionPolicy Bypass `
   -DryRun
 ```
 
-安装器不会自动修改用户 PATH，只打印目标目录。
+默认情况下，安装器会把安装目录加入当前用户的 PATH，并立即对当前 PowerShell 生效。打开新终端后，可以在任意目录执行：
+
+```powershell
+cd $env:TEMP
+levier version
+```
+
+如果不想修改 PATH：
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass `
+  -File "$env:TEMP\levier-install.ps1" `
+  -NoModifyPath
+```
+
+默认安装器还会把 Compose 源码包放到：
+
+```text
+%LOCALAPPDATA%\levier\stack
+```
+
+安装完成后写入全局配置：
+
+```powershell
+levier setup --server http://127.0.0.1:8080
+```
+
+之后进入任意业务项目目录：
+
+```powershell
+cd C:\work\my-project
+levier up
+levier status
+```
+
+默认安装器也会把 Python wheel 包放到：
+
+```text
+%LOCALAPPDATA%\levier\python-wheels
+```
+
+并在找到 Python 时安装 `levier`。镜像安装时可用
+`$env:LEVIER_SOURCE_URL` 指定 Compose 源码 zip 地址。
+
+如果不需要 Compose 源码包，安装时使用 `-NoStack`。
+如果不需要自动安装 Python SDK，使用 `-NoSdk`。
+
+---
+
+### 6.3 Python SDK wheels
+
+Release 里同时提供：
+
+```text
+levier-*.whl
+levier_app-*.whl
+levier_runtime-*.whl
+levier_agent_core-*.whl
+levier_echo_runtime-*.whl
+levier_react_runtime-*.whl
+levier_mcp_runtime-*.whl
+levier-python-wheels.tar.gz
+```
+
+发布到 PyPI 后可以直接安装：
+
+```sh
+python -m pip install levier
+```
+
+离线或未发布时，从 release wheel 目录安装：
+
+```sh
+python -m pip install --find-links ./levier-wheels levier
+```
+
+它包含 `levier_app` 和 `levier_runtime`。只使用低层适配器时也可以单独安装：
+
+```sh
+python -m pip install --find-links ./levier-wheels levier-app
+python -m pip install --find-links ./levier-wheels levier-runtime
+```
+
+内置 Runtime 需要把对应的 wheel 一起安装：
+
+```sh
+python -m pip install --find-links ./levier-wheels \
+  levier-runtime levier-echo-runtime
+```
+
+这些 wheel 不依赖仓库路径。安装后业务项目里直接 import：
+
+```python
+from levier import App, tool, Runtime
+```
 
 ---
 

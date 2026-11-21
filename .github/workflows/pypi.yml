@@ -1,0 +1,60 @@
+# Levier — publish Python distributions to TestPyPI/PyPI.
+#
+# Manual runs default to TestPyPI. Stable v* tags publish to PyPI. Prerelease
+# tags (v0.1.0-rc.1, ...) are skipped so a release candidate cannot claim the
+# final version by accident.
+name: pypi
+
+on:
+  workflow_dispatch:
+    inputs:
+      target:
+        description: "Publish target"
+        type: choice
+        options:
+          - testpypi
+          - pypi
+        default: testpypi
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: pypi-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    if: ${{ github.event_name == 'workflow_dispatch' || !contains(github.ref_name, '-') }}
+    runs-on: ubuntu-latest
+    environment:
+      name: pypi
+      url: https://pypi.org/p/levier
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Build wheels
+        run: OUT_DIR=dist-pypi sh scripts/build-wheels.sh
+      - name: Keep only importable distributions
+        run: rm -f dist-pypi/levier-python-wheels.tar.gz
+      - name: Publish to TestPyPI
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.target == 'testpypi' }}
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          repository-url: https://test.pypi.org/legacy/
+          packages-dir: dist-pypi
+          password: ${{ secrets.TEST_PYPI_API_TOKEN }}
+          skip-existing: true
+      - name: Publish to PyPI
+        if: ${{ github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.target == 'pypi') }}
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          packages-dir: dist-pypi
+          password: ${{ secrets.PYPI_API_TOKEN }}
+          skip-existing: true

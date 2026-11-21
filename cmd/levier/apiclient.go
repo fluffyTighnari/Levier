@@ -305,6 +305,14 @@ func (c *apiClient) upsertModelProvider(ctx context.Context, payload map[string]
 	return response, err
 }
 
+func (c *apiClient) putModelProviderSecret(ctx context.Context, name, apiKey string) (modelProviderView, error) {
+	var response modelProviderView
+	err := c.do(ctx, http.MethodPut, "/admin/model-providers/"+url.PathEscape(name)+"/secret", map[string]string{
+		"api_key": apiKey,
+	}, &response)
+	return response, err
+}
+
 func (c *apiClient) deleteModelProvider(ctx context.Context, name string) error {
 	return c.do(ctx, http.MethodDelete, "/admin/model-providers/"+url.PathEscape(name), nil, nil)
 }

@@ -93,6 +93,10 @@ func (r *Registry) UpsertModelProvider(ctx context.Context, input ModelProviderI
 	if secretRef != "" && strings.ContainsAny(secretRef, " \t\r\n") {
 		return ModelProvider{}, fmt.Errorf("%w: secret_ref must not contain whitespace", ErrModelProviderInvalid)
 	}
+	lowerRef := strings.ToLower(secretRef)
+	if strings.HasPrefix(lowerRef, "sk-") || strings.HasPrefix(lowerRef, "mw_") || strings.HasPrefix(lowerRef, "bearer ") {
+		return ModelProvider{}, fmt.Errorf("%w: secret_ref must be a name such as deepseek_api_key, not an API key; store the key in LEVIER_SECRET_* or LEVIER_SECRETS_FILE", ErrModelProviderInvalid)
+	}
 	if input.Default && !input.Enabled {
 		return ModelProvider{}, fmt.Errorf("%w: the default provider must be enabled", ErrModelProviderInvalid)
 	}
@@ -209,10 +213,28 @@ func (r *Registry) CheckModelProvider(ctx context.Context, name string) (ModelPr
 	}
 	if provider.SecretRef != "" {
 		if _, err := r.secretResolver().Resolve(ctx, provider.SecretRef); err != nil {
-			return ModelProvider{}, fmt.Errorf("register: resolve secret %q: %w", provider.SecretRef, err)
+			return ModelProvider{}, fmt.Errorf("%w: provider %q secret is not configured; set LEVIER_SECRET_%s or LEVIER_SECRETS_FILE", ErrModelProviderInvalid, provider.Name, strings.ToUpper(strings.ReplaceAll(provider.SecretRef, "-", "_")))
 		}
 	}
 	return provider, nil
+}
+
+// PutModelProviderSecret stores the provider's API key in the managed store.
+func (r *Registry) PutModelProviderSecret(ctx context.Context, name, apiKey string) (ModelProvider, error) {
+	if r == nil || r.secretWriter == nil {
+		return ModelProvider{}, fmt.Errorf("%w: managed provider secrets are not enabled; set LEVIER_SECRETS_WRITE_FILE", ErrModelProviderInvalid)
+	}
+	provider, err := r.GetModelProvider(ctx, name)
+	if err != nil {
+		return ModelProvider{}, err
+	}
+	if strings.TrimSpace(provider.SecretRef) == "" {
+		return ModelProvider{}, fmt.Errorf("%w: provider %q has no secret_ref", ErrModelProviderInvalid, provider.Name)
+	}
+	if err := r.secretWriter.PutSecret(ctx, provider.SecretRef, apiKey); err != nil {
+		return ModelProvider{}, fmt.Errorf("%w: store provider secret: %v", ErrModelProviderInvalid, err)
+	}
+	return r.GetModelProvider(ctx, name)
 }
 
 // ResolveModelProfile turns a requested provider/model into a runtime profile.
@@ -269,7 +291,7 @@ func (r *Registry) profileFromProvider(ctx context.Context, provider ModelProvid
 	if provider.SecretRef != "" {
 		apiKey, err = r.secretResolver().Resolve(ctx, provider.SecretRef)
 		if err != nil {
-			return ModelProfile{}, fmt.Errorf("register: resolve provider %q secret: %w", provider.Name, err)
+			return ModelProfile{}, fmt.Errorf("%w: provider %q secret is not configured", ErrModelProviderInvalid, provider.Name)
 		}
 	}
 	adapter := provider.Adapter
