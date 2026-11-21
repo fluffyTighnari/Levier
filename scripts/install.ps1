@@ -186,12 +186,12 @@ function Install-PythonSdk {
             return $wheelsDir
         }
         $installed = $false
-        & $python.Source -m pip install --user --no-index --disable-pip-version-check `
+        & $python.Source -m pip install --user --disable-pip-version-check `
             --find-links $wheelsDir levier 2>$null | Out-Null
         if ($LASTEXITCODE -eq 0) {
             $installed = $true
         } else {
-            & $python.Source -m pip install --no-index --disable-pip-version-check `
+            & $python.Source -m pip install --disable-pip-version-check `
                 --find-links $wheelsDir levier 2>$null | Out-Null
             if ($LASTEXITCODE -eq 0) {
                 $installed = $true

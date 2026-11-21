@@ -272,10 +272,10 @@ install_sdk() {
 	fi
 	if [ -n "$python_bin" ]; then
 		sdk_installed=0
-		if "$python_bin" -m pip install --user --no-index --disable-pip-version-check \
+		if "$python_bin" -m pip install --user --disable-pip-version-check \
 			--find-links "$wheels_dir" levier >/dev/null 2>&1; then
 			sdk_installed=1
-		elif "$python_bin" -m pip install --no-index --disable-pip-version-check \
+		elif "$python_bin" -m pip install --disable-pip-version-check \
 			--find-links "$wheels_dir" levier >/dev/null 2>&1; then
 			sdk_installed=1
 		fi
