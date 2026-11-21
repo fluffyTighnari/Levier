@@ -66,7 +66,7 @@ def counter_add(delta: int) -> dict:
     """Add delta to the counter."""
     return {"value": delta}
 
-app = App(tools=[counter_add], mcp=[])
+app = App(tools=[counter_add])
 app.run()
 
 # Runtime

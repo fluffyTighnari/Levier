@@ -82,7 +82,7 @@ def counter_get() -> dict:
     """Read the counter."""
     return {"value": counter["value"]}
 
-app = App(tools=[counter_add, counter_get], mcp=[])
+app = App(tools=[counter_add, counter_get])
 
 if __name__ == "__main__":
     app.run()
@@ -641,6 +641,7 @@ execution/agent_core/      可选 ReAct 循环库
 - App SDK：`sdk/python/README.md`
 - Runtime SDK：`execution/runtime_sdk/README.md`
 - Runtime 接入：`docs/RUNTIME_ONBOARDING.md`
+- 按使用顺序阅读：`docs/USER_GUIDE.md`
 - MCP：`docs/MCP.md`
 - CLI：`docs/CLI_REFERENCE.md`
-- 全部操作面：`docs/OPERATIONS_SURFACE.md`
+- 全部操作面查询：`docs/OPERATIONS_SURFACE.md`

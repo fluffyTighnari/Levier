@@ -33,6 +33,8 @@ from __future__ import annotations
 
 from typing import Any
 
+from levier_app import ToolExecutionError
+
 from .app import App
 from .tools import Tool, schema_from_function, tool
 
@@ -41,6 +43,7 @@ __version__ = "0.1.0"
 __all__ = [
     "App",
     "Tool",
+    "ToolExecutionError",
     "schema_from_function",
     "tool",
     "Context",

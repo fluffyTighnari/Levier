@@ -3,6 +3,9 @@
 这一页只写用户真正要做的事。凭据路径、secret 引用、adapter、runtime token、
 CLI 参数和错误封装都由 SDK 处理。
 
+需要从安装、配置、App、Runtime 到排错的完整顺序时，看
+[`USER_GUIDE.md`](USER_GUIDE.md)。
+
 ---
 
 ## 1. 安装
@@ -114,10 +117,7 @@ def counter_get() -> dict:
     return {"value": counter["value"]}
 
 
-app = App(
-    tools=[counter_add, counter_get],
-    mcp=[],  # 需要哪些 MCP Server 就写在这里，例如 ["github"]
-)
+app = App(tools=[counter_add, counter_get])
 
 
 if __name__ == "__main__":

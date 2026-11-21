@@ -26,8 +26,9 @@ MAP.md          仓库地图
 
 | 文档 | 内容 |
 |---|---|
-| `QUICKSTART.md` | **黄金路径：安装、启动、模型、App、Run、自己的 Runtime** |
-| `OPERATIONS_SURFACE.md` | **当前 CLI、SDK、HTTP/WS、环境变量逐项清单** |
+| `USER_GUIDE.md` | **按真实使用顺序编排：启动 → 配置 → App → Runtime → 排错 → 运维** |
+| `QUICKSTART.md` | 五分钟黄金路径卡片 |
+| `OPERATIONS_SURFACE.md` | 当前 CLI、SDK、HTTP/WS、环境变量逐项查询清单 |
 | `DX.md` | 操作面设计：默认值、隐藏项、取舍与后续 |
 | `ONBOARDING.md` | 从启动 Levier 到第一个 Run 的详细引导 |
 | `APP_ONBOARDING.md` | App 接入流程与底层协议 |

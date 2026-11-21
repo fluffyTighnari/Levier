@@ -17,7 +17,7 @@ def counter_add(delta: int) -> dict:
     return {"value": counter["value"]}
 
 
-app = App(tools=[counter_add], mcp=[])
+app = App(tools=[counter_add])
 
 if __name__ == "__main__":
     app.run()
