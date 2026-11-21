@@ -229,9 +229,9 @@ gh workflow run pypi.yml -f target=pypi
 ```
 
 PyPI 不允许覆盖同一版本的同一个文件。发布失败后修改内容必须提升版本号，
-例如从 `0.1.0` 升到 `0.1.1`。发布的是 `dist-pypi/` 下的所有 wheel，包括
-`levier`、`levier-app`、`levier-runtime`；后两者必须先有版本，`levier` 的
-精确依赖才能解析。
+例如从 `0.1.0` 升到 `0.1.1`。PyPI workflow 只发布核心三包：
+`levier`、`levier-app`、`levier-runtime`；其余 runtime wheel 仍随 GitHub Release
+分发，后续需要时可以再加入 PyPI workflow。
 
 ### 4.3 go install
 

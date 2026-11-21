@@ -41,20 +41,24 @@ jobs:
           python-version: "3.12"
       - name: Build wheels
         run: OUT_DIR=dist-pypi sh scripts/build-wheels.sh
-      - name: Keep only importable distributions
-        run: rm -f dist-pypi/levier-python-wheels.tar.gz
+      - name: Keep core distributions
+        run: |
+          mkdir -p dist-pypi-core
+          cp dist-pypi/levier-[0-9]*.whl dist-pypi-core/
+          cp dist-pypi/levier_app-*.whl dist-pypi-core/
+          cp dist-pypi/levier_runtime-*.whl dist-pypi-core/
       - name: Publish to TestPyPI
         if: ${{ github.event_name == 'workflow_dispatch' && inputs.target == 'testpypi' }}
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
           repository-url: https://test.pypi.org/legacy/
-          packages-dir: dist-pypi
+          packages-dir: dist-pypi-core
           password: ${{ secrets.TEST_PYPI_API_TOKEN }}
           skip-existing: true
       - name: Publish to PyPI
         if: ${{ github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.target == 'pypi') }}
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
-          packages-dir: dist-pypi
+          packages-dir: dist-pypi-core
           password: ${{ secrets.PYPI_API_TOKEN }}
           skip-existing: true
