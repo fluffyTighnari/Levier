@@ -52,6 +52,9 @@ func (s *Server) handleCreateRun(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
+	if s.apps != nil {
+		setResponseTenant(w, tenantID)
+	}
 	runtimeType := request.Runtime
 	if runtimeType == "" {
 		runtimeType = RuntimeNormal
@@ -213,6 +216,7 @@ func (s *Server) handleGetRun(w http.ResponseWriter, r *http.Request) {
 		writeErrorCode(w, errs.CodeRunNotFound, "run not found", false)
 		return
 	}
+	setResponseTenant(w, run.TenantID)
 	writeJSON(w, http.StatusOK, RunView{
 		RunID:       run.RunID,
 		AppID:       run.AppID,
@@ -255,6 +259,7 @@ func (s *Server) handleListEvents(w http.ResponseWriter, r *http.Request) {
 		writeErrorCode(w, errs.CodeRunNotFound, "run not found", false)
 		return
 	}
+	setResponseTenant(w, run.TenantID)
 	events, err := s.runs.ListEvents(r.Context(), runID, afterAttempt, afterSeq, limit)
 	if err != nil {
 		writeErrorCode(w, errs.CodeInternal, "list events failed", true)
@@ -277,6 +282,7 @@ func (s *Server) handleCancelRun(w http.ResponseWriter, r *http.Request) {
 		writeErrorCode(w, errs.CodeRunNotFound, "run not found", false)
 		return
 	}
+	setResponseTenant(w, run.TenantID)
 	if s.canceller == nil {
 		writeErrorCode(w, errs.CodeNotImplemented, "cancellation is not configured", false)
 		return

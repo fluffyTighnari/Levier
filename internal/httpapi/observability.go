@@ -38,13 +38,20 @@ func (s *Server) instrumentHandler(next http.Handler) http.Handler {
 		if route == "" {
 			route = "unmatched"
 		}
+		tenantID := writer.Tenant()
 		if s.cfg.Metrics != nil {
-			s.cfg.Metrics.Inc(observe.MetricHTTPRequestsTotal, "HTTP requests by route and status.", map[string]string{
+			requestLabels := map[string]string{
 				"method": r.Method, "route": route, "status": httpStatus(status),
-			})
-			s.cfg.Metrics.Observe(observe.MetricHTTPRequestDuration, "HTTP request duration in seconds.", map[string]string{
+			}
+			durationLabels := map[string]string{
 				"method": r.Method, "route": route,
-			}, duration.Seconds())
+			}
+			if tenantID != "" {
+				requestLabels["tenant"] = tenantID
+				durationLabels["tenant"] = tenantID
+			}
+			s.cfg.Metrics.Inc(observe.MetricHTTPRequestsTotal, "HTTP requests by route, status, and tenant.", requestLabels)
+			s.cfg.Metrics.Observe(observe.MetricHTTPRequestDuration, "HTTP request duration in seconds.", durationLabels, duration.Seconds())
 		}
 		level := slog.LevelInfo
 		switch {
@@ -53,14 +60,18 @@ func (s *Server) instrumentHandler(next http.Handler) http.Handler {
 		case r.URL.Path == "/healthz" || r.URL.Path == "/readyz":
 			level = slog.LevelDebug
 		}
-		s.log.Log(r.Context(), level, "http request",
+		logArgs := []any{
 			observe.FieldRequestID, requestIDFromContext(r.Context()),
 			observe.FieldMethod, r.Method,
 			observe.FieldRoute, route,
 			observe.FieldStatus, status,
 			observe.FieldDurationMS, duration.Milliseconds(),
 			observe.FieldRemoteAddr, r.RemoteAddr,
-		)
+		}
+		if tenantID != "" {
+			logArgs = append(logArgs, observe.FieldTenantID, tenantID)
+		}
+		s.log.Log(r.Context(), level, "http request", logArgs...)
 	})
 }
 
@@ -84,6 +95,7 @@ func traceIDFromRequest(r *http.Request) string {
 type statusWriter struct {
 	http.ResponseWriter
 	status int
+	tenant string
 }
 
 func (w *statusWriter) Status() int {
@@ -91,6 +103,23 @@ func (w *statusWriter) Status() int {
 		return http.StatusOK
 	}
 	return w.status
+}
+
+func (w *statusWriter) Tenant() string {
+	return w.tenant
+}
+
+func (w *statusWriter) SetTenant(tenantID string) {
+	w.tenant = tenantID
+}
+
+func setResponseTenant(w http.ResponseWriter, tenantID string) {
+	if w == nil || tenantID == "" {
+		return
+	}
+	if setter, ok := w.(interface{ SetTenant(string) }); ok {
+		setter.SetTenant(tenantID)
+	}
 }
 
 func (w *statusWriter) WriteHeader(code int) {

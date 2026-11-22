@@ -19,6 +19,7 @@ func (s *Server) handleIssueWSToken(w http.ResponseWriter, r *http.Request) {
 		writeErrorCode(w, errs.CodeInternal, "issue ws token failed", true)
 		return
 	}
+	setResponseTenant(w, s.tenantForApp(r.Context(), appID))
 	writeJSON(w, http.StatusOK, WSTokenResponse{
 		WSURL:     WSURL,
 		WSToken:   token,

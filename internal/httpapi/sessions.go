@@ -30,6 +30,7 @@ func (s *Server) handleGetSession(w http.ResponseWriter, r *http.Request) {
 		writeErrorCode(w, errs.CodeSessionNotFound, "session not found", false)
 		return
 	}
+	setResponseTenant(w, session.TenantID)
 	writeJSON(w, http.StatusOK, sessionView(session))
 }
 
@@ -67,6 +68,7 @@ func (s *Server) handleListSessionEvents(w http.ResponseWriter, r *http.Request)
 		writeErrorCode(w, errs.CodeSessionNotFound, "session not found", false)
 		return
 	}
+	setResponseTenant(w, session.TenantID)
 	events, err := s.sessions.ListSessionEvents(r.Context(), sessionID, afterAttempt, afterSeq, limit)
 	if err != nil {
 		writeErrorCode(w, errs.CodeInternal, "list session events failed", true)

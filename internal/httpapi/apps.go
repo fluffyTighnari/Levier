@@ -56,6 +56,7 @@ func (s *Server) handleAdminCreateApp(w http.ResponseWriter, r *http.Request) {
 	if created && !s.applyAppCatalog(w, r, app.AppID, request) {
 		return
 	}
+	setResponseTenant(w, app.TenantID)
 	status := http.StatusOK
 	if created {
 		status = http.StatusCreated
@@ -152,6 +153,7 @@ func (s *Server) handleUpdateApp(w http.ResponseWriter, r *http.Request) {
 	if !s.applyAppCatalog(w, r, app.AppID, request) {
 		return
 	}
+	setResponseTenant(w, updated.TenantID)
 	writeJSON(w, http.StatusOK, appView(updated))
 }
 
@@ -181,6 +183,7 @@ func (s *Server) handleGetApp(w http.ResponseWriter, r *http.Request) {
 		writeErrorCode(w, errs.CodeInternal, "get app failed", true)
 		return
 	}
+	setResponseTenant(w, app.TenantID)
 	writeJSON(w, http.StatusOK, appView(app))
 }
 
