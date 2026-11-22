@@ -1,155 +1,219 @@
-# Levier — 静态站点
+# Levier — website
 
-`site/` 下的首页与文档页都是**无构建静态文件**，不需要 npm、Node 或打包步骤。
+The public Levier site: a React 19 + Material UI v9 application built with Vite.
+
+- The landing page is English.
+- Documentation is bilingual: English is the default, and an **EN / 中文** button switches the whole documentation shell and the page content.
+- Every documentation page has a Chinese source in `docs/content/` and an English mirror in `docs/content/en/`.
+- `docs/manifest.json` remains the structural source of truth; English titles and descriptions live in `src/content/nav.en.js`.
+- The language preference is stored locally and does not change routes.
+
+## Current support
+
+- Python App SDK
+- Python Runtime SDK
+- Local CLI control plane
+
+The landing page also shows what comes next: TypeScript, Java and Go SDKs; sandbox and long-running runtimes; multi-agent runs; and streaming. Those surfaces are listed as upcoming, not shipped.
+
+## Quick start
+
+```bash
+cd site
+npm install
+npm run dev
+```
+
+Open:
+
+```text
+http://127.0.0.1:5173/            landing page
+http://127.0.0.1:5173/docs/       documentation shell
+```
+
+The documentation pages use hash routes, for example:
+
+```text
+http://127.0.0.1:5173/docs/#/onboarding
+http://127.0.0.1:5173/docs/#/pre-model
+```
+
+## Build and deploy
+
+```bash
+cd site
+npm run build
+```
+
+The build runs the content integrity check first, then Vite, then copies the Markdown source into the output.
+
+Deploy the generated `site/dist/` directory. The source `site/` directory is not the deployable artifact anymore.
+
+Preview the production build locally:
+
+```bash
+python -m http.server 4173 --directory site/dist
+```
+
+Open `http://127.0.0.1:4173/` and `http://127.0.0.1:4173/docs/`.
+
+## Structure
 
 ```text
 site/
-  index.html                 首页
+  index.html                  landing entry
   docs/
-    index.html               文档壳
-    manifest.json            文档导航 + 接入点
-    content/*.md             文档正文
-  assets/
-    css/tokens.css           色板、字体、基础层
-    css/site.css             首页
-    css/docs.css             文档页
-    js/site.js               顶栏滚动阴影
-    js/trace.js              接入流程播放器
-    js/docs.js               manifest + Markdown 渲染 + callout
-    vendor/marked.min.js     Markdown 解析
-    vendor/purify.min.js     HTML 清洗
+    index.html                docs entry
+    manifest.json             navigation structure (source of truth)
+    content/*.md              31 Chinese documents (source of truth)
+    content/en/*.md           31 English mirrors
+  src/
+    main-landing.jsx
+    main-docs.jsx
+    theme/
+      tokens.js               the only colour literals in the UI source
+      index.js                MUI theme and component overrides
+    components/               shared header, footer, brand, code surface, terminal
+    landing/                  landing page sections
+    docs/                     docs shell, sidebar, article, TOC, states
+    content/
+      nav.en.js               English titles and descriptions
+      docsCopy.js             bilingual documentation-shell labels
+      landing.js              landing copy, samples and CLI trace data
+    lib/
+      markdown.jsx            marked token renderer to MUI components
+      clipboard.js
+      useActiveSection.js
+  scripts/
+    verify-content.mjs        manifest, file and link integrity check
+    copy-content.mjs          copies Markdown into dist/docs
 ```
 
-## 1. 本地预览
+## Content model
 
-文档页需要读取本地 `.md`，浏览器在 `file://` 下会拦截 `fetch`。必须通过 HTTP 预览：
+`docs/manifest.json` defines six sections and 31 pages. Every page points at a Chinese Markdown file under `docs/content/` and has an English mirror with the same filename under `docs/content/en/`.
 
-```powershell
-cd D:\Workspace\Code\middleware
-python -m http.server 4173 --directory site
-```
+`src/content/nav.en.js` maps each slug to an English title and description for navigation, search, the document header and the pager. `src/content/docsCopy.js` holds the bilingual shell labels.
 
-然后打开：
+The docs loader selects the file by language:
 
 ```text
-http://127.0.0.1:4173/
-http://127.0.0.1:4173/docs/
+English   content/en/<file>.md
+Chinese   content/<file>.md
 ```
 
-首页本身也可以直接双击 `index.html` 打开，但文档页会提示需要本地 HTTP 服务。
+To add a page:
 
-## 2. 首页结构
+1. Copy `docs/content/_template.md` to a new file under `docs/content/`.
+2. Copy `docs/content/en/_template.md` to the same filename under `docs/content/en/`.
+3. Add an entry to `docs/manifest.json` with the Chinese file path.
+4. Add the English title and description to `src/content/nav.en.js`.
+5. Run `npm run verify:content` and `npm run build`.
 
-首页按「价值 → 成本 → 机制 → 证据 → 边界 → 入口」推进，刻意只保留六段：
+Markdown support:
+
+- GFM tables are rendered with MUI `Table`.
+- Fenced code blocks get a language label and copy button.
+- Callouts (`> [!NOTE]`, `[!TIP]`, `[!IMPORTANT]`, `[!WARNING]`, `[!CAUTION]`, `[!OUTPUT]`, `[!FAIL]`) become MUI `Alert` variants.
+- `.md` links become hash routes.
+- External links open in a new tab.
+- `##` headings generate the TOC and stable anchors.
+- Every code block has a visible Copy action. The Linux/macOS install command is a single copyable line; Windows PowerShell instructions stay on the same install page. There are no OS-specific document files.
+
+## Language
+
+- The first visit opens in English.
+- The language button in the docs top bar switches between `EN` and `中文`.
+- The preference is stored in `localStorage` under `levier-docs-language`.
+- Switching language reloads the current document, the sidebar labels, search, TOC title, pager, callouts, copy feedback and all loading/error/empty states.
+- Routes and aliases do not change. A shared link opens in the reader's stored language.
+
+## Routes
+
+The docs shell preserves the existing hash routes and aliases. For example:
 
 ```text
-Hero（一句承诺 + 一张 Run 回执）
-§01 接入成本（已有函数 vs 新增声明）
-§02 一次 Run，你只需要看四件事
-§03 真实命令（五步可回放终端）
-§04 边界与代价（负责 / 你负责 / 不包含）
-§05 从哪开始（三条文档路径）
+overview / quickstart / concepts  → onboarding
+install                           → levier-install
+app / app-sdk                     → app-core
+app-run                           → app-run-cli
+runtime / runtime-sdk             → runtime-core
+architecture / stack              → levier-install
+troubleshooting                   → errors
+model / catalog                   → pre-model
+mcp                               → pre-mcp
+config                            → pre-env
+secrets                           → pre-env
+pre-model-check                   → pre-model
+pre-mcp-config                    → pre-mcp
+pre-project                       → pre-profile
+pre-secrets                       → pre-env
+app-tools / app-app               → app-install
+app-init                          → app-dev
+app-run-cli / app-run-sdk         → app-runs
+app-errors                        → app-mcp
+app-check                         → app-manage
+levier-start / levier-setup       → levier-install
+levier-down / levier-logs         → levier-status
+levier-run-show                   → levier-run
+levier-config                     → levier-doctor
+runtime-install / runtime-init    → runtime-start
+runtime-checkpoint                → runtime-errors
+runtime-list                      → runtime-remote
 ```
 
-旧锚点保持不变，外部链接继续可用：
+Unknown routes go to the first document. Page titles update `document.title`; focus moves to the main region without a visible focus ring; the route is announced to assistive technology.
 
-```text
-#principe   → 接入成本
-#anatomie   → 一次 Run
-#integration→ 真实命令
-#capacites  → 边界
+## Design system
+
+All colours are defined in `src/theme/tokens.js` and consumed through the MUI theme. Components do not contain colour literals.
+
+- Canvas: warm paper
+- Ink: near-black
+- Accent: rust, used for emphasis and primary actions only
+- Status: success, warning, error and info only mean status
+- Type: Newsreader for display, IBM Plex Sans / Noto Sans SC for reading, IBM Plex Mono for code
+- Shape: 6px controls, 10px surfaces, 14px large containers
+- Borders: 1px rules; no gradients, glass blur or large shadows
+
+The landing page and the documentation shell share the same theme, brand, focus treatment and code surfaces.
+
+## States and accessibility
+
+- Language: English default; EN / 中文 toggle; the preference is stored locally.
+- Documentation navigation: loading skeleton, manifest error with retry, empty manifest state, no-results state for the filter.
+- Document body: loading skeleton, fetch error with retry, empty state.
+- Copy actions: success and failure feedback with an accessible live region.
+- Tabs: MUI keyboard navigation with arrow, Home and End keys.
+- Mobile navigation: MUI Drawer with focus trap, Escape close and focus return.
+- The mobile TOC is a collapsed MUI Accordion.
+- Motion is limited to state changes and respects `prefers-reduced-motion`.
+
+## Verification
+
+```bash
+npm run verify:content
+npm run build
 ```
 
-终端回放由 `assets/js/trace.js` 驱动，命令与仓库 README 对齐；
-ID、耗时与模型回复为示意，页面上有明确说明。
+`verify:content` checks:
 
-## 3. 新增一篇文档
+- all manifest files exist in both `content/` and `content/en/`
+- slugs are unique
+- frontmatter titles exist
+- English titles and descriptions match `nav.en.js`
+- `status` and `updated` match between languages
+- heading, fenced-block and callout counts match between languages
+- internal `.md` links resolve in both languages
+- no document body is empty
+- no Chinese characters remain in an English document
 
-只有两步。
+The site has no separate unit-test runner. The project's Go test suite is independent of the website and runs with:
 
-**第一步**：从模板复制一份正文：
-
-```text
-site/docs/content/_template.md
-  → site/docs/content/your-topic.md
+```bash
+go test ./...
 ```
 
-**第二步**：在 `site/docs/manifest.json` 的某个 section 里追加入口：
+## Relationship to the repository docs
 
-```json
-{
-  "slug": "your-topic",
-  "title": "你的标题",
-  "status": "published",
-  "file": "content/your-topic.md",
-  "description": "一句话说明。"
-}
-```
-
-刷新页面即可。`slug` 就是路由：
-
-```text
-docs/index.html#/your-topic
-```
-
-### 正文约定
-
-- 文件头可有 frontmatter：`title`、`status`、`description`、`updated`。
-- 标题 `##` 会自动生成锚点与右侧目录；`###` 只生成锚点，不进目录。
-- 代码块自动获得语言标签与复制按钮。
-- 指向其他 `.md` 的链接会自动转成站内路由。
-- 支持四类 callout，写法是 GitHub 风格：
-
-```markdown
-> [!NOTE]
-> 读完之后：...
-
-> [!OUTPUT]
-> 应该看到...
-
-> [!FAIL]
-> 先检查什么，再看哪条日志。
-
-> [!TIP]
-> 提示...
-```
-
-渲染后分别对应「说明 / 应该看到 / 失败时 / 提示」。
-写步骤时优先给出**预期输出**与**失败时的动作**，不要只写命令。
-
-## 4. 设计令牌
-
-所有颜色与字体在 `assets/css/tokens.css`：
-
-```text
---paper       #F1EBDF   暖纸
---paper-2     #E9E0D0   次级底色
---ink         #1C1915   墨
---ink-2       #3B352D   正文
---muted       #665D50   注释
---accent      #A4472C   锈红（唯一强调色）
-```
-
-字体只保留三种声音：
-
-```text
-展示    Newsreader + Noto Serif SC
-正文    IBM Plex Sans + Noto Sans SC
-代码    IBM Plex Mono
-```
-
-原则：
-
-- 衬线只用于标题与少量数字，不用于正文。
-- `mono` 只用于代码、命令、事件名，不再给全站标签加宽字距大写。
-- 强调色只用于链接、当前状态、索引与关键标记。
-- 动效只保留一次性入场与终端逐行播放；没有循环装饰动画。
-
-## 5. 部署
-
-把整个 `site/` 目录上传到任意静态托管即可。文档页使用 hash 路由，不需要服务端 rewrite 规则。
-
-## 6. 与仓库 `docs/` 的关系
-
-`site/docs/content/` 是**面向公开读者的文档**；仓库 `docs/` 中的 SCOPE、DESIGN、ADR、报告等属于内部或开发文档。
-需要公开时，挑选并改写后放入 `content/`，不要直接复制全部内部计划。
+`site/docs/content/` is the public-facing documentation. Internal SCOPE, design, ADR and report files remain under the repository's `docs/` directory and are not part of this site.

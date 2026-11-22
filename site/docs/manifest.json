@@ -1,75 +1,251 @@
 {
-  "version": 1,
-  "updated": "2026-11-20",
+  "version": 3,
+  "updated": "2026-11-22",
   "sections": [
-    {
-      "title": "开始",
-      "items": [
-        {
-          "slug": "quickstart",
-          "title": "快速开始",
-          "status": "published",
-          "file": "content/quickstart.md",
-          "description": "用内置 Echo Runtime 跑通第一次 Run，不需要模型 key。约 5 分钟。"
-        },
-        {
-          "slug": "concepts",
-          "title": "核心概念",
-          "status": "published",
-          "file": "content/concepts.md",
-          "description": "四个角色、四条边界，以及一次 Run 的生命周期。"
-        }
-      ]
-    },
     {
       "title": "接入",
       "items": [
         {
-          "slug": "app-sdk",
-          "title": "App SDK",
+          "slug": "onboarding",
+          "title": "完整接入",
           "status": "published",
-          "file": "content/app-sdk.md",
-          "description": "保留已有业务函数，用一层声明把它交给模型调用。"
-        },
-        {
-          "slug": "runtime-sdk",
-          "title": "Runtime SDK",
-          "status": "published",
-          "file": "content/runtime-sdk.md",
-          "description": "一个 runtime_name，一个 run(ctx)。传输与状态由 SDK 负责。"
-        },
-        {
-          "slug": "mcp",
-          "title": "MCP",
-          "status": "published",
-          "file": "content/mcp.md",
-          "description": "注册 MCP Server、声明 mcp_refs、理解工具命名与凭据占位。"
+          "file": "content/onboarding.md",
+          "description": "从安装到第一次 Run 的最小完整路径；细节指向各管理面。"
         }
       ]
     },
     {
-      "title": "操作与参考",
+      "title": "配置",
+      "items": [
+        {
+          "slug": "pre-model",
+          "title": "模型配置",
+          "status": "published",
+          "file": "content/pre-model.md",
+          "description": "连接模型并验证：URL、API key、model 名称、adapter 与检查。"
+        },
+        {
+          "slug": "pre-mcp",
+          "title": "MCP 配置",
+          "status": "published",
+          "file": "content/pre-mcp.md",
+          "description": "注册 MCP Server，配置 transport、secret 与 allowed_tools。"
+        },
+        {
+          "slug": "pre-profile",
+          "title": "用户与项目配置",
+          "status": "published",
+          "file": "content/pre-profile.md",
+          "description": "用户 profile、项目 .levier.json 与配置路径。"
+        },
+        {
+          "slug": "pre-env",
+          "title": "环境与密钥",
+          "status": "published",
+          "file": "content/pre-env.md",
+          "description": "环境变量优先级、App key、模型 key 与 managed secret。"
+        }
+      ]
+    },
+    {
+      "title": "App 端接入与管理",
+      "items": [
+        {
+          "slug": "app-core",
+          "title": "App 核心流程",
+          "status": "published",
+          "file": "content/app-core.md",
+          "description": "安装、工具、init、dev、run 与错误处理的最小闭环。"
+        },
+        {
+          "slug": "app-install",
+          "title": "App SDK、工具与构造",
+          "status": "published",
+          "file": "content/app-install.md",
+          "description": "安装 App SDK、定义工具并构造 App。"
+        },
+        {
+          "slug": "app-dev",
+          "title": "初始化与运行 App",
+          "status": "published",
+          "file": "content/app-dev.md",
+          "description": "初始化项目，并通过 dev 或 Python 运行 App。"
+        },
+        {
+          "slug": "app-runs",
+          "title": "Run 与事件",
+          "status": "published",
+          "file": "content/app-runs.md",
+          "description": "通过 CLI 或 SDK 提交 Run，并查看状态与事件。"
+        },
+        {
+          "slug": "app-mcp",
+          "title": "MCP 引用与重连",
+          "status": "published",
+          "file": "content/app-mcp.md",
+          "description": "声明 MCP 引用，并处理断线与重连。"
+        },
+        {
+          "slug": "app-manage",
+          "title": "App 管理",
+          "status": "published",
+          "file": "content/app-manage.md",
+          "description": "App 自检、查看与轮换 key。"
+        }
+      ]
+    },
+    {
+      "title": "Levier 端管理",
+      "items": [
+        {
+          "slug": "levier-install",
+          "title": "安装、连接与启动",
+          "status": "published",
+          "file": "content/levier-install.md",
+          "description": "安装 CLI、连接 profile 并启动本地栈。"
+        },
+        {
+          "slug": "levier-status",
+          "title": "本地栈生命周期",
+          "status": "published",
+          "file": "content/levier-status.md",
+          "description": "查看状态、日志并停止本地栈。"
+        },
+        {
+          "slug": "levier-run",
+          "title": "Run 提交与查看",
+          "status": "published",
+          "file": "content/levier-run.md",
+          "description": "提交 Run，并查看或取消。"
+        },
+        {
+          "slug": "levier-runtime-list",
+          "title": "Runtime 列表",
+          "status": "published",
+          "file": "content/levier-runtime-list.md",
+          "description": "runtime list 的实例、容量与心跳。"
+        },
+        {
+          "slug": "levier-doctor",
+          "title": "诊断与维护",
+          "status": "published",
+          "file": "content/levier-doctor.md",
+          "description": "运行 doctor / describe / selfcheck，并校验、迁移或维护控制面。"
+        },
+        {
+          "slug": "levier-ops",
+          "title": "ops 运维视图",
+          "status": "published",
+          "file": "content/levier-ops.md",
+          "description": "runs、daemons、tasks。"
+        },
+        {
+          "slug": "levier-remote",
+          "title": "远程控制面",
+          "status": "published",
+          "file": "content/levier-remote.md",
+          "description": "HTTPS、admin token、runtime token 与网络边界。"
+        }
+      ]
+    },
+    {
+      "title": "Runtime 端接入与管理",
+      "items": [
+        {
+          "slug": "runtime-core",
+          "title": "Runtime 核心流程",
+          "status": "published",
+          "file": "content/runtime-core.md",
+          "description": "runtime init、run(ctx)、start 与错误处理。"
+        },
+        {
+          "slug": "runtime-start",
+          "title": "配置 Runtime",
+          "status": "published",
+          "file": "content/runtime-start.md",
+          "description": "安装 Runtime SDK、初始化模板并启动 Runtime。"
+        },
+        {
+          "slug": "runtime-builtin",
+          "title": "内置 Runtime",
+          "status": "published",
+          "file": "content/runtime-builtin.md",
+          "description": "react1、echo1 与 conformance。"
+        },
+        {
+          "slug": "runtime-context",
+          "title": "Context",
+          "status": "published",
+          "file": "content/runtime-context.md",
+          "description": "ctx 字段、input/model/tools/mcp、超时与取消。"
+        },
+        {
+          "slug": "runtime-toolbox",
+          "title": "Toolbox",
+          "status": "published",
+          "file": "content/runtime-toolbox.md",
+          "description": "本地与 MCP 工具聚合、调用与关闭。"
+        },
+        {
+          "slug": "runtime-chat",
+          "title": "chat 与 invoke",
+          "status": "published",
+          "file": "content/runtime-chat.md",
+          "description": "ctx.chat、ctx.invoke、ctx.invoke_all。"
+        },
+        {
+          "slug": "runtime-errors",
+          "title": "错误与 checkpoint",
+          "status": "published",
+          "file": "content/runtime-errors.md",
+          "description": "处理工具与模型错误、取消与 checkpoint 状态。"
+        },
+        {
+          "slug": "runtime-remote",
+          "title": "部署与容量",
+          "status": "published",
+          "file": "content/runtime-remote.md",
+          "description": "查看实例与容量，并通过 token 与 TLS 部署远程 Runtime。"
+        }
+      ]
+    },
+    {
+      "title": "总览",
       "items": [
         {
           "slug": "cli",
-          "title": "CLI 参考",
+          "title": "CLI 总览",
           "status": "published",
           "file": "content/cli.md",
-          "description": "按任务分组的日常命令：status、app、provider、run 与 runtime。"
+          "description": "主路径、观测、高级、兼容、--json 与退出码。"
         },
         {
-          "slug": "troubleshooting",
-          "title": "排查",
+          "slug": "sdk",
+          "title": "SDK 总览",
           "status": "published",
-          "file": "content/troubleshooting.md",
-          "description": "从 status、run show 与日志三个入口定位问题。"
+          "file": "content/sdk.md",
+          "description": "按用途归纳：App、Runtime、工具、Run、配置与安装。"
         },
         {
-          "slug": "architecture",
-          "title": "架构",
+          "slug": "env",
+          "title": "环境变量",
           "status": "published",
-          "file": "content/architecture.md",
-          "description": "进程视图、控制面的包、Run 生命周期与三条工具路径。"
+          "file": "content/env.md",
+          "description": "用户级、项目级、CLI、SDK 与部署环境变量。"
+        },
+        {
+          "slug": "errors",
+          "title": "错误与排查",
+          "status": "published",
+          "file": "content/errors.md",
+          "description": "退出码、常见错误与先看什么。"
+        },
+        {
+          "slug": "glossary",
+          "title": "术语表",
+          "status": "published",
+          "file": "content/glossary.md",
+          "description": "App、Runtime、profile、managed secret 等术语。"
         }
       ]
     }
