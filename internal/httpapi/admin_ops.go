@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/fluffyTighnari/levier/internal/errs"
+	"github.com/fluffyTighnari/levier/internal/observe"
 	"github.com/fluffyTighnari/levier/internal/runstore"
 	"github.com/fluffyTighnari/levier/internal/workflow"
 )
@@ -20,6 +21,7 @@ import (
 type AdminRunView struct {
 	RunID            string          `json:"run_id"`
 	AppID            string          `json:"app_id"`
+	TenantID         string          `json:"tenant_id"`
 	Runtime          string          `json:"runtime"`
 	RuntimeName      string          `json:"runtime_name"`
 	Status           string          `json:"status"`
@@ -105,6 +107,7 @@ func (s *Server) handleAdminListRuns(w http.ResponseWriter, r *http.Request) {
 	}
 	page, err := lister.ListRuns(r.Context(), runstore.RunFilter{
 		Statuses:  statuses,
+		TenantID:  r.URL.Query().Get("tenant_id"),
 		AppID:     r.URL.Query().Get("app_id"),
 		DaemonID:  r.URL.Query().Get("daemon_id"),
 		SessionID: r.URL.Query().Get("session_id"),
@@ -193,6 +196,7 @@ func (s *Server) handleAdminCancelRun(w http.ResponseWriter, r *http.Request) {
 		"action", "run.cancel",
 		"run_id", run.RunID,
 		"app_id", run.AppID,
+		observe.FieldTenantID, run.TenantID,
 		"assigned_daemon_id", run.AssignedDaemonID,
 		"reason", reason,
 		"previous_status", run.Status,
@@ -302,6 +306,7 @@ func adminRunView(run runstore.Run, tasks []workflow.Task) AdminRunView {
 	view := AdminRunView{
 		RunID:            run.RunID,
 		AppID:            run.AppID,
+		TenantID:         run.TenantID,
 		Runtime:          run.Runtime,
 		RuntimeName:      run.RuntimeName,
 		Status:           run.Status,

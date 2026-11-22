@@ -173,17 +173,19 @@ func (s *Server) handleWS(conn *websocket.Conn) {
 		return
 	}
 
+	tenantID := s.tenantForApp(conn.Request().Context(), appID)
 	started := time.Now()
 	if s.cfg.Metrics != nil {
 		s.cfg.Metrics.AddGauge(observe.MetricWSConnections, "Current App WebSocket connections.", map[string]string{
-			"app": appID,
+			"app": appID, "tenant": tenantID,
 		}, 1)
 		defer s.cfg.Metrics.AddGauge(observe.MetricWSConnections, "Current App WebSocket connections.", map[string]string{
-			"app": appID,
+			"app": appID, "tenant": tenantID,
 		}, -1)
 	}
 	s.log.Info("ws connected",
 		observe.FieldAppID, appID,
+		observe.FieldTenantID, tenantID,
 		observe.FieldRemoteAddr, conn.Request().RemoteAddr,
 	)
 	defer func() {

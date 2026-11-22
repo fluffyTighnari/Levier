@@ -190,12 +190,12 @@ func (c *Control) handleEvent(env *runtimev1.Envelope) {
 	})
 	if c.metrics != nil {
 		c.metrics.Observe(observe.MetricEventAppendDuration, "Run event persistence latency in seconds.",
-			map[string]string{"source": source}, time.Since(appendStarted).Seconds())
+			map[string]string{"source": source, "tenant": run.TenantID}, time.Since(appendStarted).Seconds())
 	}
 	if err != nil {
 		if c.metrics != nil {
 			c.metrics.Inc(observe.MetricEventAppendErrorsTotal, "Failed run event inserts.", map[string]string{
-				"source": source,
+				"source": source, "tenant": run.TenantID,
 			})
 		}
 		c.log.Warn("control append event failed", "run_id", env.GetRunId(), "err", err)
@@ -230,7 +230,8 @@ func (c *Control) handleEvent(env *runtimev1.Envelope) {
 	}
 	if c.metrics != nil {
 		c.metrics.Inc(observe.MetricEventsTotal, "Persisted events by type.", map[string]string{
-			"type": runtimev1.EventType_name[int32(event.GetType())],
+			"type":   runtimev1.EventType_name[int32(event.GetType())],
+			"tenant": run.TenantID,
 		})
 		c.observeUsage(run, event, eventData)
 	}
@@ -283,6 +284,7 @@ func (c *Control) handleEvent(env *runtimev1.Envelope) {
 			observe.FieldRunID, run.RunID,
 			observe.FieldTraceID, run.TraceID,
 			observe.FieldAppID, run.AppID,
+			observe.FieldTenantID, run.TenantID,
 			observe.FieldAttempt, env.GetAttempt(),
 			observe.FieldStatus, status,
 			"current_status", run.Status,
@@ -294,12 +296,13 @@ func (c *Control) handleEvent(env *runtimev1.Envelope) {
 			observe.FieldRunID, run.RunID,
 			observe.FieldTraceID, run.TraceID,
 			observe.FieldAppID, run.AppID,
+			observe.FieldTenantID, run.TenantID,
 			observe.FieldAttempt, env.GetAttempt(),
 			observe.FieldStatus, status,
 		)
 		if c.metrics != nil {
-			c.metrics.Inc(observe.MetricRunsTotal, "Terminal runs by status and runtime.", map[string]string{
-				"status": status, "runtime": run.Runtime,
+			c.metrics.Inc(observe.MetricRunsTotal, "Terminal runs by status, runtime, and tenant.", map[string]string{
+				"status": status, "runtime": run.Runtime, "tenant": run.TenantID,
 			})
 		}
 		c.hub.Release(run.AssignedDaemonID)
@@ -340,6 +343,6 @@ func (c *Control) observeUsage(run runstore.Run, event *runtimev1.Event, data ma
 		model = profile.Model
 	}
 	c.metrics.Add(observe.MetricTokenUsageTotal, "Token usage from USAGE events.", map[string]string{
-		"app": run.AppID, "model": model,
+		"app": run.AppID, "model": model, "tenant": run.TenantID,
 	}, input+output)
 }

@@ -14,7 +14,7 @@ import (
 )
 
 const appColumns = `
-	app_id, name, api_key_hash, multiagent, status, created_at, updated_at`
+	app_id, tenant_id, name, api_key_hash, multiagent, status, created_at, updated_at`
 
 // CreateApp upserts an app by app_id.
 func (s *Store) CreateApp(ctx context.Context, app App) (App, error) {
@@ -24,13 +24,16 @@ func (s *Store) CreateApp(ctx context.Context, app App) (App, error) {
 	if app.AppID == "" || app.Name == "" || app.APIKeyHash == "" {
 		return App{}, fmt.Errorf("runstore: app_id, name, and api_key_hash are required")
 	}
+	if app.TenantID == "" {
+		app.TenantID = DefaultTenantID
+	}
 	if app.Status == "" {
 		app.Status = "active"
 	}
 	now := time.Now().UTC()
 	row := s.pool.QueryRow(ctx, `
-		INSERT INTO apps (app_id, name, api_key_hash, multiagent, status, created_at, updated_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7)
+		INSERT INTO apps (app_id, tenant_id, name, api_key_hash, multiagent, status, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
 		ON CONFLICT (app_id) DO UPDATE SET
 			name = EXCLUDED.name,
 			api_key_hash = EXCLUDED.api_key_hash,
@@ -38,7 +41,7 @@ func (s *Store) CreateApp(ctx context.Context, app App) (App, error) {
 			status = EXCLUDED.status,
 			updated_at = EXCLUDED.updated_at
 		RETURNING `+appColumns,
-		app.AppID, app.Name, app.APIKeyHash, app.Multiagent, app.Status, now, now,
+		app.AppID, app.TenantID, app.Name, app.APIKeyHash, app.Multiagent, app.Status, now, now,
 	)
 	created, err := scanApp(row)
 	if err != nil {
@@ -69,6 +72,7 @@ func scanApp(row pgx.Row) (App, error) {
 	var app App
 	if err := row.Scan(
 		&app.AppID,
+		&app.TenantID,
 		&app.Name,
 		&app.APIKeyHash,
 		&app.Multiagent,

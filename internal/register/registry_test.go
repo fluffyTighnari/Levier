@@ -126,3 +126,32 @@ func TestUpdateAndRotateApp(t *testing.T) {
 		t.Fatalf("new key error = %v", err)
 	}
 }
+
+func TestRegisterAppInTenantScopesNames(t *testing.T) {
+	registry := New(testPool(t))
+	ctx := context.Background()
+
+	first, firstKey, firstCreated, err := registry.RegisterAppInTenant(ctx, "tenant-a", "same-name", false)
+	if err != nil {
+		t.Fatalf("RegisterAppInTenant(tenant-a) error = %v", err)
+	}
+	if !firstCreated || firstKey == "" || first.TenantID != "tenant-a" {
+		t.Fatalf("first = %+v key=%q created=%v", first, firstKey, firstCreated)
+	}
+
+	second, secondKey, secondCreated, err := registry.RegisterAppInTenant(ctx, "tenant-b", "same-name", false)
+	if err != nil {
+		t.Fatalf("RegisterAppInTenant(tenant-b) error = %v", err)
+	}
+	if !secondCreated || secondKey == "" || second.TenantID != "tenant-b" {
+		t.Fatalf("second = %+v key=%q created=%v", second, secondKey, secondCreated)
+	}
+	if first.AppID == second.AppID {
+		t.Fatal("tenant-scoped duplicate names returned the same App")
+	}
+
+	byName, err := registry.GetAppByNameInTenant(ctx, "tenant-a", "same-name")
+	if err != nil || byName.AppID != first.AppID {
+		t.Fatalf("GetAppByNameInTenant() = %+v, %v", byName, err)
+	}
+}

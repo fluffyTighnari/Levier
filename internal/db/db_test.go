@@ -31,8 +31,8 @@ func TestMigrateIsIdempotent(t *testing.T) {
 	if err := pool.QueryRow(ctx, "SELECT count(*) FROM schema_migrations").Scan(&applied); err != nil {
 		t.Fatalf("count schema_migrations: %v", err)
 	}
-	if applied != 13 {
-		t.Fatalf("applied migrations = %d, want 13", applied)
+	if applied != 14 {
+		t.Fatalf("applied migrations = %d, want 14", applied)
 	}
 
 	for _, table := range []string{"apps", "tool_defs", "mcp_server_defs", "daemons", "runs", "run_events", "run_tasks", "sessions", "tool_invocations", "app_mcp_refs", "model_providers"} {

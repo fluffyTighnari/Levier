@@ -886,3 +886,46 @@ func TestAppendMWEventUsesReservedSeq(t *testing.T) {
 		t.Fatalf("events = %+v", events)
 	}
 }
+
+func TestRunTenantScopeAndFilter(t *testing.T) {
+	store := New(testPool(t))
+	ctx := context.Background()
+	app := createApp(t, store)
+
+	first, err := store.CreateRun(ctx, Run{
+		RunID:       "run-" + id.New(),
+		AppID:       app.AppID,
+		TenantID:    "tenant-a",
+		RuntimeName: "echo1",
+	})
+	if err != nil {
+		t.Fatalf("CreateRun(tenant-a) error = %v", err)
+	}
+	second, err := store.CreateRun(ctx, Run{
+		RunID:       "run-" + id.New(),
+		AppID:       app.AppID,
+		TenantID:    "tenant-b",
+		RuntimeName: "echo1",
+	})
+	if err != nil {
+		t.Fatalf("CreateRun(tenant-b) error = %v", err)
+	}
+
+	got, err := store.GetRun(ctx, first.RunID)
+	if err != nil || got.TenantID != "tenant-a" {
+		t.Fatalf("GetRun() = %+v, %v", got, err)
+	}
+
+	page, err := store.ListRuns(ctx, RunFilter{TenantID: "tenant-a", Limit: 10})
+	if err != nil {
+		t.Fatalf("ListRuns() error = %v", err)
+	}
+	if len(page.Runs) != 1 || page.Runs[0].RunID != first.RunID {
+		t.Fatalf("tenant-a runs = %+v", page.Runs)
+	}
+	for _, run := range page.Runs {
+		if run.RunID == second.RunID {
+			t.Fatalf("tenant-b run leaked into tenant-a filter")
+		}
+	}
+}

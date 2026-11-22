@@ -41,6 +41,7 @@ func (s *Server) handleCreateRun(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
+	tenantID := s.tenantForApp(r.Context(), appID)
 	if err := request.Validate(); err != nil {
 		writeErrorCode(w, errs.CodeBadRequest, err.Error(), false)
 		return
@@ -82,6 +83,7 @@ func (s *Server) handleCreateRun(w http.ResponseWriter, r *http.Request) {
 	run, transactional, err := s.createRun(r.Context(), runstore.Run{
 		RunID:          runID,
 		AppID:          appID,
+		TenantID:       tenantID,
 		IdempotencyKey: strings.TrimSpace(r.Header.Get("Idempotency-Key")),
 		RequestHash:    requestHash(body),
 		Runtime:        string(runtimeType),
@@ -178,6 +180,17 @@ func (s *Server) createRun(
 		return nil
 	})
 	return created, true, err
+}
+
+func (s *Server) tenantForApp(ctx context.Context, appID string) string {
+	if s.apps == nil || strings.TrimSpace(appID) == "" {
+		return runstore.DefaultTenantID
+	}
+	app, err := s.apps.GetApp(ctx, appID)
+	if err != nil || app.TenantID == "" {
+		return runstore.DefaultTenantID
+	}
+	return app.TenantID
 }
 
 func (s *Server) handleGetRun(w http.ResponseWriter, r *http.Request) {

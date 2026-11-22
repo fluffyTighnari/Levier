@@ -26,7 +26,7 @@ import (
 const apiKeyPrefix = "mw_"
 
 const appColumns = `
-	app_id, name, api_key_hash, multiagent, status, created_at, updated_at`
+	app_id, tenant_id, name, api_key_hash, multiagent, status, created_at, updated_at`
 
 // Registry owns App registration and API-key authentication.
 type Registry struct {
@@ -40,11 +40,21 @@ func New(pool *pgxpool.Pool) *Registry {
 	return &Registry{pool: pool, secrets: EnvSecretResolver{}}
 }
 
-// RegisterApp creates an App and returns the plaintext API key once.
-// A duplicate name returns the existing App with an empty key.
+// RegisterApp creates an App in the default tenant and returns the plaintext
+// API key once. A duplicate name returns the existing App with an empty key.
 func (r *Registry) RegisterApp(ctx context.Context, name string, multiagent bool) (runstore.App, string, bool, error) {
+	return r.RegisterAppInTenant(ctx, runstore.DefaultTenantID, name, multiagent)
+}
+
+// RegisterAppInTenant creates an App in one tenant and returns the plaintext
+// API key once. A duplicate name returns the existing App with an empty key.
+func (r *Registry) RegisterAppInTenant(ctx context.Context, tenantID, name string, multiagent bool) (runstore.App, string, bool, error) {
 	if r == nil || r.pool == nil {
 		return runstore.App{}, "", false, fmt.Errorf("register: postgres pool is nil")
+	}
+	tenantID = strings.TrimSpace(tenantID)
+	if tenantID == "" {
+		tenantID = runstore.DefaultTenantID
 	}
 	name = strings.TrimSpace(name)
 	if name == "" {
@@ -57,14 +67,14 @@ func (r *Registry) RegisterApp(ctx context.Context, name string, multiagent bool
 	appID := "app_" + id.New()
 	now := time.Now().UTC()
 	app, err := scanApp(r.pool.QueryRow(ctx, `
-		INSERT INTO apps (app_id, name, api_key_hash, multiagent, status, created_at, updated_at)
-		VALUES ($1, $2, $3, $4, 'active', $5, $6)
-		ON CONFLICT (name) DO NOTHING
+		INSERT INTO apps (app_id, tenant_id, name, api_key_hash, multiagent, status, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, 'active', $6, $7)
+		ON CONFLICT (tenant_id, name) DO NOTHING
 		RETURNING `+appColumns,
-		appID, name, hashAPIKey(key), multiagent, now, now,
+		appID, tenantID, name, hashAPIKey(key), multiagent, now, now,
 	))
 	if errors.Is(err, pgx.ErrNoRows) {
-		existing, lookupErr := r.GetAppByName(ctx, name)
+		existing, lookupErr := r.GetAppByNameInTenant(ctx, tenantID, name)
 		if lookupErr != nil {
 			return runstore.App{}, "", false, lookupErr
 		}
@@ -93,13 +103,22 @@ func (r *Registry) GetApp(ctx context.Context, appID string) (runstore.App, erro
 	return app, nil
 }
 
-// GetAppByName returns an App by unique name.
+// GetAppByName returns an App by name in the default tenant.
 func (r *Registry) GetAppByName(ctx context.Context, name string) (runstore.App, error) {
+	return r.GetAppByNameInTenant(ctx, runstore.DefaultTenantID, name)
+}
+
+// GetAppByNameInTenant returns an App by tenant and unique name.
+func (r *Registry) GetAppByNameInTenant(ctx context.Context, tenantID, name string) (runstore.App, error) {
 	if r == nil || r.pool == nil {
 		return runstore.App{}, fmt.Errorf("register: postgres pool is nil")
 	}
+	if strings.TrimSpace(tenantID) == "" {
+		tenantID = runstore.DefaultTenantID
+	}
 	app, err := scanApp(r.pool.QueryRow(ctx,
-		"SELECT "+appColumns+" FROM apps WHERE name = $1", name,
+		"SELECT "+appColumns+" FROM apps WHERE tenant_id = $1 AND name = $2",
+		tenantID, name,
 	))
 	if errors.Is(err, pgx.ErrNoRows) {
 		return runstore.App{}, runstore.ErrAppNotFound
@@ -206,6 +225,7 @@ func scanApp(row pgx.Row) (runstore.App, error) {
 	var app runstore.App
 	if err := row.Scan(
 		&app.AppID,
+		&app.TenantID,
 		&app.Name,
 		&app.APIKeyHash,
 		&app.Multiagent,

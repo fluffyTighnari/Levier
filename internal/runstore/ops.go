@@ -38,6 +38,7 @@ func ValidRunStatus(status string) bool {
 // RunFilter selects runs for the admin operations view.
 type RunFilter struct {
 	Statuses  []string
+	TenantID  string
 	AppID     string
 	DaemonID  string
 	SessionID string
@@ -79,6 +80,10 @@ func (s *Store) ListRuns(ctx context.Context, filter RunFilter) (RunPage, error)
 	if len(filter.Statuses) > 0 {
 		args = append(args, filter.Statuses)
 		where = append(where, fmt.Sprintf("status = ANY($%d)", len(args)))
+	}
+	if value := strings.TrimSpace(filter.TenantID); value != "" {
+		args = append(args, value)
+		where = append(where, fmt.Sprintf("tenant_id = $%d", len(args)))
 	}
 	if value := strings.TrimSpace(filter.AppID); value != "" {
 		args = append(args, value)

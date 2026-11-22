@@ -8,6 +8,7 @@ import (
 	"errors"
 	"github.com/fluffyTighnari/levier/internal/errs"
 	"net/http"
+	"strings"
 
 	"github.com/fluffyTighnari/levier/internal/register"
 	"github.com/fluffyTighnari/levier/internal/runstore"
@@ -30,7 +31,24 @@ func (s *Server) handleAdminCreateApp(w http.ResponseWriter, r *http.Request) {
 		writeErrorCode(w, errs.CodeBadRequest, err.Error(), false)
 		return
 	}
-	app, key, created, err := s.apps.RegisterApp(r.Context(), request.Name, request.Multiagent)
+	tenantID := strings.TrimSpace(request.TenantID)
+	if tenantID == "" {
+		tenantID = runstore.DefaultTenantID
+	}
+	var app runstore.App
+	var key string
+	var created bool
+	var err error
+	if registrar, ok := s.apps.(AppTenantRegistrar); ok {
+		app, key, created, err = registrar.RegisterAppInTenant(
+			r.Context(), tenantID, request.Name, request.Multiagent,
+		)
+	} else if tenantID == "default" {
+		app, key, created, err = s.apps.RegisterApp(r.Context(), request.Name, request.Multiagent)
+	} else {
+		writeErrorCode(w, errs.CodeNotImplemented, "tenant-aware app registration is not configured", false)
+		return
+	}
 	if err != nil {
 		writeErrorCode(w, errs.CodeInternal, "create app failed", true)
 		return
@@ -60,8 +78,12 @@ func (s *Server) handleAdminListApps(w http.ResponseWriter, r *http.Request) {
 		writeErrorCode(w, errs.CodeInternal, "list apps failed", true)
 		return
 	}
+	tenantID := strings.TrimSpace(r.URL.Query().Get("tenant_id"))
 	views := make([]AppView, 0, len(apps))
 	for _, app := range apps {
+		if tenantID != "" && app.TenantID != tenantID {
+			continue
+		}
 		views = append(views, appView(app))
 	}
 	writeJSON(w, http.StatusOK, AppListResponse{Apps: views})
@@ -112,6 +134,10 @@ func (s *Server) handleUpdateApp(w http.ResponseWriter, r *http.Request) {
 	}
 	if err := request.Validate(); err != nil {
 		writeErrorCode(w, errs.CodeBadRequest, err.Error(), false)
+		return
+	}
+	if tenantID := strings.TrimSpace(request.TenantID); tenantID != "" && tenantID != app.TenantID {
+		writeErrorCode(w, errs.CodeBadRequest, "tenant_id cannot be changed", false)
 		return
 	}
 	updated, err := s.apps.UpdateApp(r.Context(), app.AppID, request.Name, request.Multiagent)
@@ -182,6 +208,7 @@ func (s *Server) handleAdminRotateKey(w http.ResponseWriter, r *http.Request) {
 func appView(app runstore.App) AppView {
 	return AppView{
 		AppID:      app.AppID,
+		TenantID:   app.TenantID,
 		Name:       app.Name,
 		Multiagent: app.Multiagent,
 		Status:     app.Status,

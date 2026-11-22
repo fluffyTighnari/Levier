@@ -57,6 +57,11 @@ type AppLister interface {
 	ListApps(ctx context.Context) ([]runstore.App, error)
 }
 
+// AppTenantRegistrar is the optional tenant-aware App registration subset.
+type AppTenantRegistrar interface {
+	RegisterAppInTenant(ctx context.Context, tenantID, name string, multiagent bool) (runstore.App, string, bool, error)
+}
+
 // CatalogRegistry is the optional App tool/MCP catalog subset.
 // Canceller cancels one non-terminal run.
 type Canceller interface {

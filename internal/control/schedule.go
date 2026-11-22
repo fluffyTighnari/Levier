@@ -130,13 +130,14 @@ func (c *Control) Handle(ctx context.Context, task workflow.Task, _ workflow.Lea
 		currentEpoch = assigned.LeaseEpoch
 		if c.metrics != nil && assigned.AssignedAt != nil && !assigned.CreatedAt.IsZero() {
 			c.metrics.Observe(observe.MetricRunQueueDuration, "Run queue duration in seconds.", map[string]string{
-				"runtime": run.Runtime,
+				"runtime": run.Runtime, "tenant": run.TenantID,
 			}, assigned.AssignedAt.Sub(assigned.CreatedAt).Seconds())
 		}
 		c.log.Info("control assigned run",
 			observe.FieldRunID, run.RunID,
 			observe.FieldTraceID, run.TraceID,
 			observe.FieldAppID, run.AppID,
+			observe.FieldTenantID, run.TenantID,
 			observe.FieldAttempt, attempt,
 			observe.FieldLeaseEpoch, leaseEpoch,
 			observe.FieldDaemonID, daemonID,

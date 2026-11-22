@@ -25,13 +25,14 @@ func (s *Store) GetSession(ctx context.Context, sessionID string) (Session, erro
 	var currentRunID pgtype.Text
 	var expiresAt pgtype.Timestamptz
 	err := s.pool.QueryRow(ctx, `
-		SELECT session_id, app_id, status, current_run_id, event_attempt,
+		SELECT session_id, app_id, tenant_id, status, current_run_id, event_attempt,
 		       event_watermark, created_at, updated_at, expires_at
 		FROM sessions
 		WHERE session_id = $1
 	`, sessionID).Scan(
 		&session.SessionID,
 		&session.AppID,
+		&session.TenantID,
 		&session.Status,
 		&currentRunID,
 		&session.EventAttempt,

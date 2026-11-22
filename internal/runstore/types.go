@@ -10,9 +10,13 @@ import (
 	"time"
 )
 
+// DefaultTenantID is the tenant used by local and legacy data.
+const DefaultTenantID = "default"
+
 // App is a registered application.
 type App struct {
 	AppID      string    `json:"app_id"`
+	TenantID   string    `json:"tenant_id"`
 	Name       string    `json:"name"`
 	APIKeyHash string    `json:"-"`
 	Multiagent bool      `json:"multiagent"`
@@ -25,6 +29,7 @@ type App struct {
 type Run struct {
 	RunID            string          `json:"run_id"`
 	AppID            string          `json:"app_id"`
+	TenantID         string          `json:"tenant_id"`
 	IdempotencyKey   string          `json:"-"`
 	RequestHash      string          `json:"-"`
 	Runtime          string          `json:"runtime"`
@@ -51,6 +56,7 @@ type Run struct {
 type Session struct {
 	SessionID      string     `json:"session_id"`
 	AppID          string     `json:"app_id"`
+	TenantID       string     `json:"tenant_id"`
 	Status         string     `json:"status"`
 	CurrentRunID   string     `json:"current_run_id,omitempty"`
 	EventAttempt   int        `json:"event_attempt"`

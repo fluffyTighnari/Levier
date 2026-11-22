@@ -145,6 +145,7 @@ type CancelRunResponse struct {
 type SessionView struct {
 	SessionID      string     `json:"session_id"`
 	AppID          string     `json:"app_id"`
+	TenantID       string     `json:"tenant_id"`
 	Status         string     `json:"status"`
 	CurrentRunID   string     `json:"current_run_id,omitempty"`
 	EventAttempt   int32      `json:"event_attempt"`
@@ -157,6 +158,7 @@ type SessionView struct {
 // AppView is the App registration projection.
 type AppView struct {
 	AppID      string    `json:"app_id"`
+	TenantID   string    `json:"tenant_id"`
 	Name       string    `json:"name"`
 	Multiagent bool      `json:"multiagent"`
 	Status     string    `json:"status"`
@@ -174,6 +176,7 @@ type ToolDefinition struct {
 
 // AppUpsertRequest is the POST /admin/apps and POST /apps body.
 type AppUpsertRequest struct {
+	TenantID   string           `json:"tenant_id,omitempty"`
 	Name       string           `json:"name"`
 	Multiagent bool             `json:"multiagent"`
 	Tools      []ToolDefinition `json:"tools,omitempty"`

@@ -15,6 +15,7 @@ import (
 
 const (
 	FieldAppID        = "app_id"
+	FieldTenantID     = "tenant_id"
 	FieldRunID        = "run_id"
 	FieldTaskID       = "task_id"
 	FieldInvocationID = "invocation_id"

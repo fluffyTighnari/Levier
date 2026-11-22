@@ -266,6 +266,7 @@ func newRun() runstore.Run {
 	return runstore.Run{
 		RunID:         "run-1",
 		AppID:         "app-1",
+		TenantID:      "default",
 		Runtime:       "normal",
 		RuntimeName:   "echo1",
 		Params:        json.RawMessage(`{"max_steps":8}`),
@@ -1123,10 +1124,10 @@ func TestControlRecordsMetrics(t *testing.T) {
 	}
 	output := buf.String()
 	for _, want := range []string{
-		`levier_runs_total{runtime="normal",status="completed"} 1`,
-		`levier_events_total{type="RUN_STATUS"} 1`,
-		`levier_events_total{type="USAGE"} 1`,
-		`levier_token_usage_total{app="app-1",model="claude-test"} 15`,
+		`levier_runs_total{runtime="normal",status="completed",tenant="default"} 1`,
+		`levier_events_total{tenant="default",type="RUN_STATUS"} 1`,
+		`levier_events_total{tenant="default",type="USAGE"} 1`,
+		`levier_token_usage_total{app="app-1",model="claude-test",tenant="default"} 15`,
 	} {
 		if !strings.Contains(output, want) {
 			t.Fatalf("metrics do not contain %q:\n%s", want, output)

@@ -16,22 +16,22 @@ import (
 )
 
 const runColumns = `
-	run_id, app_id, idempotency_key, request_hash, runtime, runtime_name,
+	run_id, app_id, tenant_id, idempotency_key, request_hash, runtime, runtime_name,
 	params_json, input_json, status, attempt, session_id, model_json, run_timeout_ms,
 	tool_timeout_ms, trace_id, assigned_daemon_id, lease_epoch, assigned_at,
 	last_event_attempt, last_event_seq, created_at, updated_at`
 
 const insertRunSQL = `
 	INSERT INTO runs (
-		run_id, app_id, idempotency_key, request_hash, runtime, runtime_name,
+		run_id, app_id, tenant_id, idempotency_key, request_hash, runtime, runtime_name,
 		params_json, input_json, status, attempt, session_id, model_json, run_timeout_ms,
 		tool_timeout_ms, trace_id, assigned_daemon_id, lease_epoch, assigned_at,
 		last_event_attempt, last_event_seq, created_at, updated_at
 	) VALUES (
-		$1, $2, $3, $4, $5, $6,
-		$7, $8, $9, $10, NULLIF($11, ''), $12, $13,
-		$14, $15, NULLIF($16, ''), $17, $18, $19,
-		$20, $21, $22
+		$1, $2, $3, $4, $5, $6, $7,
+		$8, $9, $10, $11, NULLIF($12, ''), $13, $14,
+		$15, $16, NULLIF($17, ''), $18, $19, $20,
+		$21, $22, $23
 	)
 	ON CONFLICT (app_id, idempotency_key)
 		WHERE idempotency_key <> ''
@@ -93,6 +93,7 @@ func createRun(ctx context.Context, q querier, normalized Run) (Run, error) {
 		inserted, err := scanRun(q.QueryRow(ctx, insertRunSQL,
 			normalized.RunID,
 			normalized.AppID,
+			normalized.TenantID,
 			normalized.IdempotencyKey,
 			normalized.RequestHash,
 			normalized.Runtime,
@@ -314,6 +315,9 @@ func normalizeRun(run Run) (Run, error) {
 	if run.AppID == "" {
 		return Run{}, fmt.Errorf("%w: app_id is required", ErrInvalidRun)
 	}
+	if run.TenantID == "" {
+		run.TenantID = DefaultTenantID
+	}
 	if run.Status == "" {
 		run.Status = "queued"
 	}
@@ -364,6 +368,7 @@ func scanRun(row pgx.Row) (Run, error) {
 	if err := row.Scan(
 		&run.RunID,
 		&run.AppID,
+		&run.TenantID,
 		&run.IdempotencyKey,
 		&run.RequestHash,
 		&run.Runtime,

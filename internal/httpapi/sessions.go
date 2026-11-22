@@ -104,6 +104,7 @@ func sessionView(session runstore.Session) SessionView {
 	return SessionView{
 		SessionID:      session.SessionID,
 		AppID:          session.AppID,
+		TenantID:       session.TenantID,
 		Status:         session.Status,
 		CurrentRunID:   session.CurrentRunID,
 		EventAttempt:   int32(session.EventAttempt),
