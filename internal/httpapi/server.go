@@ -98,6 +98,12 @@ type TaskQueue interface {
 	Enqueue(ctx context.Context, task workflow.Task) (workflow.Task, error)
 }
 
+// QuotaPolicy decides whether a tenant may start another Run.
+// I1 only defines the extension point; enforcement is configured by the host.
+type QuotaPolicy interface {
+	AllowRun(ctx context.Context, tenantID, appID string) error
+}
+
 // Config controls the minimal HTTP API.
 type Config struct {
 	BearerToken          string
@@ -111,6 +117,7 @@ type Config struct {
 	Daemons              DaemonSource
 	ReadinessCheck       func(context.Context) error
 	Canceller            Canceller
+	QuotaPolicy          QuotaPolicy
 	Metrics              *observe.Registry
 	MetricsCollector     func(context.Context)
 	Logger               *slog.Logger
@@ -127,6 +134,7 @@ type Server struct {
 	appHub    *connection.AppHub
 	wsTokens  *WSTokenStore
 	canceller Canceller
+	quota     QuotaPolicy
 	cfg       Config
 	log       *slog.Logger
 	mux       *http.ServeMux
@@ -166,6 +174,7 @@ func NewServer(runs RunStore, queue TaskQueue, cfg Config, registries ...AppRegi
 		appHub:    appHub,
 		wsTokens:  NewWSTokenStore(cfg.WSTokenTTL),
 		canceller: cfg.Canceller,
+		quota:     cfg.QuotaPolicy,
 		mux:       http.NewServeMux(),
 	}
 	if len(registries) > 0 {

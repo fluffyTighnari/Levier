@@ -46,6 +46,12 @@ func (s *Server) handleCreateRun(w http.ResponseWriter, r *http.Request) {
 		writeErrorCode(w, errs.CodeBadRequest, err.Error(), false)
 		return
 	}
+	if s.quota != nil {
+		if err := s.quota.AllowRun(r.Context(), tenantID, appID); err != nil {
+			writeErrorCode(w, errs.CodeQuotaExceeded, err.Error(), false)
+			return
+		}
+	}
 	runtimeType := request.Runtime
 	if runtimeType == "" {
 		runtimeType = RuntimeNormal

@@ -15,6 +15,7 @@ type Code string
 const (
 	CodeNoDaemonAvailable            Code = "NO_DAEMON_AVAILABLE"
 	CodeQueueOverflow                Code = "QUEUE_OVERFLOW"
+	CodeQuotaExceeded                Code = "QUOTA_EXCEEDED"
 	CodeQueueUnavailable             Code = "QUEUE_UNAVAILABLE"
 	CodeToolNotFound                 Code = "TOOL_NOT_FOUND"
 	CodeToolTimeout                  Code = "TOOL_TIMEOUT"
@@ -142,6 +143,7 @@ type codeMeta struct {
 var codeMetaByCode = map[Code]codeMeta{
 	CodeNoDaemonAvailable:            {retryable: true, status: 503},
 	CodeQueueOverflow:                {retryable: false, status: 429},
+	CodeQuotaExceeded:                {retryable: false, status: 429},
 	CodeQueueUnavailable:             {retryable: true, status: 503},
 	CodeToolNotFound:                 {retryable: false, status: 404},
 	CodeToolTimeout:                  {retryable: true, status: 504},
