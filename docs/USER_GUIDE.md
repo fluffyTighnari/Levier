@@ -212,14 +212,11 @@ levier mcp list            已注册需要的 MCP Server（如果使用 MCP）
 
 ### 3.1 安装 Python SDK
 
-发布到 PyPI 后：
+从 PyPI：
 
 ```sh
 pip install levier
 ```
-
-当前测试期如果 PyPI 还没有完整的 `levier-runtime`，改用 GitHub Release 的
-wheel bundle 或 TestPyPI；正式发布后不需要这一步。
 
 从源码开发：
 
