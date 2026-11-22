@@ -284,8 +284,16 @@ func (i *Invoker) invokeOnce(
 			status = "error"
 		}
 		labels := map[string]string{"tool": tool.Name, "scope": tool.Scope}
-		i.metrics.Inc(observe.MetricToolInvocationsTotal, "Tool executions by tool, scope, and status.",
-			map[string]string{"tool": tool.Name, "scope": tool.Scope, "status": status})
+		if tenantID := observe.TenantFromContext(ctx); tenantID != "" {
+			labels["tenant"] = tenantID
+		}
+		invocationLabels := make(map[string]string, len(labels)+1)
+		for key, value := range labels {
+			invocationLabels[key] = value
+		}
+		invocationLabels["status"] = status
+		i.metrics.Inc(observe.MetricToolInvocationsTotal, "Tool executions by tool, scope, status, and tenant.",
+			invocationLabels)
 		i.metrics.Observe(observe.MetricToolDuration, "Tool execution duration in seconds.",
 			labels, time.Since(started).Seconds())
 	}

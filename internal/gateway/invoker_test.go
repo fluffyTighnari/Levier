@@ -196,6 +196,33 @@ func TestInvokerRecordsMetrics(t *testing.T) {
 	}
 }
 
+func TestInvokerRecordsTenantMetrics(t *testing.T) {
+	registry := observe.NewRegistry()
+	resolver := &fakeResolver{tools: map[string]register.ToolMaterial{
+		"search": {Name: "search", Scope: "local", TimeoutMS: 1000},
+	}}
+	local := &fakeLocal{result: connection.LocalToolResult{OK: true, ResultJSON: "3"}}
+	invoker := NewInvoker(resolver, local, nil, WithMetrics(registry))
+	ctx := observe.WithTenant(context.Background(), "tenant-a")
+	if result := invoker.Invoke(ctx, "run-1", "app-1", requestWithID("inv-tenant-metrics", "search")); !result.GetOk() {
+		t.Fatalf("result = %+v", result)
+	}
+
+	var buf bytes.Buffer
+	if err := registry.WritePrometheus(&buf); err != nil {
+		t.Fatalf("WritePrometheus() error = %v", err)
+	}
+	output := buf.String()
+	for _, want := range []string{
+		`levier_tool_invocations_total{scope="local",status="ok",tenant="tenant-a",tool="search"} 1`,
+		`levier_tool_duration_seconds_count{scope="local",tenant="tenant-a",tool="search"} 1`,
+	} {
+		if !strings.Contains(output, want) {
+			t.Fatalf("metrics do not contain %q:\n%s", want, output)
+		}
+	}
+}
+
 type panicLocal struct{}
 
 func (f *panicLocal) CallLocalTool(context.Context, string, connection.LocalToolRequest) (connection.LocalToolResult, error) {

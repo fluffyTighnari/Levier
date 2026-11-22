@@ -27,6 +27,7 @@ func (c *Control) HandleToolCall(daemonID string, env *runtimev1.Envelope) error
 	if err != nil {
 		return fmt.Errorf("get run for tool call: %w", err)
 	}
+	ctx = observe.WithTenant(ctx, run.TenantID)
 	result := c.cfg.Tools.Invoke(ctx, env.GetRunId(), run.AppID, env.GetToolCallRequest())
 	response, err := protocol.NewResponse(env, result)
 	if err != nil {
