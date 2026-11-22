@@ -1,5 +1,7 @@
 # Levier
 
+**English** · [中文](README.zh-CN.md)
+
 **A run function is all you need.**
 
 Levier is a local control plane for LLM agent runs. It schedules runs, routes tool calls, records state and events, and gives you one CLI.
