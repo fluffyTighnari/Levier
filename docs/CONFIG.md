@@ -4,7 +4,7 @@
 
 > 状态：6A 盘点完成；6B 控制面配置已实现；6C 执行侧配置已实现；6D 部署配置已实现；6E 测试与文档已完成，Compose smoke 已通过；10C retention 配置已实现。
 > 目标：先明确“现在有哪些配置、从哪里来、哪些是秘密、哪些还缺失”，再进入 6B 改代码。
-> 相关：`TODO.md`、`CLI_REFERENCE.md`、`deploy/README.md`。
+> 相关：`CLI_REFERENCE.md`、`deploy/README.md`。
 
 ---
 

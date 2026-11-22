@@ -29,7 +29,6 @@ MAP.md          仓库地图
 | `USER_GUIDE.md` | **按真实使用顺序编排：启动 → 配置 → App → Runtime → 排错 → 运维** |
 | `QUICKSTART.md` | 五分钟黄金路径卡片 |
 | `OPERATIONS_SURFACE.md` | 当前 CLI、SDK、HTTP/WS、环境变量逐项查询清单 |
-| `DX.md` | 操作面设计：默认值、隐藏项、取舍与后续 |
 | `ONBOARDING.md` | 从启动 Levier 到第一个 Run 的详细引导 |
 | `APP_ONBOARDING.md` | App 接入流程与底层协议 |
 | `RUNTIME_ONBOARDING.md` | Runtime 作者最小接入：runtime_name + run(ctx) + 可选能力 |
@@ -44,21 +43,11 @@ MAP.md          仓库地图
 | `RUNTIME_OPS.md` | 运维运行列表、Run 取消、daemon 和任务视图 |
 | `MIGRATION-1D.md` | Compose / 数据库 / 指标改名迁移 |
 
-## 路线与待办
+## 发布与契约
 
 | 文档 | 内容 |
 |---|---|
-| `SIMPLIFICATION.md` | App / Runtime 接入面简化讨论稿（runtime_name、run(ctx)、凭证分层） |
-| `ADAPTER_ROADMAP.md` | Adapter / Sidecar 优先级、收益、代价 |
-| `CLI_DISTRIBUTION_PLAN.md` | CLI 操作面与分发安装计划 |
-| `CLI_ACTIONS.md` | 动作型 CLI：app / run / migrate / daemon 设计 |
 | `RELEASE.md` | release 构建、checksums、tag 与发布流程 |
-| `TODO.md` | 公开前最终检查清单 + 6 配置外部化 / 7 服务自描述 / 8 状态总览 / 9 逐跳自检 / 10 生命周期 / 11 引导与凭据 / 12 运行操作面 / 13 Python App adapter |
-| `SELF_DESCRIPTION_PLAN.md` | 7 服务自描述改造计划（内部开发文档） |
-| `STATUS_OVERVIEW_PLAN.md` | 8 状态总览改造计划（内部开发文档） |
-| `HOP_CHECK_PLAN.md` | 9 逐跳自检改造计划（内部开发文档） |
-| `LIFECYCLE_PLAN.md` | 10 生命周期（进程与数据）改造计划（内部开发文档） |
-| `ONBOARDING_CREDENTIALS_PLAN.md` | 11 引导与凭据管理设计与实现记录（内部开发文档） |
 | `adr/` | 历史架构决策记录 |
 | `api/openapi.yaml` | HTTP API 契约 |
 
@@ -69,11 +58,9 @@ SCOPE → MAP → 你的任务对应文档
 第一次接入    → QUICKSTART.md
 接 Python App → examples/counter_agent + sdk/python/README.md + APP_ADAPTER_CONTRACT.md
 底层 App 协议 → APP_ONBOARDING.md
-引导计划      → ONBOARDING_CREDENTIALS_PLAN.md
 用 CLI        → CLI_REFERENCE.md
 安装 CLI      → INSTALL.md
 发布          → RELEASE.md
-待办 / 配置   → TODO.md
 改控制面      → DESIGN.md + ARCHITECTURE.md
 改配置        → CONFIG.md
 改 React Runtime    → AGENT_CORE_CONTRACT.md + execution/react_runtime/README.md

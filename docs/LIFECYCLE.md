@@ -4,7 +4,7 @@
 
 > 状态：10D 已实现；脚本为显式操作，不自动备份，也不自动轮换。
 > 本文属于内部开发/运维文档，不进入镜像、release 或公开 HTTP 接口。
-> 相关：`docs/LIFECYCLE_PLAN.md`、`deploy/README.md`、`docs/CONFIG.md`。
+> 相关：`deploy/README.md`、`docs/CONFIG.md`。
 
 ---
 

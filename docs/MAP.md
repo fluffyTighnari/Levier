@@ -69,11 +69,10 @@ App SDK
 | CLI 使用 / 参数 / 退出码 | `docs/CLI_REFERENCE.md` |
 | Release 构建 / checksums | `scripts/build-release.sh` + `docs/RELEASE.md` |
 | CLI 安装 / 校验 / 镜像 | `scripts/install.sh`、`scripts/install.ps1` + `docs/INSTALL.md` |
-| 公开前检查 / 下一阶段 | `docs/TODO.md` |
 | 配置盘点 / 环境变量 | `docs/CONFIG.md` |
 | 备份 / 恢复 / 卷 / secret 轮换 | `docs/LIFECYCLE.md` + `scripts/backup.sh`、`scripts/restore.sh` |
 | 运行操作面 | `docs/RUNTIME_OPS.md` + `cmd/levier/ops*.go` |
-| 引导 / App 凭据管理 | `docs/ONBOARDING.md`、`docs/ONBOARDING_CREDENTIALS_PLAN.md` |
+| 引导 / App 凭据管理 | `docs/ONBOARDING.md` |
 | React Runtime / Agent ?? | `execution/react_runtime/` |
 | Agent Core 契约 | `execution/agent_core/` + `docs/AGENT_CORE_CONTRACT.md` |
 | MCP 连接 / 会话 | `execution/mcp_runtime/` + `docs/MCP.md` |

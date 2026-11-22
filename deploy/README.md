@@ -115,7 +115,7 @@ docker compose exec levier /app/levier maintenance prune --yes
 
 第一版只删除超过 `run_days` 的终态 Run；它的 events、tasks 和 tool
 invocations 通过外键级联删除。过期 Session 在没有 active Run 引用时才会
-被清理。执行前请先备份，详见 `docs/LIFECYCLE_PLAN.md`。
+被清理。执行前请先备份，详见 `docs/LIFECYCLE.md`。
 
 ## 3. 真实模型
 

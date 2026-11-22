@@ -138,7 +138,7 @@ MCP Server 实现
 ```text
 接入新的 App
 接入新的 React Runtime
-Adapter / Sidecar SDK（已立项，见 docs/ADAPTER_ROADMAP.md）
+Adapter / Sidecar SDK（已立项）
 多 Daemon / 多 Levier / HA
 sandbox runtime
 longterm checkpoint 续跑
@@ -202,7 +202,7 @@ AppPort 与 DaemonPort 都有版本号
 | 2026-11-15 | MCP 能力 | 产品默认能力；`mcp_runtime` 为默认实现，可替换 |
 | 2026-11-15 | GUI | 以后考虑，本迭代不做 |
 | 2026-11-15 | global executor | 产品能力 |
-| 2026-11-15 | Adapter / Sidecar | 延后实现，见 `docs/ADAPTER_ROADMAP.md` |
+| 2026-11-15 | Adapter / Sidecar | 延后实现 |
 | 2026-11-15 | 多租户 | 后续再考虑，本迭代不做 |
 
 第 0 跳封板。命名与标识落地见 `docs/NAMING.md`。
