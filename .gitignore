@@ -7,6 +7,10 @@
 .stfolder/
 .stignore
 
+# Local AI tool session state (screens, threads, skeletons) — never publish
+.uinice/
+.qta/
+
 # Archived nested engine: read-only, keeps its own git history.
 /workflow_engine/
 
@@ -41,3 +45,14 @@ vendor/
 
 # Local verification evidence and historical reports
 /docs/reports/
+
+# Internal planning and development notes.
+# Published documentation lives in site/docs/.
+/docs/*_PLAN.md
+/docs/ADAPTER_ROADMAP.md
+/docs/CLI_ACTIONS.md
+/docs/DX.md
+/docs/SIMPLIFICATION.md
+/docs/START_HERE.md
+/docs/TODO.md
+/docs/configue.txt
