@@ -122,6 +122,7 @@ func TestDispatchEchoRunEndToEnd(t *testing.T) {
 	daemonCfg := fakedaemon.DefaultConfig()
 	daemonCfg.DaemonID = "daemon-1"
 	daemonCfg.AuthToken = "token-1"
+	daemonCfg.RuntimeName = "echo1"
 	daemonCfg.HeartbeatInterval = 20 * time.Millisecond
 	daemonCfg.AutoEcho = true
 	daemon, err := fakedaemon.Dial(ctx, listener.Addr().String(), daemonCfg)
