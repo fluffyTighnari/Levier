@@ -53,7 +53,7 @@ UNIT_CARDS = [
     "deploy/README.md",
     "tests/README.md",
     "docs/README.md",
-    ".github/README.md",
+    ".github/workflows/README.md",
 ]
 
 AGENT_CORE_FORBIDDEN = [
