@@ -477,3 +477,19 @@ Runtime：Driver、能力声明、自定义事件、Runtime-local 工具
 验证：集成测试、迁移测试、兼容性测试
 文档：I2 checklist、契约文档、运行说明
 ```
+
+## 16. 当前进展
+
+分支：`feat/i2-runtime-driver`
+
+| 项目 | 状态 | 说明 |
+|---|---|---|
+| Runtime Driver 抽象 | 已完成 | 简单 `run(ctx)` 保持兼容 |
+| Runtime Capabilities | 已完成 | 先作为 SDK 元数据，协议握手待接入 |
+| Driver 生命周期 | 已完成 | 启动、关闭 Hook |
+| Driver 测试 | 已完成 | 简单入口和 Driver 都通过 |
+| I2.0 协议契约 | 待开始 | custom event、checkpoint、resume 字段 |
+| 自定义事件 | 待开始 | 协议、SDK、控制面持久化 |
+| Checkpoint / Resume | 待开始 | 控制面闭环 |
+| Runtime-local 工具 | 待开始 | 统一工具来源 |
+| LangGraph 原型 | 待开始 | 依赖前序能力 |
