@@ -48,6 +48,8 @@ __all__ = [
     "tool",
     "Context",
     "Runtime",
+    "RuntimeCapabilities",
+    "RuntimeDriver",
     "RunContext",
     "Toolbox",
     "__version__",
@@ -55,14 +57,22 @@ __all__ = [
 
 
 def __getattr__(name: str) -> Any:
-    if name in {"Context", "RunContext", "Runtime", "Toolbox"}:
-        from levier_runtime import Context, RunContext, Runtime
+    if name in {"Context", "RunContext", "Runtime", "RuntimeCapabilities", "RuntimeDriver", "Toolbox"}:
+        from levier_runtime import (
+            Context,
+            RunContext,
+            Runtime,
+            RuntimeCapabilities,
+            RuntimeDriver,
+        )
         from levier_runtime.toolbox import Toolbox
 
         exports = {
             "Context": Context,
             "RunContext": RunContext,
             "Runtime": Runtime,
+            "RuntimeCapabilities": RuntimeCapabilities,
+            "RuntimeDriver": RuntimeDriver,
             "Toolbox": Toolbox,
         }
         return exports[name]

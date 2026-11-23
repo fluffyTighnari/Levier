@@ -37,6 +37,38 @@ the same tool observability events.
 - `ctx.call_tool` automatically emits `TOOL_CALL_BEGIN` / `TOOL_CALL_END`
 - uncaught `run(ctx)` exceptions become `ERROR` + a failed terminal run
 
+## Runtime Driver
+
+The simple `run(ctx)` entry point remains the default. A Runtime Driver is an
+optional composition layer for runtimes that need capability declarations or
+startup/shutdown hooks:
+
+```python
+from levier_runtime import Runtime, RuntimeCapabilities
+
+
+class MyDriver:
+    capabilities = RuntimeCapabilities(checkpoint=True, custom_events=True)
+
+    async def on_start(self, runtime):
+        ...
+
+    async def on_shutdown(self):
+        ...
+
+    async def run(self, ctx):
+        ...
+        return "completed"
+
+
+Runtime.start_driver(MyDriver())
+```
+
+The driver does not replace the transport or lifecycle layer. The SDK still
+owns the RuntimeChannel, heartbeat, reconnect, cancellation, events, and tool
+transport. Capabilities are declarative metadata; control-plane handshake and
+custom-event support are added by the I2 protocol work.
+
 ## Tests
 
 ```sh

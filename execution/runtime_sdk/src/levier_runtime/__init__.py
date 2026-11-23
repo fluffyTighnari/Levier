@@ -22,6 +22,7 @@ __version__ = "0.1.0"
 
 from .config import ConfigError, MiddlewareConfig, RuntimeConfig, load_runtime_config
 from .context import RunContext, RuntimeUsageError
+from .driver import RuntimeCapabilities, RuntimeDriver
 from .runtime import Runtime, RunFunction
 from .toolbox import Tool, Toolbox
 from .types import (
@@ -46,7 +47,9 @@ __all__ = [
     "RunContext",
     "RunFunction",
     "Runtime",
+    "RuntimeCapabilities",
     "RuntimeConfig",
+    "RuntimeDriver",
     "RuntimeUsageError",
     "Timeouts",
     "Tool",
