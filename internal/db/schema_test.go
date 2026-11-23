@@ -27,6 +27,7 @@ func TestSchemaTablesIndexesAndConstraints(t *testing.T) {
 		"idx_tool_invocations_status",
 		"idx_runs_app_status",
 		"idx_run_events_type",
+		"idx_run_events_custom_name",
 		"uq_apps_api_key_hash",
 		"idx_apps_status",
 		"uq_apps_tenant_name",
@@ -66,6 +67,22 @@ func TestSchemaTablesIndexesAndConstraints(t *testing.T) {
 	}
 	if !hasEventAttempt {
 		t.Fatal("sessions.event_attempt is missing")
+	}
+
+	for _, column := range []string{"name", "schema_version"} {
+		var exists bool
+		if err := pool.QueryRow(ctx, `
+			SELECT EXISTS (
+				SELECT 1 FROM information_schema.columns
+				WHERE table_schema = current_schema()
+				  AND table_name = 'run_events'
+				  AND column_name = $1
+			)`, column).Scan(&exists); err != nil {
+			t.Fatalf("check run_events.%s: %v", column, err)
+		}
+		if !exists {
+			t.Fatalf("run_events.%s is missing", column)
+		}
 	}
 
 	if _, err := pool.Exec(ctx, `

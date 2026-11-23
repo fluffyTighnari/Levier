@@ -288,14 +288,16 @@ func (s *Server) replayWS(appConn *connection.AppConn, msg *SubscribeMessage) (i
 		}
 		for _, event := range events {
 			view := EventMessage{
-				Type:      contract.WSMessageEvent,
-				RunID:     event.RunID,
-				Attempt:   int32(event.Attempt),
-				Seq:       event.Seq,
-				Source:    event.Source,
-				EventType: event.Type,
-				Data:      event.Payload,
-				TSMillis:  event.TSMs,
+				Type:          contract.WSMessageEvent,
+				RunID:         event.RunID,
+				Attempt:       int32(event.Attempt),
+				Seq:           event.Seq,
+				Source:        event.Source,
+				EventType:     event.Type,
+				EventName:     event.Name,
+				SchemaVersion: event.SchemaVersion,
+				Data:          event.Payload,
+				TSMillis:      event.TSMs,
 			}
 			payload, err := json.Marshal(view)
 			if err != nil {

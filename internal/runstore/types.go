@@ -68,15 +68,17 @@ type Session struct {
 
 // Event is one run event submitted to the store.
 type Event struct {
-	RunID      string          `json:"run_id"`
-	Attempt    int             `json:"attempt"`
-	Seq        int64           `json:"seq"`
-	Source     string          `json:"source"`
-	Type       string          `json:"type"`
-	Payload    json.RawMessage `json:"payload"`
-	TSMs       int64           `json:"ts_ms"`
-	LeaseEpoch int64           `json:"lease_epoch"`
-	Ephemeral  bool            `json:"ephemeral"`
+	RunID         string          `json:"run_id"`
+	Attempt       int             `json:"attempt"`
+	Seq           int64           `json:"seq"`
+	Source        string          `json:"source"`
+	Type          string          `json:"type"`
+	Name          string          `json:"name,omitempty"`
+	SchemaVersion string          `json:"schema_version,omitempty"`
+	Payload       json.RawMessage `json:"payload"`
+	TSMs          int64           `json:"ts_ms"`
+	LeaseEpoch    int64           `json:"lease_epoch"`
+	Ephemeral     bool            `json:"ephemeral"`
 }
 
 // AppendResult describes one event insertion attempt.

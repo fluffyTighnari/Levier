@@ -887,6 +887,46 @@ func TestAppendMWEventUsesReservedSeq(t *testing.T) {
 	}
 }
 
+func TestCustomEventRoundTrip(t *testing.T) {
+	store := New(testPool(t))
+	ctx := context.Background()
+	app := createApp(t, store)
+	run, _ := store.CreateRun(ctx, Run{RunID: "run-" + id.New(), AppID: app.AppID, RuntimeName: "react1"})
+	if _, err := store.AssignRun(ctx, Assignment{
+		RunID: run.RunID, ExpectedStatus: StatusQueued,
+		ExpectedAttempt: 0, ExpectedLeaseEpoch: 0,
+		Attempt: 1, LeaseEpoch: 1, DaemonID: "daemon-1",
+	}); err != nil {
+		t.Fatalf("AssignRun() error = %v", err)
+	}
+
+	result, err := store.AppendEvent(ctx, Event{
+		RunID:         run.RunID,
+		Attempt:       1,
+		Seq:           1,
+		Source:        "daemon",
+		Type:          "CUSTOM",
+		Name:          "graph.node.started",
+		SchemaVersion: "1",
+		Payload:       json.RawMessage(`{"node":"research"}`),
+		LeaseEpoch:    1,
+	})
+	if err != nil || !result.Inserted {
+		t.Fatalf("AppendEvent() = %+v, %v", result, err)
+	}
+
+	events, err := store.ListEvents(ctx, run.RunID, 0, 0, 10)
+	if err != nil {
+		t.Fatalf("ListEvents() error = %v", err)
+	}
+	if len(events) != 1 {
+		t.Fatalf("events = %+v", events)
+	}
+	if events[0].Type != "CUSTOM" || events[0].Name != "graph.node.started" || events[0].SchemaVersion != "1" {
+		t.Fatalf("custom event = %+v", events[0])
+	}
+}
+
 func TestRunTenantScopeAndFilter(t *testing.T) {
 	store := New(testPool(t))
 	ctx := context.Background()

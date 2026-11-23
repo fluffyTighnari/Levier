@@ -81,13 +81,15 @@ func eventListResponse(events []runstore.Event, limit int) EventListResponse {
 	views := make([]RunEventView, 0, len(events))
 	for _, event := range events {
 		views = append(views, RunEventView{
-			RunID:     event.RunID,
-			Attempt:   int32(event.Attempt),
-			Seq:       event.Seq,
-			Source:    event.Source,
-			EventType: event.Type,
-			Data:      event.Payload,
-			TSMillis:  event.TSMs,
+			RunID:         event.RunID,
+			Attempt:       int32(event.Attempt),
+			Seq:           event.Seq,
+			Source:        event.Source,
+			EventType:     event.Type,
+			Name:          event.Name,
+			SchemaVersion: event.SchemaVersion,
+			Data:          event.Payload,
+			TSMillis:      event.TSMs,
 		})
 	}
 	response := EventListResponse{

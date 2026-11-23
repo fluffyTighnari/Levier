@@ -248,6 +248,8 @@ enum EventType {
   ERROR = 7;
   // CHECKPOINT_SAVED reports a saved checkpoint.
   CHECKPOINT_SAVED = 8;
+  // CUSTOM carries a runtime-defined event name and schema version.
+  CUSTOM = 9;
 }
 
 // Event is one run progress event.
@@ -262,6 +264,10 @@ message Event {
   google.protobuf.Struct data = 4;
   // source is daemon or mw.
   string source = 5;
+  // name is the runtime-defined event name for CUSTOM events.
+  string name = 6;
+  // schema_version is the runtime-defined schema version for CUSTOM events.
+  string schema_version = 7;
 }
 
 // ToolCallRequest asks middleware to execute one tool invocation.

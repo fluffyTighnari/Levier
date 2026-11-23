@@ -177,16 +177,19 @@ func (c *Control) handleEvent(env *runtimev1.Envelope) {
 	if source == "" {
 		source = protocol.EventSourceDaemon
 	}
+	eventType := runtimev1.EventType_name[int32(event.GetType())]
 	appendStarted := time.Now()
 	result, err := c.runs.AppendEvent(ctx, runstore.Event{
-		RunID:      env.GetRunId(),
-		Attempt:    int(env.GetAttempt()),
-		Seq:        event.GetSeq(),
-		Source:     source,
-		Type:       runtimev1.EventType_name[int32(event.GetType())],
-		Payload:    payload,
-		TSMs:       env.GetTsMs(),
-		LeaseEpoch: env.GetLeaseEpoch(),
+		RunID:         env.GetRunId(),
+		Attempt:       int(env.GetAttempt()),
+		Seq:           event.GetSeq(),
+		Source:        source,
+		Type:          eventType,
+		Name:          event.GetName(),
+		SchemaVersion: event.GetSchemaVersion(),
+		Payload:       payload,
+		TSMs:          env.GetTsMs(),
+		LeaseEpoch:    env.GetLeaseEpoch(),
 	})
 	if c.metrics != nil {
 		c.metrics.Observe(observe.MetricEventAppendDuration, "Run event persistence latency in seconds.",
@@ -230,21 +233,29 @@ func (c *Control) handleEvent(env *runtimev1.Envelope) {
 	}
 	if c.metrics != nil {
 		c.metrics.Inc(observe.MetricEventsTotal, "Persisted events by type.", map[string]string{
-			"type":   runtimev1.EventType_name[int32(event.GetType())],
+			"type":   eventType,
 			"tenant": run.TenantID,
 		})
+		if event.GetType() == runtimev1.EventType_CUSTOM {
+			c.metrics.Inc(observe.MetricCustomEventsTotal, "Persisted custom events by name.", map[string]string{
+				"name":   firstNonEmpty(event.GetName(), "unnamed"),
+				"tenant": run.TenantID,
+			})
+		}
 		c.observeUsage(run, event, eventData)
 	}
 	if c.cfg.Publisher != nil {
 		wsPayload, err := json.Marshal(map[string]any{
-			"type":       "event",
-			"run_id":     env.GetRunId(),
-			"attempt":    env.GetAttempt(),
-			"seq":        event.GetSeq(),
-			"source":     source,
-			"event_type": runtimev1.EventType_name[int32(event.GetType())],
-			"data":       eventData,
-			"ts_ms":      env.GetTsMs(),
+			"type":           "event",
+			"run_id":         env.GetRunId(),
+			"attempt":        env.GetAttempt(),
+			"seq":            event.GetSeq(),
+			"source":         source,
+			"event_type":     eventType,
+			"event_name":     event.GetName(),
+			"schema_version": event.GetSchemaVersion(),
+			"data":           eventData,
+			"ts_ms":          env.GetTsMs(),
 		})
 		if err == nil {
 			c.cfg.Publisher.Publish(run.AppID, env.GetRunId(), wsPayload)
@@ -325,6 +336,13 @@ func (c *Control) EphemeralEvents() int64 { return c.ephemeralEvents.Load() }
 
 // CriticalEvents returns the number of critical events lost to a full buffer.
 func (c *Control) CriticalEvents() int64 { return c.criticalEvents.Load() }
+
+func firstNonEmpty(value, fallback string) string {
+	if value == "" {
+		return fallback
+	}
+	return value
+}
 
 func (c *Control) observeUsage(run runstore.Run, event *runtimev1.Event, data map[string]any) {
 	if c.metrics == nil || event.GetType() != runtimev1.EventType_USAGE {

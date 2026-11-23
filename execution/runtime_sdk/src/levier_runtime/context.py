@@ -120,12 +120,38 @@ class RunContext:
         data: dict[str, Any],
         *,
         ephemeral: bool = False,
+        name: str = "",
+        schema_version: str = "",
     ) -> None:
         """Emit one event by protocol name, e.g. MESSAGE_DELTA.
 
-        The SDK assigns sequence numbers and envelope scope.
+        The SDK assigns sequence numbers and envelope scope. Custom events use
+        ``emit_custom``; this method keeps the fixed-event path compatible.
         """
-        await self._events.emit(event_type, data, ephemeral=ephemeral)
+        await self._events.emit(
+            event_type,
+            data,
+            ephemeral=ephemeral,
+            name=name,
+            schema_version=schema_version,
+        )
+
+    async def emit_custom(
+        self,
+        name: str,
+        data: dict[str, Any],
+        *,
+        schema_version: str = "1",
+        ephemeral: bool = False,
+    ) -> None:
+        """Emit one runtime-defined event with name and schema version."""
+        await self.emit(
+            "CUSTOM",
+            data,
+            ephemeral=ephemeral,
+            name=name,
+            schema_version=schema_version,
+        )
 
     async def toolbox(self) -> "Any":
         """Return every local and MCP tool as one callable sequence.

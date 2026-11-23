@@ -22,6 +22,8 @@ const (
 	MetricToolDuration = "levier_tool_duration_seconds"
 	// MetricEventsTotal counts persisted events.
 	MetricEventsTotal = "levier_events_total"
+	// MetricCustomEventsTotal counts persisted custom events by name.
+	MetricCustomEventsTotal = "levier_custom_events_total"
 	// MetricEventsDroppedTotal counts dropped or skipped events.
 	MetricEventsDroppedTotal = "levier_events_dropped_total"
 	// MetricEventAppendDuration observes run event persistence latency.

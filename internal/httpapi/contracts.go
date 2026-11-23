@@ -106,13 +106,15 @@ type RunView struct {
 
 // RunEventView is one persisted run event.
 type RunEventView struct {
-	RunID     string          `json:"run_id"`
-	Attempt   int32           `json:"attempt"`
-	Seq       int64           `json:"seq"`
-	Source    string          `json:"source"`
-	EventType string          `json:"event_type"`
-	Data      json.RawMessage `json:"data,omitempty"`
-	TSMillis  int64           `json:"ts_ms"`
+	RunID         string          `json:"run_id"`
+	Attempt       int32           `json:"attempt"`
+	Seq           int64           `json:"seq"`
+	Source        string          `json:"source"`
+	EventType     string          `json:"event_type"`
+	Name          string          `json:"name,omitempty"`
+	SchemaVersion string          `json:"schema_version,omitempty"`
+	Data          json.RawMessage `json:"data,omitempty"`
+	TSMillis      int64           `json:"ts_ms"`
 }
 
 // EventListResponse is the events replay response.

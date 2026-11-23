@@ -32,6 +32,7 @@ class EventType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     USAGE: _ClassVar[EventType]
     ERROR: _ClassVar[EventType]
     CHECKPOINT_SAVED: _ClassVar[EventType]
+    CUSTOM: _ClassVar[EventType]
 RUNTIME_TYPE_UNSPECIFIED: RuntimeType
 NORMAL: RuntimeType
 SANDBOX: RuntimeType
@@ -48,6 +49,7 @@ TOOL_CALL_END: EventType
 USAGE: EventType
 ERROR: EventType
 CHECKPOINT_SAVED: EventType
+CUSTOM: EventType
 
 class Envelope(_message.Message):
     __slots__ = ("msg_id", "correlation_id", "run_id", "ts_ms", "attempt", "lease_epoch", "hello", "heartbeat", "task_assign", "task_ack", "event", "tool_call_request", "tool_call_result", "cancel", "reconcile", "checkpoint", "error")
@@ -260,18 +262,22 @@ class TaskAck(_message.Message):
     def __init__(self, accepted: _Optional[bool] = ..., reason: _Optional[str] = ...) -> None: ...
 
 class Event(_message.Message):
-    __slots__ = ("seq", "type", "ephemeral", "data", "source")
+    __slots__ = ("seq", "type", "ephemeral", "data", "source", "name", "schema_version")
     SEQ_FIELD_NUMBER: _ClassVar[int]
     TYPE_FIELD_NUMBER: _ClassVar[int]
     EPHEMERAL_FIELD_NUMBER: _ClassVar[int]
     DATA_FIELD_NUMBER: _ClassVar[int]
     SOURCE_FIELD_NUMBER: _ClassVar[int]
+    NAME_FIELD_NUMBER: _ClassVar[int]
+    SCHEMA_VERSION_FIELD_NUMBER: _ClassVar[int]
     seq: int
     type: EventType
     ephemeral: bool
     data: _struct_pb2.Struct
     source: str
-    def __init__(self, seq: _Optional[int] = ..., type: _Optional[_Union[EventType, str]] = ..., ephemeral: _Optional[bool] = ..., data: _Optional[_Union[_struct_pb2.Struct, _Mapping]] = ..., source: _Optional[str] = ...) -> None: ...
+    name: str
+    schema_version: str
+    def __init__(self, seq: _Optional[int] = ..., type: _Optional[_Union[EventType, str]] = ..., ephemeral: _Optional[bool] = ..., data: _Optional[_Union[_struct_pb2.Struct, _Mapping]] = ..., source: _Optional[str] = ..., name: _Optional[str] = ..., schema_version: _Optional[str] = ...) -> None: ...
 
 class ToolCallRequest(_message.Message):
     __slots__ = ("invocation_id", "tool_name", "arguments_json", "timeout_ms")

@@ -234,6 +234,13 @@ func validateEvent(env *runtimev1.Envelope, event *runtimev1.Event) error {
 	if event.GetType() == runtimev1.EventType_EVENT_TYPE_UNSPECIFIED {
 		return fmt.Errorf("event.type is required")
 	}
+	if event.GetType() == runtimev1.EventType_CUSTOM {
+		if event.GetName() == "" {
+			return fmt.Errorf("event.name is required for CUSTOM events")
+		}
+	} else if event.GetName() != "" || event.GetSchemaVersion() != "" {
+		return fmt.Errorf("event.name and event.schema_version are only valid for CUSTOM events")
+	}
 	if event.GetSource() != EventSourceDaemon && event.GetSource() != EventSourceMW {
 		return fmt.Errorf("event.source must be daemon or mw")
 	}

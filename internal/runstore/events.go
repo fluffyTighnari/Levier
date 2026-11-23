@@ -65,11 +65,11 @@ func (s *Store) AppendEvent(ctx context.Context, event Event) (AppendResult, err
 	}
 
 	tag, err := tx.Exec(ctx, `
-		INSERT INTO run_events (run_id, attempt, seq, source, type, payload, ts_ms)
-		VALUES ($1, $2, $3, $4, $5, $6, $7)
+		INSERT INTO run_events (run_id, attempt, seq, source, type, name, schema_version, payload, ts_ms)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
 		ON CONFLICT (run_id, attempt, seq) DO NOTHING
 	`, normalized.RunID, normalized.Attempt, normalized.Seq, normalized.Source,
-		normalized.Type, normalized.Payload, normalized.TSMs)
+		normalized.Type, normalized.Name, normalized.SchemaVersion, normalized.Payload, normalized.TSMs)
 	if err != nil {
 		return AppendResult{}, fmt.Errorf("append event: insert: %w", err)
 	}
@@ -122,7 +122,7 @@ func (s *Store) ListEvents(
 	}
 	limit = eventLimit(limit)
 	rows, err := s.pool.Query(ctx, `
-		SELECT run_id, attempt, seq, source, type, payload, ts_ms
+		SELECT run_id, attempt, seq, source, type, name, schema_version, payload, ts_ms
 		FROM run_events
 		WHERE run_id = $1
 		  AND (attempt > $2 OR (attempt = $2 AND seq > $3))
@@ -142,6 +142,8 @@ func (s *Store) ListEvents(
 			&event.Seq,
 			&event.Source,
 			&event.Type,
+			&event.Name,
+			&event.SchemaVersion,
 			&event.Payload,
 			&event.TSMs,
 		); err != nil {
@@ -182,6 +184,12 @@ func normalizeEvent(event Event) (Event, error) {
 	}
 	if event.Type == "" {
 		return Event{}, fmt.Errorf("%w: type is required", ErrInvalidEvent)
+	}
+	if event.Type == "CUSTOM" && event.Name == "" {
+		return Event{}, fmt.Errorf("%w: custom event name is required", ErrInvalidEvent)
+	}
+	if event.Type != "CUSTOM" && (event.Name != "" || event.SchemaVersion != "") {
+		return Event{}, fmt.Errorf("%w: event name is only valid for CUSTOM events", ErrInvalidEvent)
 	}
 	var err error
 	event.Payload, err = normalizeJSON(event.Payload)

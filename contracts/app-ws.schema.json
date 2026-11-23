@@ -101,6 +101,8 @@
         "seq": { "type": "integer", "minimum": 1 },
         "source": { "enum": ["daemon", "mw"] },
         "event_type": { "type": "string", "minLength": 1 },
+        "event_name": { "type": "string", "minLength": 1 },
+        "schema_version": { "type": "string", "minLength": 1 },
         "data": { "type": "object" },
         "ts_ms": { "type": "integer", "minimum": 0 }
       },

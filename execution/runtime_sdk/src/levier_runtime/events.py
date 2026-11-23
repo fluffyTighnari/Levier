@@ -44,8 +44,14 @@ class EventWriter:
         data: dict[str, Any],
         *,
         ephemeral: bool = False,
+        name: str = "",
+        schema_version: str = "",
     ) -> None:
-        """Emit one event; only persistent events consume a sequence number."""
+        """Emit one event; only persistent events consume a sequence number.
+
+        ``name`` and ``schema_version`` are required for ``CUSTOM`` events.
+        Fixed event types keep their existing wire shape.
+        """
         if isinstance(event_type, str):
             try:
                 wire_type = runtime_pb2.EventType.Value(event_type)
@@ -53,6 +59,11 @@ class EventWriter:
                 raise ValueError(f"unknown runtime event type {event_type!r}") from exc
         else:
             wire_type = event_type
+        if wire_type == runtime_pb2.EventType.CUSTOM:
+            if not name:
+                raise ValueError("custom event name is required")
+        elif name or schema_version:
+            raise ValueError("event name and schema_version are only valid for CUSTOM events")
         if ephemeral:
             seq = 0
         else:
@@ -67,6 +78,8 @@ class EventWriter:
             ephemeral=ephemeral,
             source="daemon",
             data=payload,
+            name=name,
+            schema_version=schema_version,
         )
         await self.sender.send(new_envelope(
             event,

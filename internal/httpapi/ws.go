@@ -54,14 +54,16 @@ type PingMessage struct {
 
 // EventMessage is a server run event.
 type EventMessage struct {
-	Type      string          `json:"type"`
-	RunID     string          `json:"run_id"`
-	Attempt   int32           `json:"attempt"`
-	Seq       int64           `json:"seq"`
-	Source    string          `json:"source"`
-	EventType string          `json:"event_type"`
-	Data      json.RawMessage `json:"data,omitempty"`
-	TSMillis  int64           `json:"ts_ms"`
+	Type          string          `json:"type"`
+	RunID         string          `json:"run_id"`
+	Attempt       int32           `json:"attempt"`
+	Seq           int64           `json:"seq"`
+	Source        string          `json:"source"`
+	EventType     string          `json:"event_type"`
+	EventName     string          `json:"event_name,omitempty"`
+	SchemaVersion string          `json:"schema_version,omitempty"`
+	Data          json.RawMessage `json:"data,omitempty"`
+	TSMillis      int64           `json:"ts_ms"`
 }
 
 // LocalToolCallMessage asks the App to execute a local tool.

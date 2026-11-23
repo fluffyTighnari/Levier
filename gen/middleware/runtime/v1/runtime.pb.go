@@ -157,6 +157,8 @@ const (
 	EventType_ERROR EventType = 7
 	// CHECKPOINT_SAVED reports a saved checkpoint.
 	EventType_CHECKPOINT_SAVED EventType = 8
+	// CUSTOM carries a runtime-defined event name and schema version.
+	EventType_CUSTOM EventType = 9
 )
 
 // Enum value maps for EventType.
@@ -171,6 +173,7 @@ var (
 		6: "USAGE",
 		7: "ERROR",
 		8: "CHECKPOINT_SAVED",
+		9: "CUSTOM",
 	}
 	EventType_value = map[string]int32{
 		"EVENT_TYPE_UNSPECIFIED": 0,
@@ -182,6 +185,7 @@ var (
 		"USAGE":                  6,
 		"ERROR":                  7,
 		"CHECKPOINT_SAVED":       8,
+		"CUSTOM":                 9,
 	}
 )
 
@@ -1375,7 +1379,11 @@ type Event struct {
 	// data is event-specific structured payload.
 	Data *structpb.Struct `protobuf:"bytes,4,opt,name=data,proto3" json:"data,omitempty"`
 	// source is daemon or mw.
-	Source        string `protobuf:"bytes,5,opt,name=source,proto3" json:"source,omitempty"`
+	Source string `protobuf:"bytes,5,opt,name=source,proto3" json:"source,omitempty"`
+	// name is the runtime-defined event name for CUSTOM events.
+	Name string `protobuf:"bytes,6,opt,name=name,proto3" json:"name,omitempty"`
+	// schema_version is the runtime-defined schema version for CUSTOM events.
+	SchemaVersion string `protobuf:"bytes,7,opt,name=schema_version,json=schemaVersion,proto3" json:"schema_version,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1441,6 +1449,20 @@ func (x *Event) GetData() *structpb.Struct {
 func (x *Event) GetSource() string {
 	if x != nil {
 		return x.Source
+	}
+	return ""
+}
+
+func (x *Event) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *Event) GetSchemaVersion() string {
+	if x != nil {
+		return x.SchemaVersion
 	}
 	return ""
 }
@@ -1930,13 +1952,15 @@ const file_middleware_runtime_v1_runtime_proto_rawDesc = "" +
 	"\x0ftool_timeout_ms\x18\x02 \x01(\x03R\rtoolTimeoutMs\"=\n" +
 	"\aTaskAck\x12\x1a\n" +
 	"\baccepted\x18\x01 \x01(\bR\baccepted\x12\x16\n" +
-	"\x06reason\x18\x02 \x01(\tR\x06reason\"\xb2\x01\n" +
+	"\x06reason\x18\x02 \x01(\tR\x06reason\"\xed\x01\n" +
 	"\x05Event\x12\x10\n" +
 	"\x03seq\x18\x01 \x01(\x03R\x03seq\x124\n" +
 	"\x04type\x18\x02 \x01(\x0e2 .middleware.runtime.v1.EventTypeR\x04type\x12\x1c\n" +
 	"\tephemeral\x18\x03 \x01(\bR\tephemeral\x12+\n" +
 	"\x04data\x18\x04 \x01(\v2\x17.google.protobuf.StructR\x04data\x12\x16\n" +
-	"\x06source\x18\x05 \x01(\tR\x06source\"\x99\x01\n" +
+	"\x06source\x18\x05 \x01(\tR\x06source\x12\x12\n" +
+	"\x04name\x18\x06 \x01(\tR\x04name\x12%\n" +
+	"\x0eschema_version\x18\a \x01(\tR\rschemaVersion\"\x99\x01\n" +
 	"\x0fToolCallRequest\x12#\n" +
 	"\rinvocation_id\x18\x01 \x01(\tR\finvocationId\x12\x1b\n" +
 	"\ttool_name\x18\x02 \x01(\tR\btoolName\x12%\n" +
@@ -1974,7 +1998,7 @@ const file_middleware_runtime_v1_runtime_proto_rawDesc = "" +
 	"\x16TOOL_SCOPE_UNSPECIFIED\x10\x00\x12\t\n" +
 	"\x05LOCAL\x10\x01\x12\n" +
 	"\n" +
-	"\x06GLOBAL\x10\x02*\xb5\x01\n" +
+	"\x06GLOBAL\x10\x02*\xc1\x01\n" +
 	"\tEventType\x12\x1a\n" +
 	"\x16EVENT_TYPE_UNSPECIFIED\x10\x00\x12\x0e\n" +
 	"\n" +
@@ -1985,7 +2009,9 @@ const file_middleware_runtime_v1_runtime_proto_rawDesc = "" +
 	"\rTOOL_CALL_END\x10\x05\x12\t\n" +
 	"\x05USAGE\x10\x06\x12\t\n" +
 	"\x05ERROR\x10\a\x12\x14\n" +
-	"\x10CHECKPOINT_SAVED\x10\b2a\n" +
+	"\x10CHECKPOINT_SAVED\x10\b\x12\n" +
+	"\n" +
+	"\x06CUSTOM\x10\t2a\n" +
 	"\x0eRuntimeService\x12O\n" +
 	"\aChannel\x12\x1f.middleware.runtime.v1.Envelope\x1a\x1f.middleware.runtime.v1.Envelope(\x010\x01BFZDgithub.com/fluffyTighnari/levier/gen/middleware/runtime/v1;runtimev1b\x06proto3"
 

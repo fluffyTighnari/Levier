@@ -76,7 +76,7 @@ func (s *Store) ListSessionEvents(
 	}
 	limit = eventLimit(limit)
 	rows, err := s.pool.Query(ctx, `
-		SELECT e.run_id, e.attempt, e.seq, e.source, e.type, e.payload, e.ts_ms
+		SELECT e.run_id, e.attempt, e.seq, e.source, e.type, e.name, e.schema_version, e.payload, e.ts_ms
 		FROM run_events e
 		JOIN runs r ON r.run_id = e.run_id
 		WHERE r.session_id = $1
@@ -97,6 +97,8 @@ func (s *Store) ListSessionEvents(
 			&event.Seq,
 			&event.Source,
 			&event.Type,
+			&event.Name,
+			&event.SchemaVersion,
 			&event.Payload,
 			&event.TSMs,
 		); err != nil {
