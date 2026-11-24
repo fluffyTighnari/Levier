@@ -225,6 +225,12 @@ paths:
         - adminToken: []
       parameters:
         - $ref: '#/components/parameters/RunID'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ResumeRunRequest'
       responses:
         "200":
           description: Run resume result
@@ -577,6 +583,12 @@ paths:
       operationId: resumeRun
       parameters:
         - $ref: '#/components/parameters/RunID'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ResumeRunRequest'
       responses:
         "200":
           description: Run requeued for another attempt
@@ -901,6 +913,11 @@ components:
           type: string
         status:
           type: string
+    ResumeRunRequest:
+      type: object
+      properties:
+        resume:
+          description: Opaque JSON value passed to the resumed runtime.
     ResumeRunResponse:
       type: object
       required: [run_id, status]

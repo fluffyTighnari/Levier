@@ -5,6 +5,7 @@ package control
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"time"
@@ -15,7 +16,7 @@ import (
 )
 
 // ResumeRun requeues a waiting run and schedules its next dispatch attempt.
-func (c *Control) ResumeRun(ctx context.Context, runID string) (runstore.Run, error) {
+func (c *Control) ResumeRun(ctx context.Context, runID string, resume json.RawMessage) (runstore.Run, error) {
 	c.waitingMu.Lock()
 	defer c.waitingMu.Unlock()
 
@@ -26,7 +27,7 @@ func (c *Control) ResumeRun(ctx context.Context, runID string) (runstore.Run, er
 	if run.Status != runstore.StatusWaiting {
 		return run, runstore.ErrRunNotResumable
 	}
-	requeued, err := c.runs.RequeueRun(ctx, runID)
+	requeued, err := c.runs.RequeueRunWithResume(ctx, runID, resume)
 	if err != nil {
 		if errors.Is(err, runstore.ErrRunNotAssignable) {
 			return runstore.Run{}, runstore.ErrRunNotResumable

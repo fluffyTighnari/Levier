@@ -87,7 +87,7 @@
 - `App.get_run(run_id)` — 获取单个 Run。
 - `App.get_events(run_id)` — 获取 Run 事件列表。
 - `App.cancel_run(run_id)` — 取消 Run。
-- `App.resume_run(run_id)` — 恢复 waiting Run。
+- `App.resume_run(run_id, resume=None)` — 恢复 waiting Run，可携带外部恢复值。
 - `App.list_model_providers()` — 获取当前 App 可见的模型目录。
 - `App.tools_manifest()` — 获取已注册工具的 manifest。
 - `levier.tool(function=None, *, name=None, description=None, schema=None, timeout_ms=10000)` — 把普通函数转成 `Tool`，从类型注解和 docstring 自动生成 schema。
@@ -114,7 +114,7 @@
 - `LevierApp.get_run(run_id)` — 查询 Run。
 - `LevierApp.get_events(run_id, *, after_seq=0, limit=1000)` — 查询 Run 事件。
 - `LevierApp.cancel_run(run_id)` — 取消 Run。
-- `LevierApp.resume_run(run_id)` — 恢复 waiting Run。
+- `LevierApp.resume_run(run_id, resume=None)` — 恢复 waiting Run，可携带外部恢复值。
 - `Credentials` / `Secret` — 凭据数据类和不会在 repr/str 中泄漏的 key 包装。
 - `load_credentials` / `save_credentials` / `default_credentials_path` / `resolve_server` / `credential_fingerprint` — 凭据读写、默认路径、server 解析和 key 指纹。
 - `CredentialsError` / `LevierError` / `HTTPError` / `ProtocolError` / `TransportError` / `AppInactiveError` / `ToolExecutionError` — SDK 结构化错误类型。
@@ -149,6 +149,7 @@
 - `ctx.mcp_bindings` — 控制面下发的 MCP 连接描述列表。
 - `ctx.timeouts` — Run 超时和工具超时。
 - `ctx.session_id` / `ctx.resume_from` — 可选 session 和 checkpoint 状态。
+- `ctx.resume_value` / `ctx.resume_value_set` — resume API 传入的外部恢复值；存在性与值分开表示。
 - `ctx.cancelled` / `ctx.cancel_event` — 取消状态和 asyncio 事件。
 - `ctx.started_at` / `ctx.outcome` / `ctx.task` — 启动时间、当前结果和内部 task。
 - `ctx.logger` — 自动带 run/app/runtime/attempt/trace 字段的 logger adapter。
@@ -215,7 +216,7 @@
 - `GET /api/v1/runs/{id}` — 查询 Run。
 - `GET /api/v1/runs/{id}/events?after_attempt=&after_seq=&limit=` — 按游标补拉事件。
 - `POST /api/v1/runs/{id}/cancel` — 取消 Run。
-- `POST /api/v1/runs/{id}/resume` — 恢复 waiting longterm Run。
+- `POST /api/v1/runs/{id}/resume` — 恢复 waiting longterm Run；可选 body `{"resume": ...}` 透传外部恢复值。
 - `POST /api/v1/ws-token` — App key 换取短期 WebSocket token。
 - `GET /api/v1/ws` — App WebSocket 连接。
 - `POST /api/v1/apps` — 更新 App 元信息。

@@ -27,5 +27,9 @@ when the graph pauses at an interrupt. Resume uses the standard Levier Run
 resume entry point; the driver restores the LangGraph checkpointer state and
 continues with `Command(resume=...)`.
 
+When the resume request carries `{"resume": ...}`, the value is delivered as
+`ctx.resume_value` with `ctx.resume_value_set=True`. The driver prefers that
+value over its configured fallback.
+
 This is an I2 prototype. It deliberately does not add LangGraph to the core
 Runtime SDK, and it does not implement a separate graph execution engine.

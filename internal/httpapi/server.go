@@ -75,7 +75,7 @@ type Canceller interface {
 
 // Resumer requeues one waiting run for another dispatch attempt.
 type Resumer interface {
-	ResumeRun(ctx context.Context, runID string) (runstore.Run, error)
+	ResumeRun(ctx context.Context, runID string, resume json.RawMessage) (runstore.Run, error)
 }
 
 // RunLister is the optional operator run-listing subset.

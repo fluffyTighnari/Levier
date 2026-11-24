@@ -690,6 +690,58 @@ func TestWaitingRunCanBeRequeued(t *testing.T) {
 	}
 }
 
+func TestRequeueRunWithResumePayloadIsOneShot(t *testing.T) {
+	store := New(testPool(t))
+	ctx := context.Background()
+	app := createApp(t, store)
+	run, _ := store.CreateRun(ctx, Run{RunID: "run-" + id.New(), AppID: app.AppID, RuntimeName: "react1"})
+	if _, err := store.AssignRun(ctx, Assignment{
+		RunID: run.RunID, ExpectedStatus: StatusQueued,
+		ExpectedAttempt: 0, ExpectedLeaseEpoch: 0,
+		Attempt: 1, LeaseEpoch: 1, DaemonID: "daemon-1",
+	}); err != nil {
+		t.Fatalf("AssignRun() error = %v", err)
+	}
+	if _, err := store.Transition(ctx, Transition{
+		RunID: run.RunID, ExpectedStatus: StatusAssigned,
+		ToStatus: StatusRunning, ExpectedAttempt: 1, ExpectedLeaseEpoch: 1,
+	}); err != nil {
+		t.Fatalf("Transition(running) error = %v", err)
+	}
+	requeued, err := store.RequeueRunWithResume(ctx, run.RunID, json.RawMessage(`{"approved":true}`))
+	if err != nil {
+		t.Fatalf("RequeueRunWithResume() error = %v", err)
+	}
+	var resumePayload map[string]bool
+	if err := json.Unmarshal(requeued.ResumeJSON, &resumePayload); err != nil || !resumePayload["approved"] {
+		t.Fatalf("resume payload = %s, %v", requeued.ResumeJSON, err)
+	}
+	assigned, err := store.AssignRun(ctx, Assignment{
+		RunID: run.RunID, ExpectedStatus: StatusQueued,
+		ExpectedAttempt: requeued.Attempt, ExpectedLeaseEpoch: requeued.LeaseEpoch,
+		Attempt: 2, LeaseEpoch: 3, DaemonID: "daemon-1",
+	})
+	if err != nil {
+		t.Fatalf("AssignRun(resumed) error = %v", err)
+	}
+	if string(assigned.ResumeJSON) == "" {
+		t.Fatal("resume payload was cleared before the run started")
+	}
+	if _, err := store.Transition(ctx, Transition{
+		RunID: run.RunID, ExpectedStatus: StatusAssigned,
+		ToStatus: StatusRunning, ExpectedAttempt: assigned.Attempt, ExpectedLeaseEpoch: assigned.LeaseEpoch,
+	}); err != nil {
+		t.Fatalf("Transition(running) error = %v", err)
+	}
+	current, err := store.GetRun(ctx, run.RunID)
+	if err != nil {
+		t.Fatalf("GetRun() error = %v", err)
+	}
+	if len(current.ResumeJSON) != 0 {
+		t.Fatalf("stored resume payload was not cleared after start: %s", current.ResumeJSON)
+	}
+}
+
 func TestListActiveRuns(t *testing.T) {
 	store := New(testPool(t))
 	ctx := context.Background()

@@ -817,9 +817,12 @@ type TaskAssign struct {
 	// resume_from is an optional longterm checkpoint.
 	ResumeFrom *Checkpoint `protobuf:"bytes,11,opt,name=resume_from,json=resumeFrom,proto3" json:"resume_from,omitempty"`
 	// trace_context is a W3C traceparent value.
-	TraceContext  string `protobuf:"bytes,12,opt,name=trace_context,json=traceContext,proto3" json:"trace_context,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	TraceContext string `protobuf:"bytes,12,opt,name=trace_context,json=traceContext,proto3" json:"trace_context,omitempty"`
+	// resume_value_json is the optional external value supplied to resume.
+	// It is opaque JSON so a runtime can pass a string, object, or null.
+	ResumeValueJson []byte `protobuf:"bytes,13,opt,name=resume_value_json,json=resumeValueJson,proto3" json:"resume_value_json,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
 }
 
 func (x *TaskAssign) Reset() {
@@ -927,6 +930,13 @@ func (x *TaskAssign) GetTraceContext() string {
 		return x.TraceContext
 	}
 	return ""
+}
+
+func (x *TaskAssign) GetResumeValueJson() []byte {
+	if x != nil {
+		return x.ResumeValueJson
+	}
+	return nil
 }
 
 // ChatMessage is one conversation message.
@@ -1908,7 +1918,7 @@ const file_middleware_runtime_v1_runtime_proto_rawDesc = "" +
 	"\tHeartbeat\x12#\n" +
 	"\rrunning_count\x18\x01 \x01(\x05R\frunningCount\x12\x19\n" +
 	"\bcpu_load\x18\x02 \x01(\x01R\acpuLoad\x12\x15\n" +
-	"\x06mem_mb\x18\x03 \x01(\x01R\x05memMb\"\xb2\x04\n" +
+	"\x06mem_mb\x18\x03 \x01(\x01R\x05memMb\"\xde\x04\n" +
 	"\n" +
 	"TaskAssign\x12\x15\n" +
 	"\x06run_id\x18\x01 \x01(\tR\x05runId\x12\x15\n" +
@@ -1924,7 +1934,8 @@ const file_middleware_runtime_v1_runtime_proto_rawDesc = "" +
 	" \x01(\tR\tsessionId\x12B\n" +
 	"\vresume_from\x18\v \x01(\v2!.middleware.runtime.v1.CheckpointR\n" +
 	"resumeFrom\x12#\n" +
-	"\rtrace_context\x18\f \x01(\tR\ftraceContextJ\x04\b\x03\x10\x04\"O\n" +
+	"\rtrace_context\x18\f \x01(\tR\ftraceContext\x12*\n" +
+	"\x11resume_value_json\x18\r \x01(\fR\x0fresumeValueJsonJ\x04\b\x03\x10\x04\"O\n" +
 	"\vChatMessage\x12\x12\n" +
 	"\x04role\x18\x01 \x01(\tR\x04role\x12\x18\n" +
 	"\acontent\x18\x02 \x01(\tR\acontent\x12\x12\n" +

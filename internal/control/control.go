@@ -6,6 +6,7 @@ package control
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"log/slog"
 	"sync"
@@ -82,6 +83,7 @@ type RunStore interface {
 	ListActiveRuns(ctx context.Context) ([]runstore.Run, error)
 	ListActiveRunsForDaemon(ctx context.Context, daemonID string) ([]runstore.Run, error)
 	RequeueRun(ctx context.Context, runID string) (runstore.Run, error)
+	RequeueRunWithResume(ctx context.Context, runID string, resume json.RawMessage) (runstore.Run, error)
 }
 
 // MaterialAssembler supplies TaskAssign tools and MCP bindings.

@@ -74,6 +74,8 @@ class RunContext:
         events: EventWriter,
         attempt: int,
         lease_epoch: int,
+        resume_value: Any = None,
+        resume_value_set: bool = False,
     ) -> None:
         self.runtime_name = runtime_name
         self.run_id = run_id
@@ -86,6 +88,8 @@ class RunContext:
         self.timeouts = timeouts
         self.session_id = session_id
         self.resume_from = resume_from
+        self.resume_value = resume_value
+        self.resume_value_set = resume_value_set
         self.trace_id = trace_id
         self.cancel_event = asyncio.Event()
         self.started_at = datetime.now(tz=timezone.utc)

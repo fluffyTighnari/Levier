@@ -77,6 +77,8 @@ ctx.tools
 ctx.mcp_bindings
 ctx.session_id
 ctx.resume_from
+ctx.resume_value
+ctx.resume_value_set
 ```
 
 ### Operations

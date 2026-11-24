@@ -185,8 +185,8 @@ class App:
     def cancel_run(self, run_id: str) -> dict[str, Any]:
         return self._app.cancel_run(run_id)
 
-    def resume_run(self, run_id: str) -> dict[str, Any]:
-        return self._app.resume_run(run_id)
+    def resume_run(self, run_id: str, resume: Any = None) -> dict[str, Any]:
+        return self._app.resume_run(run_id, resume)
 
     def _start_serving(self) -> None:
         if self._serve_thread is not None and self._serve_thread.is_alive():

@@ -144,6 +144,9 @@ message TaskAssign {
   Checkpoint resume_from = 11;
   // trace_context is a W3C traceparent value.
   string trace_context = 12;
+  // resume_value_json is the optional external value supplied to resume.
+  // It is opaque JSON so a runtime can pass a string, object, or null.
+  bytes resume_value_json = 13;
 }
 
 // ChatMessage is one conversation message.

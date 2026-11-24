@@ -114,12 +114,16 @@ class HttpTest(unittest.TestCase):
         client = LevierClient("http://levier:8080", "app-1", "secret", transport)
         waiting = client.wait_run("run-1", timeout=1, interval=0.001)
         self.assertEqual(waiting["status"], "waiting")
-        resumed = client.resume_run("run-1")
+        resumed = client.resume_run("run-1", {"approved": True})
         self.assertEqual(resumed["status"], "queued")
         self.assertEqual(resumed["session_id"], "session-1")
         self.assertEqual(
             transport.requests[1].url,
             "http://levier:8080/api/v1/runs/run-1/resume",
+        )
+        self.assertEqual(
+            json.loads(transport.requests[1].body),
+            {"resume": {"approved": True}},
         )
 
     def test_http_error_is_normalized(self) -> None:

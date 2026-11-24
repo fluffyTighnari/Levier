@@ -146,6 +146,11 @@ type CancelRunResponse struct {
 	Status RunStatus `json:"status"`
 }
 
+// ResumeRunRequest is the optional POST /runs/{run_id}/resume body.
+type ResumeRunRequest struct {
+	Resume json.RawMessage `json:"resume,omitempty"`
+}
+
 // ResumeRunResponse is returned after a waiting run is requeued.
 type ResumeRunResponse struct {
 	RunID     string    `json:"run_id"`

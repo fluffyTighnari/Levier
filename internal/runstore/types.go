@@ -39,6 +39,7 @@ type Run struct {
 	Status           string          `json:"status"`
 	Attempt          int             `json:"attempt"`
 	SessionID        string          `json:"session_id,omitempty"`
+	ResumeJSON       json.RawMessage `json:"-"`
 	Model            json.RawMessage `json:"model"`
 	RunTimeoutMS     int             `json:"run_timeout_ms"`
 	ToolTimeoutMS    int             `json:"tool_timeout_ms"`

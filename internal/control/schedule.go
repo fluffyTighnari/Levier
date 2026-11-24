@@ -283,8 +283,9 @@ func buildTaskAssign(run runstore.Run, attempt int) (*runtimev1.TaskAssign, erro
 			RunTimeoutMs:  runTimeout,
 			ToolTimeoutMs: toolTimeout,
 		},
-		SessionId:    run.SessionID,
-		TraceContext: run.TraceID,
+		SessionId:       run.SessionID,
+		TraceContext:    run.TraceID,
+		ResumeValueJson: run.ResumeJSON,
 	}
 	if model.Provider != "" || model.Model != "" {
 		assign.Model = &runtimev1.ModelProfile{

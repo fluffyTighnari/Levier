@@ -325,9 +325,11 @@ class LevierClient:
         )
         return _require_ok(response, 200)
 
-    def resume_run(self, run_id: str) -> dict[str, Any]:
+    def resume_run(self, run_id: str, resume: Any = None) -> dict[str, Any]:
+        body = None if resume is None else {"resume": resume}
         response = self._request(
             "POST",
             f"/api/v1/runs/{urllib.parse.quote(run_id, safe='')}/resume",
+            body=body,
         )
         return _require_ok(response, 200)

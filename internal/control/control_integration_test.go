@@ -241,7 +241,7 @@ func TestWaitingResumeUsesPersistedCheckpoint(t *testing.T) {
 		t.Fatalf("run status = %+v, %v; want waiting", current, err)
 	}
 
-	resumed, err := ctrl.ResumeRun(ctx, run.RunID)
+	resumed, err := ctrl.ResumeRun(ctx, run.RunID, json.RawMessage(`"approved"`))
 	if err != nil {
 		t.Fatalf("ResumeRun() error = %v", err)
 	}
@@ -273,6 +273,9 @@ func TestWaitingResumeUsesPersistedCheckpoint(t *testing.T) {
 	resume := assign.GetResumeFrom()
 	if resume == nil || string(resume.GetState()) != `{"step":7}` {
 		t.Fatalf("resume = %+v", resume)
+	}
+	if string(assign.GetResumeValueJson()) != `"approved"` {
+		t.Fatalf("resume value = %s", assign.GetResumeValueJson())
 	}
 }
 

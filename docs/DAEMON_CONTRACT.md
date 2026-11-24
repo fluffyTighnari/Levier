@@ -55,6 +55,7 @@ mcp_bindings          McpBinding[]
 timeouts              run_ms / tool_ms
 session_id            longterm 会话（可空）
 resume_from           checkpoint（可空）
+resume_value_json     外部恢复值，JSON bytes（可空）
 trace_context         traceparent
 ```
 

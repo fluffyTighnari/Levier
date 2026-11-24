@@ -216,9 +216,9 @@ class LevierApp:
         """Cancel one of this App's Runs."""
         return self._client.cancel_run(run_id)
 
-    def resume_run(self, run_id: str) -> dict[str, Any]:
-        """Resume one of this App's waiting Runs."""
-        return self._client.resume_run(run_id)
+    def resume_run(self, run_id: str, resume: Any = None) -> dict[str, Any]:
+        """Resume one of this App's waiting Runs with optional external input."""
+        return self._client.resume_run(run_id, resume)
 
     def stop(self) -> None:
         """Request a graceful stop; safe to call from a signal handler."""

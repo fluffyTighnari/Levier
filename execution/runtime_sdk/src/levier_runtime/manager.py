@@ -8,6 +8,7 @@ Copyright 2026 The Levier Authors.
 from __future__ import annotations
 
 import asyncio
+import json
 import logging
 from dataclasses import dataclass
 from typing import Any, Protocol
@@ -122,6 +123,7 @@ class RunManager:
             envelope.attempt,
             envelope.lease_epoch,
         )
+        resume_value, resume_value_set = _parse_resume_value(assign.resume_value_json)
         ctx = RunContext(
             runtime_name=self.config.runtime_name,
             run_id=assign.run_id,
@@ -137,6 +139,8 @@ class RunManager:
             ),
             session_id=assign.session_id or None,
             resume_from=assign.resume_from.state or None,
+            resume_value=resume_value,
+            resume_value_set=resume_value_set,
             trace_id=assign.trace_context,
             channel=self.sender,
             events=events,
@@ -163,6 +167,11 @@ class RunManager:
             return "lease_epoch must be >= 1"
         if self._closing:
             return "runtime draining"
+        if assign.resume_value_json:
+            try:
+                json.loads(assign.resume_value_json.decode("utf-8"))
+            except (UnicodeDecodeError, json.JSONDecodeError):
+                return "resume_value_json is invalid"
         return ""
 
     async def _send_ack(
@@ -278,3 +287,12 @@ class RunManager:
         if tasks:
             await asyncio.gather(*tasks, return_exceptions=True)
         self.active.clear()
+
+
+def _parse_resume_value(raw: bytes) -> tuple[Any, bool]:
+    if not raw:
+        return None, False
+    try:
+        return json.loads(raw.decode("utf-8")), True
+    except (UnicodeDecodeError, json.JSONDecodeError):
+        return None, False

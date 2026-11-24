@@ -61,6 +61,8 @@ class FakeContext:
         self.input = [Message(role="user", content="start")]
         self.params: dict[str, Any] = {}
         self.resume_from = resume_from
+        self.resume_value: Any = None
+        self.resume_value_set = False
         self.checkpoint_data: bytes | None = None
         self.checkpoint_calls = 0
         self.events: list[tuple[str, dict[str, Any], str]] = []
@@ -125,11 +127,20 @@ class LangGraphDriverTest(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(paused["next"], ["ask"])
         self.assertEqual(paused["interrupts"][0]["value"]["question"], "approve?")
 
+        held: dict[str, Any] = {}
+
+        def build_held_graph(saver):
+            graph = build_graph(saver)
+            held["graph"] = graph
+            return graph
+
         second = FakeContext(resume_from=first.checkpoint_data)
+        second.resume_value = "api-approved"
+        second.resume_value_set = True
         resumed = LangGraphDriver(
-            build_graph,
+            build_held_graph,
             input_builder=lambda _ctx: {"value": 1, "answer": ""},
-            resume_value="approved",
+            resume_value="configured-fallback",
         )
         status = await resumed.run(second)
 
@@ -137,6 +148,10 @@ class LangGraphDriverTest(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(second.errors, [])
         self.assertIsNotNone(second.checkpoint_data)
         self.assertIn("graph.completed", [name for name, _, _ in second.events])
+        state = await held["graph"].aget_state(
+            {"configurable": {"thread_id": "session-1"}}
+        )
+        self.assertEqual(state.values["answer"], "api-approved")
 
     async def test_checkpoint_loader_rejects_wrong_session(self) -> None:
         ctx = FakeContext()

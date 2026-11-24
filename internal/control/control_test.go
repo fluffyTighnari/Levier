@@ -101,11 +101,16 @@ func (f *fakeRuns) ListQueuedRuns(context.Context) ([]runstore.Run, error) {
 	return nil, nil
 }
 
-func (f *fakeRuns) RequeueRun(_ context.Context, _ string) (runstore.Run, error) {
+func (f *fakeRuns) RequeueRun(ctx context.Context, runID string) (runstore.Run, error) {
+	return f.RequeueRunWithResume(ctx, runID, nil)
+}
+
+func (f *fakeRuns) RequeueRunWithResume(_ context.Context, _ string, resume json.RawMessage) (runstore.Run, error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	f.run.Status = "queued"
 	f.run.AssignedDaemonID = ""
+	f.run.ResumeJSON = append(json.RawMessage(nil), resume...)
 	f.run.LeaseEpoch++
 	return f.run, nil
 }
@@ -1090,7 +1095,7 @@ func TestResumeWaitingRunRequeuesAndRehydrates(t *testing.T) {
 	}}
 	ctrl := New(runs, hub, Config{Tasks: tasks, Checkpoints: checkpoints, Metrics: registry})
 
-	resumed, err := ctrl.ResumeRun(context.Background(), "run-1")
+	resumed, err := ctrl.ResumeRun(context.Background(), "run-1", json.RawMessage(`{"approved":true}`))
 	if err != nil {
 		t.Fatalf("ResumeRun() error = %v", err)
 	}
@@ -1140,12 +1145,15 @@ func TestResumeWaitingRunRequeuesAndRehydrates(t *testing.T) {
 		resume.GetEventSeqWatermark() != 10 || string(resume.GetState()) != `{"step":9}` {
 		t.Fatalf("resume = %+v", resume)
 	}
+	if string(assign.GetResumeValueJson()) != `{"approved":true}` {
+		t.Fatalf("resume value = %s", assign.GetResumeValueJson())
+	}
 }
 
 func TestResumeNonWaitingRunIsRejected(t *testing.T) {
 	runs := &fakeRuns{run: newRun()}
 	ctrl := New(runs, &fakeHub{}, Config{})
-	if _, err := ctrl.ResumeRun(context.Background(), "run-1"); !errors.Is(err, runstore.ErrRunNotResumable) {
+	if _, err := ctrl.ResumeRun(context.Background(), "run-1", nil); !errors.Is(err, runstore.ErrRunNotResumable) {
 		t.Fatalf("ResumeRun() error = %v, want ErrRunNotResumable", err)
 	}
 }

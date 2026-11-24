@@ -24,7 +24,8 @@ sequence numbers, cancellation, tool-call transport, and graceful shutdown.
 `RunContext` is plain Python:
 
 - core: `runtime_name`, `run_id`, `input`, `params`, `timeouts`, `cancelled`
-- optional: `model`, `tools`, `mcp_bindings`, `session_id`, `resume_from`
+- optional: `model`, `tools`, `mcp_bindings`, `session_id`, `resume_from`,
+  `resume_value` / `resume_value_set`
 - operations: `reply`, `call_tool`, `error`; optional `emit`, `checkpoint`
 - one-liners: `await ctx.toolbox()`, `await ctx.chat(...)`,
   `await ctx.invoke_all(reply, toolbox=...)`
@@ -69,6 +70,13 @@ Register Runtime-local tools before opening `ctx.toolbox()`, `ctx.chat()`, or
 `ctx.invoke()`. Names must not collide with control-plane tools. A Runtime that
 advertises `RuntimeCapabilities(runtime_tools=True)` makes the capability
 visible in the daemon handshake.
+
+## Resume values
+
+When the control plane resumes a waiting Run with an external value, the value
+is available as `ctx.resume_value`, with `ctx.resume_value_set` distinguishing
+an absent value from an explicit JSON `null`. This is the value a LangGraph
+driver passes to `Command(resume=...)` or a custom Runtime uses to continue.
 
 ## Runtime Driver
 

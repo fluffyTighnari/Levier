@@ -17,21 +17,21 @@ import (
 
 const runColumns = `
 	run_id, app_id, tenant_id, idempotency_key, request_hash, runtime, runtime_name,
-	params_json, input_json, status, attempt, session_id, model_json, run_timeout_ms,
+	params_json, input_json, status, attempt, session_id, resume_json, model_json, run_timeout_ms,
 	tool_timeout_ms, trace_id, assigned_daemon_id, lease_epoch, assigned_at,
 	last_event_attempt, last_event_seq, created_at, updated_at`
 
 const insertRunSQL = `
 	INSERT INTO runs (
 		run_id, app_id, tenant_id, idempotency_key, request_hash, runtime, runtime_name,
-		params_json, input_json, status, attempt, session_id, model_json, run_timeout_ms,
+		params_json, input_json, status, attempt, session_id, resume_json, model_json, run_timeout_ms,
 		tool_timeout_ms, trace_id, assigned_daemon_id, lease_epoch, assigned_at,
 		last_event_attempt, last_event_seq, created_at, updated_at
 	) VALUES (
 		$1, $2, $3, $4, $5, $6, $7,
 		$8, $9, $10, $11, NULLIF($12, ''), $13, $14,
-		$15, $16, NULLIF($17, ''), $18, $19, $20,
-		$21, $22, $23
+		$15, $16, $17, NULLIF($18, ''), $19, $20,
+		$21, $22, $23, $24
 	)
 	ON CONFLICT (app_id, idempotency_key)
 		WHERE idempotency_key <> ''
@@ -103,6 +103,7 @@ func createRun(ctx context.Context, q querier, normalized Run) (Run, error) {
 			normalized.Status,
 			normalized.Attempt,
 			normalized.SessionID,
+			normalized.ResumeJSON,
 			normalized.Model,
 			normalized.RunTimeoutMS,
 			normalized.ToolTimeoutMS,
@@ -245,6 +246,7 @@ func (s *Store) Transition(ctx context.Context, transition Transition) (Run, err
 		UPDATE runs
 		SET status = $5,
 		    attempt = attempt + $6,
+		    resume_json = CASE WHEN $5 = 'running' THEN NULL ELSE resume_json END,
 		    updated_at = now()
 		WHERE run_id = $1
 		  AND status = $2
@@ -269,11 +271,25 @@ func (s *Store) Transition(ctx context.Context, transition Transition) (Run, err
 
 // RequeueRun moves an assigned/running/waiting run back to queued with a new epoch.
 func (s *Store) RequeueRun(ctx context.Context, runID string) (Run, error) {
+	return s.RequeueRunWithResume(ctx, runID, nil)
+}
+
+// RequeueRunWithResume requeues a run and attaches a one-shot external resume
+// payload. The payload is included in the next TaskAssign and cleared when
+// that assignment succeeds. Passing nil clears any stale payload.
+func (s *Store) RequeueRunWithResume(ctx context.Context, runID string, resume json.RawMessage) (Run, error) {
 	if s == nil || s.pool == nil {
 		return Run{}, fmt.Errorf("runstore: postgres pool is nil")
 	}
 	if runID == "" {
 		return Run{}, fmt.Errorf("%w: run_id is required", ErrInvalidRun)
+	}
+	if len(resume) > 0 && !json.Valid(resume) {
+		return Run{}, fmt.Errorf("%w: resume_json is invalid JSON", ErrInvalidRun)
+	}
+	var resumeParam any
+	if len(resume) > 0 {
+		resumeParam = string(resume)
 	}
 	run, err := scanRun(s.pool.QueryRow(ctx, `
 		UPDATE runs
@@ -281,6 +297,7 @@ func (s *Store) RequeueRun(ctx context.Context, runID string) (Run, error) {
 		    lease_epoch = lease_epoch + 1,
 		    assigned_daemon_id = NULL,
 		    assigned_at = NULL,
+		    resume_json = COALESCE($2::jsonb, resume_json),
 		    updated_at = now()
 		WHERE run_id = $1
 		  AND status IN ('assigned', 'running', 'waiting')
@@ -294,7 +311,7 @@ func (s *Store) RequeueRun(ctx context.Context, runID string) (Run, error) {
 		          ('completed', 'failed', 'cancelled', 'timeout')
 		  )
 		RETURNING `+runColumns,
-		runID,
+		runID, resumeParam,
 	))
 	if errors.Is(err, pgx.ErrNoRows) {
 		if _, getErr := s.GetRun(ctx, runID); errors.Is(getErr, ErrRunNotFound) {
@@ -339,6 +356,9 @@ func normalizeRun(run Run) (Run, error) {
 	if run.Attempt < 0 || run.LeaseEpoch < 0 || run.LastEventAttempt < 0 || run.LastEventSeq < 0 {
 		return Run{}, fmt.Errorf("%w: counters must be non-negative", ErrInvalidRun)
 	}
+	if len(run.ResumeJSON) > 0 && !json.Valid(run.ResumeJSON) {
+		return Run{}, fmt.Errorf("%w: resume_json is invalid JSON", ErrInvalidRun)
+	}
 	var err error
 	run.Params, err = normalizeJSON(run.Params)
 	if err != nil {
@@ -362,7 +382,7 @@ func normalizeRun(run Run) (Run, error) {
 
 func scanRun(row pgx.Row) (Run, error) {
 	var run Run
-	var params, model []byte
+	var params, resume, model []byte
 	var sessionID, assignedDaemon pgtype.Text
 	var assignedAt pgtype.Timestamptz
 	if err := row.Scan(
@@ -378,6 +398,7 @@ func scanRun(row pgx.Row) (Run, error) {
 		&run.Status,
 		&run.Attempt,
 		&sessionID,
+		&resume,
 		&model,
 		&run.RunTimeoutMS,
 		&run.ToolTimeoutMS,
@@ -393,6 +414,7 @@ func scanRun(row pgx.Row) (Run, error) {
 		return Run{}, err
 	}
 	run.Params = json.RawMessage(params)
+	run.ResumeJSON = json.RawMessage(resume)
 	run.Model = json.RawMessage(model)
 	if sessionID.Valid {
 		run.SessionID = sessionID.String

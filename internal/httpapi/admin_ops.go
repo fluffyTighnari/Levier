@@ -228,7 +228,11 @@ func (s *Server) handleAdminResumeRun(w http.ResponseWriter, r *http.Request) {
 		writeErrorCode(w, errs.CodeNotImplemented, "resume is not configured", false)
 		return
 	}
-	resumed, err := s.resumer.ResumeRun(r.Context(), run.RunID)
+	var request ResumeRunRequest
+	if _, ok := s.readJSONBody(w, r, &request, false); !ok {
+		return
+	}
+	resumed, err := s.resumer.ResumeRun(r.Context(), run.RunID, request.Resume)
 	if errors.Is(err, runstore.ErrRunNotFound) {
 		writeErrorCode(w, errs.CodeRunNotFound, "run not found", false)
 		return

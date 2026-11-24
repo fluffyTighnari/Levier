@@ -29,6 +29,7 @@ def assign_envelope(
     attempt: int = 1,
     epoch: int = 1,
     session_id: str = "",
+    resume_value_json: bytes = b"",
 ) -> runtime_pb2.Envelope:
     assign = runtime_pb2.TaskAssign(
         run_id=run_id,
@@ -36,6 +37,7 @@ def assign_envelope(
         input=[runtime_pb2.ChatMessage(role="user", content="hello")],
         model=runtime_pb2.ModelProfile(provider="test", model="test-model"),
         session_id=session_id,
+        resume_value_json=resume_value_json,
     )
     assign.params.update({"max_steps": 3})
     return new_envelope(
@@ -107,6 +109,37 @@ class RunManagerTest(unittest.IsolatedAsyncioTestCase):
         )
         self.assertEqual(events[1].event.data.fields["content"].string_value, "answer")
         self.assertEqual(events[-1].event.data.fields["status"].string_value, "completed")
+
+    async def test_resume_value_is_parsed_into_context(self) -> None:
+        sender = FakeSender()
+        runner = CapturingRunner()
+        manager = RunManager(
+            sender,
+            ManagerConfig(runtime_name="echo1"),
+            runner,
+        )
+        await manager.handle(
+            assign_envelope(resume_value_json=b'{"approved":true}')
+        )
+        await self.wait_done(manager)
+
+        self.assertTrue(runner.context.resume_value_set)
+        self.assertEqual(runner.context.resume_value, {"approved": True})
+
+    async def test_invalid_resume_value_is_rejected(self) -> None:
+        sender = FakeSender()
+        manager = RunManager(
+            sender,
+            ManagerConfig(runtime_name="echo1"),
+            CapturingRunner(),
+        )
+        await manager.handle(assign_envelope(resume_value_json=b"{"))
+        ack = next(
+            item for item in sender.sent
+            if item.WhichOneof("payload") == "task_ack"
+        )
+        self.assertFalse(ack.task_ack.accepted)
+        self.assertIn("resume_value_json", ack.task_ack.reason)
 
     async def test_waiting_status_is_accepted(self) -> None:
         sender = FakeSender()

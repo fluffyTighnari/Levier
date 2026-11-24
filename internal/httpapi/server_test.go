@@ -158,10 +158,12 @@ type fakeResumer struct {
 	run    runstore.Run
 	err    error
 	called bool
+	resume json.RawMessage
 }
 
-func (f *fakeResumer) ResumeRun(_ context.Context, runID string) (runstore.Run, error) {
+func (f *fakeResumer) ResumeRun(_ context.Context, runID string, resume json.RawMessage) (runstore.Run, error) {
 	f.called = true
+	f.resume = append(json.RawMessage(nil), resume...)
 	if f.err != nil {
 		return runstore.Run{}, f.err
 	}
@@ -476,7 +478,7 @@ func TestResumeRun(t *testing.T) {
 	httpServer := httptest.NewServer(server.Handler())
 	defer httpServer.Close()
 
-	resp := request(t, http.MethodPost, httpServer.URL+"/api/v1/runs/run-1/resume", "token-1", nil)
+	resp := request(t, http.MethodPost, httpServer.URL+"/api/v1/runs/run-1/resume", "token-1", []byte(`{"resume":{"approved":true}}`))
 	if resp.StatusCode != http.StatusOK {
 		t.Fatalf("status = %d", resp.StatusCode)
 	}
@@ -487,6 +489,9 @@ func TestResumeRun(t *testing.T) {
 	resp.Body.Close()
 	if !resumer.called || resumed.Status != RunStatusQueued || resumed.SessionID != "session-1" {
 		t.Fatalf("resumed = %+v called=%v", resumed, resumer.called)
+	}
+	if string(resumer.resume) != `{"approved":true}` {
+		t.Fatalf("resume payload = %s", resumer.resume)
 	}
 }
 

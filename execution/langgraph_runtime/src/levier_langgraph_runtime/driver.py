@@ -80,7 +80,11 @@ class LangGraphDriver:
             if state.interrupts:
                 from langgraph.types import Command
 
-                graph_input = Command(resume=self._resume_value(ctx))
+                if getattr(ctx, "resume_value_set", False):
+                    resume_value = ctx.resume_value
+                else:
+                    resume_value = self._resume_value(ctx)
+                graph_input = Command(resume=resume_value)
             elif state.next:
                 graph_input = None
             else:

@@ -150,7 +150,7 @@ class Heartbeat(_message.Message):
     def __init__(self, running_count: _Optional[int] = ..., cpu_load: _Optional[float] = ..., mem_mb: _Optional[float] = ...) -> None: ...
 
 class TaskAssign(_message.Message):
-    __slots__ = ("run_id", "app_id", "params", "input", "model", "tools", "mcp_bindings", "timeouts", "session_id", "resume_from", "trace_context")
+    __slots__ = ("run_id", "app_id", "params", "input", "model", "tools", "mcp_bindings", "timeouts", "session_id", "resume_from", "trace_context", "resume_value_json")
     RUN_ID_FIELD_NUMBER: _ClassVar[int]
     APP_ID_FIELD_NUMBER: _ClassVar[int]
     PARAMS_FIELD_NUMBER: _ClassVar[int]
@@ -162,6 +162,7 @@ class TaskAssign(_message.Message):
     SESSION_ID_FIELD_NUMBER: _ClassVar[int]
     RESUME_FROM_FIELD_NUMBER: _ClassVar[int]
     TRACE_CONTEXT_FIELD_NUMBER: _ClassVar[int]
+    RESUME_VALUE_JSON_FIELD_NUMBER: _ClassVar[int]
     run_id: str
     app_id: str
     params: _struct_pb2.Struct
@@ -173,7 +174,8 @@ class TaskAssign(_message.Message):
     session_id: str
     resume_from: Checkpoint
     trace_context: str
-    def __init__(self, run_id: _Optional[str] = ..., app_id: _Optional[str] = ..., params: _Optional[_Union[_struct_pb2.Struct, _Mapping]] = ..., input: _Optional[_Iterable[_Union[ChatMessage, _Mapping]]] = ..., model: _Optional[_Union[ModelProfile, _Mapping]] = ..., tools: _Optional[_Iterable[_Union[ToolManifest, _Mapping]]] = ..., mcp_bindings: _Optional[_Iterable[_Union[McpBinding, _Mapping]]] = ..., timeouts: _Optional[_Union[TimeoutProfile, _Mapping]] = ..., session_id: _Optional[str] = ..., resume_from: _Optional[_Union[Checkpoint, _Mapping]] = ..., trace_context: _Optional[str] = ...) -> None: ...
+    resume_value_json: bytes
+    def __init__(self, run_id: _Optional[str] = ..., app_id: _Optional[str] = ..., params: _Optional[_Union[_struct_pb2.Struct, _Mapping]] = ..., input: _Optional[_Iterable[_Union[ChatMessage, _Mapping]]] = ..., model: _Optional[_Union[ModelProfile, _Mapping]] = ..., tools: _Optional[_Iterable[_Union[ToolManifest, _Mapping]]] = ..., mcp_bindings: _Optional[_Iterable[_Union[McpBinding, _Mapping]]] = ..., timeouts: _Optional[_Union[TimeoutProfile, _Mapping]] = ..., session_id: _Optional[str] = ..., resume_from: _Optional[_Union[Checkpoint, _Mapping]] = ..., trace_context: _Optional[str] = ..., resume_value_json: _Optional[bytes] = ...) -> None: ...
 
 class ChatMessage(_message.Message):
     __slots__ = ("role", "content", "name")
