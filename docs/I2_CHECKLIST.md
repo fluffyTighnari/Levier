@@ -456,13 +456,13 @@ levier_run_resume_total
 
 ## 14. 完成标记
 
-- [ ] I2.0 契约冻结完成。
-- [ ] Runtime Driver 和能力声明完成。
-- [ ] 自定义事件完成。
-- [ ] Runtime-local 工具和 Provider 完成。
-- [ ] Session / Checkpoint / Resume 完成。
-- [ ] LangGraph 原型完成。
-- [ ] PostgreSQL 集成测试完成。
+- [x] I2.0 契约冻结完成。
+- [x] Runtime Driver 和能力声明完成。
+- [x] 自定义事件完成。
+- [x] Runtime-local 工具和 Provider 完成。
+- [x] Session / Checkpoint / Resume 完成。
+- [x] LangGraph 原型完成。
+- [x] PostgreSQL 集成测试完成。
 - [ ] 指标、日志和文档完成。
 - [ ] I2 退出评审通过。
 - [ ] 下一版本 I3 的范围确认。
@@ -512,3 +512,6 @@ Runtime：Driver、能力声明、自定义事件、Runtime-local 工具
 | LangGraph checkpoint | 已完成 | LangGraph checkpointer 状态编码进 Levier checkpoint |
 | LangGraph interrupt/resume | 已完成 | interrupt 返回 `waiting`，resume 从 checkpoint 继续 |
 | LangGraph 核心隔离 | 已完成 | 未安装 LangGraph 不影响 runtime_sdk、echo、react |
+| PostgreSQL waiting/resume 集成 | 已完成 | 真实 PostgreSQL 保存 checkpoint、waiting、resume、attempt+1 |
+| I2.6 加固 | 进行中 | 指标和集成测试已补；Session 管理 API、能力指标未做 |
+| I2 退出评审 | 待开始 | 需要确认剩余非阻塞项 |
