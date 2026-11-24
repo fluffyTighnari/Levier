@@ -488,7 +488,7 @@ Runtime：Driver、能力声明、自定义事件、Runtime-local 工具
 | Runtime Capabilities | 已完成 | SDK 元数据、Hello 握手、daemon 注册 |
 | Driver 生命周期 | 已完成 | 启动、关闭 Hook |
 | Driver 测试 | 已完成 | 简单入口和 Driver 都通过 |
-| I2.0 协议契约 | 部分完成 | 能力握手、自定义事件、checkpoint 元数据已落地；waiting/resume API 待开始 |
+| I2.0 协议契约 | 已完成 | 能力握手、自定义事件、checkpoint、waiting/resume 已落地 |
 | 自定义事件 | 已完成 | proto、SDK、控制面持久化、API/WS、测试 |
 | Checkpoint Store | 已完成 | PostgreSQL 保存、读取、租户归属校验 |
 | Checkpoint 自动恢复 | 已完成 | 新 Run 加载同 Session 的最新 checkpoint |
@@ -497,6 +497,9 @@ Runtime：Driver、能力声明、自定义事件、Runtime-local 工具
 | Session 归属校验 | 已完成 | App/租户不匹配时拒绝 |
 | SDK Session 透传 | 已完成 | runtime_type、session_id 可传入 |
 | Session 管理 API | 待开始 | 列表、关闭、清理、过期 |
-| Waiting / Resume API | 待开始 | 暂停和外部恢复入口 |
+| Waiting 状态 | 已完成 | 仅 longterm；要求已保存 checkpoint |
+| Waiting / Resume API | 已完成 | `POST /api/v1/runs/{id}/resume`，恢复后重新入队 |
+| Waiting SDK | 已完成 | `return await ctx.wait(state)`，`resume_run` 已透传 |
+| Waiting 时长/恢复指标 | 待开始 | `levier_run_waiting_seconds` 等 |
 | Runtime-local 工具 | 待开始 | 统一工具来源 |
 | LangGraph 原型 | 待开始 | 依赖前序能力 |
