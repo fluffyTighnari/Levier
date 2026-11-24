@@ -317,10 +317,17 @@ request_id
 
 | 项目 | 状态 | 说明 |
 |---|---|---|
-| I3.0 契约与数据库 | 进行中 | gateway / connection lease schema 与迁移 |
+| I3.0 契约与数据库 | 已完成 | `0018` schema、cluster store、lease 状态机、迁移测试 |
+| Gateway Registry | 已完成 | gateway instance 注册、心跳、epoch、离线 |
+| Runtime Connection Lease | 已完成 | daemon 注册、连接 epoch、心跳、接管、离线 |
+| App Connection Lease | 已完成 | App 连接注册、协议版本、能力、心跳 |
+| App Execution Lease | 已完成 | 单一 local-tool 执行连接、抢占和释放 |
+| Notification Outbox | 已完成 | 持久化通知、待发送查询、发布/重试标记 |
+| WSToken 无状态化 | 已完成 | 共享 secret HMAC token，可跨副本验证 |
+| App Bridge v2 契约 | 已完成 | 协议版本、幂等、进度、取消的最小契约 |
 | I3.1 角色拆分 | 待开始 | 保持单进程兼容 |
 | I3.2 Runtime Gateway | 待开始 | daemon 跨副本路由 |
-| I3.3 App Gateway | 待开始 | App 连接与 WSToken |
+| I3.3 App Gateway | 待开始 | App 连接与事件 fanout |
 | I3.4 Local Tool 路由 | 待开始 | 定向投递与幂等 |
 | I3.5 通知与恢复 | 待开始 | 补偿与 reaper |
 | I3.6 多副本测试 | 待开始 | 故障矩阵 |
