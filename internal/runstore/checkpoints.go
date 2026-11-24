@@ -39,6 +39,7 @@ func (s *Store) SaveCheckpoint(ctx context.Context, checkpoint Checkpoint) error
 			updated_at = now()
 		WHERE sessions.app_id = EXCLUDED.app_id
 		  AND sessions.tenant_id = EXCLUDED.tenant_id
+		  AND sessions.status <> 'expired'
 	`, checkpoint.SessionID, checkpoint.AppID, checkpoint.TenantID,
 		checkpoint.RunID, checkpoint.State, checkpoint.EventAttempt, checkpoint.EventWatermark)
 	if err != nil {

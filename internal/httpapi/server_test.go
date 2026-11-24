@@ -116,6 +116,39 @@ func (f *fakeStore) ListSessionEvents(_ context.Context, _ string, afterAttempt 
 	return f.sessionEvents, nil
 }
 
+func (f *fakeStore) ListSessions(_ context.Context, appID, tenantID string, limit int) ([]runstore.Session, error) {
+	result := make([]runstore.Session, 0)
+	for _, session := range f.sessions {
+		if session.AppID != appID || session.TenantID != tenantID {
+			continue
+		}
+		result = append(result, session)
+		if limit > 0 && len(result) >= limit {
+			break
+		}
+	}
+	return result, nil
+}
+
+func (f *fakeStore) CloseSession(_ context.Context, sessionID, appID, tenantID string) (runstore.Session, error) {
+	session, ok := f.sessions[sessionID]
+	if !ok || session.AppID != appID || session.TenantID != tenantID {
+		return runstore.Session{}, runstore.ErrSessionNotFound
+	}
+	for _, run := range f.runs {
+		if run.SessionID != sessionID {
+			continue
+		}
+		switch run.Status {
+		case runstore.StatusQueued, runstore.StatusAssigned, runstore.StatusRunning, runstore.StatusWaiting:
+			return runstore.Session{}, runstore.ErrSessionActive
+		}
+	}
+	session.Status = "expired"
+	f.sessions[sessionID] = session
+	return session, nil
+}
+
 func (f *fakeStore) ListRuns(_ context.Context, filter runstore.RunFilter) (runstore.RunPage, error) {
 	page := runstore.RunPage{Runs: []runstore.Run{}}
 	for _, run := range f.runs {
@@ -518,6 +551,60 @@ func TestResumeRunRejectsNonWaiting(t *testing.T) {
 	resp.Body.Close()
 	if body.Error.Code != "RUN_NOT_RESUMABLE" {
 		t.Fatalf("error code = %q", body.Error.Code)
+	}
+}
+
+func TestListAndCloseSessions(t *testing.T) {
+	store := newFakeStore()
+	store.sessions["session-1"] = runstore.Session{
+		SessionID: "session-1", AppID: "app-1", TenantID: "default", Status: "active",
+	}
+	store.runs["run-1"] = runstore.Run{
+		RunID: "run-1", AppID: "app-1", SessionID: "session-1", Status: "completed",
+	}
+	server := NewServer(store, &fakeQueue{}, Config{BearerToken: "token-1", AllowLegacyBearer: true})
+	httpServer := httptest.NewServer(server.Handler())
+	defer httpServer.Close()
+
+	resp := request(t, http.MethodGet, httpServer.URL+"/api/v1/sessions?app_id=app-1", "token-1", nil)
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("GET sessions status = %d", resp.StatusCode)
+	}
+	var listing SessionListResponse
+	if err := json.NewDecoder(resp.Body).Decode(&listing); err != nil {
+		t.Fatalf("decode sessions: %v", err)
+	}
+	resp.Body.Close()
+	if len(listing.Sessions) != 1 || listing.Sessions[0].SessionID != "session-1" {
+		t.Fatalf("sessions = %+v", listing.Sessions)
+	}
+
+	resp = request(t, http.MethodPost, httpServer.URL+"/api/v1/sessions/session-1/close?app_id=app-1", "token-1", nil)
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("close status = %d", resp.StatusCode)
+	}
+	var closed SessionView
+	_ = json.NewDecoder(resp.Body).Decode(&closed)
+	resp.Body.Close()
+	if closed.Status != "expired" {
+		t.Fatalf("closed session = %+v", closed)
+	}
+
+	store.runs["run-1"] = runstore.Run{
+		RunID: "run-1", AppID: "app-1", SessionID: "session-1", Status: "running",
+	}
+	store.sessions["session-1"] = runstore.Session{
+		SessionID: "session-1", AppID: "app-1", TenantID: "default", Status: "active",
+	}
+	resp = request(t, http.MethodPost, httpServer.URL+"/api/v1/sessions/session-1/close?app_id=app-1", "token-1", nil)
+	if resp.StatusCode != http.StatusConflict {
+		t.Fatalf("active close status = %d", resp.StatusCode)
+	}
+	var body ErrorResponse
+	_ = json.NewDecoder(resp.Body).Decode(&body)
+	resp.Body.Close()
+	if body.Error.Code != "SESSION_ACTIVE" {
+		t.Fatalf("active close error = %+v", body)
 	}
 }
 

@@ -38,8 +38,15 @@ func (s *Store) EnsureSession(ctx context.Context, sessionID, appID, tenantID st
 	if session.AppID != appID || session.TenantID != tenantID {
 		return Session{}, ErrSessionConflict
 	}
+	if session.Status == "expired" {
+		return Session{}, ErrSessionClosed
+	}
 	return session, nil
 }
+
+const sessionColumns = `
+	session_id, app_id, tenant_id, status, current_run_id, event_attempt,
+	event_watermark, created_at, updated_at, expires_at`
 
 // GetSession returns one longterm session.
 func (s *Store) GetSession(ctx context.Context, sessionID string) (Session, error) {
@@ -49,15 +56,133 @@ func (s *Store) GetSession(ctx context.Context, sessionID string) (Session, erro
 	if sessionID == "" {
 		return Session{}, fmt.Errorf("runstore: session_id is required")
 	}
+	session, err := scanSession(s.pool.QueryRow(ctx, `
+		SELECT `+sessionColumns+`
+		FROM sessions
+		WHERE session_id = $1
+	`, sessionID))
+	if errors.Is(err, pgx.ErrNoRows) {
+		return Session{}, ErrSessionNotFound
+	}
+	if err != nil {
+		return Session{}, fmt.Errorf("get session: %w", err)
+	}
+	return session, nil
+}
+
+// ListSessions returns sessions owned by one app in a tenant.
+func (s *Store) ListSessions(ctx context.Context, appID, tenantID string, limit int) ([]Session, error) {
+	if s == nil || s.pool == nil {
+		return nil, fmt.Errorf("runstore: postgres pool is nil")
+	}
+	if appID == "" {
+		return nil, fmt.Errorf("%w: app_id is required", ErrInvalidRun)
+	}
+	if tenantID == "" {
+		tenantID = DefaultTenantID
+	}
+	if limit <= 0 {
+		limit = 50
+	}
+	if limit > 200 {
+		limit = 200
+	}
+	rows, err := s.pool.Query(ctx, `
+		SELECT `+sessionColumns+`
+		FROM sessions
+		WHERE app_id = $1 AND tenant_id = $2
+		ORDER BY updated_at DESC, session_id DESC
+		LIMIT $3
+	`, appID, tenantID, limit)
+	if err != nil {
+		return nil, fmt.Errorf("list sessions: %w", err)
+	}
+	defer rows.Close()
+	sessions := make([]Session, 0, limit)
+	for rows.Next() {
+		session, err := scanSession(rows)
+		if err != nil {
+			return nil, fmt.Errorf("list sessions: scan: %w", err)
+		}
+		sessions = append(sessions, session)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("list sessions: rows: %w", err)
+	}
+	return sessions, nil
+}
+
+// CloseSession marks a session expired when it has no active runs.
+func (s *Store) CloseSession(ctx context.Context, sessionID, appID, tenantID string) (Session, error) {
+	if s == nil || s.pool == nil {
+		return Session{}, fmt.Errorf("runstore: postgres pool is nil")
+	}
+	if sessionID == "" || appID == "" {
+		return Session{}, fmt.Errorf("%w: session_id and app_id are required", ErrInvalidRun)
+	}
+	if tenantID == "" {
+		tenantID = DefaultTenantID
+	}
+	session, err := scanSession(s.pool.QueryRow(ctx, `
+		UPDATE sessions s
+		SET status = 'expired',
+		    expires_at = now(),
+		    updated_at = now()
+		WHERE s.session_id = $1
+		  AND s.app_id = $2
+		  AND s.tenant_id = $3
+		  AND s.status <> 'expired'
+		  AND NOT EXISTS (
+		    SELECT 1
+		    FROM runs r
+		    WHERE r.session_id = s.session_id
+		      AND r.status IN ('queued', 'assigned', 'running', 'waiting')
+		  )
+		RETURNING `+sessionColumns,
+		sessionID, appID, tenantID,
+	))
+	if err == nil {
+		return session, nil
+	}
+	if !errors.Is(err, pgx.ErrNoRows) {
+		return Session{}, fmt.Errorf("close session: %w", err)
+	}
+
+	current, getErr := s.GetSession(ctx, sessionID)
+	if errors.Is(getErr, ErrSessionNotFound) {
+		return Session{}, ErrSessionNotFound
+	}
+	if getErr != nil {
+		return Session{}, getErr
+	}
+	if current.AppID != appID || current.TenantID != tenantID {
+		return Session{}, ErrSessionNotFound
+	}
+	if current.Status == "expired" {
+		return current, nil
+	}
+	var active bool
+	if err := s.pool.QueryRow(ctx, `
+		SELECT EXISTS (
+			SELECT 1
+			FROM runs
+			WHERE session_id = $1
+			  AND status IN ('queued', 'assigned', 'running', 'waiting')
+		)
+	`, sessionID).Scan(&active); err != nil {
+		return Session{}, fmt.Errorf("close session: check active runs: %w", err)
+	}
+	if active {
+		return Session{}, ErrSessionActive
+	}
+	return Session{}, fmt.Errorf("close session: concurrent update")
+}
+
+func scanSession(row pgx.Row) (Session, error) {
 	var session Session
 	var currentRunID pgtype.Text
 	var expiresAt pgtype.Timestamptz
-	err := s.pool.QueryRow(ctx, `
-		SELECT session_id, app_id, tenant_id, status, current_run_id, event_attempt,
-		       event_watermark, created_at, updated_at, expires_at
-		FROM sessions
-		WHERE session_id = $1
-	`, sessionID).Scan(
+	if err := row.Scan(
 		&session.SessionID,
 		&session.AppID,
 		&session.TenantID,
@@ -68,12 +193,8 @@ func (s *Store) GetSession(ctx context.Context, sessionID string) (Session, erro
 		&session.CreatedAt,
 		&session.UpdatedAt,
 		&expiresAt,
-	)
-	if errors.Is(err, pgx.ErrNoRows) {
-		return Session{}, ErrSessionNotFound
-	}
-	if err != nil {
-		return Session{}, fmt.Errorf("get session: %w", err)
+	); err != nil {
+		return Session{}, err
 	}
 	if currentRunID.Valid {
 		session.CurrentRunID = currentRunID.String

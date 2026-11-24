@@ -598,6 +598,48 @@ paths:
                 $ref: '#/components/schemas/ResumeRunResponse'
         default:
           $ref: '#/components/responses/Error'
+  /sessions:
+    get:
+      summary: List longterm sessions for the authenticated App
+      operationId: listSessions
+      parameters:
+        - name: app_id
+          in: query
+          required: false
+          description: Required for admin/legacy bearer credentials.
+          schema:
+            type: string
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        "200":
+          description: Session list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SessionListResponse'
+        default:
+          $ref: '#/components/responses/Error'
+  /sessions/{session_id}/close:
+    post:
+      summary: Close a longterm session that has no active runs
+      operationId: closeSession
+      parameters:
+        - $ref: '#/components/parameters/SessionID'
+        - name: app_id
+          in: query
+          required: false
+          description: Required for admin/legacy bearer credentials.
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Closed session
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SessionView'
+        default:
+          $ref: '#/components/responses/Error'
   /sessions/{session_id}:
     get:
       summary: Read a longterm session
@@ -928,6 +970,14 @@ components:
           type: string
         status:
           type: string
+    SessionListResponse:
+      type: object
+      required: [sessions]
+      properties:
+        sessions:
+          type: array
+          items:
+            $ref: '#/components/schemas/SessionView'
     SessionView:
       type: object
       required: [session_id, app_id, status, event_attempt, event_watermark, created_at, updated_at]

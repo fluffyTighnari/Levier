@@ -325,6 +325,22 @@ class LevierClient:
         )
         return _require_ok(response, 200)
 
+    def list_sessions(self, *, limit: int = 50) -> list[dict[str, Any]]:
+        response = self._request(
+            "GET",
+            f"/api/v1/sessions?limit={int(limit)}",
+        )
+        payload = _require_ok(response, 200)
+        sessions = payload.get("sessions")
+        return [session for session in sessions if isinstance(session, dict)] if isinstance(sessions, list) else []
+
+    def close_session(self, session_id: str) -> dict[str, Any]:
+        response = self._request(
+            "POST",
+            f"/api/v1/sessions/{urllib.parse.quote(session_id, safe='')}/close",
+        )
+        return _require_ok(response, 200)
+
     def resume_run(self, run_id: str, resume: Any = None) -> dict[str, Any]:
         body = None if resume is None else {"resume": resume}
         response = self._request(

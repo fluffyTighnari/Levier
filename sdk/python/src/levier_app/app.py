@@ -220,6 +220,14 @@ class LevierApp:
         """Resume one of this App's waiting Runs with optional external input."""
         return self._client.resume_run(run_id, resume)
 
+    def list_sessions(self, *, limit: int = 50) -> list[dict[str, Any]]:
+        """List this App's longterm sessions."""
+        return self._client.list_sessions(limit=limit)
+
+    def close_session(self, session_id: str) -> dict[str, Any]:
+        """Close one of this App's sessions that has no active Runs."""
+        return self._client.close_session(session_id)
+
     def stop(self) -> None:
         """Request a graceful stop; safe to call from a signal handler."""
         self._stop_requested = True

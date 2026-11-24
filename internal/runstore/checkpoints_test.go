@@ -78,6 +78,54 @@ func TestEnsureSessionOwnership(t *testing.T) {
 	}
 }
 
+func TestListAndCloseSessions(t *testing.T) {
+	store := New(testPool(t))
+	ctx := context.Background()
+	app := createApp(t, store)
+	other := createApp(t, store)
+	sessionID := "session-" + id.New()
+	if _, err := store.EnsureSession(ctx, sessionID, app.AppID, app.TenantID); err != nil {
+		t.Fatalf("EnsureSession() error = %v", err)
+	}
+	if _, err := store.EnsureSession(ctx, "other-"+sessionID, other.AppID, other.TenantID); err != nil {
+		t.Fatalf("EnsureSession(other) error = %v", err)
+	}
+	sessions, err := store.ListSessions(ctx, app.AppID, app.TenantID, 10)
+	if err != nil || len(sessions) != 1 || sessions[0].SessionID != sessionID {
+		t.Fatalf("ListSessions() = %+v, %v", sessions, err)
+	}
+	closed, err := store.CloseSession(ctx, sessionID, app.AppID, app.TenantID)
+	if err != nil {
+		t.Fatalf("CloseSession() error = %v", err)
+	}
+	if closed.Status != "expired" || closed.ExpiresAt == nil {
+		t.Fatalf("closed = %+v", closed)
+	}
+	if _, err := store.EnsureSession(ctx, sessionID, app.AppID, app.TenantID); !errors.Is(err, ErrSessionClosed) {
+		t.Fatalf("EnsureSession(closed) error = %v, want ErrSessionClosed", err)
+	}
+	if _, err := store.CloseSession(ctx, sessionID, app.AppID, app.TenantID); err != nil {
+		t.Fatalf("CloseSession(idempotent) error = %v", err)
+	}
+	if _, err := store.CloseSession(ctx, sessionID, other.AppID, other.TenantID); !errors.Is(err, ErrSessionNotFound) {
+		t.Fatalf("CloseSession(other) error = %v, want ErrSessionNotFound", err)
+	}
+
+	activeID := "session-" + id.New()
+	if _, err := store.EnsureSession(ctx, activeID, app.AppID, app.TenantID); err != nil {
+		t.Fatalf("EnsureSession(active) error = %v", err)
+	}
+	if _, err := store.CreateRun(ctx, Run{
+		RunID: "run-" + id.New(), AppID: app.AppID, Runtime: "longterm",
+		RuntimeName: "longterm1", SessionID: activeID,
+	}); err != nil {
+		t.Fatalf("CreateRun() error = %v", err)
+	}
+	if _, err := store.CloseSession(ctx, activeID, app.AppID, app.TenantID); !errors.Is(err, ErrSessionActive) {
+		t.Fatalf("CloseSession(active) error = %v, want ErrSessionActive", err)
+	}
+}
+
 func TestSaveCheckpointRejectsSessionOwnerMismatch(t *testing.T) {
 	store := New(testPool(t))
 	ctx := context.Background()

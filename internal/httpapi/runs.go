@@ -70,6 +70,10 @@ func (s *Server) handleCreateRun(w http.ResponseWriter, r *http.Request) {
 					writeErrorCode(w, errs.CodeForbidden, err.Error(), false)
 					return
 				}
+				if errors.Is(err, runstore.ErrSessionClosed) {
+					writeErrorCode(w, errs.CodeSessionClosed, err.Error(), false)
+					return
+				}
 				writeErrorCode(w, errs.CodeInternal, "ensure session failed", true)
 				return
 			}

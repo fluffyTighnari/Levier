@@ -43,6 +43,8 @@ const (
 	CodeAppNameConflict              Code = "APP_NAME_CONFLICT"
 	CodeRunNotFound                  Code = "RUN_NOT_FOUND"
 	CodeSessionNotFound              Code = "SESSION_NOT_FOUND"
+	CodeSessionClosed                Code = "SESSION_CLOSED"
+	CodeSessionActive                Code = "SESSION_ACTIVE"
 	CodeIdempotencyConflict          Code = "IDEMPOTENCY_CONFLICT"
 	CodeBadTool                      Code = "BAD_TOOL"
 	CodeBadMCP                       Code = "BAD_MCP"
@@ -172,6 +174,8 @@ var codeMetaByCode = map[Code]codeMeta{
 	CodeAppNameConflict:              {retryable: false, status: 409},
 	CodeRunNotFound:                  {retryable: false, status: 404},
 	CodeSessionNotFound:              {retryable: false, status: 404},
+	CodeSessionClosed:                {retryable: false, status: 409},
+	CodeSessionActive:                {retryable: false, status: 409},
 	CodeIdempotencyConflict:          {retryable: false, status: 409},
 	CodeBadTool:                      {retryable: false, status: 400},
 	CodeBadMCP:                       {retryable: false, status: 400},

@@ -158,6 +158,11 @@ type ResumeRunResponse struct {
 	Status    RunStatus `json:"status"`
 }
 
+// SessionListResponse is the App-visible session listing.
+type SessionListResponse struct {
+	Sessions []SessionView `json:"sessions"`
+}
+
 // SessionView is the App-visible longterm session.
 type SessionView struct {
 	SessionID      string     `json:"session_id"`

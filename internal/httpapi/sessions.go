@@ -12,6 +12,63 @@ import (
 	"github.com/fluffyTighnari/levier/internal/runstore"
 )
 
+func (s *Server) handleListSessions(w http.ResponseWriter, r *http.Request) {
+	lister, ok := s.runs.(SessionLister)
+	if !ok {
+		writeErrorCode(w, errs.CodeNotImplemented, "session listing is not configured", false)
+		return
+	}
+	appID, ok := s.resolveRequestApp(w, r, r.URL.Query().Get("app_id"))
+	if !ok {
+		return
+	}
+	tenantID := s.tenantForApp(r.Context(), appID)
+	limit, err := queryLimit(r.URL.Query().Get("limit"))
+	if err != nil {
+		writeErrorCode(w, errs.CodeBadRequest, "limit must be between 1 and 1000", false)
+		return
+	}
+	sessions, err := lister.ListSessions(r.Context(), appID, tenantID, limit)
+	if err != nil {
+		writeErrorCode(w, errs.CodeInternal, "list sessions failed", true)
+		return
+	}
+	views := make([]SessionView, 0, len(sessions))
+	for _, session := range sessions {
+		views = append(views, sessionView(session))
+	}
+	setResponseTenant(w, tenantID)
+	writeJSON(w, http.StatusOK, SessionListResponse{Sessions: views})
+}
+
+func (s *Server) handleCloseSession(w http.ResponseWriter, r *http.Request) {
+	closer, ok := s.runs.(SessionCloser)
+	if !ok {
+		writeErrorCode(w, errs.CodeNotImplemented, "session close is not configured", false)
+		return
+	}
+	appID, ok := s.resolveRequestApp(w, r, r.URL.Query().Get("app_id"))
+	if !ok {
+		return
+	}
+	tenantID := s.tenantForApp(r.Context(), appID)
+	session, err := closer.CloseSession(r.Context(), r.PathValue("session_id"), appID, tenantID)
+	if errors.Is(err, runstore.ErrSessionNotFound) {
+		writeErrorCode(w, errs.CodeSessionNotFound, "session not found", false)
+		return
+	}
+	if errors.Is(err, runstore.ErrSessionActive) {
+		writeErrorCode(w, errs.CodeSessionActive, "session has active runs", false)
+		return
+	}
+	if err != nil {
+		writeErrorCode(w, errs.CodeInternal, "close session failed", true)
+		return
+	}
+	setResponseTenant(w, session.TenantID)
+	writeJSON(w, http.StatusOK, sessionView(session))
+}
+
 func (s *Server) handleGetSession(w http.ResponseWriter, r *http.Request) {
 	if s.sessions == nil {
 		writeErrorCode(w, errs.CodeNotImplemented, "session store is not configured", false)

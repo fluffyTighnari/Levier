@@ -16,6 +16,10 @@ var (
 	ErrSessionNotFound = errors.New("session not found")
 	// ErrSessionConflict reports a session owned by another app or tenant.
 	ErrSessionConflict = errors.New("session belongs to another app or tenant")
+	// ErrSessionClosed reports a session that was explicitly closed.
+	ErrSessionClosed = errors.New("session is closed")
+	// ErrSessionActive reports a session that still has active runs.
+	ErrSessionActive = errors.New("session has active runs")
 	// ErrCheckpointNotFound reports a session without a stored checkpoint.
 	ErrCheckpointNotFound = errors.New("checkpoint not found")
 	// ErrCheckpointConflict reports a session owned by another app or tenant.

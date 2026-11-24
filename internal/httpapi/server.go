@@ -48,6 +48,16 @@ type SessionCreator interface {
 	EnsureSession(ctx context.Context, sessionID, appID, tenantID string) (runstore.Session, error)
 }
 
+// SessionLister lists sessions owned by one App and tenant.
+type SessionLister interface {
+	ListSessions(ctx context.Context, appID, tenantID string, limit int) ([]runstore.Session, error)
+}
+
+// SessionCloser closes one session when it has no active runs.
+type SessionCloser interface {
+	CloseSession(ctx context.Context, sessionID, appID, tenantID string) (runstore.Session, error)
+}
+
 // AppRegistry is the App registration subset used by the HTTP API.
 type AppRegistry interface {
 	RegisterApp(ctx context.Context, name string, multiagent bool) (runstore.App, string, bool, error)
@@ -218,8 +228,10 @@ func (s *Server) routes() {
 	s.mux.HandleFunc("GET "+APIPrefix+"/runs/{run_id}/events", s.handleListEvents)
 	s.mux.HandleFunc("POST "+APIPrefix+"/runs/{run_id}/cancel", s.handleCancelRun)
 	s.mux.HandleFunc("POST "+APIPrefix+"/runs/{run_id}/resume", s.handleResumeRun)
+	s.mux.HandleFunc("GET "+APIPrefix+"/sessions", s.handleListSessions)
 	s.mux.HandleFunc("GET "+APIPrefix+"/sessions/{session_id}", s.handleGetSession)
 	s.mux.HandleFunc("GET "+APIPrefix+"/sessions/{session_id}/events", s.handleListSessionEvents)
+	s.mux.HandleFunc("POST "+APIPrefix+"/sessions/{session_id}/close", s.handleCloseSession)
 	s.mux.HandleFunc("POST "+APIPrefix+"/ws-token", s.handleIssueWSToken)
 	s.mux.HandleFunc("POST /admin/apps", s.handleAdminCreateApp)
 	s.mux.HandleFunc("GET /admin/apps", s.handleAdminListApps)

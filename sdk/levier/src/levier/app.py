@@ -188,6 +188,12 @@ class App:
     def resume_run(self, run_id: str, resume: Any = None) -> dict[str, Any]:
         return self._app.resume_run(run_id, resume)
 
+    def list_sessions(self, *, limit: int = 50) -> list[dict[str, Any]]:
+        return self._app.list_sessions(limit=limit)
+
+    def close_session(self, session_id: str) -> dict[str, Any]:
+        return self._app.close_session(session_id)
+
     def _start_serving(self) -> None:
         if self._serve_thread is not None and self._serve_thread.is_alive():
             return

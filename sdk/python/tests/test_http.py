@@ -126,6 +126,25 @@ class HttpTest(unittest.TestCase):
             {"resume": {"approved": True}},
         )
 
+    def test_list_and_close_sessions(self) -> None:
+        transport = FakeTransport(
+            response(200, {"sessions": [{"session_id": "session-1"}]}),
+            response(200, {"session_id": "session-1", "status": "expired"}),
+        )
+        client = LevierClient("http://levier:8080", "app-1", "secret", transport)
+        sessions = client.list_sessions(limit=10)
+        self.assertEqual(sessions[0]["session_id"], "session-1")
+        self.assertEqual(
+            transport.requests[0].url,
+            "http://levier:8080/api/v1/sessions?limit=10",
+        )
+        closed = client.close_session("session-1")
+        self.assertEqual(closed["status"], "expired")
+        self.assertEqual(
+            transport.requests[1].url,
+            "http://levier:8080/api/v1/sessions/session-1/close",
+        )
+
     def test_http_error_is_normalized(self) -> None:
         transport = FakeTransport(response(401, {
             "error": {"code": "UNAUTHORIZED", "message": "bad key"},

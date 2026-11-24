@@ -88,6 +88,8 @@
 - `App.get_events(run_id)` — 获取 Run 事件列表。
 - `App.cancel_run(run_id)` — 取消 Run。
 - `App.resume_run(run_id, resume=None)` — 恢复 waiting Run，可携带外部恢复值。
+- `App.list_sessions(*, limit=50)` — 列出当前 App 的 longterm session。
+- `App.close_session(session_id)` — 关闭没有活跃 Run 的 session。
 - `App.list_model_providers()` — 获取当前 App 可见的模型目录。
 - `App.tools_manifest()` — 获取已注册工具的 manifest。
 - `levier.tool(function=None, *, name=None, description=None, schema=None, timeout_ms=10000)` — 把普通函数转成 `Tool`，从类型注解和 docstring 自动生成 schema。
@@ -115,6 +117,8 @@
 - `LevierApp.get_events(run_id, *, after_seq=0, limit=1000)` — 查询 Run 事件。
 - `LevierApp.cancel_run(run_id)` — 取消 Run。
 - `LevierApp.resume_run(run_id, resume=None)` — 恢复 waiting Run，可携带外部恢复值。
+- `LevierApp.list_sessions(*, limit=50)` — 列出当前 App 的 longterm session。
+- `LevierApp.close_session(session_id)` — 关闭没有活跃 Run 的 session。
 - `Credentials` / `Secret` — 凭据数据类和不会在 repr/str 中泄漏的 key 包装。
 - `load_credentials` / `save_credentials` / `default_credentials_path` / `resolve_server` / `credential_fingerprint` — 凭据读写、默认路径、server 解析和 key 指纹。
 - `CredentialsError` / `LevierError` / `HTTPError` / `ProtocolError` / `TransportError` / `AppInactiveError` / `ToolExecutionError` — SDK 结构化错误类型。
@@ -222,8 +226,10 @@
 - `POST /api/v1/apps` — 更新 App 元信息。
 - `GET /api/v1/apps/{app_id}` — 查询当前 App。
 - `GET /api/v1/model-providers` — App 可读的模型目录。
+- `GET /api/v1/sessions?limit=` — 列出当前 App 的 session。
 - `GET /api/v1/sessions/{id}` — 查询 session。
 - `GET /api/v1/sessions/{id}/events` — 查询 session 事件。
+- `POST /api/v1/sessions/{id}/close` — 关闭没有活跃 Run 的 session；有活跃 Run 时返回 409。
 - `POST /admin/apps` — 创建 App 并一次性返回 key。
 - `GET /admin/apps` — 管理员列出 App。
 - `POST /admin/apps/{id}/rotate-key` — 轮换 App key。

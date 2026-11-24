@@ -57,8 +57,10 @@ func TestOpenAPIMatchesHTTPRoutes(t *testing.T) {
 		"/runs/{run_id}/events":                {"get"},
 		"/runs/{run_id}/cancel":                {"post"},
 		"/runs/{run_id}/resume":                {"post"},
+		"/sessions":                            {"get"},
 		"/sessions/{session_id}":               {"get"},
 		"/sessions/{session_id}/events":        {"get"},
+		"/sessions/{session_id}/close":         {"post"},
 		"/ws-token":                            {"post"},
 		"/ws":                                  {"get"},
 	}
