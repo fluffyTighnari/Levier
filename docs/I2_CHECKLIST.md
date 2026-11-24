@@ -488,8 +488,10 @@ Runtime：Driver、能力声明、自定义事件、Runtime-local 工具
 | Runtime Capabilities | 已完成 | SDK 元数据、Hello 握手、daemon 注册 |
 | Driver 生命周期 | 已完成 | 启动、关闭 Hook |
 | Driver 测试 | 已完成 | 简单入口和 Driver 都通过 |
-| I2.0 协议契约 | 部分完成 | 能力握手、自定义事件已落地；checkpoint、resume 待开始 |
+| I2.0 协议契约 | 部分完成 | 能力握手、自定义事件、checkpoint 元数据已落地；waiting/resume API 待开始 |
 | 自定义事件 | 已完成 | proto、SDK、控制面持久化、API/WS、测试 |
-| Checkpoint / Resume | 待开始 | 控制面闭环 |
+| Checkpoint Store | 已完成 | PostgreSQL 保存、读取、租户归属校验 |
+| Checkpoint 自动恢复 | 已完成 | 新 Run 加载同 Session 的最新 checkpoint |
+| Waiting / Resume API | 待开始 | 暂停和外部恢复入口 |
 | Runtime-local 工具 | 待开始 | 统一工具来源 |
 | LangGraph 原型 | 待开始 | 依赖前序能力 |
