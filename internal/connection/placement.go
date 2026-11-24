@@ -156,6 +156,7 @@ func (h *Hub) reaper() {
 
 func cloneInfo(info DaemonInfo) DaemonInfo {
 	info.Labels = cloneStringMap(info.Labels)
+	info.Capabilities = cloneStringMap(info.Capabilities)
 	info.RunningRuns = append([]RunRef(nil), info.RunningRuns...)
 	return info
 }

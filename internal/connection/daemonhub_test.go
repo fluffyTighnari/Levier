@@ -77,6 +77,7 @@ func TestHelloAuthHeartbeatAndCleanup(t *testing.T) {
 	cfg := fakedaemon.DefaultConfig()
 	cfg.DaemonID = "daemon-1"
 	cfg.AuthToken = "token-1"
+	cfg.Capabilities = map[string]string{"checkpoint": "true"}
 	cfg.HeartbeatInterval = 20 * time.Millisecond
 	daemon, err := fakedaemon.Dial(context.Background(), addr, cfg)
 	if err != nil {
@@ -96,6 +97,9 @@ func TestHelloAuthHeartbeatAndCleanup(t *testing.T) {
 	}
 	if info.RuntimeName != "fake1" {
 		t.Fatalf("runtime_name = %q", info.RuntimeName)
+	}
+	if info.Capabilities["checkpoint"] != "true" {
+		t.Fatalf("capabilities = %+v", info.Capabilities)
 	}
 	firstHeartbeat := info.LastHeartbeat
 	if !waitFor(t, time.Second, func() bool {

@@ -39,6 +39,7 @@ class ChannelConfig:
     max_concurrent_runs: int = 4
     version: str = "0.1.0"
     labels: dict[str, str] = field(default_factory=dict)
+    capabilities: dict[str, str] = field(default_factory=dict)
     tls: bool = False
     heartbeat_interval: float = 10.0
     reconnect_initial: float = 1.0
@@ -229,6 +230,7 @@ class ChannelClient:
             max_concurrent_runs=self.config.max_concurrent_runs,
             version=self.config.version,
             labels=self.config.labels,
+            capabilities=self.config.capabilities,
             running_runs=running,
         )
         return new_envelope(hello, "hello")

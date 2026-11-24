@@ -29,6 +29,7 @@ type Config struct {
 	MaxConcurrentRuns          int32
 	Version                    string
 	Labels                     map[string]string
+	Capabilities               map[string]string
 	AutoEcho                   bool
 	Accept                     bool
 	RejectReason               string
@@ -253,6 +254,7 @@ func (d *Daemon) sendHello() error {
 		MaxConcurrentRuns: d.cfg.MaxConcurrentRuns,
 		Version:           d.cfg.Version,
 		Labels:            d.cfg.Labels,
+		Capabilities:      d.cfg.Capabilities,
 	}
 	env, err := protocol.New(hello)
 	if err != nil {

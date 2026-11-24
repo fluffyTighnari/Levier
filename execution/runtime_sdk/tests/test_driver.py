@@ -48,8 +48,14 @@ class DriverTest(unittest.IsolatedAsyncioTestCase):
         driver = DriverWithHooks(calls)
         runtime = Runtime(config=test_runtime_config())
 
-        async def fake_serve(run, *, handle_signals: bool = True) -> None:
+        async def fake_serve(
+            run,
+            *,
+            handle_signals: bool = True,
+            capabilities: dict[str, str] | None = None,
+        ) -> None:
             calls.append("serve")
+            self.assertEqual(capabilities, driver.capabilities.as_labels())
             status = await run(object())
             self.assertEqual(status, "completed")
 
@@ -70,7 +76,12 @@ class DriverTest(unittest.IsolatedAsyncioTestCase):
 
         runtime = Runtime(config=test_runtime_config())
 
-        async def fake_serve(run, *, handle_signals: bool = True) -> None:
+        async def fake_serve(
+            run,
+            *,
+            handle_signals: bool = True,
+            capabilities: dict[str, str] | None = None,
+        ) -> None:
             await run(object())
 
         with patch.object(runtime, "serve", new=fake_serve):

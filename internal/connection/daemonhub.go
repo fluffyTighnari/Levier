@@ -69,6 +69,7 @@ type DaemonInfo struct {
 	MaxConcurrentRuns int32
 	Version           string
 	Labels            map[string]string
+	Capabilities      map[string]string
 	RunningRuns       []RunRef
 	RunningCount      int32
 	Reserved          int32
@@ -215,6 +216,7 @@ func (h *Hub) Channel(stream runtimev1.RuntimeService_ChannelServer) error {
 		MaxConcurrentRuns: hello.GetMaxConcurrentRuns(),
 		Version:           hello.GetVersion(),
 		Labels:            cloneStringMap(hello.GetLabels()),
+		Capabilities:      cloneStringMap(hello.GetCapabilities()),
 		ConnectedAt:       now,
 		LastHeartbeat:     now,
 	}

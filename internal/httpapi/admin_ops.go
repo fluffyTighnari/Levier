@@ -67,17 +67,18 @@ type AdminTaskListResponse struct {
 
 // AdminDaemonView is the operator projection of a connected daemon.
 type AdminDaemonView struct {
-	DaemonID          string    `json:"daemon_id"`
-	RuntimeName       string    `json:"runtime_name"`
-	Status            string    `json:"status"`
-	RuntimeType       string    `json:"runtime_type"`
-	MaxConcurrentRuns int32     `json:"max_concurrent_runs"`
-	Running           int32     `json:"running"`
-	Reserved          int32     `json:"reserved"`
-	Available         int32     `json:"available"`
-	Healthy           bool      `json:"healthy"`
-	ConnectedAt       time.Time `json:"connected_at"`
-	LastHeartbeat     time.Time `json:"last_heartbeat"`
+	DaemonID          string            `json:"daemon_id"`
+	RuntimeName       string            `json:"runtime_name"`
+	Status            string            `json:"status"`
+	RuntimeType       string            `json:"runtime_type"`
+	MaxConcurrentRuns int32             `json:"max_concurrent_runs"`
+	Capabilities      map[string]string `json:"capabilities,omitempty"`
+	Running           int32             `json:"running"`
+	Reserved          int32             `json:"reserved"`
+	Available         int32             `json:"available"`
+	Healthy           bool              `json:"healthy"`
+	ConnectedAt       time.Time         `json:"connected_at"`
+	LastHeartbeat     time.Time         `json:"last_heartbeat"`
 }
 
 // AdminDaemonListResponse is the operator daemon list.
@@ -239,6 +240,7 @@ func (s *Server) handleAdminListDaemons(w http.ResponseWriter, r *http.Request) 
 			Status:            info.Status,
 			RuntimeType:       info.RuntimeType.String(),
 			MaxConcurrentRuns: total,
+			Capabilities:      info.Capabilities,
 			Running:           info.RunningCount,
 			Reserved:          info.Reserved,
 			Available:         available,

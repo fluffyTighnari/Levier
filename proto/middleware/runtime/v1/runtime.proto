@@ -90,6 +90,8 @@ message Hello {
   repeated RunningRun running_runs = 8;
   // runtime_name is the stable App-facing routing name, e.g. react1.
   string runtime_name = 9;
+  // capabilities are runtime capability flags advertised to the control plane.
+  map<string, string> capabilities = 10;
 }
 
 // RunningRun identifies a run and its ownership generation.

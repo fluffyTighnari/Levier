@@ -20,7 +20,7 @@ from . import __version__
 from .channel.client import ChannelClient, ChannelConfig
 from .config import RuntimeConfig, load_runtime_config
 from .context import RunContext
-from .driver import RuntimeDriver, driver_run_function
+from .driver import RuntimeDriver, driver_capabilities, driver_run_function
 from .manager import ManagerConfig, RunManager
 
 RunFunction = Callable[[RunContext], Awaitable[str]]
@@ -100,7 +100,13 @@ class Runtime:
             pass
         return 0
 
-    async def serve(self, run: RunFunction, *, handle_signals: bool = True) -> None:
+    async def serve(
+        self,
+        run: RunFunction,
+        *,
+        handle_signals: bool = True,
+        capabilities: dict[str, str] | None = None,
+    ) -> None:
         """Async variant used by tests and embedding callers."""
         channel = ChannelClient(
             ChannelConfig(
@@ -112,6 +118,7 @@ class Runtime:
                 max_concurrent_runs=self.config.max_concurrent_runs,
                 version=__version__,
                 labels=dict(self.config.labels),
+                capabilities=dict(capabilities or {}),
                 tls=self.config.middleware.tls,
             ),
             logger=logging.getLogger("levier_runtime.channel"),
@@ -154,8 +161,13 @@ class Runtime:
     ) -> None:
         """Serve a driver while keeping the simple callable path compatible."""
         await _call_driver_hook(driver, "on_start", self)
+        capabilities = driver_capabilities(driver).as_labels()
         try:
-            await self.serve(driver_run_function(driver), handle_signals=handle_signals)
+            await self.serve(
+                driver_run_function(driver),
+                handle_signals=handle_signals,
+                capabilities=capabilities,
+            )
         finally:
             await _call_driver_hook(driver, "on_shutdown")
 

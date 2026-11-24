@@ -528,7 +528,9 @@ type Hello struct {
 	// running_runs lists runs still executing after a reconnect.
 	RunningRuns []*RunningRun `protobuf:"bytes,8,rep,name=running_runs,json=runningRuns,proto3" json:"running_runs,omitempty"`
 	// runtime_name is the stable App-facing routing name, e.g. react1.
-	RuntimeName   string `protobuf:"bytes,9,opt,name=runtime_name,json=runtimeName,proto3" json:"runtime_name,omitempty"`
+	RuntimeName string `protobuf:"bytes,9,opt,name=runtime_name,json=runtimeName,proto3" json:"runtime_name,omitempty"`
+	// capabilities are runtime capability flags advertised to the control plane.
+	Capabilities  map[string]string `protobuf:"bytes,10,rep,name=capabilities,proto3" json:"capabilities,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -617,6 +619,13 @@ func (x *Hello) GetRuntimeName() string {
 		return x.RuntimeName
 	}
 	return ""
+}
+
+func (x *Hello) GetCapabilities() map[string]string {
+	if x != nil {
+		return x.Capabilities
+	}
+	return nil
 }
 
 // RunningRun identifies a run and its ownership generation.
@@ -1870,7 +1879,7 @@ const file_middleware_runtime_v1_runtime_proto_rawDesc = "" +
 	"checkpoint\x18\x13 \x01(\v2!.middleware.runtime.v1.CheckpointH\x00R\n" +
 	"checkpoint\x12:\n" +
 	"\x05error\x18\x14 \x01(\v2\".middleware.runtime.v1.ErrorReportH\x00R\x05errorB\t\n" +
-	"\apayload\"\xc0\x03\n" +
+	"\apayload\"\xd5\x04\n" +
 	"\x05Hello\x12\x1b\n" +
 	"\tdaemon_id\x18\x01 \x01(\tR\bdaemonId\x12\x1d\n" +
 	"\n" +
@@ -1880,8 +1889,13 @@ const file_middleware_runtime_v1_runtime_proto_rawDesc = "" +
 	"\aversion\x18\x06 \x01(\tR\aversion\x12@\n" +
 	"\x06labels\x18\a \x03(\v2(.middleware.runtime.v1.Hello.LabelsEntryR\x06labels\x12D\n" +
 	"\frunning_runs\x18\b \x03(\v2!.middleware.runtime.v1.RunningRunR\vrunningRuns\x12!\n" +
-	"\fruntime_name\x18\t \x01(\tR\vruntimeName\x1a9\n" +
+	"\fruntime_name\x18\t \x01(\tR\vruntimeName\x12R\n" +
+	"\fcapabilities\x18\n" +
+	" \x03(\v2..middleware.runtime.v1.Hello.CapabilitiesEntryR\fcapabilities\x1a9\n" +
 	"\vLabelsEntry\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\x1a?\n" +
+	"\x11CapabilitiesEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01J\x04\b\x05\x10\x06\"D\n" +
 	"\n" +
@@ -2028,7 +2042,7 @@ func file_middleware_runtime_v1_runtime_proto_rawDescGZIP() []byte {
 }
 
 var file_middleware_runtime_v1_runtime_proto_enumTypes = make([]protoimpl.EnumInfo, 3)
-var file_middleware_runtime_v1_runtime_proto_msgTypes = make([]protoimpl.MessageInfo, 23)
+var file_middleware_runtime_v1_runtime_proto_msgTypes = make([]protoimpl.MessageInfo, 24)
 var file_middleware_runtime_v1_runtime_proto_goTypes = []any{
 	(RuntimeType)(0),        // 0: middleware.runtime.v1.RuntimeType
 	(ToolScope)(0),          // 1: middleware.runtime.v1.ToolScope
@@ -2053,10 +2067,11 @@ var file_middleware_runtime_v1_runtime_proto_goTypes = []any{
 	(*Checkpoint)(nil),      // 20: middleware.runtime.v1.Checkpoint
 	(*ErrorReport)(nil),     // 21: middleware.runtime.v1.ErrorReport
 	nil,                     // 22: middleware.runtime.v1.Hello.LabelsEntry
-	nil,                     // 23: middleware.runtime.v1.ModelProfile.ParamsEntry
-	nil,                     // 24: middleware.runtime.v1.McpBinding.EnvEntry
-	nil,                     // 25: middleware.runtime.v1.McpBinding.HeadersEntry
-	(*structpb.Struct)(nil), // 26: google.protobuf.Struct
+	nil,                     // 23: middleware.runtime.v1.Hello.CapabilitiesEntry
+	nil,                     // 24: middleware.runtime.v1.ModelProfile.ParamsEntry
+	nil,                     // 25: middleware.runtime.v1.McpBinding.EnvEntry
+	nil,                     // 26: middleware.runtime.v1.McpBinding.HeadersEntry
+	(*structpb.Struct)(nil), // 27: google.protobuf.Struct
 }
 var file_middleware_runtime_v1_runtime_proto_depIdxs = []int32{
 	4,  // 0: middleware.runtime.v1.Envelope.hello:type_name -> middleware.runtime.v1.Hello
@@ -2073,27 +2088,28 @@ var file_middleware_runtime_v1_runtime_proto_depIdxs = []int32{
 	0,  // 11: middleware.runtime.v1.Hello.runtime_type:type_name -> middleware.runtime.v1.RuntimeType
 	22, // 12: middleware.runtime.v1.Hello.labels:type_name -> middleware.runtime.v1.Hello.LabelsEntry
 	5,  // 13: middleware.runtime.v1.Hello.running_runs:type_name -> middleware.runtime.v1.RunningRun
-	26, // 14: middleware.runtime.v1.TaskAssign.params:type_name -> google.protobuf.Struct
-	9,  // 15: middleware.runtime.v1.TaskAssign.input:type_name -> middleware.runtime.v1.ChatMessage
-	10, // 16: middleware.runtime.v1.TaskAssign.model:type_name -> middleware.runtime.v1.ModelProfile
-	11, // 17: middleware.runtime.v1.TaskAssign.tools:type_name -> middleware.runtime.v1.ToolManifest
-	12, // 18: middleware.runtime.v1.TaskAssign.mcp_bindings:type_name -> middleware.runtime.v1.McpBinding
-	13, // 19: middleware.runtime.v1.TaskAssign.timeouts:type_name -> middleware.runtime.v1.TimeoutProfile
-	20, // 20: middleware.runtime.v1.TaskAssign.resume_from:type_name -> middleware.runtime.v1.Checkpoint
-	23, // 21: middleware.runtime.v1.ModelProfile.params:type_name -> middleware.runtime.v1.ModelProfile.ParamsEntry
-	1,  // 22: middleware.runtime.v1.ToolManifest.scope:type_name -> middleware.runtime.v1.ToolScope
-	24, // 23: middleware.runtime.v1.McpBinding.env:type_name -> middleware.runtime.v1.McpBinding.EnvEntry
-	25, // 24: middleware.runtime.v1.McpBinding.headers:type_name -> middleware.runtime.v1.McpBinding.HeadersEntry
-	2,  // 25: middleware.runtime.v1.Event.type:type_name -> middleware.runtime.v1.EventType
-	26, // 26: middleware.runtime.v1.Event.data:type_name -> google.protobuf.Struct
-	18, // 27: middleware.runtime.v1.ToolCallResult.error:type_name -> middleware.runtime.v1.ErrorInfo
-	3,  // 28: middleware.runtime.v1.RuntimeService.Channel:input_type -> middleware.runtime.v1.Envelope
-	3,  // 29: middleware.runtime.v1.RuntimeService.Channel:output_type -> middleware.runtime.v1.Envelope
-	29, // [29:30] is the sub-list for method output_type
-	28, // [28:29] is the sub-list for method input_type
-	28, // [28:28] is the sub-list for extension type_name
-	28, // [28:28] is the sub-list for extension extendee
-	0,  // [0:28] is the sub-list for field type_name
+	23, // 14: middleware.runtime.v1.Hello.capabilities:type_name -> middleware.runtime.v1.Hello.CapabilitiesEntry
+	27, // 15: middleware.runtime.v1.TaskAssign.params:type_name -> google.protobuf.Struct
+	9,  // 16: middleware.runtime.v1.TaskAssign.input:type_name -> middleware.runtime.v1.ChatMessage
+	10, // 17: middleware.runtime.v1.TaskAssign.model:type_name -> middleware.runtime.v1.ModelProfile
+	11, // 18: middleware.runtime.v1.TaskAssign.tools:type_name -> middleware.runtime.v1.ToolManifest
+	12, // 19: middleware.runtime.v1.TaskAssign.mcp_bindings:type_name -> middleware.runtime.v1.McpBinding
+	13, // 20: middleware.runtime.v1.TaskAssign.timeouts:type_name -> middleware.runtime.v1.TimeoutProfile
+	20, // 21: middleware.runtime.v1.TaskAssign.resume_from:type_name -> middleware.runtime.v1.Checkpoint
+	24, // 22: middleware.runtime.v1.ModelProfile.params:type_name -> middleware.runtime.v1.ModelProfile.ParamsEntry
+	1,  // 23: middleware.runtime.v1.ToolManifest.scope:type_name -> middleware.runtime.v1.ToolScope
+	25, // 24: middleware.runtime.v1.McpBinding.env:type_name -> middleware.runtime.v1.McpBinding.EnvEntry
+	26, // 25: middleware.runtime.v1.McpBinding.headers:type_name -> middleware.runtime.v1.McpBinding.HeadersEntry
+	2,  // 26: middleware.runtime.v1.Event.type:type_name -> middleware.runtime.v1.EventType
+	27, // 27: middleware.runtime.v1.Event.data:type_name -> google.protobuf.Struct
+	18, // 28: middleware.runtime.v1.ToolCallResult.error:type_name -> middleware.runtime.v1.ErrorInfo
+	3,  // 29: middleware.runtime.v1.RuntimeService.Channel:input_type -> middleware.runtime.v1.Envelope
+	3,  // 30: middleware.runtime.v1.RuntimeService.Channel:output_type -> middleware.runtime.v1.Envelope
+	30, // [30:31] is the sub-list for method output_type
+	29, // [29:30] is the sub-list for method input_type
+	29, // [29:29] is the sub-list for extension type_name
+	29, // [29:29] is the sub-list for extension extendee
+	0,  // [0:29] is the sub-list for field type_name
 }
 
 func init() { file_middleware_runtime_v1_runtime_proto_init() }
@@ -2120,7 +2136,7 @@ func file_middleware_runtime_v1_runtime_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_middleware_runtime_v1_runtime_proto_rawDesc), len(file_middleware_runtime_v1_runtime_proto_rawDesc)),
 			NumEnums:      3,
-			NumMessages:   23,
+			NumMessages:   24,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

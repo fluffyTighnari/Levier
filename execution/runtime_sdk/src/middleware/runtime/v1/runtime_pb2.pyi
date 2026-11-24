@@ -90,8 +90,15 @@ class Envelope(_message.Message):
     def __init__(self, msg_id: _Optional[str] = ..., correlation_id: _Optional[str] = ..., run_id: _Optional[str] = ..., ts_ms: _Optional[int] = ..., attempt: _Optional[int] = ..., lease_epoch: _Optional[int] = ..., hello: _Optional[_Union[Hello, _Mapping]] = ..., heartbeat: _Optional[_Union[Heartbeat, _Mapping]] = ..., task_assign: _Optional[_Union[TaskAssign, _Mapping]] = ..., task_ack: _Optional[_Union[TaskAck, _Mapping]] = ..., event: _Optional[_Union[Event, _Mapping]] = ..., tool_call_request: _Optional[_Union[ToolCallRequest, _Mapping]] = ..., tool_call_result: _Optional[_Union[ToolCallResult, _Mapping]] = ..., cancel: _Optional[_Union[Cancel, _Mapping]] = ..., reconcile: _Optional[_Union[Reconcile, _Mapping]] = ..., checkpoint: _Optional[_Union[Checkpoint, _Mapping]] = ..., error: _Optional[_Union[ErrorReport, _Mapping]] = ...) -> None: ...
 
 class Hello(_message.Message):
-    __slots__ = ("daemon_id", "auth_token", "runtime_type", "max_concurrent_runs", "version", "labels", "running_runs", "runtime_name")
+    __slots__ = ("daemon_id", "auth_token", "runtime_type", "max_concurrent_runs", "version", "labels", "running_runs", "runtime_name", "capabilities")
     class LabelsEntry(_message.Message):
+        __slots__ = ("key", "value")
+        KEY_FIELD_NUMBER: _ClassVar[int]
+        VALUE_FIELD_NUMBER: _ClassVar[int]
+        key: str
+        value: str
+        def __init__(self, key: _Optional[str] = ..., value: _Optional[str] = ...) -> None: ...
+    class CapabilitiesEntry(_message.Message):
         __slots__ = ("key", "value")
         KEY_FIELD_NUMBER: _ClassVar[int]
         VALUE_FIELD_NUMBER: _ClassVar[int]
@@ -106,6 +113,7 @@ class Hello(_message.Message):
     LABELS_FIELD_NUMBER: _ClassVar[int]
     RUNNING_RUNS_FIELD_NUMBER: _ClassVar[int]
     RUNTIME_NAME_FIELD_NUMBER: _ClassVar[int]
+    CAPABILITIES_FIELD_NUMBER: _ClassVar[int]
     daemon_id: str
     auth_token: str
     runtime_type: RuntimeType
@@ -114,7 +122,8 @@ class Hello(_message.Message):
     labels: _containers.ScalarMap[str, str]
     running_runs: _containers.RepeatedCompositeFieldContainer[RunningRun]
     runtime_name: str
-    def __init__(self, daemon_id: _Optional[str] = ..., auth_token: _Optional[str] = ..., runtime_type: _Optional[_Union[RuntimeType, str]] = ..., max_concurrent_runs: _Optional[int] = ..., version: _Optional[str] = ..., labels: _Optional[_Mapping[str, str]] = ..., running_runs: _Optional[_Iterable[_Union[RunningRun, _Mapping]]] = ..., runtime_name: _Optional[str] = ...) -> None: ...
+    capabilities: _containers.ScalarMap[str, str]
+    def __init__(self, daemon_id: _Optional[str] = ..., auth_token: _Optional[str] = ..., runtime_type: _Optional[_Union[RuntimeType, str]] = ..., max_concurrent_runs: _Optional[int] = ..., version: _Optional[str] = ..., labels: _Optional[_Mapping[str, str]] = ..., running_runs: _Optional[_Iterable[_Union[RunningRun, _Mapping]]] = ..., runtime_name: _Optional[str] = ..., capabilities: _Optional[_Mapping[str, str]] = ...) -> None: ...
 
 class RunningRun(_message.Message):
     __slots__ = ("run_id", "lease_epoch")

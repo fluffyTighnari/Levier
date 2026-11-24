@@ -28,7 +28,7 @@ class RuntimeCapabilities:
     longterm: bool = False
 
     def as_dict(self) -> dict[str, bool]:
-        """Return a plain mapping suitable for a future capability handshake."""
+        """Return a plain capability mapping."""
         return {
             "checkpoint": self.checkpoint,
             "custom_events": self.custom_events,
@@ -38,6 +38,10 @@ class RuntimeCapabilities:
             "sandbox": self.sandbox,
             "longterm": self.longterm,
         }
+
+    def as_labels(self) -> dict[str, str]:
+        """Return capability labels for the RuntimeChannel handshake."""
+        return {key: str(value).lower() for key, value in self.as_dict().items()}
 
 
 @runtime_checkable
