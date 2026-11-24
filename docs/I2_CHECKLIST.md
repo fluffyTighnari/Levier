@@ -506,4 +506,8 @@ Runtime：Driver、能力声明、自定义事件、Runtime-local 工具
 | Runtime-local 统一清单 | 已完成 | 与 App/global/MCP 工具一起进入 `ctx.tools` 和 toolbox |
 | Runtime-local 路由 | 已完成 | 不经过 App Gateway；与控制面工具重名明确拒绝 |
 | Runtime-local 调用观测 | 已完成 | `TOOL_CALL_BEGIN/END` 带 `tool_scope=runtime`，invocation 透传 |
-| LangGraph 原型 | 待开始 | 依赖前序能力 |
+| LangGraph 可选包 | 已完成 | `execution/langgraph_runtime`，核心 SDK 不依赖 LangGraph |
+| LangGraph 节点事件 | 已完成 | `graph.node.started` / `graph.node.finished` 自定义事件 |
+| LangGraph checkpoint | 已完成 | LangGraph checkpointer 状态编码进 Levier checkpoint |
+| LangGraph interrupt/resume | 已完成 | interrupt 返回 `waiting`，resume 从 checkpoint 继续 |
+| LangGraph 核心隔离 | 已完成 | 未安装 LangGraph 不影响 runtime_sdk、echo、react |
