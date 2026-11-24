@@ -16,10 +16,13 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"google.golang.org/grpc"
+	"google.golang.org/protobuf/types/known/structpb"
 
+	runtimev1 "github.com/fluffyTighnari/levier/gen/middleware/runtime/v1"
 	"github.com/fluffyTighnari/levier/internal/connection"
 	"github.com/fluffyTighnari/levier/internal/db"
 	"github.com/fluffyTighnari/levier/internal/id"
+	"github.com/fluffyTighnari/levier/internal/protocol"
 	"github.com/fluffyTighnari/levier/internal/runstore"
 	"github.com/fluffyTighnari/levier/internal/testutil"
 	"github.com/fluffyTighnari/levier/internal/testutil/fakedaemon"
@@ -158,6 +161,119 @@ func TestDispatchEchoRunEndToEnd(t *testing.T) {
 	}
 	current, _ := runs.GetRun(ctx, run.RunID)
 	t.Fatalf("run status = %q, want completed", current.Status)
+}
+
+func TestWaitingResumeUsesPersistedCheckpoint(t *testing.T) {
+	pool := integrationPool(t)
+	ctx := context.Background()
+	runs := runstore.New(pool)
+	app, err := runs.CreateApp(ctx, runstore.App{
+		AppID:      "app-" + id.New(),
+		Name:       "app-" + id.New(),
+		APIKeyHash: "hash",
+	})
+	if err != nil {
+		t.Fatalf("CreateApp() error = %v", err)
+	}
+	sessionID := "session-" + id.New()
+	if _, err := runs.EnsureSession(ctx, sessionID, app.AppID, app.TenantID); err != nil {
+		t.Fatalf("EnsureSession() error = %v", err)
+	}
+	run, err := runs.CreateRun(ctx, runstore.Run{
+		RunID:       "run-" + id.New(),
+		AppID:       app.AppID,
+		Runtime:     "longterm",
+		RuntimeName: "longterm1",
+		SessionID:   sessionID,
+		Input:       json.RawMessage(`[{"role":"user","content":"hello"}]`),
+		Model:       json.RawMessage(`{"provider":"anthropic","model":"claude-test"}`),
+	})
+	if err != nil {
+		t.Fatalf("CreateRun() error = %v", err)
+	}
+	if _, err := runs.AssignRun(ctx, runstore.Assignment{
+		RunID: run.RunID, ExpectedStatus: runstore.StatusQueued,
+		ExpectedAttempt: 0, ExpectedLeaseEpoch: 0,
+		Attempt: 1, LeaseEpoch: 1, DaemonID: "daemon-1",
+	}); err != nil {
+		t.Fatalf("AssignRun() error = %v", err)
+	}
+	if _, err := runs.Transition(ctx, runstore.Transition{
+		RunID: run.RunID, ExpectedStatus: runstore.StatusAssigned,
+		ToStatus: runstore.StatusRunning, ExpectedAttempt: 1, ExpectedLeaseEpoch: 1,
+	}); err != nil {
+		t.Fatalf("Transition(running) error = %v", err)
+	}
+	if err := runs.SaveCheckpoint(ctx, runstore.Checkpoint{
+		SessionID: sessionID,
+		AppID:     app.AppID,
+		TenantID:  app.TenantID,
+		RunID:     run.RunID,
+		State:     []byte(`{"step":7}`),
+	}); err != nil {
+		t.Fatalf("SaveCheckpoint() error = %v", err)
+	}
+
+	hub := &fakeHub{daemonID: "daemon-1"}
+	tasks := &fakeTaskCanceller{}
+	ctrl := New(runs, hub, Config{Checkpoints: runs, Tasks: tasks})
+	ctrl.Start(ctx)
+	t.Cleanup(ctrl.Close)
+
+	data, _ := structpb.NewStruct(map[string]any{"status": "waiting"})
+	waiting, err := protocol.NewRun(run.RunID, 1, 1, &runtimev1.Event{
+		Seq: 1, Type: runtimev1.EventType_RUN_STATUS, Source: protocol.EventSourceDaemon, Data: data,
+	})
+	if err != nil {
+		t.Fatalf("NewRun(waiting) error = %v", err)
+	}
+	ctrl.HandleEnvelope("daemon-1", waiting)
+	deadline := time.Now().Add(2 * time.Second)
+	for time.Now().Before(deadline) {
+		current, getErr := runs.GetRun(ctx, run.RunID)
+		if getErr == nil && current.Status == runstore.StatusWaiting {
+			break
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+	current, err := runs.GetRun(ctx, run.RunID)
+	if err != nil || current.Status != runstore.StatusWaiting {
+		t.Fatalf("run status = %+v, %v; want waiting", current, err)
+	}
+
+	resumed, err := ctrl.ResumeRun(ctx, run.RunID)
+	if err != nil {
+		t.Fatalf("ResumeRun() error = %v", err)
+	}
+	if resumed.Status != runstore.StatusQueued || resumed.LeaseEpoch != 2 {
+		t.Fatalf("resumed = %+v", resumed)
+	}
+	if tasks.enqueueCalls != 2 {
+		t.Fatalf("enqueue calls = %d, want 2", tasks.enqueueCalls)
+	}
+
+	hub.onSend = func(env *runtimev1.Envelope) {
+		go ctrl.HandleEnvelope("daemon-1", &runtimev1.Envelope{
+			CorrelationId: env.GetMsgId(),
+			Payload: &runtimev1.Envelope_TaskAck{
+				TaskAck: &runtimev1.TaskAck{Accepted: true},
+			},
+		})
+	}
+	if err := ctrl.Handle(ctx, workflow.Task{RunID: run.RunID, Type: workflow.TaskDispatch}, workflow.Lease{}); err != nil {
+		t.Fatalf("Handle(resumed) error = %v", err)
+	}
+	if len(hub.sent) != 1 {
+		t.Fatalf("sent = %d", len(hub.sent))
+	}
+	assign := hub.sent[0].GetTaskAssign()
+	if assign == nil || hub.sent[0].GetAttempt() != 2 {
+		t.Fatalf("assign = %+v attempt=%d", assign, hub.sent[0].GetAttempt())
+	}
+	resume := assign.GetResumeFrom()
+	if resume == nil || string(resume.GetState()) != `{"step":7}` {
+		t.Fatalf("resume = %+v", resume)
+	}
 }
 
 func TestCancelQueuedRunWritesMWEvent(t *testing.T) {
