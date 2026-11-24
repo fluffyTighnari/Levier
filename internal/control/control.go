@@ -43,6 +43,7 @@ type Config struct {
 	Tasks                TaskStore
 	LocalTools           LocalToolCanceller
 	ModelProviders       ModelProviderResolver
+	Checkpoints          CheckpointStore
 	DaemonAvailable      func(daemonID string) bool
 	Logger               *slog.Logger
 	Metrics              *observe.Registry
@@ -57,6 +58,12 @@ type ToolInvoker interface {
 type TaskStore interface {
 	CancelRun(ctx context.Context, runID, reason string) (int, error)
 	Enqueue(ctx context.Context, task workflow.Task) (workflow.Task, error)
+}
+
+// CheckpointStore persists and loads longterm session state.
+type CheckpointStore interface {
+	SaveCheckpoint(ctx context.Context, checkpoint runstore.Checkpoint) error
+	GetCheckpoint(ctx context.Context, sessionID, appID, tenantID string) (runstore.Checkpoint, error)
 }
 
 // LocalToolCanceller fails pending App tool calls for a run.

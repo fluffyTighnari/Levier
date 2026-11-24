@@ -24,6 +24,8 @@ const (
 	MetricEventsTotal = "levier_events_total"
 	// MetricCustomEventsTotal counts persisted custom events by name.
 	MetricCustomEventsTotal = "levier_custom_events_total"
+	// MetricCheckpointsSavedTotal counts persisted longterm checkpoints.
+	MetricCheckpointsSavedTotal = "levier_checkpoints_saved_total"
 	// MetricEventsDroppedTotal counts dropped or skipped events.
 	MetricEventsDroppedTotal = "levier_events_dropped_total"
 	// MetricEventAppendDuration observes run event persistence latency.

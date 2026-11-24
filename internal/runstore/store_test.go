@@ -65,7 +65,7 @@ func createApp(t *testing.T, store *Store) App {
 	app, err := store.CreateApp(context.Background(), App{
 		AppID:      "app-" + id.New(),
 		Name:       "app-" + id.New(),
-		APIKeyHash: "hash",
+		APIKeyHash: "hash-" + id.New(),
 	})
 	if err != nil {
 		t.Fatalf("CreateApp() error = %v", err)

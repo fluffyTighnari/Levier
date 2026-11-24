@@ -321,6 +321,36 @@ func TestHandleDispatchAndAcceptedAck(t *testing.T) {
 	}
 }
 
+func TestHandleIncludesResumeCheckpoint(t *testing.T) {
+	runs := &fakeRuns{run: newRun()}
+	runs.run.Runtime = "longterm"
+	runs.run.SessionID = "session-1"
+	hub := &fakeHub{daemonID: "daemon-1"}
+	checkpoints := &fakeCheckpointStore{get: runstore.Checkpoint{
+		SessionID:      "session-1",
+		State:          []byte(`{"step":8}`),
+		EventWatermark: 9,
+	}}
+	ctrl := New(runs, hub, Config{AckTimeout: time.Second, Checkpoints: checkpoints})
+	hub.onSend = func(env *runtimev1.Envelope) {
+		go ctrl.HandleEnvelope("daemon-1", &runtimev1.Envelope{
+			CorrelationId: env.GetMsgId(),
+			Payload: &runtimev1.Envelope_TaskAck{
+				TaskAck: &runtimev1.TaskAck{Accepted: true},
+			},
+		})
+	}
+	if err := ctrl.Handle(context.Background(), testTask(), workflow.Lease{}); err != nil {
+		t.Fatalf("Handle() error = %v", err)
+	}
+	assign := hub.sent[0].GetTaskAssign()
+	resume := assign.GetResumeFrom()
+	if resume == nil || resume.GetSessionId() != "session-1" ||
+		resume.GetEventSeqWatermark() != 9 || string(resume.GetState()) != `{"step":8}` {
+		t.Fatalf("resume = %+v", resume)
+	}
+}
+
 func TestHandleIncludesAssembledMaterials(t *testing.T) {
 	runs := &fakeRuns{run: newRun()}
 	hub := &fakeHub{daemonID: "daemon-1"}

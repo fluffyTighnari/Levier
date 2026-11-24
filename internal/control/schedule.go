@@ -85,6 +85,14 @@ func (c *Control) Handle(ctx context.Context, task workflow.Task, _ workflow.Lea
 		}
 	}
 
+	resume, err := c.resumeCheckpoint(ctx, run)
+	if err != nil {
+		return fmt.Errorf("load run checkpoint: %w", err)
+	}
+	if resume != nil {
+		assign.ResumeFrom = resume
+	}
+
 	placement := PlacementRequest{
 		Runtime:     runtimeType(run.Runtime),
 		RuntimeName: run.RuntimeName,

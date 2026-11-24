@@ -20,7 +20,7 @@ import (
 	"github.com/fluffyTighnari/levier/internal/runstore"
 )
 
-// HandleEnvelope routes TaskAck and Event messages from DaemonHub.
+// HandleEnvelope routes TaskAck, Event, and Checkpoint messages from DaemonHub.
 func (c *Control) HandleEnvelope(daemonID string, env *runtimev1.Envelope) {
 	if env == nil {
 		return
@@ -35,6 +35,10 @@ func (c *Control) HandleEnvelope(daemonID string, env *runtimev1.Envelope) {
 			default:
 			}
 		}
+		return
+	}
+	if env.GetCheckpoint() != nil {
+		c.handleCheckpoint(env)
 		return
 	}
 	if env.GetEvent() != nil {

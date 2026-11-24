@@ -66,6 +66,18 @@ type Session struct {
 	ExpiresAt      *time.Time `json:"expires_at,omitempty"`
 }
 
+// Checkpoint is the opaque state stored for one longterm session.
+type Checkpoint struct {
+	SessionID      string    `json:"session_id"`
+	AppID          string    `json:"app_id"`
+	TenantID       string    `json:"tenant_id"`
+	RunID          string    `json:"run_id,omitempty"`
+	State          []byte    `json:"-"`
+	EventAttempt   int       `json:"event_attempt"`
+	EventWatermark int64     `json:"event_watermark"`
+	UpdatedAt      time.Time `json:"updated_at"`
+}
+
 // Event is one run event submitted to the store.
 type Event struct {
 	RunID         string          `json:"run_id"`

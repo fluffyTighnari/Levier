@@ -179,6 +179,7 @@ func runServer(args []string) {
 		EventBuffer:    cfg.Workflow.EventBuffer,
 		LocalTools:     appHub,
 		ModelProviders: registry,
+		Checkpoints:    runs,
 		DaemonAvailable: func(daemonID string) bool {
 			_, ok := hub.Get(daemonID)
 			return ok
