@@ -43,6 +43,11 @@ type SessionStore interface {
 	ListSessionEvents(ctx context.Context, sessionID string, afterAttempt int32, afterSeq int64, limit int) ([]runstore.Event, error)
 }
 
+// SessionCreator creates or validates a longterm session for a Run.
+type SessionCreator interface {
+	EnsureSession(ctx context.Context, sessionID, appID, tenantID string) (runstore.Session, error)
+}
+
 // AppRegistry is the App registration subset used by the HTTP API.
 type AppRegistry interface {
 	RegisterApp(ctx context.Context, name string, multiagent bool) (runstore.App, string, bool, error)

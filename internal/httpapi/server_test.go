@@ -92,6 +92,23 @@ func (f *fakeStore) GetSession(_ context.Context, sessionID string) (runstore.Se
 	return session, nil
 }
 
+func (f *fakeStore) EnsureSession(_ context.Context, sessionID, appID, tenantID string) (runstore.Session, error) {
+	if session, ok := f.sessions[sessionID]; ok {
+		if session.AppID != appID || session.TenantID != tenantID {
+			return runstore.Session{}, runstore.ErrSessionConflict
+		}
+		return session, nil
+	}
+	session := runstore.Session{
+		SessionID: sessionID,
+		AppID:     appID,
+		TenantID:  tenantID,
+		Status:    "active",
+	}
+	f.sessions[sessionID] = session
+	return session, nil
+}
+
 func (f *fakeStore) ListSessionEvents(_ context.Context, _ string, afterAttempt int32, afterSeq int64, limit int) ([]runstore.Event, error) {
 	f.lastAfterA = afterAttempt
 	f.lastAfterS = afterSeq
@@ -277,6 +294,47 @@ func TestCreateRunGetRunAndEvents(t *testing.T) {
 	if store.lastAfterA != 1 || store.lastAfterS != 2 || store.lastLimit != 10 {
 		t.Fatalf("query = %d/%d/%d", store.lastAfterA, store.lastAfterS, store.lastLimit)
 	}
+}
+
+func TestCreateLongtermRunAssignsAndReturnsSession(t *testing.T) {
+	store, _, server := newTestServer(t)
+	body := []byte(`{
+	  "app_id": "app-1",
+	  "runtime": "longterm",
+	  "runtime_name": "longterm1",
+	  "input": [{"role": "user", "content": "hello"}]
+	}`)
+	resp := request(t, http.MethodPost, server.URL+"/api/v1/runs", "token-1", body)
+	if resp.StatusCode != http.StatusAccepted {
+		t.Fatalf("POST status = %d", resp.StatusCode)
+	}
+	var created CreateRunResponse
+	if err := json.NewDecoder(resp.Body).Decode(&created); err != nil {
+		t.Fatalf("decode create: %v", err)
+	}
+	resp.Body.Close()
+	if created.SessionID == "" {
+		t.Fatal("longterm run did not return a session_id")
+	}
+	if store.runs[created.RunID].SessionID != created.SessionID {
+		t.Fatalf("run session = %q, want %q", store.runs[created.RunID].SessionID, created.SessionID)
+	}
+	if store.sessions[created.SessionID].AppID != "app-1" {
+		t.Fatalf("session = %+v", store.sessions[created.SessionID])
+	}
+
+	body = []byte(`{
+	  "app_id": "app-2",
+	  "runtime": "longterm",
+	  "runtime_name": "longterm1",
+	  "session_id": "` + created.SessionID + `",
+	  "input": [{"role": "user", "content": "hello"}]
+	}`)
+	resp = request(t, http.MethodPost, server.URL+"/api/v1/runs", "token-1", body)
+	if resp.StatusCode != http.StatusForbidden {
+		t.Fatalf("cross-app session status = %d", resp.StatusCode)
+	}
+	resp.Body.Close()
 }
 
 func TestAuthAndValidation(t *testing.T) {

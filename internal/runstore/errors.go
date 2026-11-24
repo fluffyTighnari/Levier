@@ -14,6 +14,8 @@ var (
 	ErrAppNotFound = errors.New("app not found")
 	// ErrSessionNotFound reports a missing session.
 	ErrSessionNotFound = errors.New("session not found")
+	// ErrSessionConflict reports a session owned by another app or tenant.
+	ErrSessionConflict = errors.New("session belongs to another app or tenant")
 	// ErrCheckpointNotFound reports a session without a stored checkpoint.
 	ErrCheckpointNotFound = errors.New("checkpoint not found")
 	// ErrCheckpointConflict reports a session owned by another app or tenant.

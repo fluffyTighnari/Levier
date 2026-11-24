@@ -59,6 +59,22 @@ func (s *Server) handleCreateRun(w http.ResponseWriter, r *http.Request) {
 	if runtimeType == "" {
 		runtimeType = RuntimeNormal
 	}
+	sessionID := strings.TrimSpace(request.SessionID)
+	if runtimeType == RuntimeLongterm {
+		if sessionID == "" {
+			sessionID = id.New()
+		}
+		if creator, ok := s.runs.(SessionCreator); ok {
+			if _, err := creator.EnsureSession(r.Context(), sessionID, appID, tenantID); err != nil {
+				if errors.Is(err, runstore.ErrSessionConflict) {
+					writeErrorCode(w, errs.CodeForbidden, err.Error(), false)
+					return
+				}
+				writeErrorCode(w, errs.CodeInternal, "ensure session failed", true)
+				return
+			}
+		}
+	}
 
 	params, err := json.Marshal(emptyMap(request.Params))
 	if err != nil {
@@ -101,7 +117,7 @@ func (s *Server) handleCreateRun(w http.ResponseWriter, r *http.Request) {
 		Input:          input,
 		Model:          model,
 		Status:         "queued",
-		SessionID:      request.SessionID,
+		SessionID:      sessionID,
 		RunTimeoutMS:   int(runTimeout),
 		ToolTimeoutMS:  int(toolTimeout),
 		TraceID:        traceIDFromRequest(r),
@@ -147,10 +163,11 @@ func (s *Server) handleCreateRun(w http.ResponseWriter, r *http.Request) {
 	}
 
 	writeJSON(w, http.StatusAccepted, CreateRunResponse{
-		RunID:   run.RunID,
-		Status:  RunStatus(run.Status),
-		WSURL:   WSURL,
-		WSToken: s.wsTokens.Issue(appID),
+		RunID:     run.RunID,
+		Status:    RunStatus(run.Status),
+		SessionID: run.SessionID,
+		WSURL:     WSURL,
+		WSToken:   s.wsTokens.Issue(appID),
 	})
 }
 

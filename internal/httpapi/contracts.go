@@ -85,10 +85,11 @@ type CreateRunRequest struct {
 
 // CreateRunResponse is returned after accepting a run.
 type CreateRunResponse struct {
-	RunID   string    `json:"run_id"`
-	Status  RunStatus `json:"status"`
-	WSURL   string    `json:"ws_url"`
-	WSToken string    `json:"ws_token"`
+	RunID     string    `json:"run_id"`
+	Status    RunStatus `json:"status"`
+	SessionID string    `json:"session_id,omitempty"`
+	WSURL     string    `json:"ws_url"`
+	WSToken   string    `json:"ws_token"`
 }
 
 // RunView is the App-visible run projection.

@@ -84,6 +84,24 @@ class HttpTest(unittest.TestCase):
         self.assertEqual(payload["runtime_name"], "react1")
         self.assertEqual(payload["model"]["provider"], "deepseek")
 
+    def test_submit_run_passes_session_and_runtime_type(self) -> None:
+        transport = FakeTransport(response(202, {
+            "run_id": "run-1",
+            "status": "queued",
+            "session_id": "session-1",
+        }))
+        client = LevierClient("http://levier:8080", "app-1", "secret", transport)
+        run = client.submit_run(
+            "hello",
+            runtime="graph1",
+            runtime_type="longterm",
+            session_id="session-1",
+        )
+        self.assertEqual(run["session_id"], "session-1")
+        payload = json.loads(transport.requests[0].body)
+        self.assertEqual(payload["runtime"], "longterm")
+        self.assertEqual(payload["session_id"], "session-1")
+
     def test_http_error_is_normalized(self) -> None:
         transport = FakeTransport(response(401, {
             "error": {"code": "UNAUTHORIZED", "message": "bad key"},

@@ -56,6 +56,28 @@ func TestSaveAndGetCheckpoint(t *testing.T) {
 	}
 }
 
+func TestEnsureSessionOwnership(t *testing.T) {
+	store := New(testPool(t))
+	ctx := context.Background()
+	first := createApp(t, store)
+	second := createApp(t, store)
+	sessionID := "session-" + id.New()
+
+	session, err := store.EnsureSession(ctx, sessionID, first.AppID, first.TenantID)
+	if err != nil {
+		t.Fatalf("EnsureSession() error = %v", err)
+	}
+	if session.SessionID != sessionID || session.AppID != first.AppID || session.Status != "active" {
+		t.Fatalf("session = %+v", session)
+	}
+	if _, err := store.EnsureSession(ctx, sessionID, first.AppID, first.TenantID); err != nil {
+		t.Fatalf("EnsureSession(existing) error = %v", err)
+	}
+	if _, err := store.EnsureSession(ctx, sessionID, second.AppID, second.TenantID); !errors.Is(err, ErrSessionConflict) {
+		t.Fatalf("EnsureSession(other owner) error = %v", err)
+	}
+}
+
 func TestSaveCheckpointRejectsSessionOwnerMismatch(t *testing.T) {
 	store := New(testPool(t))
 	ctx := context.Background()

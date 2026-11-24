@@ -116,6 +116,8 @@ class App:
         prompt: str | None = None,
         *,
         runtime: str | None = None,
+        runtime_type: str = "",
+        session_id: str = "",
         provider: str = "",
         model: str = "",
         max_steps: int = 8,
@@ -138,6 +140,8 @@ class App:
             submitted = self._app.submit_run(
                 prompt,
                 runtime=runtime or self.runtime,
+                runtime_type=runtime_type,
+                session_id=session_id,
                 provider=provider,
                 model=model,
                 max_steps=max_steps,

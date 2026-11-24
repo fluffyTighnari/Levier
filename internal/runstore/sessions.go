@@ -13,6 +13,34 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+// EnsureSession creates a session if absent and validates its ownership.
+func (s *Store) EnsureSession(ctx context.Context, sessionID, appID, tenantID string) (Session, error) {
+	if s == nil || s.pool == nil {
+		return Session{}, fmt.Errorf("runstore: postgres pool is nil")
+	}
+	if sessionID == "" || appID == "" {
+		return Session{}, fmt.Errorf("%w: session_id and app_id are required", ErrInvalidRun)
+	}
+	if tenantID == "" {
+		tenantID = DefaultTenantID
+	}
+	if _, err := s.pool.Exec(ctx, `
+		INSERT INTO sessions (session_id, app_id, tenant_id, status, created_at, updated_at)
+		VALUES ($1, $2, $3, 'active', now(), now())
+		ON CONFLICT (session_id) DO NOTHING
+	`, sessionID, appID, tenantID); err != nil {
+		return Session{}, fmt.Errorf("ensure session: %w", err)
+	}
+	session, err := s.GetSession(ctx, sessionID)
+	if err != nil {
+		return Session{}, err
+	}
+	if session.AppID != appID || session.TenantID != tenantID {
+		return Session{}, ErrSessionConflict
+	}
+	return session, nil
+}
+
 // GetSession returns one longterm session.
 func (s *Store) GetSession(ctx context.Context, sessionID string) (Session, error) {
 	if s == nil || s.pool == nil {

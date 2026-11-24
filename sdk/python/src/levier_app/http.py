@@ -228,6 +228,8 @@ class LevierClient:
         prompt: str,
         *,
         runtime: str,
+        runtime_type: str = "",
+        session_id: str = "",
         provider: str = "",
         model: str = "",
         max_steps: int = 8,
@@ -246,6 +248,10 @@ class LevierClient:
             "input": [{"role": "user", "content": prompt}],
             "timeouts": {"run_ms": run_ms, "tool_ms": tool_ms},
         }
+        if runtime_type:
+            payload["runtime"] = runtime_type
+        if session_id:
+            payload["session_id"] = session_id
         if provider or model:
             payload["model"] = {"provider": provider, "model": model}
         return self.create_run(payload, idempotency_key=idempotency_key)
