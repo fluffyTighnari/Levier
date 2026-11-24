@@ -485,10 +485,10 @@ Runtime：Driver、能力声明、自定义事件、Runtime-local 工具
 | 项目 | 状态 | 说明 |
 |---|---|---|
 | Runtime Driver 抽象 | 已完成 | 简单 `run(ctx)` 保持兼容 |
-| Runtime Capabilities | 已完成 | 先作为 SDK 元数据，协议握手待接入 |
+| Runtime Capabilities | 已完成 | SDK 元数据、Hello 握手、daemon 注册 |
 | Driver 生命周期 | 已完成 | 启动、关闭 Hook |
 | Driver 测试 | 已完成 | 简单入口和 Driver 都通过 |
-| I2.0 协议契约 | 部分完成 | 自定义事件字段已落地；能力握手、checkpoint、resume 待开始 |
+| I2.0 协议契约 | 部分完成 | 能力握手、自定义事件已落地；checkpoint、resume 待开始 |
 | 自定义事件 | 已完成 | proto、SDK、控制面持久化、API/WS、测试 |
 | Checkpoint / Resume | 待开始 | 控制面闭环 |
 | Runtime-local 工具 | 待开始 | 统一工具来源 |
