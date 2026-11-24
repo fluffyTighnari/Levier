@@ -106,6 +106,12 @@ type DaemonHub interface {
 	Disconnect(daemonID string)
 }
 
+type daemonCapabilities struct {
+	runtimeName string
+	runtimeType string
+	values      map[string]string
+}
+
 // Control claims RUN_DISPATCH tasks, assigns daemons, and drives run state.
 type Control struct {
 	runs      RunStore
@@ -115,10 +121,12 @@ type Control struct {
 	log       *slog.Logger
 	metrics   *observe.Registry
 
-	pendingMu sync.Mutex
-	pending   map[string]chan *runtimev1.TaskAck
-	waitingMu sync.Mutex
-	events    chan *runtimev1.Envelope
+	pendingMu      sync.Mutex
+	pending        map[string]chan *runtimev1.TaskAck
+	waitingMu      sync.Mutex
+	capabilitiesMu sync.Mutex
+	capabilities   map[string]daemonCapabilities
+	events         chan *runtimev1.Envelope
 
 	toolMu     sync.Mutex
 	toolClosed bool
@@ -159,14 +167,15 @@ func New(runs RunStore, hub DaemonHub, cfg Config, assemblers ...MaterialAssembl
 		cfg.Logger = slog.Default()
 	}
 	control := &Control{
-		runs:      runs,
-		hub:       hub,
-		cfg:       cfg,
-		log:       cfg.Logger,
-		metrics:   cfg.Metrics,
-		pending:   make(map[string]chan *runtimev1.TaskAck),
-		events:    make(chan *runtimev1.Envelope, cfg.EventBuffer),
-		toolSlots: make(chan struct{}, cfg.ToolConcurrency),
+		runs:         runs,
+		hub:          hub,
+		cfg:          cfg,
+		log:          cfg.Logger,
+		metrics:      cfg.Metrics,
+		pending:      make(map[string]chan *runtimev1.TaskAck),
+		capabilities: make(map[string]daemonCapabilities),
+		events:       make(chan *runtimev1.Envelope, cfg.EventBuffer),
+		toolSlots:    make(chan struct{}, cfg.ToolConcurrency),
 	}
 	if len(assemblers) > 0 {
 		control.materials = assemblers[0]

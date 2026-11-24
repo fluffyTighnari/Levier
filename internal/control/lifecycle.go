@@ -9,8 +9,10 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/fluffyTighnari/levier/internal/errs"
+	"strings"
 	"time"
+
+	"github.com/fluffyTighnari/levier/internal/errs"
 
 	runtimev1 "github.com/fluffyTighnari/levier/gen/middleware/runtime/v1"
 	"github.com/fluffyTighnari/levier/internal/connection"
@@ -22,6 +24,7 @@ import (
 
 // HandleDaemonOffline requeues runs owned by a lost daemon.
 func (c *Control) HandleDaemonOffline(daemonID string) {
+	c.clearDaemonCapabilities(daemonID)
 	ctx := context.Background()
 	runs, err := c.runs.ListActiveRunsForDaemon(ctx, daemonID)
 	if err != nil {
@@ -108,6 +111,7 @@ func (c *Control) ensureRunTasks(ctx context.Context, run runstore.Run) error {
 
 // ReconcileDaemon compares Hello.running_runs with persisted run state.
 func (c *Control) ReconcileDaemon(info connection.DaemonInfo) {
+	c.recordDaemonCapabilities(info)
 	ctx := context.Background()
 	c.scheduleQueuedRuns(ctx, info)
 	runs, err := c.runs.ListActiveRunsForDaemon(ctx, info.DaemonID)
@@ -160,6 +164,77 @@ func (c *Control) ReconcileDaemon(info connection.DaemonInfo) {
 	}
 	for _, run := range failTools {
 		c.cancelLocalTools(run.AppID, run.RunID, string(errs.CodeRunCancelled), "run already terminal")
+	}
+}
+
+func (c *Control) recordDaemonCapabilities(info connection.DaemonInfo) {
+	if c == nil || c.metrics == nil {
+		return
+	}
+	runtimeName := info.RuntimeName
+	if runtimeName == "" {
+		runtimeName = "unknown"
+	}
+	runtimeType := strings.ToLower(strings.TrimPrefix(info.RuntimeType.String(), "RUNTIME_TYPE_"))
+	if runtimeType == "" || runtimeType == "unspecified" {
+		runtimeType = "unknown"
+	}
+	values := make(map[string]string, len(info.Capabilities))
+	for key, value := range info.Capabilities {
+		values[key] = value
+	}
+	c.capabilitiesMu.Lock()
+	previous := c.capabilities[info.DaemonID]
+	c.capabilities[info.DaemonID] = daemonCapabilities{
+		runtimeName: runtimeName,
+		runtimeType: runtimeType,
+		values:      values,
+	}
+	c.capabilitiesMu.Unlock()
+
+	for key := range previous.values {
+		c.setCapabilityMetric(info.DaemonID, previous.runtimeName, previous.runtimeType, key, false)
+	}
+	for key, value := range values {
+		c.setCapabilityMetric(info.DaemonID, runtimeName, runtimeType, key, capabilityEnabled(value))
+	}
+}
+
+func (c *Control) clearDaemonCapabilities(daemonID string) {
+	if c == nil || c.metrics == nil {
+		return
+	}
+	c.capabilitiesMu.Lock()
+	previous, ok := c.capabilities[daemonID]
+	delete(c.capabilities, daemonID)
+	c.capabilitiesMu.Unlock()
+	if !ok {
+		return
+	}
+	for key := range previous.values {
+		c.setCapabilityMetric(daemonID, previous.runtimeName, previous.runtimeType, key, false)
+	}
+}
+
+func (c *Control) setCapabilityMetric(daemonID, runtimeName, runtimeType, capability string, enabled bool) {
+	value := 0.0
+	if enabled {
+		value = 1
+	}
+	c.metrics.Set(observe.MetricRuntimeCapabilities, "Advertised Runtime capabilities by daemon.", map[string]string{
+		"daemon_id":    daemonID,
+		"runtime":      runtimeName,
+		"runtime_type": runtimeType,
+		"capability":   capability,
+	}, value)
+}
+
+func capabilityEnabled(value string) bool {
+	switch strings.ToLower(strings.TrimSpace(value)) {
+	case "1", "true", "yes", "on":
+		return true
+	default:
+		return false
 	}
 }
 

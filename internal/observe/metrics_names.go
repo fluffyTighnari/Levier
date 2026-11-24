@@ -14,6 +14,8 @@ const (
 	MetricWSConnections = "levier_ws_connections"
 	// MetricRunsTotal counts terminal runs.
 	MetricRunsTotal = "levier_runs_total"
+	// MetricRuntimeCapabilities reports one advertised Runtime capability.
+	MetricRuntimeCapabilities = "levier_runtime_capabilities"
 	// MetricRunQueueDuration observes time from run creation to assignment.
 	MetricRunQueueDuration = "levier_run_queue_duration_seconds"
 	// MetricToolInvocationsTotal counts tool executions.

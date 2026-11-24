@@ -1373,6 +1373,46 @@ func TestControlRecordsMetrics(t *testing.T) {
 	}
 }
 
+func TestReconcileDaemonRecordsCapabilityMetrics(t *testing.T) {
+	runs := &fakeRuns{
+		run:    newRun(),
+		active: []runstore.Run{},
+		queued: []runstore.Run{},
+	}
+	registry := observe.NewRegistry()
+	ctrl := New(runs, &fakeHub{}, Config{Metrics: registry})
+	info := connection.DaemonInfo{
+		DaemonID:     "d1",
+		RuntimeName:  "echo1",
+		RuntimeType:  runtimev1.RuntimeType_NORMAL,
+		Capabilities: map[string]string{"checkpoint": "true", "waiting": "false"},
+	}
+	ctrl.ReconcileDaemon(info)
+
+	var buf bytes.Buffer
+	if err := registry.WritePrometheus(&buf); err != nil {
+		t.Fatalf("WritePrometheus() error = %v", err)
+	}
+	output := buf.String()
+	for _, want := range []string{
+		`levier_runtime_capabilities{capability="checkpoint",daemon_id="d1",runtime="echo1",runtime_type="normal"} 1`,
+		`levier_runtime_capabilities{capability="waiting",daemon_id="d1",runtime="echo1",runtime_type="normal"} 0`,
+	} {
+		if !strings.Contains(output, want) {
+			t.Fatalf("metrics do not contain %q:\n%s", want, output)
+		}
+	}
+
+	ctrl.HandleDaemonOffline("d1")
+	buf.Reset()
+	if err := registry.WritePrometheus(&buf); err != nil {
+		t.Fatalf("WritePrometheus() error = %v", err)
+	}
+	if strings.Contains(buf.String(), `levier_runtime_capabilities{capability="checkpoint",daemon_id="d1",runtime="echo1",runtime_type="normal"} 1`) {
+		t.Fatalf("capability metric remained enabled:\n%s", buf.String())
+	}
+}
+
 func TestRecoverQueuedRunsEnqueuesMissingTasks(t *testing.T) {
 	runs := &fakeRuns{run: newRun()}
 	runs.run.Status = runstore.StatusQueued
