@@ -103,6 +103,7 @@
         "run",
         "run_events",
         "run_cancel",
+        "run_resume",
         "ws_token",
         "websocket",
         "admin_apps",

@@ -55,7 +55,7 @@ class RuntimeDriver(Protocol):
     capabilities: RuntimeCapabilities
 
     async def run(self, ctx: RunContext) -> str:
-        """Execute one run and return a terminal status."""
+        """Execute one run and return a terminal status or ``waiting``."""
         ...
 
 

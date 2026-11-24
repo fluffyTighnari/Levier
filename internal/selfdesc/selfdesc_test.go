@@ -36,7 +36,8 @@ func TestNewDefaults(t *testing.T) {
 	if doc.Limits.WSTokenTTLSeconds != int64(DefaultWSTokenTTL/time.Second) {
 		t.Fatalf("ws ttl = %d", doc.Limits.WSTokenTTLSeconds)
 	}
-	if doc.Endpoints.Runs != "/api/v1/runs" || doc.Endpoints.WebSocket != "/api/v1/ws" {
+	if doc.Endpoints.Runs != "/api/v1/runs" || doc.Endpoints.WebSocket != "/api/v1/ws" ||
+		doc.Endpoints.RunResume != "/api/v1/runs/{run_id}/resume" {
 		t.Fatalf("endpoints = %+v", doc.Endpoints)
 	}
 }

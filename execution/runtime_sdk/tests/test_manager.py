@@ -58,6 +58,15 @@ class CapturingRunner:
         return self.status
 
 
+class WaitingRunner:
+    def __init__(self) -> None:
+        self.context = None
+
+    async def __call__(self, ctx):
+        self.context = ctx
+        return await ctx.wait({"step": 1})
+
+
 class RunManagerTest(unittest.IsolatedAsyncioTestCase):
     async def wait_done(self, manager: RunManager) -> None:
         for _ in range(200):
@@ -98,6 +107,48 @@ class RunManagerTest(unittest.IsolatedAsyncioTestCase):
         )
         self.assertEqual(events[1].event.data.fields["content"].string_value, "answer")
         self.assertEqual(events[-1].event.data.fields["status"].string_value, "completed")
+
+    async def test_waiting_status_is_accepted(self) -> None:
+        sender = FakeSender()
+        runner = WaitingRunner()
+        manager = RunManager(
+            sender,
+            ManagerConfig(runtime_name="echo1"),
+            runner,
+        )
+        await manager.handle(assign_envelope(session_id="session-1"))
+        await self.wait_done(manager)
+
+        events = [
+            item for item in sender.sent
+            if item.WhichOneof("payload") == "event"
+            and item.event.type == runtime_pb2.EventType.RUN_STATUS
+        ]
+        statuses = [event.event.data.fields["status"].string_value for event in events]
+        self.assertEqual(statuses, ["running", "waiting"])
+        self.assertEqual(manager.running_count(), 0)
+
+    async def test_waiting_without_checkpoint_fails(self) -> None:
+        sender = FakeSender()
+        runner = CapturingRunner("waiting")
+        manager = RunManager(
+            sender,
+            ManagerConfig(runtime_name="echo1"),
+            runner,
+        )
+        await manager.handle(assign_envelope())
+        await self.wait_done(manager)
+
+        events = [
+            item for item in sender.sent
+            if item.WhichOneof("payload") == "event"
+            and item.event.type == runtime_pb2.EventType.RUN_STATUS
+        ]
+        self.assertEqual(events[-1].event.data.fields["status"].string_value, "failed")
+        self.assertIn(
+            "checkpoint",
+            events[-1].event.data.fields["reason"].string_value,
+        )
 
     async def test_capacity_rejects_second_assignment(self) -> None:
         sender = FakeSender()

@@ -201,7 +201,7 @@ class LevierApp:
         )
 
     def wait_run(self, run_id: str, *, timeout: float = 300.0, interval: float = 0.5) -> dict[str, Any]:
-        """Wait for one of this App's Runs to reach a terminal status."""
+        """Wait for one of this App's Runs to finish or enter waiting."""
         return self._client.wait_run(run_id, timeout=timeout, interval=interval)
 
     def get_run(self, run_id: str) -> dict[str, Any]:
@@ -215,6 +215,10 @@ class LevierApp:
     def cancel_run(self, run_id: str) -> dict[str, Any]:
         """Cancel one of this App's Runs."""
         return self._client.cancel_run(run_id)
+
+    def resume_run(self, run_id: str) -> dict[str, Any]:
+        """Resume one of this App's waiting Runs."""
+        return self._client.resume_run(run_id)
 
     def stop(self) -> None:
         """Request a graceful stop; safe to call from a signal handler."""

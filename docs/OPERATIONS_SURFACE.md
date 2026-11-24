@@ -82,11 +82,12 @@
 - `App.serve()` — 连接 Levier 并阻塞服务工具调用。
 - `App.stop()` — 请求停止 `serve()` 或一次性 `run()`。
 - `App.run(prompt=None, *, runtime=None, provider="", model="", max_steps=8, run_ms=60000, tool_ms=10000, timeout=300.0, print_output=True)` — 无 prompt 时等价 `serve()`；有 prompt 时临时起连接、提交 Run、等待并打印最终消息。
-- `App.submit_run(prompt, *, runtime=None, **options)` — 提交 Run；`options` 可传 `provider/model/max_steps/run_ms/tool_ms/idempotency_key`。
-- `App.wait_run(run_id, *, timeout=300.0)` — 轮询 Run 到终态。
+- `App.submit_run(prompt, *, runtime=None, **options)` — 提交 Run；`options` 可传 `runtime_type/session_id/provider/model/max_steps/run_ms/tool_ms/idempotency_key`。
+- `App.wait_run(run_id, *, timeout=300.0)` — 轮询 Run 到终态或 `waiting`。
 - `App.get_run(run_id)` — 获取单个 Run。
 - `App.get_events(run_id)` — 获取 Run 事件列表。
 - `App.cancel_run(run_id)` — 取消 Run。
+- `App.resume_run(run_id)` — 恢复 waiting Run。
 - `App.list_model_providers()` — 获取当前 App 可见的模型目录。
 - `App.tools_manifest()` — 获取已注册工具的 manifest。
 - `levier.tool(function=None, *, name=None, description=None, schema=None, timeout_ms=10000)` — 把普通函数转成 `Tool`，从类型注解和 docstring 自动生成 schema。
@@ -108,11 +109,12 @@
 - `LevierApp.stop()` — 请求优雅停止。
 - `LevierApp.wait_connected(timeout=10.0)` — 等待第一次 WebSocket 握手。
 - `LevierApp.run_cli(register=None, *, argv=None, prog="levier-app")` — 标准 App CLI 外壳，自动处理 argparse、凭据、日志和信号。
-- `LevierApp.submit_run(prompt, *, runtime, provider="", model="", max_steps=8, run_ms=60000, tool_ms=10000, idempotency_key="")` — 低层 Run 提交。
-- `LevierApp.wait_run(run_id, *, timeout=300.0, interval=0.5)` — 轮询等待终态。
+- `LevierApp.submit_run(prompt, *, runtime, runtime_type="", session_id="", provider="", model="", max_steps=8, run_ms=60000, tool_ms=10000, idempotency_key="")` — 低层 Run 提交。
+- `LevierApp.wait_run(run_id, *, timeout=300.0, interval=0.5)` — 轮询等待终态或 `waiting`。
 - `LevierApp.get_run(run_id)` — 查询 Run。
 - `LevierApp.get_events(run_id, *, after_seq=0, limit=1000)` — 查询 Run 事件。
 - `LevierApp.cancel_run(run_id)` — 取消 Run。
+- `LevierApp.resume_run(run_id)` — 恢复 waiting Run。
 - `Credentials` / `Secret` — 凭据数据类和不会在 repr/str 中泄漏的 key 包装。
 - `load_credentials` / `save_credentials` / `default_credentials_path` / `resolve_server` / `credential_fingerprint` — 凭据读写、默认路径、server 解析和 key 指纹。
 - `CredentialsError` / `LevierError` / `HTTPError` / `ProtocolError` / `TransportError` / `AppInactiveError` / `ToolExecutionError` — SDK 结构化错误类型。
@@ -133,7 +135,7 @@
 - `MiddlewareConfig(address, auth_token="", auth_token_file="", tls=False)` — 控制面 gRPC 连接配置。
 - `load_runtime_config(path=None, *, environ=None)` — 加载 YAML/profile/env 并校验。
 - `ConfigError` / `RuntimeUsageError` — 配置错误和 Runtime 使用错误。
-- `RunFunction = Callable[[RunContext], Awaitable[str]]` — `run(ctx)` 的返回类型约定，终态为 `completed/failed/cancelled`。
+- `RunFunction = Callable[[RunContext], Awaitable[str]]` — `run(ctx)` 的返回类型约定，终态为 `completed/failed/cancelled`，longterm Run 也可以返回 `waiting`。
 
 ---
 
@@ -159,6 +161,7 @@
 - `await ctx.call_tool(name, arguments=None, *, timeout_ms=None, emit_events=True)` — 走 SDK 工具桥调用本地/global 工具。
 - `await ctx.error(code, message, *, retryable=False, data=None)` — 发结构化 `ERROR` 事件。
 - `await ctx.checkpoint(state)` — 保存 bytes 或 mapping 形式的 checkpoint，需要 `session_id`。
+- `await ctx.wait(state)` — 保存 checkpoint 并返回 `waiting`，用于 longterm Run 暂停等待外部恢复。
 - `await ctx.close_toolbox()` — 关闭该 Run 打开的 MCP session。
 
 ---
@@ -210,6 +213,7 @@
 - `GET /api/v1/runs/{id}` — 查询 Run。
 - `GET /api/v1/runs/{id}/events?after_attempt=&after_seq=&limit=` — 按游标补拉事件。
 - `POST /api/v1/runs/{id}/cancel` — 取消 Run。
+- `POST /api/v1/runs/{id}/resume` — 恢复 waiting longterm Run。
 - `POST /api/v1/ws-token` — App key 换取短期 WebSocket token。
 - `GET /api/v1/ws` — App WebSocket 连接。
 - `POST /api/v1/apps` — 更新 App 元信息。
@@ -223,6 +227,7 @@
 - `GET /admin/runs` — 管理员分页查询 Run。
 - `GET /admin/runs/{id}` — 管理员查看单个 Run。
 - `POST /admin/runs/{id}/cancel` — 管理员取消 Run。
+- `POST /admin/runs/{id}/resume` — 管理员恢复 waiting Run。
 - `GET /admin/daemons` — 管理员 daemon 视图。
 - `GET /admin/tasks` — 管理员 workflow task 视图。
 - `GET /admin/mcp` / `POST /admin/mcp` — 列出/写入 MCP Server。

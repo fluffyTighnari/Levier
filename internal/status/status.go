@@ -290,6 +290,7 @@ func initializeRunStatuses(statuses map[string]int64) {
 		runstore.StatusQueued,
 		runstore.StatusAssigned,
 		runstore.StatusRunning,
+		runstore.StatusWaiting,
 		runstore.StatusCompleted,
 		runstore.StatusFailed,
 		runstore.StatusCancelled,

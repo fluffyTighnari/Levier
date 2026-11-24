@@ -333,6 +333,7 @@ func runServer(args []string) {
 			return db.Health(ctx, pool, cfg.Database.HealthTimeout.Std())
 		},
 		Canceller:        controller,
+		Resumer:          controller,
 		Metrics:          metrics,
 		MetricsCollector: metricsCollector,
 		Logger:           logger,

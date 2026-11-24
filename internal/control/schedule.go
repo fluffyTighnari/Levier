@@ -39,7 +39,7 @@ func (c *Control) Handle(ctx context.Context, task workflow.Task, _ workflow.Lea
 		return fmt.Errorf("get run: %w", err)
 	}
 	switch run.Status {
-	case "completed", "failed", "cancelled", "timeout", "running":
+	case "completed", "failed", "cancelled", "timeout", "running", "waiting":
 		return nil
 	}
 

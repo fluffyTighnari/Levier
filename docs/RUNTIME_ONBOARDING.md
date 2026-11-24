@@ -101,6 +101,7 @@ run. `ctx.error` is the explicit error event entry point.
 ```text
 await ctx.emit(event_type, data, ephemeral=False)
 await ctx.checkpoint(state)
+return await ctx.wait(state)
 ```
 
 `ctx.reply` generates message IDs and event sequence numbers in the SDK.
@@ -115,7 +116,8 @@ await ctx.checkpoint(state)
 - **MCP**: read `ctx.mcp_bindings`; open sessions via `levier_runtime.mcp` or
   your own client.
 - **Longterm**: use `ctx.session_id` / `ctx.resume_from`, and save state with
-  `ctx.checkpoint`.
+  `ctx.checkpoint`. To pause for external input, `return await ctx.wait(state)`;
+  the helper saves a checkpoint before returning `waiting`.
 - **Streaming**: use `ctx.emit("MESSAGE_DELTA", ...)`.
 
 ## 5. Custom ReAct loop

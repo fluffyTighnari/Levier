@@ -39,6 +39,8 @@ const (
 	RunStatusAssigned RunStatus = "assigned"
 	// RunStatusRunning is executing.
 	RunStatusRunning RunStatus = "running"
+	// RunStatusWaiting is paused with a resumable checkpoint.
+	RunStatusWaiting RunStatus = "waiting"
 	// RunStatusCompleted finished successfully.
 	RunStatusCompleted RunStatus = "completed"
 	// RunStatusFailed finished with an error.
@@ -142,6 +144,13 @@ type CancelRunRequest struct {
 type CancelRunResponse struct {
 	RunID  string    `json:"run_id"`
 	Status RunStatus `json:"status"`
+}
+
+// ResumeRunResponse is returned after a waiting run is requeued.
+type ResumeRunResponse struct {
+	RunID     string    `json:"run_id"`
+	SessionID string    `json:"session_id,omitempty"`
+	Status    RunStatus `json:"status"`
 }
 
 // SessionView is the App-visible longterm session.

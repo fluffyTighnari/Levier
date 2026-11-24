@@ -154,6 +154,22 @@ func (f *fakeCanceller) CancelRun(_ context.Context, _ string, reason string) (r
 	return f.run, nil
 }
 
+type fakeResumer struct {
+	run    runstore.Run
+	err    error
+	called bool
+}
+
+func (f *fakeResumer) ResumeRun(_ context.Context, runID string) (runstore.Run, error) {
+	f.called = true
+	if f.err != nil {
+		return runstore.Run{}, f.err
+	}
+	f.run.RunID = runID
+	f.run.Status = runstore.StatusQueued
+	return f.run, nil
+}
+
 type fakeQueue struct {
 	tasks []workflow.Task
 	err   error
@@ -443,6 +459,60 @@ func TestCancelRun(t *testing.T) {
 	resp.Body.Close()
 	if cancelled.Status != RunStatusCancelled || canceller.reason != "user" {
 		t.Fatalf("cancelled = %+v reason=%q", cancelled, canceller.reason)
+	}
+}
+
+func TestResumeRun(t *testing.T) {
+	store := newFakeStore()
+	store.runs["run-1"] = runstore.Run{
+		RunID: "run-1", AppID: "app-1", Status: runstore.StatusWaiting, SessionID: "session-1",
+	}
+	resumer := &fakeResumer{run: runstore.Run{SessionID: "session-1"}}
+	server := NewServer(store, &fakeQueue{}, Config{
+		BearerToken:       "token-1",
+		AllowLegacyBearer: true,
+		Resumer:           resumer,
+	})
+	httpServer := httptest.NewServer(server.Handler())
+	defer httpServer.Close()
+
+	resp := request(t, http.MethodPost, httpServer.URL+"/api/v1/runs/run-1/resume", "token-1", nil)
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("status = %d", resp.StatusCode)
+	}
+	var resumed ResumeRunResponse
+	if err := json.NewDecoder(resp.Body).Decode(&resumed); err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+	resp.Body.Close()
+	if !resumer.called || resumed.Status != RunStatusQueued || resumed.SessionID != "session-1" {
+		t.Fatalf("resumed = %+v called=%v", resumed, resumer.called)
+	}
+}
+
+func TestResumeRunRejectsNonWaiting(t *testing.T) {
+	store := newFakeStore()
+	store.runs["run-1"] = runstore.Run{RunID: "run-1", AppID: "app-1", Status: runstore.StatusRunning}
+	resumer := &fakeResumer{err: runstore.ErrRunNotResumable}
+	server := NewServer(store, &fakeQueue{}, Config{
+		BearerToken:       "token-1",
+		AllowLegacyBearer: true,
+		Resumer:           resumer,
+	})
+	httpServer := httptest.NewServer(server.Handler())
+	defer httpServer.Close()
+
+	resp := request(t, http.MethodPost, httpServer.URL+"/api/v1/runs/run-1/resume", "token-1", nil)
+	if resp.StatusCode != http.StatusConflict {
+		t.Fatalf("status = %d, want 409", resp.StatusCode)
+	}
+	var body ErrorResponse
+	if err := json.NewDecoder(resp.Body).Decode(&body); err != nil {
+		t.Fatalf("decode error: %v", err)
+	}
+	resp.Body.Close()
+	if body.Error.Code != "RUN_NOT_RESUMABLE" {
+		t.Fatalf("error code = %q", body.Error.Code)
 	}
 }
 

@@ -17,7 +17,7 @@ import (
 const runStatsSQL = `
 	SELECT
 		count(*),
-		count(*) FILTER (WHERE status IN ('queued', 'assigned', 'running')),
+		count(*) FILTER (WHERE status IN ('queued', 'assigned', 'running', 'waiting')),
 		count(*) FILTER (WHERE status IN ('completed', 'failed', 'cancelled', 'timeout')),
 		count(*) FILTER (
 			WHERE status IN ('completed', 'failed', 'cancelled', 'timeout')
@@ -41,7 +41,7 @@ const sessionStatsSQL = `
 				SELECT 1
 				FROM runs r
 				WHERE (r.session_id = s.session_id OR (s.current_run_id <> '' AND r.run_id = s.current_run_id))
-				  AND r.status IN ('queued', 'assigned', 'running')
+				  AND r.status IN ('queued', 'assigned', 'running', 'waiting')
 			  )
 		)
 	FROM sessions s`

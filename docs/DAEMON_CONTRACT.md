@@ -91,11 +91,15 @@ event.data       JSON object
 envelope.attempt / lease_epoch 必须与分配一致
 ```
 
-终态：
+状态：
 
 ```text
-RUN_STATUS data.status ∈ completed / failed / cancelled / timeout
+RUN_STATUS data.status ∈ running / waiting / completed / failed / cancelled / timeout
 ```
+
+`waiting` 只用于可恢复的 longterm Run。daemon 必须在发送 `waiting`
+之前先发送 checkpoint；控制面收到 `waiting` 后会释放该 Run 的 daemon
+容量并暂停超时任务，之后可以通过 resume API 重新入队。
 
 规则：
 

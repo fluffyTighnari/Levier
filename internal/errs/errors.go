@@ -24,6 +24,7 @@ const (
 	CodeAppUnreachable               Code = "APP_UNREACHABLE"
 	CodeRunTimeout                   Code = "RUN_TIMEOUT"
 	CodeRunCancelled                 Code = "RUN_CANCELLED"
+	CodeRunNotResumable              Code = "RUN_NOT_RESUMABLE"
 	CodeDaemonLost                   Code = "DAEMON_LOST"
 	CodeMaxAttemptsExceeded          Code = "MAX_ATTEMPTS_EXCEEDED"
 	CodeBadEnvelope                  Code = "BAD_ENVELOPE"
@@ -152,6 +153,7 @@ var codeMetaByCode = map[Code]codeMeta{
 	CodeAppUnreachable:               {retryable: true, status: 503},
 	CodeRunTimeout:                   {retryable: false, status: 504},
 	CodeRunCancelled:                 {retryable: false, status: 409},
+	CodeRunNotResumable:              {retryable: false, status: 409},
 	CodeDaemonLost:                   {retryable: false, status: 503},
 	CodeMaxAttemptsExceeded:          {retryable: false, status: 500},
 	CodeBadEnvelope:                  {retryable: false, status: 400},

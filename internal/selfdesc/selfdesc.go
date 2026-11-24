@@ -99,6 +99,7 @@ type Endpoints struct {
 	Run                 string `json:"run"`
 	RunEvents           string `json:"run_events"`
 	RunCancel           string `json:"run_cancel"`
+	RunResume           string `json:"run_resume"`
 	WSToken             string `json:"ws_token"`
 	WebSocket           string `json:"websocket"`
 	AdminApps           string `json:"admin_apps"`
@@ -177,6 +178,7 @@ func New(opts Options) Document {
 			Features: []string{
 				"run_submit",
 				"run_cancel",
+				"run_resume",
 				"event_replay",
 				"app_registration",
 				"mcp_management",
@@ -209,6 +211,7 @@ func New(opts Options) Document {
 			Run:                 "/api/v1/runs/{run_id}",
 			RunEvents:           "/api/v1/runs/{run_id}/events",
 			RunCancel:           "/api/v1/runs/{run_id}/cancel",
+			RunResume:           "/api/v1/runs/{run_id}/resume",
 			WSToken:             "/api/v1/ws-token",
 			WebSocket:           "/api/v1/ws",
 			AdminApps:           "/admin/apps",

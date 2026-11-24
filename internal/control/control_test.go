@@ -950,6 +950,191 @@ func TestTerminalEventReleasesCapacity(t *testing.T) {
 	t.Fatal("capacity was not released on terminal event")
 }
 
+func TestWaitingEventTransitionsAndReleasesCapacity(t *testing.T) {
+	runs := &fakeRuns{
+		run:          newRun(),
+		appendResult: runstore.AppendResult{Inserted: true},
+	}
+	runs.run.Runtime = "longterm"
+	runs.run.SessionID = "session-1"
+	runs.run.Status = runstore.StatusRunning
+	runs.run.Attempt = 1
+	runs.run.LeaseEpoch = 1
+	runs.run.AssignedDaemonID = "d1"
+	hub := &fakeHub{}
+	tasks := &fakeTaskCanceller{}
+	ctrl := New(runs, hub, Config{Tasks: tasks})
+	ctrl.Start(context.Background())
+	defer ctrl.Close()
+
+	data, _ := structpb.NewStruct(map[string]any{"status": "waiting"})
+	event := &runtimev1.Event{
+		Seq: 1, Type: runtimev1.EventType_RUN_STATUS, Source: protocol.EventSourceDaemon, Data: data,
+	}
+	env, _ := protocol.NewRun("run-1", 1, 1, event)
+	ctrl.HandleEnvelope("d1", env)
+
+	deadline := time.Now().Add(time.Second)
+	for time.Now().Before(deadline) {
+		current, _ := runs.GetRun(context.Background(), "run-1")
+		if current.Status == runstore.StatusWaiting {
+			hub.mu.Lock()
+			released := hub.releaseCalls
+			hub.mu.Unlock()
+			if released != 1 {
+				t.Fatalf("released capacity = %d, want 1", released)
+			}
+			return
+		}
+		time.Sleep(5 * time.Millisecond)
+	}
+	t.Fatal("run did not enter waiting")
+}
+
+func TestWaitingRequiresLongtermSession(t *testing.T) {
+	runs := &fakeRuns{
+		run:          newRun(),
+		appendResult: runstore.AppendResult{Inserted: true},
+	}
+	runs.run.Status = runstore.StatusRunning
+	runs.run.Attempt = 1
+	runs.run.LeaseEpoch = 1
+	runs.run.AssignedDaemonID = "d1"
+	hub := &fakeHub{}
+	ctrl := New(runs, hub, Config{})
+	ctrl.Start(context.Background())
+	defer ctrl.Close()
+
+	data, _ := structpb.NewStruct(map[string]any{"status": "waiting"})
+	event := &runtimev1.Event{
+		Seq: 1, Type: runtimev1.EventType_RUN_STATUS, Source: protocol.EventSourceDaemon, Data: data,
+	}
+	env, _ := protocol.NewRun("run-1", 1, 1, event)
+	ctrl.HandleEnvelope("d1", env)
+
+	deadline := time.Now().Add(time.Second)
+	for time.Now().Before(deadline) {
+		current, _ := runs.GetRun(context.Background(), "run-1")
+		if current.Status == runstore.StatusFailed {
+			hub.mu.Lock()
+			released := hub.releaseCalls
+			hub.mu.Unlock()
+			if released != 1 {
+				t.Fatalf("released capacity = %d, want 1", released)
+			}
+			if len(runs.events) == 0 ||
+				!strings.Contains(string(runs.events[len(runs.events)-1].Payload), `"status":"failed"`) {
+				t.Fatalf("mw events = %+v", runs.events)
+			}
+			return
+		}
+		time.Sleep(5 * time.Millisecond)
+	}
+	t.Fatal("invalid waiting status did not fail the run")
+}
+
+func TestWaitingRequiresCheckpoint(t *testing.T) {
+	runs := &fakeRuns{
+		run:          newRun(),
+		appendResult: runstore.AppendResult{Inserted: true},
+	}
+	runs.run.Runtime = "longterm"
+	runs.run.SessionID = "session-1"
+	runs.run.Status = runstore.StatusRunning
+	runs.run.Attempt = 1
+	runs.run.LeaseEpoch = 1
+	runs.run.AssignedDaemonID = "d1"
+	hub := &fakeHub{}
+	checkpoints := &fakeCheckpointStore{err: runstore.ErrCheckpointNotFound}
+	ctrl := New(runs, hub, Config{Checkpoints: checkpoints})
+	ctrl.Start(context.Background())
+	defer ctrl.Close()
+
+	data, _ := structpb.NewStruct(map[string]any{"status": "waiting"})
+	event := &runtimev1.Event{
+		Seq: 1, Type: runtimev1.EventType_RUN_STATUS, Source: protocol.EventSourceDaemon, Data: data,
+	}
+	env, _ := protocol.NewRun("run-1", 1, 1, event)
+	ctrl.HandleEnvelope("d1", env)
+
+	deadline := time.Now().Add(time.Second)
+	for time.Now().Before(deadline) {
+		current, _ := runs.GetRun(context.Background(), "run-1")
+		if current.Status == runstore.StatusFailed {
+			if len(runs.events) == 0 ||
+				!strings.Contains(string(runs.events[len(runs.events)-1].Payload), "checkpoint") {
+				t.Fatalf("mw events = %+v", runs.events)
+			}
+			return
+		}
+		time.Sleep(5 * time.Millisecond)
+	}
+	t.Fatal("waiting without checkpoint did not fail the run")
+}
+
+func TestResumeWaitingRunRequeuesAndRehydrates(t *testing.T) {
+	runs := &fakeRuns{run: newRun()}
+	runs.run.Runtime = "longterm"
+	runs.run.Status = runstore.StatusWaiting
+	runs.run.Attempt = 1
+	runs.run.LeaseEpoch = 1
+	runs.run.SessionID = "session-1"
+	hub := &fakeHub{daemonID: "daemon-1"}
+	tasks := &fakeTaskCanceller{}
+	checkpoints := &fakeCheckpointStore{get: runstore.Checkpoint{
+		SessionID:      "session-1",
+		State:          []byte(`{"step":9}`),
+		EventWatermark: 10,
+	}}
+	ctrl := New(runs, hub, Config{Tasks: tasks, Checkpoints: checkpoints})
+
+	resumed, err := ctrl.ResumeRun(context.Background(), "run-1")
+	if err != nil {
+		t.Fatalf("ResumeRun() error = %v", err)
+	}
+	if resumed.Status != runstore.StatusQueued || resumed.Attempt != 1 || resumed.LeaseEpoch != 2 {
+		t.Fatalf("resumed = %+v", resumed)
+	}
+	if tasks.enqueueCalls != 2 {
+		t.Fatalf("enqueue calls = %d, want dispatch and timeout", tasks.enqueueCalls)
+	}
+	if len(runs.events) != 1 || !strings.Contains(string(runs.events[0].Payload), `"status":"queued"`) {
+		t.Fatalf("resume events = %+v", runs.events)
+	}
+
+	hub.onSend = func(env *runtimev1.Envelope) {
+		go ctrl.HandleEnvelope("daemon-1", &runtimev1.Envelope{
+			CorrelationId: env.GetMsgId(),
+			Payload: &runtimev1.Envelope_TaskAck{
+				TaskAck: &runtimev1.TaskAck{Accepted: true},
+			},
+		})
+	}
+	if err := ctrl.Handle(context.Background(), testTask(), workflow.Lease{}); err != nil {
+		t.Fatalf("Handle(resumed) error = %v", err)
+	}
+	if len(hub.sent) != 1 {
+		t.Fatalf("sent = %d", len(hub.sent))
+	}
+	assign := hub.sent[0].GetTaskAssign()
+	if hub.sent[0].GetAttempt() != 2 {
+		t.Fatalf("attempt = %d, want 2", hub.sent[0].GetAttempt())
+	}
+	resume := assign.GetResumeFrom()
+	if resume == nil || resume.GetSessionId() != "session-1" ||
+		resume.GetEventSeqWatermark() != 10 || string(resume.GetState()) != `{"step":9}` {
+		t.Fatalf("resume = %+v", resume)
+	}
+}
+
+func TestResumeNonWaitingRunIsRejected(t *testing.T) {
+	runs := &fakeRuns{run: newRun()}
+	ctrl := New(runs, &fakeHub{}, Config{})
+	if _, err := ctrl.ResumeRun(context.Background(), "run-1"); !errors.Is(err, runstore.ErrRunNotResumable) {
+		t.Fatalf("ResumeRun() error = %v, want ErrRunNotResumable", err)
+	}
+}
+
 func TestHandleNoDaemonRetries(t *testing.T) {
 	runs := &fakeRuns{run: newRun()}
 	ctrl := New(runs, &fakeHub{}, Config{RetryDelay: 3 * time.Second})

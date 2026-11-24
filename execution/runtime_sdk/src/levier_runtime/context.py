@@ -87,6 +87,7 @@ class RunContext:
         self._attempt = attempt
         self._lease_epoch = lease_epoch
         self._toolbox = None
+        self._checkpoint_saved = False
         self.logger = logging.LoggerAdapter(
             logging.getLogger("levier_runtime.run"),
             {
@@ -376,6 +377,7 @@ class RunContext:
             data,
             watermark=self._events.seq,
         )
+        self._checkpoint_saved = True
         await self.emit(
             "CHECKPOINT_SAVED",
             {
@@ -383,6 +385,11 @@ class RunContext:
                 "event_seq_watermark": watermark,
             },
         )
+
+    async def wait(self, state: bytes | Mapping[str, Any]) -> str:
+        """Persist a checkpoint and return the waiting status for ``run``."""
+        await self.checkpoint(state)
+        return "waiting"
 
     async def close_toolbox(self) -> None:
         """Close any MCP sessions opened by :meth:`toolbox`."""

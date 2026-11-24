@@ -271,12 +271,41 @@ func (c *Control) handleEvent(env *runtimev1.Envelope) {
 	statusValue, _ := eventData[contract.EventFieldStatus].(string)
 	status := strings.ToLower(statusValue)
 	switch status {
-	case "running", "completed", "failed", "cancelled", "timeout":
+	case "running", "waiting", "completed", "failed", "cancelled", "timeout":
 	default:
 		return
 	}
 	if status == run.Status {
 		return
+	}
+	if status == runstore.StatusWaiting {
+		// Serialize the waiting transition and task cancellation with resume.
+		// Otherwise a resume could enqueue work between the transition and
+		// cancellation and immediately lose that work.
+		c.waitingMu.Lock()
+		defer c.waitingMu.Unlock()
+	}
+	rejectedWaiting := status == runstore.StatusWaiting &&
+		(run.Runtime != "longterm" || run.SessionID == "")
+	rejectedReason := "waiting requires a longterm session"
+	if status == runstore.StatusWaiting && !rejectedWaiting && c.cfg.Checkpoints != nil {
+		checkpoint, err := c.resumeCheckpoint(ctx, run)
+		if err != nil || checkpoint == nil {
+			rejectedWaiting = true
+			rejectedReason = "waiting requires a saved checkpoint"
+		}
+	}
+	if rejectedWaiting {
+		c.log.Warn("control rejected waiting status",
+			observe.FieldRunID, run.RunID,
+			observe.FieldTraceID, run.TraceID,
+			observe.FieldAppID, run.AppID,
+			observe.FieldTenantID, run.TenantID,
+			"runtime", run.Runtime,
+			"session_id", run.SessionID,
+			"reason", rejectedReason,
+		)
+		status = runstore.StatusFailed
 	}
 	if _, err := c.runs.Transition(ctx, runstore.Transition{
 		RunID:              env.GetRunId(),
@@ -306,6 +335,18 @@ func (c *Control) handleEvent(env *runtimev1.Envelope) {
 		)
 		return
 	}
+	if status == runstore.StatusWaiting {
+		c.hub.Release(run.AssignedDaemonID)
+		c.cancelTasks(ctx, env.GetRunId(), "run waiting")
+		c.log.Info("control run waiting",
+			observe.FieldRunID, run.RunID,
+			observe.FieldTraceID, run.TraceID,
+			observe.FieldAppID, run.AppID,
+			observe.FieldTenantID, run.TenantID,
+			observe.FieldAttempt, env.GetAttempt(),
+		)
+		return
+	}
 	if runstore.TerminalStatus(status) {
 		c.log.Info("control run terminal",
 			observe.FieldRunID, run.RunID,
@@ -323,6 +364,9 @@ func (c *Control) handleEvent(env *runtimev1.Envelope) {
 		c.hub.Release(run.AssignedDaemonID)
 		if status == runstore.StatusCancelled {
 			c.cancelLocalTools(run.AppID, env.GetRunId(), string(errs.CodeRunCancelled), "run cancelled")
+		}
+		if rejectedWaiting {
+			c.appendMWStatus(ctx, run, runstore.StatusFailed, rejectedReason)
 		}
 		c.cancelTasks(ctx, env.GetRunId(), "run terminal")
 		c.publishCompleted(run.AppID, env.GetRunId(), status, int(env.GetAttempt()))

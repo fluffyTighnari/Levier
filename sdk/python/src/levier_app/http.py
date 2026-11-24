@@ -263,7 +263,7 @@ class LevierClient:
         timeout: float = 300.0,
         interval: float = 0.5,
     ) -> dict[str, Any]:
-        """Poll until a Run reaches a terminal status and return its view."""
+        """Poll until a Run finishes or waits, and return its view."""
         if timeout <= 0:
             raise ValueError("timeout must be positive")
         if interval <= 0:
@@ -272,7 +272,7 @@ class LevierClient:
         while True:
             run = self.get_run(run_id)
             status = str(run.get("status") or "")
-            if status in {"completed", "failed", "cancelled", "timeout"}:
+            if status in {"completed", "failed", "cancelled", "timeout", "waiting"}:
                 return run
             if time.monotonic() >= deadline:
                 raise TimeoutError(f"run {run_id} did not finish within {timeout}s")
@@ -322,5 +322,12 @@ class LevierClient:
         response = self._request(
             "POST",
             f"/api/v1/runs/{urllib.parse.quote(run_id, safe='')}/cancel",
+        )
+        return _require_ok(response, 200)
+
+    def resume_run(self, run_id: str) -> dict[str, Any]:
+        response = self._request(
+            "POST",
+            f"/api/v1/runs/{urllib.parse.quote(run_id, safe='')}/resume",
         )
         return _require_ok(response, 200)

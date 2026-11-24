@@ -210,6 +210,53 @@ func (s *Server) handleAdminCancelRun(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+func (s *Server) handleAdminResumeRun(w http.ResponseWriter, r *http.Request) {
+	if !s.isAdmin(r) {
+		writeErrorCode(w, errs.CodeUnauthorized, "admin token is required", false)
+		return
+	}
+	run, err := s.runs.GetRun(r.Context(), r.PathValue("run_id"))
+	if errors.Is(err, runstore.ErrRunNotFound) {
+		writeErrorCode(w, errs.CodeRunNotFound, "run not found", false)
+		return
+	}
+	if err != nil {
+		writeErrorCode(w, errs.CodeInternal, "get run failed", true)
+		return
+	}
+	if s.resumer == nil {
+		writeErrorCode(w, errs.CodeNotImplemented, "resume is not configured", false)
+		return
+	}
+	resumed, err := s.resumer.ResumeRun(r.Context(), run.RunID)
+	if errors.Is(err, runstore.ErrRunNotFound) {
+		writeErrorCode(w, errs.CodeRunNotFound, "run not found", false)
+		return
+	}
+	if errors.Is(err, runstore.ErrRunNotResumable) {
+		writeErrorCode(w, errs.CodeRunNotResumable, "run is not waiting", false)
+		return
+	}
+	if err != nil {
+		writeErrorCode(w, errs.CodeInternal, "resume run failed", true)
+		return
+	}
+	s.log.Info("admin action",
+		"action", "run.resume",
+		"run_id", run.RunID,
+		"app_id", run.AppID,
+		observe.FieldTenantID, run.TenantID,
+		"previous_status", run.Status,
+		"result_status", resumed.Status,
+		"request_id", r.Header.Get("X-Request-ID"),
+	)
+	writeJSON(w, http.StatusOK, ResumeRunResponse{
+		RunID:     resumed.RunID,
+		SessionID: resumed.SessionID,
+		Status:    RunStatus(resumed.Status),
+	})
+}
+
 func (s *Server) handleAdminListDaemons(w http.ResponseWriter, r *http.Request) {
 	if !s.isAdmin(r) {
 		writeErrorCode(w, errs.CodeUnauthorized, "admin token is required", false)

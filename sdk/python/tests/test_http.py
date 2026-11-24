@@ -102,6 +102,26 @@ class HttpTest(unittest.TestCase):
         self.assertEqual(payload["runtime"], "longterm")
         self.assertEqual(payload["session_id"], "session-1")
 
+    def test_resume_run_and_wait_for_waiting(self) -> None:
+        transport = FakeTransport(
+            response(200, {"run_id": "run-1", "status": "waiting"}),
+            response(200, {
+                "run_id": "run-1",
+                "status": "queued",
+                "session_id": "session-1",
+            }),
+        )
+        client = LevierClient("http://levier:8080", "app-1", "secret", transport)
+        waiting = client.wait_run("run-1", timeout=1, interval=0.001)
+        self.assertEqual(waiting["status"], "waiting")
+        resumed = client.resume_run("run-1")
+        self.assertEqual(resumed["status"], "queued")
+        self.assertEqual(resumed["session_id"], "session-1")
+        self.assertEqual(
+            transport.requests[1].url,
+            "http://levier:8080/api/v1/runs/run-1/resume",
+        )
+
     def test_http_error_is_normalized(self) -> None:
         transport = FakeTransport(response(401, {
             "error": {"code": "UNAUTHORIZED", "message": "bad key"},

@@ -23,7 +23,7 @@ const expireSessionsSQL = `
 		SELECT 1
 		FROM runs r
 		WHERE (r.session_id = s.session_id OR (s.current_run_id <> '' AND r.run_id = s.current_run_id))
-		  AND r.status IN ('queued', 'assigned', 'running')
+		  AND r.status IN ('queued', 'assigned', 'running', 'waiting')
 	  )`
 
 const deleteRunsSQL = `
@@ -49,7 +49,7 @@ const deleteSessionsSQL = `
 			SELECT 1
 			FROM runs r
 			WHERE (r.session_id = s.session_id OR (s.current_run_id <> '' AND r.run_id = s.current_run_id))
-			  AND r.status IN ('queued', 'assigned', 'running')
+			  AND r.status IN ('queued', 'assigned', 'running', 'waiting')
 		  )
 		ORDER BY s.expires_at
 		LIMIT $2

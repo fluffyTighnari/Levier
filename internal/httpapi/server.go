@@ -73,6 +73,11 @@ type Canceller interface {
 	CancelRun(ctx context.Context, runID, reason string) (runstore.Run, error)
 }
 
+// Resumer requeues one waiting run for another dispatch attempt.
+type Resumer interface {
+	ResumeRun(ctx context.Context, runID string) (runstore.Run, error)
+}
+
 // RunLister is the optional operator run-listing subset.
 type RunLister interface {
 	ListRuns(ctx context.Context, filter runstore.RunFilter) (runstore.RunPage, error)
@@ -122,6 +127,7 @@ type Config struct {
 	Daemons              DaemonSource
 	ReadinessCheck       func(context.Context) error
 	Canceller            Canceller
+	Resumer              Resumer
 	QuotaPolicy          QuotaPolicy
 	Metrics              *observe.Registry
 	MetricsCollector     func(context.Context)
@@ -139,6 +145,7 @@ type Server struct {
 	appHub    *connection.AppHub
 	wsTokens  *WSTokenStore
 	canceller Canceller
+	resumer   Resumer
 	quota     QuotaPolicy
 	cfg       Config
 	log       *slog.Logger
@@ -179,6 +186,7 @@ func NewServer(runs RunStore, queue TaskQueue, cfg Config, registries ...AppRegi
 		appHub:    appHub,
 		wsTokens:  NewWSTokenStore(cfg.WSTokenTTL),
 		canceller: cfg.Canceller,
+		resumer:   cfg.Resumer,
 		quota:     cfg.QuotaPolicy,
 		mux:       http.NewServeMux(),
 	}
@@ -209,6 +217,7 @@ func (s *Server) routes() {
 	s.mux.HandleFunc("GET "+APIPrefix+"/runs/{run_id}", s.handleGetRun)
 	s.mux.HandleFunc("GET "+APIPrefix+"/runs/{run_id}/events", s.handleListEvents)
 	s.mux.HandleFunc("POST "+APIPrefix+"/runs/{run_id}/cancel", s.handleCancelRun)
+	s.mux.HandleFunc("POST "+APIPrefix+"/runs/{run_id}/resume", s.handleResumeRun)
 	s.mux.HandleFunc("GET "+APIPrefix+"/sessions/{session_id}", s.handleGetSession)
 	s.mux.HandleFunc("GET "+APIPrefix+"/sessions/{session_id}/events", s.handleListSessionEvents)
 	s.mux.HandleFunc("POST "+APIPrefix+"/ws-token", s.handleIssueWSToken)
@@ -217,6 +226,7 @@ func (s *Server) routes() {
 	s.mux.HandleFunc("GET /admin/runs", s.handleAdminListRuns)
 	s.mux.HandleFunc("GET /admin/runs/{run_id}", s.handleAdminGetRun)
 	s.mux.HandleFunc("POST /admin/runs/{run_id}/cancel", s.handleAdminCancelRun)
+	s.mux.HandleFunc("POST /admin/runs/{run_id}/resume", s.handleAdminResumeRun)
 	s.mux.HandleFunc("GET /admin/daemons", s.handleAdminListDaemons)
 	s.mux.HandleFunc("GET /admin/tasks", s.handleAdminListTasks)
 	s.mux.HandleFunc("POST /admin/mcp", s.handleAdminUpsertMCP)

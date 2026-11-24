@@ -267,7 +267,7 @@ func (s *Store) Transition(ctx context.Context, transition Transition) (Run, err
 	return run, nil
 }
 
-// RequeueRun moves an assigned/running run back to queued with a new epoch.
+// RequeueRun moves an assigned/running/waiting run back to queued with a new epoch.
 func (s *Store) RequeueRun(ctx context.Context, runID string) (Run, error) {
 	if s == nil || s.pool == nil {
 		return Run{}, fmt.Errorf("runstore: postgres pool is nil")
@@ -283,7 +283,7 @@ func (s *Store) RequeueRun(ctx context.Context, runID string) (Run, error) {
 		    assigned_at = NULL,
 		    updated_at = now()
 		WHERE run_id = $1
-		  AND status IN ('assigned', 'running')
+		  AND status IN ('assigned', 'running', 'waiting')
 		  AND NOT EXISTS (
 		    SELECT 1
 		    FROM run_events e

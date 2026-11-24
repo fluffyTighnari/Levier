@@ -289,7 +289,7 @@ func (c *Control) handleTimeout(ctx context.Context, runID string) error {
 	if err != nil {
 		return fmt.Errorf("get run: %w", err)
 	}
-	if runstore.TerminalStatus(run.Status) {
+	if runstore.TerminalStatus(run.Status) || run.Status == runstore.StatusWaiting {
 		return nil
 	}
 	timedOut, err := c.runs.Transition(ctx, runstore.Transition{

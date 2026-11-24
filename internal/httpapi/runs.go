@@ -326,3 +326,42 @@ func (s *Server) handleCancelRun(w http.ResponseWriter, r *http.Request) {
 		Status: RunStatus(cancelled.Status),
 	})
 }
+
+func (s *Server) handleResumeRun(w http.ResponseWriter, r *http.Request) {
+	run, err := s.runs.GetRun(r.Context(), r.PathValue("run_id"))
+	if errors.Is(err, runstore.ErrRunNotFound) {
+		writeErrorCode(w, errs.CodeRunNotFound, "run not found", false)
+		return
+	}
+	if err != nil {
+		writeErrorCode(w, errs.CodeInternal, "get run failed", true)
+		return
+	}
+	if !s.canAccessApp(r, run.AppID) {
+		writeErrorCode(w, errs.CodeRunNotFound, "run not found", false)
+		return
+	}
+	setResponseTenant(w, run.TenantID)
+	if s.resumer == nil {
+		writeErrorCode(w, errs.CodeNotImplemented, "resume is not configured", false)
+		return
+	}
+	resumed, err := s.resumer.ResumeRun(r.Context(), run.RunID)
+	if errors.Is(err, runstore.ErrRunNotFound) {
+		writeErrorCode(w, errs.CodeRunNotFound, "run not found", false)
+		return
+	}
+	if errors.Is(err, runstore.ErrRunNotResumable) {
+		writeErrorCode(w, errs.CodeRunNotResumable, "run is not waiting", false)
+		return
+	}
+	if err != nil {
+		writeErrorCode(w, errs.CodeInternal, "resume run failed", true)
+		return
+	}
+	writeJSON(w, http.StatusOK, ResumeRunResponse{
+		RunID:     resumed.RunID,
+		SessionID: resumed.SessionID,
+		Status:    RunStatus(resumed.Status),
+	})
+}

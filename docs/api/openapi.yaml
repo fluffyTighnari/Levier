@@ -217,6 +217,23 @@ paths:
                 $ref: '#/components/schemas/CancelRunResponse'
         default:
           $ref: '#/components/responses/Error'
+  /admin/runs/{run_id}/resume:
+    post:
+      summary: Resume a waiting run as an operator
+      operationId: resumeAdminRun
+      security:
+        - adminToken: []
+      parameters:
+        - $ref: '#/components/parameters/RunID'
+      responses:
+        "200":
+          description: Run resume result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResumeRunResponse'
+        default:
+          $ref: '#/components/responses/Error'
   /admin/daemons:
     get:
       summary: List connected daemon capacity
@@ -554,6 +571,21 @@ paths:
                 $ref: '#/components/schemas/CancelRunResponse'
         default:
           $ref: '#/components/responses/Error'
+  /runs/{run_id}/resume:
+    post:
+      summary: Resume a waiting longterm run
+      operationId: resumeRun
+      parameters:
+        - $ref: '#/components/parameters/RunID'
+      responses:
+        "200":
+          description: Run requeued for another attempt
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResumeRunResponse'
+        default:
+          $ref: '#/components/responses/Error'
   /sessions/{session_id}:
     get:
       summary: Read a longterm session
@@ -775,6 +807,8 @@ components:
           type: string
         status:
           type: string
+        session_id:
+          type: string
         ws_url:
           type: string
         ws_token:
@@ -864,6 +898,16 @@ components:
       required: [run_id, status]
       properties:
         run_id:
+          type: string
+        status:
+          type: string
+    ResumeRunResponse:
+      type: object
+      required: [run_id, status]
+      properties:
+        run_id:
+          type: string
+        session_id:
           type: string
         status:
           type: string

@@ -26,6 +26,8 @@ var (
 	ErrInvalidRun = errors.New("invalid run")
 	// ErrRunNotAssignable reports a run in a non-dispatchable state.
 	ErrRunNotAssignable = errors.New("run is not assignable")
+	// ErrRunNotResumable reports a run that is not waiting.
+	ErrRunNotResumable = errors.New("run is not waiting")
 	// ErrInvalidEvent reports invalid event input.
 	ErrInvalidEvent = errors.New("invalid event")
 	// ErrEphemeralEvent reports an attempt to persist an ephemeral event.

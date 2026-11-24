@@ -115,6 +115,7 @@ type Control struct {
 
 	pendingMu sync.Mutex
 	pending   map[string]chan *runtimev1.TaskAck
+	waitingMu sync.Mutex
 	events    chan *runtimev1.Envelope
 
 	toolMu     sync.Mutex

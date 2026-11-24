@@ -122,6 +122,16 @@ class ContextTest(unittest.IsolatedAsyncioTestCase):
         ]
         self.assertEqual(len(saved), 1)
 
+    async def test_wait_saves_checkpoint_and_returns_waiting(self) -> None:
+        channel = FakeChannel()
+        ctx = make_context(channel, session_id="session-1")
+        status = await ctx.wait({"step": 2})
+        self.assertEqual(status, "waiting")
+        checkpoint = next(
+            item for item in channel.sent if item.WhichOneof("payload") == "checkpoint"
+        )
+        self.assertEqual(checkpoint.checkpoint.state, b'{"step":2}')
+
 
 if __name__ == "__main__":
     unittest.main()

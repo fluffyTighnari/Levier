@@ -23,6 +23,7 @@ var validRunStatuses = map[string]struct{}{
 	StatusQueued:    {},
 	StatusAssigned:  {},
 	StatusRunning:   {},
+	StatusWaiting:   {},
 	StatusCompleted: {},
 	StatusFailed:    {},
 	StatusCancelled: {},

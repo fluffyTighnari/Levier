@@ -12,6 +12,8 @@ const (
 	StatusAssigned = "assigned"
 	// StatusRunning is executing on a daemon.
 	StatusRunning = "running"
+	// StatusWaiting is paused with a resumable checkpoint.
+	StatusWaiting = "waiting"
 	// StatusCompleted finished successfully.
 	StatusCompleted = "completed"
 	// StatusFailed finished with an error.
@@ -36,9 +38,15 @@ var runTransitions = map[string]map[string]struct{}{
 		StatusTimeout:   {},
 	},
 	StatusRunning: {
+		StatusWaiting:   {},
 		StatusCompleted: {},
 		StatusFailed:    {},
 		StatusCancelled: {},
+		StatusTimeout:   {},
+	},
+	StatusWaiting: {
+		StatusCancelled: {},
+		StatusFailed:    {},
 		StatusTimeout:   {},
 	},
 }

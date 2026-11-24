@@ -27,13 +27,15 @@ from .types import (
 )
 
 TERMINAL_STATUSES = {"completed", "failed", "cancelled"}
+WAITING_STATUS = "waiting"
+VALID_OUTCOMES = TERMINAL_STATUSES | {WAITING_STATUS}
 
 
 class Runner(Protocol):
     """A runtime's `run(ctx)` function."""
 
     async def __call__(self, ctx: RunContext) -> str:
-        """Return a terminal status."""
+        """Return a terminal status or ``waiting`` for a resumable run."""
 
 
 class NoopRunner:
@@ -179,9 +181,15 @@ class RunManager:
         error_code = ""
         try:
             status = await self.runner(ctx)
-            if status not in TERMINAL_STATUSES:
+            if status not in VALID_OUTCOMES:
                 reason = f"runtime returned invalid status {status!r}"
                 error_code = "INVALID_RUNTIME_STATUS"
+                status = "failed"
+            elif status == WAITING_STATUS and (
+                not ctx.session_id or not ctx._checkpoint_saved
+            ):
+                reason = "waiting requires a saved longterm checkpoint"
+                error_code = "WAITING_WITHOUT_CHECKPOINT"
                 status = "failed"
             if ctx.cancelled:
                 status = "cancelled"

@@ -107,6 +107,9 @@ adapter 负责把 provider 的 `prompt_tokens/completion_tokens` 等归一化到
 completed / failed / cancelled / timeout
 ```
 
+`waiting` 是 Runtime manager 为 longterm Run 增加的可恢复状态；Agent Core
+本身仍只产生终态。
+
 `error.code`（core 层）：
 
 ```text
