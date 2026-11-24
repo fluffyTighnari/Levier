@@ -102,6 +102,7 @@ run. `ctx.error` is the explicit error event entry point.
 await ctx.emit(event_type, data, ephemeral=False)
 await ctx.checkpoint(state)
 return await ctx.wait(state)
+ctx.register_tool(name, handler, description=..., schema=...)
 ```
 
 `ctx.reply` generates message IDs and event sequence numbers in the SDK.
@@ -118,6 +119,10 @@ return await ctx.wait(state)
 - **Longterm**: use `ctx.session_id` / `ctx.resume_from`, and save state with
   `ctx.checkpoint`. To pause for external input, `return await ctx.wait(state)`;
   the helper saves a checkpoint before returning `waiting`.
+- **Runtime-local tools**: register a handler with `ctx.register_tool(...)` or
+  `@ctx.tool(...)` before opening the toolbox. It joins the same model tool
+  list as App/global/MCP tools, but executes inside the Runtime process and
+  never goes through the App Gateway.
 - **Streaming**: use `ctx.emit("MESSAGE_DELTA", ...)`.
 
 ## 5. Custom ReAct loop

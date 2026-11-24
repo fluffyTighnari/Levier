@@ -50,7 +50,7 @@ Levier 会用它做对账，并下发 `Reconcile`。
 ```text
 run_id / app_id / params
 input                 ChatMessage[]
-tools                 ToolManifest[]
+tools                 ToolManifest[]（App/global；Runtime-local 工具由 Runtime 自己注册，不经过控制面）
 mcp_bindings          McpBinding[]
 timeouts              run_ms / tool_ms
 session_id            longterm 会话（可空）

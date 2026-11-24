@@ -1,8 +1,8 @@
-"""One object that makes local and MCP tools look the same.
+"""One object that makes App, runtime, and MCP tools look the same.
 
-Runtime authors do not need to know whether a capability is a local App tool
-or an MCP tool. ``await ctx.toolbox()`` returns a sequence of callable tools,
-model-facing specs, and one dispatch method.
+Runtime authors do not need to know whether a capability is an App tool, a
+Runtime-local tool, or an MCP tool. ``await ctx.toolbox()`` returns a sequence
+of callable tools, model-facing specs, and one dispatch method.
 
 Copyright 2026 The Levier Authors.
 """
@@ -19,7 +19,7 @@ from .mcp import McpRuntimeClient, McpRuntimeError
 from .types import McpBinding, ToolResult, ToolSpec
 
 
-_Caller = Callable[[str], Awaitable[ToolResult]]
+_Caller = Callable[[str, str], Awaitable[ToolResult]]
 
 
 @dataclass(frozen=True)
@@ -32,7 +32,12 @@ class Tool:
     scope: str
     _caller: _Caller = field(repr=False, compare=False)
 
-    async def call(self, arguments: Mapping[str, Any] | str | None = None) -> ToolResult:
+    async def call(
+        self,
+        arguments: Mapping[str, Any] | str | None = None,
+        *,
+        invocation_id: str = "",
+    ) -> ToolResult:
         """Call this tool with a mapping or a JSON object string."""
         if isinstance(arguments, Mapping):
             payload = json.dumps(arguments, ensure_ascii=False, separators=(",", ":"))
@@ -42,11 +47,11 @@ class Tool:
             payload = arguments
         else:
             raise TypeError("tool arguments must be a mapping or JSON string")
-        return await self._caller(payload)
+        return await self._caller(payload, invocation_id)
 
 
 class Toolbox(Sequence[Tool]):
-    """All tools visible to one Run, local and MCP, with one dispatcher."""
+    """All tools visible to one Run, with one dispatcher."""
 
     def __init__(
         self,
@@ -66,7 +71,11 @@ class Toolbox(Sequence[Tool]):
     async def open(cls, ctx: "Any") -> "Toolbox":
         """Build the toolbox for one ``RunContext``."""
         tools: list[Tool] = []
+        seen: set[str] = set()
         for spec in ctx.tools:
+            if spec.name in seen:
+                continue
+            seen.add(spec.name)
             tools.append(_local_tool(ctx, spec))
 
         mcp_client: McpRuntimeClient | None = None
@@ -83,7 +92,15 @@ class Toolbox(Sequence[Tool]):
                     session_id, mcp_tools = await _open_mcp(ctx, mcp_client, binding)
                     if session_id:
                         sessions.append(session_id)
-                        tools.extend(mcp_tools)
+                    for tool in mcp_tools:
+                        if tool.name in seen:
+                            ctx.logger.warning(
+                                "MCP tool name %r conflicts with a visible tool; skipping",
+                                tool.name,
+                            )
+                            continue
+                        seen.add(tool.name)
+                        tools.append(tool)
         return cls(tools, mcp=mcp_client, sessions=sessions, logger=ctx.logger)
 
     def __len__(self) -> int:
@@ -99,7 +116,7 @@ class Toolbox(Sequence[Tool]):
         return self._by_name.get(name)
 
     def local(self) -> list[Tool]:
-        """Return only App/global tools executed through Levier."""
+        """Return tools executed through the Levier tool bridge or runtime."""
         return [tool for tool in self._tools if tool.scope != "mcp"]
 
     def mcp(self) -> list[Tool]:
@@ -123,6 +140,8 @@ class Toolbox(Sequence[Tool]):
         self,
         name: str,
         arguments: Mapping[str, Any] | str | None = None,
+        *,
+        invocation_id: str = "",
     ) -> ToolResult:
         """Dispatch one tool by its model-facing name."""
         value = self._by_name.get(name)
@@ -132,7 +151,7 @@ class Toolbox(Sequence[Tool]):
                 error_code="TOOL_NOT_FOUND",
                 error_message=f"unknown tool {name!r}",
             )
-        return await value.call(arguments)
+        return await value.call(arguments, invocation_id=invocation_id)
 
     async def close(self) -> None:
         """Close every MCP session opened by this toolbox."""
@@ -150,8 +169,12 @@ class Toolbox(Sequence[Tool]):
 
 
 def _local_tool(ctx: Any, spec: ToolSpec) -> Tool:
-    async def call(payload: str) -> ToolResult:
-        return await ctx.call_tool(spec.name, payload)
+    async def call(payload: str, invocation_id: str) -> ToolResult:
+        return await ctx.call_tool(
+            spec.name,
+            payload,
+            invocation_id=invocation_id,
+        )
 
     return Tool(
         name=spec.name,
@@ -186,8 +209,14 @@ async def _open_mcp(
     tools: list[Tool] = []
     for spec in session.tools:
 
-        async def call(payload: str, *, _name: str = spec.name, _session: str = session.session_id) -> ToolResult:
-            invocation_id = new_ulid()
+        async def call(
+            payload: str,
+            invocation_id: str,
+            *,
+            _name: str = spec.name,
+            _session: str = session.session_id,
+        ) -> ToolResult:
+            invocation_id = invocation_id or new_ulid()
             started = time.monotonic()
             await ctx._emit_safe(
                 "TOOL_CALL_BEGIN",

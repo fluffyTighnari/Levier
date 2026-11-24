@@ -145,7 +145,7 @@
 - `ctx.input` — 输入消息列表。
 - `ctx.params` — 提交 Run 时传入的 Runtime 自定义参数。
 - `ctx.model` — 控制面解析后的模型配置（provider/model/api_key/base_url/params），可能为 `None`。
-- `ctx.tools` — 控制面下发的本地/global 工具描述列表。
+- `ctx.tools` — 统一工具描述列表；控制面下发 App/global 工具，Runtime 注册的工具以 `scope="runtime"` 加入。
 - `ctx.mcp_bindings` — 控制面下发的 MCP 连接描述列表。
 - `ctx.timeouts` — Run 超时和工具超时。
 - `ctx.session_id` / `ctx.resume_from` — 可选 session 和 checkpoint 状态。
@@ -162,6 +162,8 @@
 - `await ctx.error(code, message, *, retryable=False, data=None)` — 发结构化 `ERROR` 事件。
 - `await ctx.checkpoint(state)` — 保存 bytes 或 mapping 形式的 checkpoint，需要 `session_id`。
 - `await ctx.wait(state)` — 保存 checkpoint 并返回 `waiting`，用于 longterm Run 暂停等待外部恢复。
+- `ctx.register_tool(name, handler, description=..., schema=...)` / `@ctx.tool(...)` — 注册 Runtime-local 工具；在打开 toolbox 前调用，工具直接在本进程执行。
+- `await ctx.call_tool(name, arguments)` — 统一路由 App/global/MCP/Runtime-local 工具；Runtime-local 不经过 App Gateway。
 - `await ctx.close_toolbox()` — 关闭该 Run 打开的 MCP session。
 
 ---

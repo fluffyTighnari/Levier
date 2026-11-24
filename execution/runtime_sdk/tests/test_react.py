@@ -242,6 +242,60 @@ class ReactAgentTest(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(error["code"], "TOOL_TIMEOUT")
         self.assertEqual(events[-1].event.data.fields["status"].string_value, "completed")
 
+    async def test_react_uses_runtime_local_tools(self) -> None:
+        provider = ScriptedProvider([
+            LLMResponse(
+                tool_calls=[
+                    ToolCall(
+                        call_id="call-runtime",
+                        name="runtime_add",
+                        arguments_json='{"a":2,"b":3}',
+                    ),
+                ],
+            ),
+            LLMResponse(content="5"),
+        ])
+        sender = FakeSender()
+
+        async def runner(ctx):
+            @ctx.tool(
+                "runtime_add",
+                description="Add two numbers in the runtime.",
+                schema={"type": "object"},
+            )
+            async def runtime_add(arguments):
+                return {"sum": arguments["a"] + arguments["b"]}
+
+            return await ReactAgent(provider).run(ctx)
+
+        self.manager = RunManager(
+            sender,
+            ManagerConfig(runtime_name="react1"),
+            runner,
+        )
+        await self.manager.handle(assign_envelope())
+        await self.wait_until(lambda: self.manager.running_count() == 0)
+
+        offered = [tool.name for tool in provider.calls[0][1]]
+        self.assertIn("runtime_add", offered)
+        events = self.events(sender)
+        begin = next(
+            event for event in events
+            if event.event.type == runtime_pb2.EventType.TOOL_CALL_BEGIN
+        )
+        end = next(
+            event for event in events
+            if event.event.type == runtime_pb2.EventType.TOOL_CALL_END
+        )
+        self.assertEqual(begin.event.data.fields["tool_name"].string_value, "runtime_add")
+        self.assertEqual(begin.event.data.fields["tool_scope"].string_value, "runtime")
+        self.assertEqual(end.event.data.fields["tool_scope"].string_value, "runtime")
+        self.assertEqual(end.event.data.fields["result_json"].string_value, '{"sum":5}')
+        tool_message = next(
+            message for message in provider.calls[1][0] if message.role == "tool"
+        )
+        self.assertEqual(tool_message.content, '{"sum":5}')
+
     async def test_react_max_steps(self) -> None:
         provider = ScriptedProvider([
             LLMResponse(tool_calls=[ToolCall(call_id=f"call-{n}", name="loop")])

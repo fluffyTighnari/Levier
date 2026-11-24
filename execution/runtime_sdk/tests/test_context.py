@@ -9,7 +9,7 @@ from middleware.runtime.v1 import runtime_pb2
 
 from levier_runtime.context import RunContext, RuntimeUsageError
 from levier_runtime.events import EventWriter
-from levier_runtime.types import Message, Timeouts
+from levier_runtime.types import Message, Timeouts, ToolSpec
 
 
 class FakeChannel:
@@ -26,7 +26,12 @@ class FakeChannel:
         return runtime_pb2.Envelope(tool_call_result=self.result)
 
 
-def make_context(channel: FakeChannel, *, session_id: str = "") -> RunContext:
+def make_context(
+    channel: FakeChannel,
+    *,
+    session_id: str = "",
+    tools: list[ToolSpec] | None = None,
+) -> RunContext:
     return RunContext(
         runtime_name="test1",
         run_id="run-1",
@@ -34,7 +39,7 @@ def make_context(channel: FakeChannel, *, session_id: str = "") -> RunContext:
         input_messages=[Message(role="user", content="hello")],
         params={"k": "v"},
         model=None,
-        tools=[],
+        tools=list(tools or []),
         mcp_bindings=[],
         timeouts=Timeouts(run_ms=1000, tool_ms=500),
         session_id=session_id or None,
@@ -121,6 +126,91 @@ class ContextTest(unittest.IsolatedAsyncioTestCase):
             and item.event.type == runtime_pb2.EventType.CHECKPOINT_SAVED
         ]
         self.assertEqual(len(saved), 1)
+
+    async def test_runtime_tool_routes_locally_and_skips_bridge(self) -> None:
+        channel = FakeChannel()
+        ctx = make_context(channel)
+
+        @ctx.tool(
+            "lookup_order",
+            description="Look up one order.",
+            schema={
+                "type": "object",
+                "properties": {"order_id": {"type": "string"}},
+                "required": ["order_id"],
+            },
+        )
+        async def lookup_order(arguments):
+            return {"status": "paid", "order_id": arguments["order_id"]}
+
+        self.assertEqual(ctx.tools[-1].name, "lookup_order")
+        self.assertEqual(ctx.tools[-1].scope, "runtime")
+        result = await ctx.call_tool(
+            "lookup_order",
+            {"order_id": "o-1"},
+            invocation_id="inv-runtime-1",
+        )
+
+        self.assertTrue(result.ok)
+        self.assertEqual(
+            json.loads(result.result_json),
+            {"status": "paid", "order_id": "o-1"},
+        )
+        self.assertEqual(channel.requests, [])
+        events = [
+            item.event for item in channel.sent
+            if item.WhichOneof("payload") == "event"
+        ]
+        self.assertEqual(
+            [event.type for event in events],
+            [
+                runtime_pb2.EventType.TOOL_CALL_BEGIN,
+                runtime_pb2.EventType.TOOL_CALL_END,
+            ],
+        )
+        self.assertEqual(
+            events[0].data.fields["invocation_id"].string_value,
+            "inv-runtime-1",
+        )
+        self.assertEqual(
+            events[1].data.fields["tool_scope"].string_value,
+            "runtime",
+        )
+
+    async def test_runtime_tool_supports_sync_handlers(self) -> None:
+        channel = FakeChannel()
+        ctx = make_context(channel)
+
+        @ctx.tool("double", description="Double a number.")
+        def double(arguments):
+            return {"value": arguments["value"] * 2}
+
+        result = await ctx.call_tool("double", {"value": 3})
+        self.assertTrue(result.ok)
+        self.assertEqual(json.loads(result.result_json), {"value": 6})
+        self.assertEqual(channel.requests, [])
+
+    async def test_runtime_tool_errors_stay_local(self) -> None:
+        channel = FakeChannel()
+        ctx = make_context(channel)
+
+        @ctx.tool("explode", description="Fail on purpose.")
+        async def explode(_arguments):
+            raise RuntimeError("boom")
+
+        result = await ctx.call_tool("explode", {})
+        self.assertFalse(result.ok)
+        self.assertEqual(result.error_code, "TOOL_EXEC_ERROR")
+        self.assertIn("boom", result.error_message)
+        self.assertEqual(channel.requests, [])
+
+    async def test_runtime_tool_rejects_control_tool_collision(self) -> None:
+        ctx = make_context(
+            FakeChannel(),
+            tools=[ToolSpec(name="search", description="Control tool", scope="local")],
+        )
+        with self.assertRaises(RuntimeUsageError):
+            ctx.register_tool("search", lambda arguments: arguments)
 
     async def test_wait_saves_checkpoint_and_returns_waiting(self) -> None:
         channel = FakeChannel()

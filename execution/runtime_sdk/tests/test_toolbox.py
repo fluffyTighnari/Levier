@@ -22,8 +22,11 @@ class FakeContext:
         if self.logger is None:
             self.logger = _Logger()
 
-    async def call_tool(self, name: str, arguments):
-        return ToolResult(ok=True, result_json='{"name":"%s"}' % name)
+    async def call_tool(self, name: str, arguments, *, invocation_id: str = ""):
+        return ToolResult(
+            ok=True,
+            result_json='{"name":"%s","invocation_id":"%s"}' % (name, invocation_id),
+        )
 
 
 class _Logger:
@@ -50,6 +53,30 @@ class ToolboxTest(unittest.TestCase):
             result = await toolbox.call("counter_add", {"delta": 2})
             self.assertTrue(result.ok)
             self.assertIn("counter_add", result.result_json)
+            await toolbox.close()
+
+        asyncio.run(run())
+
+    def test_runtime_tool_keeps_source_and_invocation_id(self) -> None:
+        ctx = FakeContext(tools=[
+            ToolSpec(
+                name="lookup_order",
+                description="Runtime-owned tool.",
+                input_schema_json='{"type":"object"}',
+                scope="runtime",
+            ),
+        ])
+
+        async def run():
+            toolbox = await Toolbox.open(ctx)
+            self.assertEqual(toolbox[0].scope, "runtime")
+            result = await toolbox.call(
+                "lookup_order",
+                {"order_id": "o-1"},
+                invocation_id="inv-runtime-1",
+            )
+            self.assertTrue(result.ok)
+            self.assertIn('"invocation_id":"inv-runtime-1"', result.result_json)
             await toolbox.close()
 
         asyncio.run(run())

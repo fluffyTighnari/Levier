@@ -251,12 +251,17 @@ class _ContextToolProvider:
         toolbox = await ctx.toolbox()
         tool = toolbox.find(call.name)
         if tool is not None and tool.scope == "mcp":
-            result = await toolbox.call(call.name, call.arguments_json)
+            result = await toolbox.call(
+                call.name,
+                call.arguments_json,
+                invocation_id=call.invocation_id,
+            )
         else:
             result = await ctx.call_tool(
                 call.name,
                 call.arguments_json,
                 timeout_ms=timeout_ms,
+                invocation_id=call.invocation_id,
             )
         return ToolResult(
             ok=result.ok,

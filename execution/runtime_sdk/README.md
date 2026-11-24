@@ -29,13 +29,46 @@ sequence numbers, cancellation, tool-call transport, and graceful shutdown.
 - one-liners: `await ctx.toolbox()`, `await ctx.chat(...)`,
   `await ctx.invoke_all(reply, toolbox=...)`
 
-`ctx.toolbox()` merges local App tools and MCP tools into one callable
-sequence. `ctx.chat()` uses the model already resolved for the Run.
+`ctx.toolbox()` merges App, global, MCP, and Runtime-local tools into one
+callable sequence. `ctx.chat()` uses the model already resolved for the Run.
 `ctx.invoke_all()` dispatches model tool calls to the right source and emits
 the same tool observability events.
 - `ctx.logger` automatically carries run/app/runtime/attempt/trace fields
 - `ctx.call_tool` automatically emits `TOOL_CALL_BEGIN` / `TOOL_CALL_END`
 - uncaught `run(ctx)` exceptions become `ERROR` + a failed terminal run
+
+## Runtime-local tools
+
+A Runtime can register tools that live and execute inside its own process.
+They join the same model-facing tool list, but never cross the App Gateway:
+
+```python
+from levier_runtime import Context, Runtime
+
+async def run(ctx: Context) -> str:
+    @ctx.tool(
+        "lookup_order",
+        description="Look up one order.",
+        schema={
+            "type": "object",
+            "properties": {"order_id": {"type": "string"}},
+            "required": ["order_id"],
+        },
+    )
+    async def lookup_order(arguments):
+        return {"order_id": arguments["order_id"], "status": "paid"}
+
+    result = await ctx.call_tool("lookup_order", {"order_id": "o-1"})
+    await ctx.reply(result.result_json)
+    return "completed"
+
+Runtime.start(run)
+```
+
+Register Runtime-local tools before opening `ctx.toolbox()`, `ctx.chat()`, or
+`ctx.invoke()`. Names must not collide with control-plane tools. A Runtime that
+advertises `RuntimeCapabilities(runtime_tools=True)` makes the capability
+visible in the daemon handshake.
 
 ## Runtime Driver
 
@@ -66,8 +99,10 @@ Runtime.start_driver(MyDriver())
 
 The driver does not replace the transport or lifecycle layer. The SDK still
 owns the RuntimeChannel, heartbeat, reconnect, cancellation, events, and tool
-transport. Capabilities are declarative metadata; control-plane handshake and
-custom-event support are added by the I2 protocol work.
+transport. Capabilities are declarative metadata used by the daemon handshake
+and admin views. Model providers are resolved by the control-plane catalog; a
+Runtime that implements its own model integration can advertise
+`RuntimeCapabilities(providers=True)` and use its own provider client.
 
 ## Tests
 

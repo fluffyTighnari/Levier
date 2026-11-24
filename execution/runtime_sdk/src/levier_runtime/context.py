@@ -14,11 +14,13 @@ Copyright 2026 The Levier Authors.
 from __future__ import annotations
 
 import asyncio
+import inspect
 import json
 import logging
 import time
+from dataclasses import dataclass
 from datetime import datetime, timezone
-from typing import Any, Mapping
+from typing import Any, Callable, Mapping
 
 from middleware.runtime.v1 import runtime_pb2
 
@@ -37,6 +39,17 @@ from .types import (
 
 class RuntimeUsageError(ValueError):
     """Raised when a runtime uses a context operation incorrectly."""
+
+
+@dataclass(frozen=True)
+class _RuntimeTool:
+    """One tool registered and executed inside a runtime process."""
+
+    name: str
+    description: str
+    schema_json: str
+    handler: Callable[..., Any]
+    timeout_ms: int = 0
 
 
 class RunContext:
@@ -88,6 +101,7 @@ class RunContext:
         self._lease_epoch = lease_epoch
         self._toolbox = None
         self._checkpoint_saved = False
+        self._runtime_tools: dict[str, _RuntimeTool] = {}
         self.logger = logging.LoggerAdapter(
             logging.getLogger("levier_runtime.run"),
             {
@@ -154,10 +168,89 @@ class RunContext:
             schema_version=schema_version,
         )
 
-    async def toolbox(self) -> "Any":
-        """Return every local and MCP tool as one callable sequence.
+    def register_tool(
+        self,
+        name: str,
+        handler: Callable[..., Any],
+        *,
+        description: str = "",
+        schema: Mapping[str, Any] | str | None = None,
+        timeout_ms: int = 0,
+    ) -> None:
+        """Register a tool executed inside this runtime process.
 
-        MCP sessions are opened lazily on the first call and closed when the Run
+        Runtime-local tools join ``ctx.tools`` and therefore the same unified
+        model tool list as App, global, and MCP tools. ``ctx.call_tool`` routes
+        these tools directly and never sends them through the App Gateway.
+        """
+        if self._toolbox is not None:
+            raise RuntimeUsageError(
+                "register runtime tools before opening ctx.toolbox()"
+            )
+        normalized_name = str(name or "").strip()
+        if not normalized_name:
+            raise RuntimeUsageError("runtime tool name is required")
+        if any(character.isspace() for character in normalized_name):
+            raise RuntimeUsageError("runtime tool name must not contain whitespace")
+        if not callable(handler):
+            raise RuntimeUsageError("runtime tool handler must be callable")
+        if normalized_name in self._runtime_tools:
+            raise RuntimeUsageError(
+                f"runtime tool {normalized_name!r} is already registered"
+            )
+        if any(tool.name == normalized_name for tool in self.tools):
+            raise RuntimeUsageError(
+                f"runtime tool {normalized_name!r} conflicts with a control-plane tool"
+            )
+        if timeout_ms < 0:
+            raise RuntimeUsageError("runtime tool timeout_ms must not be negative")
+        normalized_description = description or inspect.getdoc(handler) or ""
+        self._runtime_tools[normalized_name] = _RuntimeTool(
+            name=normalized_name,
+            description=normalized_description,
+            schema_json=_normalize_tool_schema(schema),
+            handler=handler,
+            timeout_ms=timeout_ms,
+        )
+        self.tools.append(
+            ToolSpec(
+                name=normalized_name,
+                description=normalized_description,
+                input_schema_json=self._runtime_tools[normalized_name].schema_json,
+                scope="runtime",
+            )
+        )
+
+    def tool(
+        self,
+        name: str | None = None,
+        *,
+        description: str = "",
+        schema: Mapping[str, Any] | str | None = None,
+        timeout_ms: int = 0,
+    ) -> Callable[[Callable[..., Any]], Callable[..., Any]]:
+        """Decorator form of :meth:`register_tool`."""
+
+        def decorator(handler: Callable[..., Any]) -> Callable[..., Any]:
+            self.register_tool(
+                name or handler.__name__,
+                handler,
+                description=description,
+                schema=schema,
+                timeout_ms=timeout_ms,
+            )
+            return handler
+
+        return decorator
+
+    def _runtime_tool(self, name: str) -> _RuntimeTool | None:
+        return self._runtime_tools.get(name)
+
+    async def toolbox(self) -> "Any":
+        """Return every visible tool as one callable sequence.
+
+        The toolbox includes App, global, Runtime-local, and MCP tools. MCP
+        sessions are opened lazily on the first call and closed when the Run
         ends. Runtime authors do not need to construct an MCP client.
         """
         if self._toolbox is None:
@@ -226,10 +319,14 @@ class RunContext:
         *,
         toolbox: "Any" = None,
     ) -> ToolResult:
-        """Parse one model tool call and execute it, local or MCP."""
-        name, arguments = _tool_call(call)
+        """Parse one model tool call and route it by its source."""
+        name, arguments, invocation_id = _tool_call(call)
         active = toolbox if toolbox is not None else await self.toolbox()
-        return await active.call(name, arguments)
+        return await active.call(
+            name,
+            arguments,
+            invocation_id=invocation_id,
+        )
 
     async def invoke_all(
         self,
@@ -252,12 +349,15 @@ class RunContext:
         *,
         timeout_ms: int | None = None,
         emit_events: bool = True,
+        invocation_id: str = "",
     ) -> ToolResult:
-        """Call one tool through the middleware tool bridge.
+        """Call one tool through the unified runtime tool router.
 
-        By default the SDK emits TOOL_CALL_BEGIN/END and owns tool-call
-        observability. Runtimes that already emit those events can pass
-        ``emit_events=False`` to avoid duplicates.
+        Runtime-local tools execute in this process. App and global tools go
+        through the middleware tool bridge. By default the SDK emits
+        TOOL_CALL_BEGIN/END and owns tool-call observability. Runtimes that
+        already emit those events can pass ``emit_events=False`` to avoid
+        duplicates.
         """
         if not name:
             raise RuntimeUsageError("tool name is required")
@@ -274,7 +374,17 @@ class RunContext:
         else:
             raise RuntimeUsageError("tool arguments must be a mapping or JSON string")
 
-        invocation_id = new_ulid()
+        runtime_tool = self._runtime_tools.get(name)
+        if runtime_tool is not None:
+            return await self._call_runtime_tool(
+                runtime_tool,
+                arguments_json,
+                timeout_ms=timeout_ms,
+                invocation_id=invocation_id or new_ulid(),
+                emit_events=emit_events,
+            )
+
+        invocation_id = invocation_id or new_ulid()
         if emit_events:
             await self._emit_safe(
                 "TOOL_CALL_BEGIN",
@@ -316,6 +426,82 @@ class RunContext:
                 "tool_name": name,
                 "ok": result.ok,
                 "duration_ms": int((time.monotonic() - started) * 1000),
+            }
+            if result.ok:
+                data["result_json"] = result.result_json
+            else:
+                data["error_code"] = result.error_code
+                data["error_message"] = result.error_message
+                data["retryable"] = result.retryable
+            await self._emit_safe("TOOL_CALL_END", data)
+        return result
+
+    async def _call_runtime_tool(
+        self,
+        tool: _RuntimeTool,
+        arguments_json: str,
+        *,
+        timeout_ms: int | None,
+        invocation_id: str,
+        emit_events: bool,
+    ) -> ToolResult:
+        if emit_events:
+            await self._emit_safe(
+                "TOOL_CALL_BEGIN",
+                {
+                    "invocation_id": invocation_id,
+                    "tool_name": tool.name,
+                    "arguments_json": arguments_json,
+                    "tool_scope": "runtime",
+                },
+            )
+
+        started = time.monotonic()
+        timeout = timeout_ms or tool.timeout_ms or self.timeouts.tool_ms or 60_000
+        try:
+            arguments = json.loads(arguments_json)
+            if not isinstance(arguments, Mapping):
+                raise ValueError("tool arguments must be a JSON object")
+
+            async def invoke() -> Any:
+                if inspect.iscoroutinefunction(tool.handler):
+                    return await tool.handler(arguments)
+                value = await asyncio.to_thread(tool.handler, arguments)
+                if inspect.isawaitable(value):
+                    return await value
+                return value
+
+            value = await asyncio.wait_for(invoke(), timeout=max(timeout, 1) / 1000.0)
+            result = _runtime_tool_result(value)
+        except asyncio.CancelledError:
+            raise
+        except asyncio.TimeoutError:
+            result = ToolResult(
+                ok=False,
+                error_code="TOOL_TIMEOUT",
+                error_message=f"runtime tool {tool.name!r} timed out",
+                retryable=True,
+            )
+        except json.JSONDecodeError as exc:
+            result = ToolResult(
+                ok=False,
+                error_code="BAD_TOOL_ARGUMENTS",
+                error_message=f"runtime tool arguments are invalid JSON: {exc}",
+            )
+        except Exception as exc:  # runtime-local failures stay local
+            result = ToolResult(
+                ok=False,
+                error_code="TOOL_EXEC_ERROR",
+                error_message=str(exc),
+            )
+
+        if emit_events:
+            data: dict[str, Any] = {
+                "invocation_id": invocation_id,
+                "tool_name": tool.name,
+                "ok": result.ok,
+                "duration_ms": int((time.monotonic() - started) * 1000),
+                "tool_scope": "runtime",
             }
             if result.ok:
                 data["result_json"] = result.result_json
@@ -399,6 +585,51 @@ class RunContext:
         self._toolbox = None
 
 
+def _runtime_tool_result(value: Any) -> ToolResult:
+    if isinstance(value, ToolResult):
+        return value
+    if all(hasattr(value, attribute) for attribute in (
+        "ok", "result_json", "error_code", "error_message", "retryable",
+    )):
+        return ToolResult(
+            ok=bool(value.ok),
+            result_json=str(value.result_json),
+            error_code=str(value.error_code),
+            error_message=str(value.error_message),
+            retryable=bool(value.retryable),
+        )
+    try:
+        result_json = json.dumps(
+            value,
+            ensure_ascii=False,
+            separators=(",", ":"),
+        )
+    except (TypeError, ValueError) as exc:
+        return ToolResult(
+            ok=False,
+            error_code="TOOL_EXEC_ERROR",
+            error_message=f"runtime tool result is not JSON serializable: {exc}",
+        )
+    return ToolResult(ok=True, result_json=result_json)
+
+
+def _normalize_tool_schema(schema: Mapping[str, Any] | str | None) -> str:
+    if schema is None:
+        return '{"type":"object"}'
+    if isinstance(schema, Mapping):
+        value: Any = schema
+    elif isinstance(schema, str):
+        try:
+            value = json.loads(schema)
+        except json.JSONDecodeError as exc:
+            raise RuntimeUsageError(f"runtime tool schema is invalid JSON: {exc}") from exc
+    else:
+        raise RuntimeUsageError("runtime tool schema must be a mapping or JSON string")
+    if not isinstance(value, Mapping):
+        raise RuntimeUsageError("runtime tool schema must be a JSON object")
+    return json.dumps(value, ensure_ascii=False, separators=(",", ":"))
+
+
 def _tool_specs(tools: Any) -> list[Any]:
     from .llm.base import ToolSpec as LLMToolSpec
 
@@ -424,19 +655,25 @@ def _tool_specs(tools: Any) -> list[Any]:
     return result
 
 
-def _tool_call(call: Any) -> tuple[str, str]:
+def _tool_call(call: Any) -> tuple[str, str, str]:
     if isinstance(call, Mapping):
         name = str(call.get("name", ""))
         arguments = call.get("arguments_json", call.get("arguments", "{}"))
+        invocation_id = str(
+            call.get("invocation_id", call.get("invocationId", ""))
+        )
     else:
         name = str(getattr(call, "name", ""))
         arguments = getattr(call, "arguments_json", None)
         if arguments is None:
             arguments = getattr(call, "arguments", "{}")
+        invocation_id = str(getattr(call, "invocation_id", ""))
     if not name:
         raise RuntimeUsageError("tool call has no name")
     if isinstance(arguments, Mapping):
-        return name, json.dumps(arguments, ensure_ascii=False, separators=(",", ":"))
-    if arguments is None:
-        return name, "{}"
-    return name, str(arguments)
+        encoded = json.dumps(arguments, ensure_ascii=False, separators=(",", ":"))
+    elif arguments is None:
+        encoded = "{}"
+    else:
+        encoded = str(arguments)
+    return name, encoded, invocation_id
