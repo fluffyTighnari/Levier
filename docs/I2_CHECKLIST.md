@@ -492,6 +492,11 @@ Runtime：Driver、能力声明、自定义事件、Runtime-local 工具
 | 自定义事件 | 已完成 | proto、SDK、控制面持久化、API/WS、测试 |
 | Checkpoint Store | 已完成 | PostgreSQL 保存、读取、租户归属校验 |
 | Checkpoint 自动恢复 | 已完成 | 新 Run 加载同 Session 的最新 checkpoint |
+| Session 自动创建 | 已完成 | longterm Run 缺省时生成 session_id |
+| Session ID 返回 | 已完成 | Run 响应和 RunView 可读 |
+| Session 归属校验 | 已完成 | App/租户不匹配时拒绝 |
+| SDK Session 透传 | 已完成 | runtime_type、session_id 可传入 |
+| Session 管理 API | 待开始 | 列表、关闭、清理、过期 |
 | Waiting / Resume API | 待开始 | 暂停和外部恢复入口 |
 | Runtime-local 工具 | 待开始 | 统一工具来源 |
 | LangGraph 原型 | 待开始 | 依赖前序能力 |
