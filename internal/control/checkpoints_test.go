@@ -4,11 +4,14 @@
 package control
 
 import (
+	"bytes"
 	"context"
 	"errors"
+	"strings"
 	"testing"
 
 	runtimev1 "github.com/fluffyTighnari/levier/gen/middleware/runtime/v1"
+	"github.com/fluffyTighnari/levier/internal/observe"
 	"github.com/fluffyTighnari/levier/internal/protocol"
 	"github.com/fluffyTighnari/levier/internal/runstore"
 )
@@ -41,7 +44,8 @@ func TestHandleCheckpointPersistsState(t *testing.T) {
 	run.LeaseEpoch = 2
 	runs := &fakeRuns{run: run}
 	checkpoints := &fakeCheckpointStore{}
-	ctrl := New(runs, &fakeHub{}, Config{Checkpoints: checkpoints})
+	registry := observe.NewRegistry()
+	ctrl := New(runs, &fakeHub{}, Config{Checkpoints: checkpoints, Metrics: registry})
 
 	env, err := protocol.NewRun(run.RunID, 1, 2, &runtimev1.Checkpoint{
 		SessionId:         "session-1",
@@ -58,6 +62,18 @@ func TestHandleCheckpointPersistsState(t *testing.T) {
 		checkpoints.saved.EventWatermark != 7 ||
 		string(checkpoints.saved.State) != `{"step":3}` {
 		t.Fatalf("saved checkpoint = %+v", checkpoints.saved)
+	}
+	var metrics bytes.Buffer
+	if err := registry.WritePrometheus(&metrics); err != nil {
+		t.Fatalf("WritePrometheus() error = %v", err)
+	}
+	for _, want := range []string{
+		`levier_checkpoints_saved_total{runtime="normal",tenant="default"} 1`,
+		`levier_checkpoint_size_bytes{runtime="normal",tenant="default"} 10`,
+	} {
+		if !strings.Contains(metrics.String(), want) {
+			t.Fatalf("metrics do not contain %q:\n%s", want, metrics.String())
+		}
 	}
 }
 

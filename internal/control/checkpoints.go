@@ -61,9 +61,9 @@ func (c *Control) handleCheckpoint(env *runtimev1.Envelope) {
 		return
 	}
 	if c.metrics != nil {
-		c.metrics.Inc(observe.MetricCheckpointsSavedTotal, "Checkpoints persisted by tenant.", map[string]string{
-			"tenant": run.TenantID,
-		})
+		labels := map[string]string{"tenant": run.TenantID, "runtime": run.Runtime}
+		c.metrics.Inc(observe.MetricCheckpointsSavedTotal, "Checkpoints persisted by tenant and runtime.", labels)
+		c.metrics.Set(observe.MetricCheckpointSizeBytes, "Last persisted checkpoint size in bytes.", labels, float64(len(checkpoint.GetState())))
 	}
 }
 
@@ -80,6 +80,13 @@ func (c *Control) resumeCheckpoint(ctx context.Context, run runstore.Run) (*runt
 	}
 	if len(checkpoint.State) == 0 {
 		return nil, nil
+	}
+	if c.metrics != nil {
+		c.metrics.Inc(observe.MetricCheckpointRestoreTotal, "Checkpoint restores by tenant, runtime, and outcome.", map[string]string{
+			"tenant":  run.TenantID,
+			"runtime": run.Runtime,
+			"result":  "restored",
+		})
 	}
 	return &runtimev1.Checkpoint{
 		SessionId:         checkpoint.SessionID,

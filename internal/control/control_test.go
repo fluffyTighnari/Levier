@@ -1079,14 +1079,16 @@ func TestResumeWaitingRunRequeuesAndRehydrates(t *testing.T) {
 	runs.run.Attempt = 1
 	runs.run.LeaseEpoch = 1
 	runs.run.SessionID = "session-1"
+	runs.run.UpdatedAt = time.Now().Add(-2 * time.Second)
 	hub := &fakeHub{daemonID: "daemon-1"}
 	tasks := &fakeTaskCanceller{}
+	registry := observe.NewRegistry()
 	checkpoints := &fakeCheckpointStore{get: runstore.Checkpoint{
 		SessionID:      "session-1",
 		State:          []byte(`{"step":9}`),
 		EventWatermark: 10,
 	}}
-	ctrl := New(runs, hub, Config{Tasks: tasks, Checkpoints: checkpoints})
+	ctrl := New(runs, hub, Config{Tasks: tasks, Checkpoints: checkpoints, Metrics: registry})
 
 	resumed, err := ctrl.ResumeRun(context.Background(), "run-1")
 	if err != nil {
@@ -1100,6 +1102,19 @@ func TestResumeWaitingRunRequeuesAndRehydrates(t *testing.T) {
 	}
 	if len(runs.events) != 1 || !strings.Contains(string(runs.events[0].Payload), `"status":"queued"`) {
 		t.Fatalf("resume events = %+v", runs.events)
+	}
+	var metrics bytes.Buffer
+	if err := registry.WritePrometheus(&metrics); err != nil {
+		t.Fatalf("WritePrometheus() error = %v", err)
+	}
+	output := metrics.String()
+	for _, want := range []string{
+		`levier_run_resume_total{runtime="longterm",tenant="default"} 1`,
+		`levier_run_waiting_seconds_count{runtime="longterm",tenant="default"} 1`,
+	} {
+		if !strings.Contains(output, want) {
+			t.Fatalf("metrics do not contain %q:\n%s", want, output)
+		}
 	}
 
 	hub.onSend = func(env *runtimev1.Envelope) {

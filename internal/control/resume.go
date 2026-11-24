@@ -34,6 +34,13 @@ func (c *Control) ResumeRun(ctx context.Context, runID string) (runstore.Run, er
 		return runstore.Run{}, fmt.Errorf("resume run: %w", err)
 	}
 	c.appendMWStatus(ctx, requeued, runstore.StatusQueued, "resume")
+	if c.metrics != nil {
+		labels := map[string]string{"tenant": requeued.TenantID, "runtime": requeued.Runtime}
+		c.metrics.Inc(observe.MetricRunResumeTotal, "Waiting runs resumed by tenant and runtime.", labels)
+		if !run.UpdatedAt.IsZero() {
+			c.metrics.Observe(observe.MetricRunWaitingSeconds, "Time spent in the waiting state in seconds.", labels, time.Since(run.UpdatedAt).Seconds())
+		}
+	}
 	if c.cfg.Tasks != nil {
 		if _, err := c.cfg.Tasks.Enqueue(ctx, workflow.NewTask(
 			requeued.RunID, workflow.TaskDispatch, time.Now(), 0,

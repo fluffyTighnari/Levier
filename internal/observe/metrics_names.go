@@ -26,6 +26,14 @@ const (
 	MetricCustomEventsTotal = "levier_custom_events_total"
 	// MetricCheckpointsSavedTotal counts persisted longterm checkpoints.
 	MetricCheckpointsSavedTotal = "levier_checkpoints_saved_total"
+	// MetricCheckpointSizeBytes observes serialized checkpoint size.
+	MetricCheckpointSizeBytes = "levier_checkpoint_size_bytes"
+	// MetricCheckpointRestoreTotal counts checkpoint restore outcomes.
+	MetricCheckpointRestoreTotal = "levier_checkpoint_restore_total"
+	// MetricRunWaitingSeconds observes time spent in the waiting state.
+	MetricRunWaitingSeconds = "levier_run_waiting_seconds"
+	// MetricRunResumeTotal counts waiting runs resumed by an operator or App.
+	MetricRunResumeTotal = "levier_run_resume_total"
 	// MetricEventsDroppedTotal counts dropped or skipped events.
 	MetricEventsDroppedTotal = "levier_events_dropped_total"
 	// MetricEventAppendDuration observes run event persistence latency.
