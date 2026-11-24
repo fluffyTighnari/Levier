@@ -14,6 +14,9 @@ http:
   # admin_token_file: "/run/secrets/levier_admin_token"
   # Compatibility switch; keep false in production.
   allow_legacy_bearer: false
+  ws_token_ttl: "10m"
+  # Production: use the same secret on every control/API replica.
+  # ws_token_secret: "change-me"
 
 grpc:
   addr: ":9090"

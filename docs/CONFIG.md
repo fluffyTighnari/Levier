@@ -82,6 +82,7 @@ CLI
 | `http.admin_token_file` | `LEVIER_HTTP_ADMIN_TOKEN_FILE` | path | 空 | 生产推荐 | **是** | 文件内容秘密 |
 | `http.allow_legacy_bearer` | `LEVIER_HTTP_ALLOW_LEGACY_BEARER` | bool | `false` | 否 | 否 | 兼容开关 |
 | `http.ws_token_ttl` | `LEVIER_HTTP_WS_TOKEN_TTL` | duration | `10m` | 是 | 否 | 支持 env |
+| `http.ws_token_secret` | `LEVIER_HTTP_WS_TOKEN_SECRET` | string | 空 | 否 | **是** | 多副本共享签名密钥；为空时回落进程内 token |
 
 ### 3.2 gRPC
 

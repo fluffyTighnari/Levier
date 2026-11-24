@@ -153,6 +153,7 @@ func redactedConfig(cfg config.Config) map[string]any {
 			"admin_token_file":    cfg.HTTP.AdminTokenFile,
 			"allow_legacy_bearer": cfg.HTTP.AllowLegacyBearer,
 			"ws_token_ttl":        cfg.HTTP.WSTokenTTL.Std().String(),
+			"ws_token_secret":     redactSecret(cfg.HTTP.WSTokenSecret),
 		},
 		"grpc": map[string]any{
 			"addr":               cfg.GRPC.Addr,

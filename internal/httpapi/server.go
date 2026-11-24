@@ -133,6 +133,7 @@ type Config struct {
 	DefaultToolTimeoutMS int
 	MaxBodyBytes         int64
 	WSTokenTTL           time.Duration
+	WSTokenSecret        string
 	AppHub               *connection.AppHub
 	Daemons              DaemonSource
 	ReadinessCheck       func(context.Context) error
@@ -194,7 +195,7 @@ func NewServer(runs RunStore, queue TaskQueue, cfg Config, registries ...AppRegi
 		cfg:       cfg,
 		log:       cfg.Logger,
 		appHub:    appHub,
-		wsTokens:  NewWSTokenStore(cfg.WSTokenTTL),
+		wsTokens:  NewWSTokenStoreWithSecret(cfg.WSTokenTTL, cfg.WSTokenSecret),
 		canceller: cfg.Canceller,
 		resumer:   cfg.Resumer,
 		quota:     cfg.QuotaPolicy,

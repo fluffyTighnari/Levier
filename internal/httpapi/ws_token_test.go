@@ -21,6 +21,44 @@ import (
 	"github.com/fluffyTighnari/levier/internal/runstore"
 )
 
+func TestWSTokenStatelessAcrossReplicas(t *testing.T) {
+	now := time.Now()
+	first := NewWSTokenStoreWithSecret(time.Minute, "shared-secret")
+	second := NewWSTokenStoreWithSecret(time.Minute, "shared-secret")
+	first.now = func() time.Time { return now }
+	second.now = func() time.Time { return now }
+
+	token := first.Issue("app-1")
+	if token == "" {
+		t.Fatal("stateless token was empty")
+	}
+	appID, ok := second.Validate(token)
+	if !ok || appID != "app-1" {
+		t.Fatalf("second replica validate = %q, %v", appID, ok)
+	}
+	if _, ok := NewWSTokenStoreWithSecret(time.Minute, "other-secret").Validate(token); ok {
+		t.Fatal("token was accepted with a different secret")
+	}
+	now = now.Add(2 * time.Minute)
+	if _, ok := second.Validate(token); ok {
+		t.Fatal("expired stateless token was accepted")
+	}
+}
+
+func TestWSTokenLegacyStoreStillWorks(t *testing.T) {
+	now := time.Now()
+	store := NewWSTokenStore(time.Minute)
+	store.now = func() time.Time { return now }
+	token := store.Issue("app-1")
+	if appID, ok := store.Validate(token); !ok || appID != "app-1" {
+		t.Fatalf("legacy token = %q, %v", appID, ok)
+	}
+	now = now.Add(2 * time.Minute)
+	if _, ok := store.Validate(token); ok {
+		t.Fatal("expired legacy token was accepted")
+	}
+}
+
 func TestWSTokenExpiryAndReissue(t *testing.T) {
 	store := newFakeStore()
 	appHub := connection.NewAppHub()

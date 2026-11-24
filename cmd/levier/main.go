@@ -315,6 +315,7 @@ func runServer(args []string) {
 		AdminToken:           cfg.HTTP.AdminToken,
 		AllowLegacyBearer:    cfg.HTTP.AllowLegacyBearer,
 		WSTokenTTL:           cfg.HTTP.WSTokenTTL.Std(),
+		WSTokenSecret:        cfg.HTTP.WSTokenSecret,
 		DefaultRunTimeoutMS:  selfdesc.DefaultRunTimeoutMS,
 		DefaultToolTimeoutMS: selfdesc.DefaultToolTimeoutMS,
 		Meta: selfdesc.New(selfdesc.Options{

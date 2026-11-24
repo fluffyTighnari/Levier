@@ -44,6 +44,7 @@ type HTTPConfig struct {
 	AdminTokenFile    string   `yaml:"admin_token_file"`
 	AllowLegacyBearer bool     `yaml:"allow_legacy_bearer"`
 	WSTokenTTL        Duration `yaml:"ws_token_ttl"`
+	WSTokenSecret     string   `yaml:"ws_token_secret"`
 }
 
 // GRPCConfig configures the daemon-facing gRPC server.
@@ -195,6 +196,7 @@ func ApplyEnv(cfg *Config, lookup func(string) (string, bool)) error {
 	if err := boolOverride(lookup, "LEVIER_HTTP_ALLOW_LEGACY_BEARER", &cfg.HTTP.AllowLegacyBearer); err != nil {
 		return err
 	}
+	stringOverride(lookup, "LEVIER_HTTP_WS_TOKEN_SECRET", &cfg.HTTP.WSTokenSecret)
 	stringOverride(lookup, "LEVIER_GRPC_ADDR", &cfg.GRPC.Addr)
 	stringOverride(lookup, "LEVIER_GRPC_DAEMON_TOKENS_FILE", &cfg.GRPC.DaemonTokensFile)
 	stringOverride(lookup, "LEVIER_DATABASE_URL", &cfg.Database.URL)
