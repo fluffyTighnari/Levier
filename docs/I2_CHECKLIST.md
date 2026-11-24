@@ -512,6 +512,7 @@ Runtime：Driver、能力声明、自定义事件、Runtime-local 工具
 | LangGraph checkpoint | 已完成 | LangGraph checkpointer 状态编码进 Levier checkpoint |
 | LangGraph interrupt/resume | 已完成 | interrupt 返回 `waiting`，resume 从 checkpoint 继续 |
 | LangGraph 核心隔离 | 已完成 | 未安装 LangGraph 不影响 runtime_sdk、echo、react |
+| Resume 外部输入 | 待开始 | LangGraph 原型使用配置的 `resume_value`；API 尚未携带 resume payload |
 | PostgreSQL waiting/resume 集成 | 已完成 | 真实 PostgreSQL 保存 checkpoint、waiting、resume、attempt+1 |
 | I2.6 加固 | 进行中 | 指标和集成测试已补；Session 管理 API、能力指标未做 |
 | I2 退出评审 | 待开始 | 需要确认剩余非阻塞项 |
