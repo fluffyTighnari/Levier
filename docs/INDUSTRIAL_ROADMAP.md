@@ -335,6 +335,7 @@ I2 和 I3 可以在契约稳定后并行，但 I3 不能跳过 I2 的 Runtime �
 - 本次新增的 Runtime、App、Control Plane 决策已合并到本文。
 - I1 执行清单：`docs/I1_CHECKLIST.md`，代码基础已完成，等待退出评审。
 - I2 执行计划：`docs/I2_CHECKLIST.md`，当前详细计划。
+- I3 执行计划：`docs/I3_CHECKLIST.md`，多副本控制面阶段。
 - 后续 checklist 不重新定义本文决策；范围变化先改本文。
 
 ## 15. 变更记录
