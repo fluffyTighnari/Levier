@@ -54,7 +54,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - run: python -m compileall execution/runtime_sdk/src execution/echo_runtime/src execution/react_runtime/src sdk/python/src sdk/levier/src
+      - run: python -m compileall execution/runtime_sdk/src execution/echo_runtime/src execution/react_runtime/src execution/langgraph_runtime/src sdk/python/src sdk/levier/src
       - run: python -m pip install --upgrade pip
       # react_runtime depends on the local workspace package levier-agent-core.
       # pip does not understand [tool.uv.sources], so install it explicitly first.
@@ -62,11 +62,13 @@ jobs:
       - run: python -m pip install -e ./execution/runtime_sdk
       - run: python -m pip install -e ./execution/echo_runtime
       - run: python -m pip install -e ./execution/react_runtime
+      - run: python -m pip install -e ./execution/langgraph_runtime
       - run: python -m pip install -e ./sdk/python
       - run: python -m pip install -e ./sdk/levier
       - run: PYTHONPATH=execution/runtime_sdk/src:execution/react_runtime/src python tests/contract/test_contract.py -v
       - run: PYTHONPATH=execution/agent_core/src:execution/runtime_sdk/src:execution/react_runtime/src python -m unittest discover -s execution/react_runtime/tests -v
       - run: PYTHONPATH=execution/agent_core/src:execution/runtime_sdk/src python -m unittest discover -s execution/runtime_sdk/tests -v
+      - run: PYTHONPATH=execution/runtime_sdk/src:execution/langgraph_runtime/src python -m unittest discover -s execution/langgraph_runtime/tests -v
       - run: PYTHONPATH=execution/runtime_sdk/src python -m levier_echo_runtime --config execution/echo_runtime/runtime.yaml --check
       - run: PYTHONPATH=sdk/levier/src:sdk/python/src python -m unittest discover -s sdk/python/tests -v
       - run: PYTHONPATH=sdk/levier/src:sdk/python/src python -m unittest discover -s sdk/levier/tests -v

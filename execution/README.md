@@ -19,17 +19,20 @@ execution/
 
   agent_core/      可选 ReAct 循环库
                    可被 Runtime 作者复用，不是 Runtime 核心
+
+  langgraph_runtime/ 可选 LangGraph Driver
+                     LangGraph 状态、interrupt 和节点事件，不进入核心 SDK
 ```
 
 ## 依赖方向
 
 ```text
 echo_runtime ─────┐
-                  ├──> runtime_sdk
-react_runtime ────┘
-       │
-       ├──> agent_core
-       └──> mcp_runtime（可选共享进程）
+react_runtime ────┼──> runtime_sdk
+langgraph_runtime ┘
+
+react_runtime ──> agent_core
+react_runtime ──> mcp_runtime（可选共享进程）
 
 mcp_runtime 独立运行，不依赖 SDK 或具体 Runtime。
 ```
@@ -48,6 +51,11 @@ PYTHONPATH=execution/runtime_sdk/src:execution/echo_runtime/src \
 PYTHONPATH=execution/agent_core/src:execution/runtime_sdk/src:execution/react_runtime/src \
   python -m levier_react_runtime \
   --config execution/react_runtime/react.example.yaml
+
+# LangGraph (optional package)
+pip install -e execution/langgraph_runtime
+PYTHONPATH=execution/runtime_sdk/src:execution/langgraph_runtime/src \
+  python -m unittest discover -s execution/langgraph_runtime/tests -v
 
 # Shared MCP Runtime
 PYTHONPATH=execution/mcp_runtime/src \

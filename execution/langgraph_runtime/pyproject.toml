@@ -1,0 +1,23 @@
+# Levier - optional LangGraph runtime package metadata.
+# Copyright 2026 The Levier Authors.
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "levier-langgraph-runtime"
+version = "0.1.0"
+description = "Optional LangGraph driver for Levier runtimes"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "langgraph>=1.0,<2",
+    "levier-runtime",
+]
+
+[tool.uv.sources]
+levier-runtime = { path = "../runtime_sdk", editable = true }
+
+[tool.setuptools.packages.find]
+where = ["src"]

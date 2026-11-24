@@ -27,7 +27,7 @@ LDFLAGS := -X github.com/fluffyTighnari/levier/internal/version.Version=$(VERSIO
 	-X github.com/fluffyTighnari/levier/internal/version.Commit=$(COMMIT) \
 	-X github.com/fluffyTighnari/levier/internal/version.Built=$(BUILD_TIME)
 
-.PHONY: all build install wheels test lint fmt fmt-check vet run clean dev-up dev-down migrate proto proto-check proto-lint contract-check react-runtime-test runtime-sdk-test mcp-runtime-test sdk-test image-runtime image-mcp-runtime counter-agent counter-agent-test http-smoke retrofit-e2e mcp-e2e global-e2e deps-check structure-check scripts-check size-report daemon-check agent-core-test mvp-demo mvp-demo-react fault-matrix secrets-check docker-up docker-down docker-smoke docker-logs docker-reset release-dist
+.PHONY: all build install wheels test lint fmt fmt-check vet run clean dev-up dev-down migrate proto proto-check proto-lint contract-check react-runtime-test runtime-sdk-test langgraph-runtime-test mcp-runtime-test sdk-test image-runtime image-mcp-runtime counter-agent counter-agent-test http-smoke retrofit-e2e mcp-e2e global-e2e deps-check structure-check scripts-check size-report daemon-check agent-core-test mvp-demo mvp-demo-react fault-matrix secrets-check docker-up docker-down docker-smoke docker-logs docker-reset release-dist
 
 PREFIX ?= $(HOME)/.local/bin
 
@@ -104,6 +104,9 @@ react-runtime-test:
 
 runtime-sdk-test:
 	PYTHONPATH="execution/agent_core/src$(PYTHONPATH_SEP)execution/runtime_sdk/src" $(PYTHON) -m unittest discover -s execution/runtime_sdk/tests -v
+
+langgraph-runtime-test:
+	PYTHONPATH="execution/runtime_sdk/src$(PYTHONPATH_SEP)execution/langgraph_runtime/src" $(PYTHON) -m unittest discover -s execution/langgraph_runtime/tests -v
 
 mcp-runtime-test:
 	PYTHONPATH="execution/mcp_runtime/src" $(MCP_PYTHON) -m unittest discover -s execution/mcp_runtime/tests -v

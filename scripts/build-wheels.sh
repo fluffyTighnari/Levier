@@ -44,6 +44,7 @@ execution/runtime_sdk
 execution/echo_runtime
 execution/react_runtime
 execution/mcp_runtime
+execution/langgraph_runtime
 "
 
 for package in $packages; do
