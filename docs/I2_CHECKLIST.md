@@ -496,7 +496,7 @@ Runtime：Driver、能力声明、自定义事件、Runtime-local 工具
 | Session ID 返回 | 已完成 | Run 响应和 RunView 可读 |
 | Session 归属校验 | 已完成 | App/租户不匹配时拒绝 |
 | SDK Session 透传 | 已完成 | runtime_type、session_id 可传入 |
-| Session 管理 API | 待开始 | 列表、关闭、清理、过期 |
+| Session 管理 API | 已完成 | `GET /sessions`、`POST /sessions/{id}/close`、SDK 透传；有活跃 Run 时拒绝关闭 |
 | Waiting 状态 | 已完成 | 仅 longterm；要求已保存 checkpoint |
 | Waiting / Resume API | 已完成 | `POST /api/v1/runs/{id}/resume`，恢复后重新入队 |
 | Waiting SDK | 已完成 | `return await ctx.wait(state)`，`resume_run` 已透传 |
@@ -517,4 +517,4 @@ Runtime：Driver、能力声明、自定义事件、Runtime-local 工具
 | Resume payload 迁移 | 已完成 | `0017_resume_payload.sql` |
 | PostgreSQL waiting/resume 集成 | 已完成 | 真实 PostgreSQL 保存 checkpoint、waiting、resume、attempt+1 |
 | I2.6 加固 | 已完成 | 指标、日志、迁移、集成测试和文档已补 |
-| I2 退出评审 | 待开始 | 需要确认剩余非阻塞项（Session 管理 API） |
+| I2 退出评审 | 待开始 | 功能与加固项已完成，等待评审 |
