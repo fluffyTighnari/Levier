@@ -501,5 +501,9 @@ Runtime：Driver、能力声明、自定义事件、Runtime-local 工具
 | Waiting / Resume API | 已完成 | `POST /api/v1/runs/{id}/resume`，恢复后重新入队 |
 | Waiting SDK | 已完成 | `return await ctx.wait(state)`，`resume_run` 已透传 |
 | Waiting 时长/恢复指标 | 待开始 | `levier_run_waiting_seconds` 等 |
-| Runtime-local 工具 | 待开始 | 统一工具来源 |
+| Provider Registry | 已完成 | 复用控制面 `model_providers`；自定义 provider 通过 adapter 解析，Runtime 可声明 `providers` |
+| Runtime-local 工具 | 已完成 | `ctx.register_tool` / `@ctx.tool`，`scope=runtime`，直接在本进程执行 |
+| Runtime-local 统一清单 | 已完成 | 与 App/global/MCP 工具一起进入 `ctx.tools` 和 toolbox |
+| Runtime-local 路由 | 已完成 | 不经过 App Gateway；与控制面工具重名明确拒绝 |
+| Runtime-local 调用观测 | 已完成 | `TOOL_CALL_BEGIN/END` 带 `tool_scope=runtime`，invocation 透传 |
 | LangGraph 原型 | 待开始 | 依赖前序能力 |
