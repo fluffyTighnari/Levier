@@ -463,7 +463,7 @@ levier_run_resume_total
 - [x] Session / Checkpoint / Resume 完成。
 - [x] LangGraph 原型完成。
 - [x] PostgreSQL 集成测试完成。
-- [ ] 指标、日志和文档完成。
+- [x] 指标、日志和文档完成。
 - [ ] I2 退出评审通过。
 - [ ] 下一版本 I3 的范围确认。
 
@@ -501,7 +501,7 @@ Runtime：Driver、能力声明、自定义事件、Runtime-local 工具
 | Waiting / Resume API | 已完成 | `POST /api/v1/runs/{id}/resume`，恢复后重新入队 |
 | Waiting SDK | 已完成 | `return await ctx.wait(state)`，`resume_run` 已透传 |
 | Waiting / Checkpoint 指标 | 已完成 | `run_waiting_seconds`、`run_resume_total`、`checkpoint_size_bytes`、`checkpoint_restore_total` |
-| Runtime capability 指标 | 待开始 | daemon/admin 可见；Prometheus gauge 尚未补 |
+| Runtime capability 指标 | 已完成 | `levier_runtime_capabilities`，按 daemon/runtime/capability 输出，离线归零 |
 | Provider Registry | 已完成 | 复用控制面 `model_providers`；自定义 provider 通过 adapter 解析，Runtime 可声明 `providers` |
 | Runtime-local 工具 | 已完成 | `ctx.register_tool` / `@ctx.tool`，`scope=runtime`，直接在本进程执行 |
 | Runtime-local 统一清单 | 已完成 | 与 App/global/MCP 工具一起进入 `ctx.tools` 和 toolbox |
@@ -516,5 +516,5 @@ Runtime：Driver、能力声明、自定义事件、Runtime-local 工具
 | Resume payload 语义 | 已完成 | 进入 running 后清除；ack 重试/daemon 重排期间保留 |
 | Resume payload 迁移 | 已完成 | `0017_resume_payload.sql` |
 | PostgreSQL waiting/resume 集成 | 已完成 | 真实 PostgreSQL 保存 checkpoint、waiting、resume、attempt+1 |
-| I2.6 加固 | 进行中 | 指标和集成测试已补；Session 管理 API、能力指标未做 |
-| I2 退出评审 | 待开始 | 需要确认剩余非阻塞项 |
+| I2.6 加固 | 已完成 | 指标、日志、迁移、集成测试和文档已补 |
+| I2 退出评审 | 待开始 | 需要确认剩余非阻塞项（Session 管理 API） |
