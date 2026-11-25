@@ -325,7 +325,8 @@ request_id
 | Notification Outbox | 已完成 | 持久化通知、待发送查询、发布/重试标记 |
 | WSToken 无状态化 | 已完成 | 共享 secret HMAC token，可跨副本验证 |
 | App Bridge v2 契约 | 已完成 | 协议版本、幂等、进度、取消的最小契约 |
-| I3.1 角色拆分 | 待开始 | 保持单进程兼容 |
+| Gateway presence 接线 | 已完成 | 启动注册 gateway instance，心跳续租，退出标记 offline |
+| I3.1 角色拆分 | 进行中 | 先完成 presence，下一步按角色装配服务 |
 | I3.2 Runtime Gateway | 待开始 | daemon 跨副本路由 |
 | I3.3 App Gateway | 待开始 | App 连接与事件 fanout |
 | I3.4 Local Tool 路由 | 待开始 | 定向投递与幂等 |
