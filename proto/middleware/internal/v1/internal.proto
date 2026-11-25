@@ -1,0 +1,169 @@
+// Levier internal role-to-role RPC.
+//
+// These services are not public App/Runtime APIs. They are used only between
+// control/api, runtime-gateway, and app-gateway roles.
+//
+// Copyright 2026 The Levier Authors.
+syntax = "proto3";
+
+package middleware.internal.v1;
+
+option go_package = "github.com/fluffyTighnari/levier/gen/middleware/internal/v1;internalv1";
+
+import "google/protobuf/empty.proto";
+import "middleware/runtime/v1/runtime.proto";
+
+// RuntimeGatewayService owns daemon streams and Runtime connection leases.
+service RuntimeGatewayService {
+  // Dispatch sends one TaskAssign and waits for its TaskAck.
+  rpc Dispatch(DispatchRequest) returns (DispatchResponse);
+  // Send forwards a non-dispatch envelope (Cancel, Reconcile, ToolResult).
+  rpc Send(SendRequest) returns (google.protobuf.Empty);
+  // Reserve acquires one capacity slot for a daemon.
+  rpc Reserve(ReserveRequest) returns (ReserveResponse);
+  // Release releases one capacity reservation.
+  rpc Release(ReleaseRequest) returns (google.protobuf.Empty);
+  // Disconnect closes the daemon stream after a fencing/offline decision.
+  rpc Disconnect(DisconnectRequest) returns (google.protobuf.Empty);
+  // ListRuntimes returns live connections owned by this gateway.
+  rpc ListRuntimes(ListRuntimesRequest) returns (ListRuntimesResponse);
+}
+
+message DispatchRequest {
+  string daemon_id = 1;
+  middleware.runtime.v1.Envelope envelope = 2;
+  int64 ack_timeout_ms = 3;
+}
+
+message DispatchResponse {
+  bool accepted = 1;
+  string reason = 2;
+  middleware.runtime.v1.TaskAck ack = 3;
+}
+
+message SendRequest {
+  string daemon_id = 1;
+  middleware.runtime.v1.Envelope envelope = 2;
+  int64 connection_epoch = 3;
+}
+
+message ReserveRequest {
+  string daemon_id = 1;
+  string reservation_id = 2;
+  int64 ttl_ms = 3;
+  string run_id = 4;
+}
+
+message ReserveResponse {
+  bool accepted = 1;
+  string reason = 2;
+}
+
+message ReleaseRequest {
+  string daemon_id = 1;
+  string reservation_id = 2;
+}
+
+message DisconnectRequest {
+  string daemon_id = 1;
+  int64 connection_epoch = 2;
+}
+
+message ListRuntimesRequest {}
+
+message RuntimeSnapshot {
+  string daemon_id = 1;
+  string gateway_id = 2;
+  int64 connection_epoch = 3;
+  string runtime_name = 4;
+  string runtime_type = 5;
+  int32 max_concurrent_runs = 6;
+  int32 running_count = 7;
+  int32 reserved = 8;
+  map<string, string> labels = 9;
+  map<string, string> capabilities = 10;
+}
+
+message ListRuntimesResponse {
+  repeated RuntimeSnapshot runtimes = 1;
+}
+
+// ControlService accepts Runtime events and operator/API commands.
+service ControlService {
+  // DeliverEnvelope handles Event, Checkpoint, ToolCallRequest, and ErrorReport.
+  rpc DeliverEnvelope(DeliverEnvelopeRequest) returns (google.protobuf.Empty);
+  // CancelRun cancels one Run from any API replica.
+  rpc CancelRun(CancelRunRequest) returns (CancelRunResponse);
+  // ResumeRun resumes one waiting Run with an optional external value.
+  rpc ResumeRun(ResumeRunRequest) returns (ResumeRunResponse);
+}
+
+message DeliverEnvelopeRequest {
+  string gateway_id = 1;
+  string daemon_id = 2;
+  middleware.runtime.v1.Envelope envelope = 3;
+}
+
+message CancelRunRequest {
+  string run_id = 1;
+  string reason = 2;
+}
+
+message CancelRunResponse {
+  string run_id = 1;
+  string status = 2;
+}
+
+message ResumeRunRequest {
+  string run_id = 1;
+  bytes resume_value_json = 2;
+}
+
+message ResumeRunResponse {
+  string run_id = 1;
+  string session_id = 2;
+  string status = 3;
+}
+
+// AppGatewayService owns App WebSocket connections and local tool transport.
+service AppGatewayService {
+  // CallLocalTool delivers one invocation to the execution connection.
+  rpc CallLocalTool(CallLocalToolRequest) returns (CallLocalToolResponse);
+  // CancelLocalTools fails pending invocations for a Run.
+  rpc CancelLocalTools(CancelLocalToolsRequest) returns (google.protobuf.Empty);
+  // PublishRunEvent forwards a persisted Run event to subscribed App sockets.
+  rpc PublishRunEvent(PublishRunEventRequest) returns (google.protobuf.Empty);
+  // PublishRunCompleted announces a terminal Run state.
+  rpc PublishRunCompleted(PublishRunCompletedRequest) returns (google.protobuf.Empty);
+}
+
+message CallLocalToolRequest {
+  string app_id = 1;
+  string connection_id = 2;
+  middleware.runtime.v1.ToolCallRequest request = 3;
+  int64 timeout_ms = 4;
+}
+
+message CallLocalToolResponse {
+  middleware.runtime.v1.ToolCallResult result = 1;
+}
+
+message CancelLocalToolsRequest {
+  string app_id = 1;
+  string run_id = 2;
+  string code = 3;
+  string message = 4;
+}
+
+message PublishRunEventRequest {
+  string app_id = 1;
+  string run_id = 2;
+  bytes payload = 3;
+}
+
+message PublishRunCompletedRequest {
+  string app_id = 1;
+  string run_id = 2;
+  string status = 3;
+  int32 attempt = 4;
+}
