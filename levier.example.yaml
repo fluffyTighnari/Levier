@@ -18,6 +18,12 @@ http:
   # Production: use the same secret on every control/API replica.
   # ws_token_secret: "change-me"
 
+gateway:
+  # Unique per process. Defaults to hostname-pid when omitted.
+  instance_id: "levier-local-1"
+  heartbeat_interval: "10s"
+  lease_ttl: "30s"
+
 grpc:
   addr: ":9090"
   max_recv_msg_bytes: 16777216

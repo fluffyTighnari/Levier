@@ -25,6 +25,7 @@ import (
 	"google.golang.org/grpc"
 
 	runtimev1 "github.com/fluffyTighnari/levier/gen/middleware/runtime/v1"
+	"github.com/fluffyTighnari/levier/internal/cluster"
 	"github.com/fluffyTighnari/levier/internal/config"
 	"github.com/fluffyTighnari/levier/internal/connection"
 	"github.com/fluffyTighnari/levier/internal/control"
@@ -103,6 +104,13 @@ func runServer(args []string) {
 			"fix", "run levier migrate up")
 		os.Exit(1)
 	}
+
+	gatewayLease, err := startGatewayLease(ctx, cluster.New(pool), cfg, logger)
+	if err != nil {
+		logger.Error("register gateway failed", "gateway_id", cfg.Gateway.InstanceID, "err", err)
+		os.Exit(1)
+	}
+	defer gatewayLease.Stop()
 
 	hub := connection.New(connection.Config{
 		Authenticate: daemonAuthenticator(cfg.GRPC.DaemonTokens),

@@ -26,6 +26,7 @@ type Config struct {
 	Environment   string          `yaml:"environment"`
 	HTTP          HTTPConfig      `yaml:"http"`
 	GRPC          GRPCConfig      `yaml:"grpc"`
+	Gateway       GatewayConfig   `yaml:"gateway"`
 	Database      DatabaseConfig  `yaml:"database"`
 	Workflow      WorkflowConfig  `yaml:"workflow"`
 	Retention     RetentionConfig `yaml:"retention"`
@@ -55,6 +56,13 @@ type GRPCConfig struct {
 	ShutdownTimeout  Duration          `yaml:"shutdown_timeout"`
 	DaemonTokens     map[string]string `yaml:"daemon_tokens"`
 	DaemonTokensFile string            `yaml:"daemon_tokens_file"`
+}
+
+// GatewayConfig identifies one control / gateway process and its presence lease.
+type GatewayConfig struct {
+	InstanceID        string   `yaml:"instance_id"`
+	HeartbeatInterval Duration `yaml:"heartbeat_interval"`
+	LeaseTTL          Duration `yaml:"lease_ttl"`
 }
 
 // DatabaseConfig configures the PostgreSQL connection pool.
@@ -112,6 +120,11 @@ func Default() Config {
 			MaxRecvMsgBytes: 16 << 20,
 			MaxSendMsgBytes: 16 << 20,
 			ShutdownTimeout: Duration(10 * time.Second),
+		},
+		Gateway: GatewayConfig{
+			InstanceID:        defaultGatewayInstanceID(),
+			HeartbeatInterval: Duration(10 * time.Second),
+			LeaseTTL:          Duration(30 * time.Second),
 		},
 		Database: DatabaseConfig{
 			MaxConns:       20,
@@ -197,6 +210,7 @@ func ApplyEnv(cfg *Config, lookup func(string) (string, bool)) error {
 		return err
 	}
 	stringOverride(lookup, "LEVIER_HTTP_WS_TOKEN_SECRET", &cfg.HTTP.WSTokenSecret)
+	stringOverride(lookup, "LEVIER_GATEWAY_INSTANCE_ID", &cfg.Gateway.InstanceID)
 	stringOverride(lookup, "LEVIER_GRPC_ADDR", &cfg.GRPC.Addr)
 	stringOverride(lookup, "LEVIER_GRPC_DAEMON_TOKENS_FILE", &cfg.GRPC.DaemonTokensFile)
 	stringOverride(lookup, "LEVIER_DATABASE_URL", &cfg.Database.URL)
@@ -223,6 +237,12 @@ func ApplyEnv(cfg *Config, lookup func(string) (string, bool)) error {
 		return err
 	}
 	if err := durationOverride(lookup, "LEVIER_GRPC_SHUTDOWN_TIMEOUT", &cfg.GRPC.ShutdownTimeout); err != nil {
+		return err
+	}
+	if err := durationOverride(lookup, "LEVIER_GATEWAY_HEARTBEAT_INTERVAL", &cfg.Gateway.HeartbeatInterval); err != nil {
+		return err
+	}
+	if err := durationOverride(lookup, "LEVIER_GATEWAY_LEASE_TTL", &cfg.Gateway.LeaseTTL); err != nil {
 		return err
 	}
 	if err := int32Override(lookup, "LEVIER_DATABASE_MAX_CONNS", &cfg.Database.MaxConns); err != nil {
@@ -442,6 +462,15 @@ func (c Config) Validate() error {
 	if c.HTTP.WSTokenTTL.Std() <= 0 {
 		problems = append(problems, "http.ws_token_ttl must be positive")
 	}
+	if strings.TrimSpace(c.Gateway.InstanceID) == "" {
+		problems = append(problems, "gateway.instance_id is required")
+	}
+	if c.Gateway.HeartbeatInterval.Std() <= 0 {
+		problems = append(problems, "gateway.heartbeat_interval must be positive")
+	}
+	if c.Gateway.LeaseTTL.Std() <= c.Gateway.HeartbeatInterval.Std() {
+		problems = append(problems, "gateway.lease_ttl must be greater than gateway.heartbeat_interval")
+	}
 	if c.GRPC.ShutdownTimeout.Std() <= 0 {
 		problems = append(problems, "grpc.shutdown_timeout must be positive")
 	}
@@ -559,6 +588,14 @@ func boolOverride(lookup func(string) (string, bool), key string, dst *bool) err
 	}
 	*dst = parsed
 	return nil
+}
+
+func defaultGatewayInstanceID() string {
+	hostname, err := os.Hostname()
+	if err != nil || strings.TrimSpace(hostname) == "" {
+		hostname = "levier"
+	}
+	return fmt.Sprintf("%s-%d", hostname, os.Getpid())
 }
 
 func stringOverride(lookup func(string) (string, bool), key string, dst *string) {

@@ -83,6 +83,9 @@ CLI
 | `http.allow_legacy_bearer` | `LEVIER_HTTP_ALLOW_LEGACY_BEARER` | bool | `false` | 否 | 否 | 兼容开关 |
 | `http.ws_token_ttl` | `LEVIER_HTTP_WS_TOKEN_TTL` | duration | `10m` | 是 | 否 | 支持 env |
 | `http.ws_token_secret` | `LEVIER_HTTP_WS_TOKEN_SECRET` | string | 空 | 否 | **是** | 多副本共享签名密钥；为空时回落进程内 token |
+| `gateway.instance_id` | `LEVIER_GATEWAY_INSTANCE_ID` | string | hostname-pid | 是 | 否 | Gateway 实例唯一标识 |
+| `gateway.heartbeat_interval` | `LEVIER_GATEWAY_HEARTBEAT_INTERVAL` | duration | `10s` | 是 | 否 | Gateway presence 心跳 |
+| `gateway.lease_ttl` | `LEVIER_GATEWAY_LEASE_TTL` | duration | `30s` | 是 | 否 | 必须大于心跳间隔 |
 
 ### 3.2 gRPC
 

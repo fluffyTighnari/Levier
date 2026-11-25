@@ -155,6 +155,11 @@ func redactedConfig(cfg config.Config) map[string]any {
 			"ws_token_ttl":        cfg.HTTP.WSTokenTTL.Std().String(),
 			"ws_token_secret":     redactSecret(cfg.HTTP.WSTokenSecret),
 		},
+		"gateway": map[string]any{
+			"instance_id":        cfg.Gateway.InstanceID,
+			"heartbeat_interval": cfg.Gateway.HeartbeatInterval.Std().String(),
+			"lease_ttl":          cfg.Gateway.LeaseTTL.Std().String(),
+		},
 		"grpc": map[string]any{
 			"addr":               cfg.GRPC.Addr,
 			"max_recv_msg_bytes": cfg.GRPC.MaxRecvMsgBytes,

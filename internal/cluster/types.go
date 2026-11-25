@@ -19,6 +19,17 @@ const (
 	StatusOffline = "offline"
 )
 
+const (
+	// RoleControl runs scheduling and workflow workers.
+	RoleControl = "control"
+	// RoleAPI serves the public HTTP API.
+	RoleAPI = "api"
+	// RoleRuntimeGateway owns daemon RuntimeChannel connections.
+	RoleRuntimeGateway = "runtime-gateway"
+	// RoleAppGateway owns App WebSocket connections and local tools.
+	RoleAppGateway = "app-gateway"
+)
+
 // GatewayInstance is one control / runtime-gateway / app-gateway process.
 type GatewayInstance struct {
 	GatewayID      string            `json:"gateway_id"`
