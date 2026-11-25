@@ -22,7 +22,7 @@ const (
 )
 
 const gatewayColumns = `
-	gateway_id, epoch, roles, status, version, address, labels_json,
+	gateway_id, epoch, roles, status, version, address, internal_address, labels_json,
 	started_at, last_seen_at, lease_expires_at`
 
 const runtimeColumns = `
@@ -38,6 +38,10 @@ const appConnectionColumns = `
 
 const executionLeaseColumns = `
 	app_id, connection_id, gateway_id, lease_epoch, expires_at, updated_at`
+
+const notificationColumns = `
+	notification_id, channel, dedupe_key, payload_json, attempts,
+	next_attempt_at, claimed_by, claimed_until, created_at, published_at`
 
 // Store is the PostgreSQL connection registry used by I3 replicas.
 type Store struct {
@@ -64,22 +68,23 @@ func (s *Store) RegisterGateway(ctx context.Context, reg GatewayRegistration, tt
 	expires := time.Now().UTC().Add(normalizeTTL(ttl))
 	gateway, err := scanGateway(s.pool.QueryRow(ctx, `
 		INSERT INTO gateway_instances (
-			gateway_id, epoch, roles, status, version, address, labels_json,
+			gateway_id, epoch, roles, status, version, address, internal_address, labels_json,
 			started_at, last_seen_at, lease_expires_at, updated_at
-		) VALUES ($1, 1, $2, 'online', $3, $4, $5, now(), now(), $6, now())
+		) VALUES ($1, 1, $2, 'online', $3, $4, $5, $6, now(), now(), $7, now())
 		ON CONFLICT (gateway_id) DO UPDATE SET
 			epoch = gateway_instances.epoch + 1,
 			roles = EXCLUDED.roles,
 			status = 'online',
 			version = EXCLUDED.version,
 			address = EXCLUDED.address,
+			internal_address = EXCLUDED.internal_address,
 			labels_json = EXCLUDED.labels_json,
 			started_at = EXCLUDED.started_at,
 			last_seen_at = now(),
 			lease_expires_at = EXCLUDED.lease_expires_at,
 			updated_at = now()
 		RETURNING `+gatewayColumns,
-		reg.GatewayID, reg.Roles, reg.Version, reg.Address, labels, expires,
+		reg.GatewayID, reg.Roles, reg.Version, reg.Address, reg.InternalAddress, labels, expires,
 	))
 	if err != nil {
 		return GatewayInstance{}, fmt.Errorf("register gateway: %w", err)
@@ -154,6 +159,37 @@ func (s *Store) GetGateway(ctx context.Context, gatewayID string) (GatewayInstan
 	return gateway, nil
 }
 
+// ListGatewaysByRole returns live gateways advertising one role.
+func (s *Store) ListGatewaysByRole(ctx context.Context, role string) ([]GatewayInstance, error) {
+	if err := s.ready(); err != nil {
+		return nil, err
+	}
+	rows, err := s.pool.Query(ctx, `
+		SELECT `+gatewayColumns+`
+		FROM gateway_instances
+		WHERE status = 'online'
+		  AND lease_expires_at > now()
+		  AND $1 = ANY(roles)
+		ORDER BY gateway_id
+	`, role)
+	if err != nil {
+		return nil, fmt.Errorf("list gateways by role: %w", err)
+	}
+	defer rows.Close()
+	result := make([]GatewayInstance, 0)
+	for rows.Next() {
+		gateway, err := scanGateway(rows)
+		if err != nil {
+			return nil, fmt.Errorf("list gateways by role: scan: %w", err)
+		}
+		result = append(result, gateway)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("list gateways by role: rows: %w", err)
+	}
+	return result, nil
+}
+
 // RegisterRuntime creates or takes over a Runtime connection lease.
 func (s *Store) RegisterRuntime(ctx context.Context, reg RuntimeRegistration, ttl time.Duration) (RuntimeConnection, error) {
 	if err := s.ready(); err != nil {
@@ -204,11 +240,17 @@ func (s *Store) RegisterRuntime(ctx context.Context, reg RuntimeRegistration, tt
 			last_heartbeat_at = now(),
 			lease_expires_at = EXCLUDED.lease_expires_at,
 			updated_at = now()
+		WHERE runtime_connections.status = 'offline'
+		   OR runtime_connections.lease_expires_at < now()
+		   OR runtime_connections.gateway_id = EXCLUDED.gateway_id
 		RETURNING `+runtimeColumns,
 		reg.DaemonID, reg.GatewayID, reg.RuntimeName, reg.RuntimeType,
 		reg.Version, reg.MaxConcurrentRuns, len(reg.RunningRuns),
 		labels, capabilities, runningRuns, expires,
 	))
+	if errors.Is(err, pgx.ErrNoRows) {
+		return RuntimeConnection{}, ErrLeaseHeld
+	}
 	if err != nil {
 		return RuntimeConnection{}, fmt.Errorf("register runtime: %w", err)
 	}
@@ -414,6 +456,100 @@ func (s *Store) MarkAppConnectionOffline(ctx context.Context, connectionID strin
 	return nil
 }
 
+// AcquireCapacityLease reserves one Runtime capacity slot atomically.
+func (s *Store) AcquireCapacityLease(
+	ctx context.Context,
+	daemonID, reservationID, gatewayID string,
+	ttl time.Duration,
+) (CapacityLease, error) {
+	if err := s.ready(); err != nil {
+		return CapacityLease{}, err
+	}
+	if daemonID == "" || reservationID == "" || gatewayID == "" {
+		return CapacityLease{}, fmt.Errorf("%w: daemon, reservation, and gateway are required", ErrInvalidRegistration)
+	}
+	expires := time.Now().UTC().Add(normalizeTTL(ttl))
+	tx, err := s.pool.Begin(ctx)
+	if err != nil {
+		return CapacityLease{}, fmt.Errorf("acquire capacity: begin: %w", err)
+	}
+	defer func() { _ = tx.Rollback(context.Background()) }()
+
+	if _, err := tx.Exec(ctx, "SELECT pg_advisory_xact_lock(hashtext($1)::bigint)", daemonID); err != nil {
+		return CapacityLease{}, fmt.Errorf("acquire capacity: lock: %w", err)
+	}
+	var maxRuns int
+	if err := tx.QueryRow(ctx, `
+		SELECT max_concurrent_runs
+		FROM runtime_connections
+		WHERE daemon_id = $1
+		  AND gateway_id = $2
+		  AND status = 'online'
+		  AND lease_expires_at > now()
+	`, daemonID, gatewayID).Scan(&maxRuns); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return CapacityLease{}, ErrLeaseLost
+		}
+		return CapacityLease{}, fmt.Errorf("acquire capacity: runtime: %w", err)
+	}
+	if maxRuns <= 0 {
+		maxRuns = 1
+	}
+	var existing bool
+	if err := tx.QueryRow(ctx, `
+		SELECT EXISTS (
+			SELECT 1 FROM runtime_capacity_leases
+			WHERE daemon_id = $1 AND reservation_id = $2 AND expires_at > now()
+		)
+	`, daemonID, reservationID).Scan(&existing); err != nil {
+		return CapacityLease{}, fmt.Errorf("acquire capacity: existing: %w", err)
+	}
+	if !existing {
+		var active int
+		if err := tx.QueryRow(ctx, `
+			SELECT count(*) FROM runtime_capacity_leases
+			WHERE daemon_id = $1 AND expires_at > now()
+		`, daemonID).Scan(&active); err != nil {
+			return CapacityLease{}, fmt.Errorf("acquire capacity: usage: %w", err)
+		}
+		if active >= maxRuns {
+			return CapacityLease{}, ErrCapacityExceeded
+		}
+	}
+	lease, err := scanCapacityLease(tx.QueryRow(ctx, `
+		INSERT INTO runtime_capacity_leases (
+			daemon_id, reservation_id, gateway_id, expires_at, created_at, updated_at
+		) VALUES ($1, $2, $3, $4, now(), now())
+		ON CONFLICT (daemon_id, reservation_id) DO UPDATE SET
+			gateway_id = EXCLUDED.gateway_id,
+			expires_at = EXCLUDED.expires_at,
+			updated_at = now()
+		RETURNING daemon_id, reservation_id, gateway_id, expires_at, created_at, updated_at
+	`, daemonID, reservationID, gatewayID, expires))
+	if err != nil {
+		return CapacityLease{}, fmt.Errorf("acquire capacity: upsert: %w", err)
+	}
+	if err := tx.Commit(ctx); err != nil {
+		return CapacityLease{}, fmt.Errorf("acquire capacity: commit: %w", err)
+	}
+	return lease, nil
+}
+
+// ReleaseCapacityLease releases one reservation.
+func (s *Store) ReleaseCapacityLease(ctx context.Context, daemonID, reservationID string) (bool, error) {
+	if err := s.ready(); err != nil {
+		return false, err
+	}
+	tag, err := s.pool.Exec(ctx, `
+		DELETE FROM runtime_capacity_leases
+		WHERE daemon_id = $1 AND reservation_id = $2
+	`, daemonID, reservationID)
+	if err != nil {
+		return false, fmt.Errorf("release capacity: %w", err)
+	}
+	return tag.RowsAffected() > 0, nil
+}
+
 // GetAppConnection returns one App connection.
 func (s *Store) GetAppConnection(ctx context.Context, connectionID string) (AppConnection, error) {
 	if err := s.ready(); err != nil {
@@ -440,7 +576,9 @@ func (s *Store) ListAppConnections(ctx context.Context, appID, tenantID string) 
 	rows, err := s.pool.Query(ctx, `
 		SELECT `+appConnectionColumns+`
 		FROM app_connections
-		WHERE app_id = $1 AND tenant_id = $2 AND status = 'online'
+		WHERE app_id = $1 AND tenant_id = $2
+		  AND status = 'online'
+		  AND lease_expires_at > now()
 		ORDER BY connected_at DESC, connection_id
 	`, appID, tenantID)
 	if err != nil {
@@ -524,6 +662,11 @@ func (s *Store) GetAppExecutionLease(ctx context.Context, appID string) (AppExec
 
 // EnqueueNotification stores one durable wakeup for another replica.
 func (s *Store) EnqueueNotification(ctx context.Context, channel string, payload json.RawMessage) (Notification, error) {
+	return s.EnqueueNotificationKey(ctx, channel, "", payload)
+}
+
+// EnqueueNotificationKey stores a deduplicated wakeup when dedupeKey is set.
+func (s *Store) EnqueueNotificationKey(ctx context.Context, channel, dedupeKey string, payload json.RawMessage) (Notification, error) {
 	if err := s.ready(); err != nil {
 		return Notification{}, err
 	}
@@ -531,11 +674,18 @@ func (s *Store) EnqueueNotification(ctx context.Context, channel string, payload
 		return Notification{}, fmt.Errorf("%w: channel and valid JSON payload are required", ErrInvalidRegistration)
 	}
 	notification, err := scanNotification(s.pool.QueryRow(ctx, `
-		INSERT INTO gateway_notifications (channel, payload_json, next_attempt_at)
-		VALUES ($1, $2, now())
-		RETURNING notification_id, channel, payload_json, attempts,
-		          next_attempt_at, created_at, published_at
-	`, channel, string(payload)))
+		INSERT INTO gateway_notifications (channel, dedupe_key, payload_json, next_attempt_at)
+		VALUES ($1, $2, $3, now())
+		ON CONFLICT (dedupe_key) WHERE dedupe_key <> '' AND published_at IS NULL
+		DO NOTHING
+		RETURNING `+notificationColumns,
+		channel, dedupeKey, string(payload)))
+	if errors.Is(err, pgx.ErrNoRows) && dedupeKey != "" {
+		notification, err = scanNotification(s.pool.QueryRow(ctx,
+			"SELECT "+notificationColumns+" FROM gateway_notifications WHERE dedupe_key = $1 AND published_at IS NULL",
+			dedupeKey,
+		))
+	}
 	if err != nil {
 		return Notification{}, fmt.Errorf("enqueue notification: %w", err)
 	}
@@ -554,11 +704,11 @@ func (s *Store) ListPendingNotifications(ctx context.Context, channel string, li
 		limit = 500
 	}
 	rows, err := s.pool.Query(ctx, `
-		SELECT notification_id, channel, payload_json, attempts,
-		       next_attempt_at, created_at, published_at
+		SELECT `+notificationColumns+`
 		FROM gateway_notifications
 		WHERE published_at IS NULL
 		  AND next_attempt_at <= now()
+		  AND (claimed_until IS NULL OR claimed_until < now())
 		  AND ($1 = '' OR channel = $1)
 		ORDER BY notification_id
 		LIMIT $2
@@ -581,6 +731,62 @@ func (s *Store) ListPendingNotifications(ctx context.Context, channel string, li
 	return result, nil
 }
 
+// ClaimNotifications atomically leases due notifications to one consumer.
+func (s *Store) ClaimNotifications(ctx context.Context, channel, consumer string, limit int, ttl time.Duration) ([]Notification, error) {
+	if err := s.ready(); err != nil {
+		return nil, err
+	}
+	if consumer == "" {
+		return nil, fmt.Errorf("%w: consumer is required", ErrInvalidRegistration)
+	}
+	if limit <= 0 {
+		limit = 50
+	}
+	if limit > 500 {
+		limit = 500
+	}
+	expires := time.Now().UTC().Add(normalizeTTL(ttl))
+	rows, err := s.pool.Query(ctx, `
+		WITH claimed AS (
+			SELECT notification_id
+			FROM gateway_notifications
+			WHERE published_at IS NULL
+			  AND next_attempt_at <= now()
+			  AND (claimed_until IS NULL OR claimed_until < now())
+			  AND ($1 = '' OR channel = $1)
+			ORDER BY notification_id
+			LIMIT $2
+			FOR UPDATE SKIP LOCKED
+		)
+		UPDATE gateway_notifications n
+		SET claimed_by = $3,
+		    claimed_until = $4,
+		    attempts = attempts + 1,
+		    updated_at = now()
+		FROM claimed
+		WHERE n.notification_id = claimed.notification_id
+		RETURNING n.notification_id, n.channel, n.dedupe_key, n.payload_json,
+		          n.attempts, n.next_attempt_at, n.claimed_by, n.claimed_until,
+		          n.created_at, n.published_at
+	`, channel, limit, consumer, expires)
+	if err != nil {
+		return nil, fmt.Errorf("claim notifications: %w", err)
+	}
+	defer rows.Close()
+	result := make([]Notification, 0)
+	for rows.Next() {
+		notification, err := scanNotification(rows)
+		if err != nil {
+			return nil, fmt.Errorf("claim notifications: scan: %w", err)
+		}
+		result = append(result, notification)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("claim notifications: rows: %w", err)
+	}
+	return result, nil
+}
+
 // MarkNotificationPublished marks a notification as delivered.
 func (s *Store) MarkNotificationPublished(ctx context.Context, notificationID int64) error {
 	if err := s.ready(); err != nil {
@@ -588,7 +794,10 @@ func (s *Store) MarkNotificationPublished(ctx context.Context, notificationID in
 	}
 	_, err := s.pool.Exec(ctx, `
 		UPDATE gateway_notifications
-		SET published_at = now(), attempts = attempts + 1
+		SET published_at = now(),
+		    claimed_by = '',
+		    claimed_until = NULL,
+		    attempts = attempts + 1
 		WHERE notification_id = $1
 	`, notificationID)
 	if err != nil {
@@ -608,6 +817,8 @@ func (s *Store) RescheduleNotification(ctx context.Context, notificationID int64
 	_, err := s.pool.Exec(ctx, `
 		UPDATE gateway_notifications
 		SET attempts = attempts + 1,
+		    claimed_by = '',
+		    claimed_until = NULL,
 		    next_attempt_at = now() + $2
 		WHERE notification_id = $1
 	`, notificationID, delay)
@@ -657,6 +868,13 @@ func (s *Store) ReapExpired(ctx context.Context, now time.Time) (ReapResult, err
 		return ReapResult{}, fmt.Errorf("reap app execution leases: %w", err)
 	}
 	result.Exec = tag.RowsAffected()
+	tag, err = s.pool.Exec(ctx, `
+		DELETE FROM runtime_capacity_leases WHERE expires_at < $1
+	`, now)
+	if err != nil {
+		return ReapResult{}, fmt.Errorf("reap capacity leases: %w", err)
+	}
+	result.Capacity = tag.RowsAffected()
 	return result, nil
 }
 
@@ -728,6 +946,7 @@ func scanGateway(row pgx.Row) (GatewayInstance, error) {
 		&gateway.Status,
 		&gateway.Version,
 		&gateway.Address,
+		&gateway.InternalAddress,
 		&labels,
 		&gateway.StartedAt,
 		&gateway.LastSeenAt,
@@ -826,6 +1045,21 @@ func scanAppConnections(rows pgx.Rows) ([]AppConnection, error) {
 	return result, nil
 }
 
+func scanCapacityLease(row pgx.Row) (CapacityLease, error) {
+	var lease CapacityLease
+	if err := row.Scan(
+		&lease.DaemonID,
+		&lease.ReservationID,
+		&lease.GatewayID,
+		&lease.ExpiresAt,
+		&lease.CreatedAt,
+		&lease.UpdatedAt,
+	); err != nil {
+		return CapacityLease{}, err
+	}
+	return lease, nil
+}
+
 func scanExecutionLease(row pgx.Row) (AppExecutionLease, error) {
 	var lease AppExecutionLease
 	if err := row.Scan(
@@ -844,19 +1078,26 @@ func scanExecutionLease(row pgx.Row) (AppExecutionLease, error) {
 func scanNotification(row pgx.Row) (Notification, error) {
 	var notification Notification
 	var payload []byte
-	var published pgtype.Timestamptz
+	var claimedUntil, published pgtype.Timestamptz
 	if err := row.Scan(
 		&notification.NotificationID,
 		&notification.Channel,
+		&notification.DedupeKey,
 		&payload,
 		&notification.Attempts,
 		&notification.NextAttemptAt,
+		&notification.ClaimedBy,
+		&claimedUntil,
 		&notification.CreatedAt,
 		&published,
 	); err != nil {
 		return Notification{}, err
 	}
 	notification.Payload = json.RawMessage(payload)
+	if claimedUntil.Valid {
+		value := claimedUntil.Time
+		notification.ClaimedUntil = &value
+	}
 	if published.Valid {
 		value := published.Time
 		notification.PublishedAt = &value

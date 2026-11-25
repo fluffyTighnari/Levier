@@ -106,6 +106,12 @@ func TestGatewayAndRuntimeLeases(t *testing.T) {
 	if err != nil || len(online) != 1 || online[0].DaemonID != "daemon-1" {
 		t.Fatalf("ListOnlineRuntimes() = %+v, %v", online, err)
 	}
+	if _, err := store.RegisterRuntime(ctx, RuntimeRegistration{
+		DaemonID: "daemon-1", GatewayID: "gateway-2", RuntimeName: "echo1",
+		RuntimeType: "normal", MaxConcurrentRuns: 1,
+	}, time.Minute); !errors.Is(err, ErrLeaseHeld) {
+		t.Fatalf("RegisterRuntime(active takeover) error = %v, want ErrLeaseHeld", err)
+	}
 	if err := store.MarkRuntimeOffline(ctx, "daemon-1", runtimeConn.ConnectionEpoch); err != nil {
 		t.Fatalf("MarkRuntimeOffline() error = %v", err)
 	}
@@ -118,6 +124,72 @@ func TestGatewayAndRuntimeLeases(t *testing.T) {
 	}, time.Minute)
 	if err != nil || reconnected.ConnectionEpoch != 2 || reconnected.GatewayID != "gateway-2" {
 		t.Fatalf("RegisterRuntime(reconnect) = %+v, %v", reconnected, err)
+	}
+}
+
+func TestCapacityLeaseAndGatewayRoles(t *testing.T) {
+	store := New(testPool(t))
+	ctx := context.Background()
+	gateway, err := store.RegisterGateway(ctx, GatewayRegistration{
+		GatewayID: "gateway-cap", Roles: []string{RoleRuntimeGateway},
+		InternalAddress: "127.0.0.1:19090",
+	}, time.Minute)
+	if err != nil {
+		t.Fatalf("RegisterGateway() error = %v", err)
+	}
+	gateways, err := store.ListGatewaysByRole(ctx, RoleRuntimeGateway)
+	if err != nil || len(gateways) != 1 || gateways[0].InternalAddress != "127.0.0.1:19090" {
+		t.Fatalf("ListGatewaysByRole() = %+v, %v", gateways, err)
+	}
+	if _, err := store.RegisterRuntime(ctx, RuntimeRegistration{
+		DaemonID: "daemon-cap", GatewayID: gateway.GatewayID, RuntimeName: "echo1",
+		RuntimeType: "normal", MaxConcurrentRuns: 2,
+	}, time.Minute); err != nil {
+		t.Fatalf("RegisterRuntime() error = %v", err)
+	}
+	if _, err := store.AcquireCapacityLease(ctx, "daemon-cap", "res-1", gateway.GatewayID, time.Minute); err != nil {
+		t.Fatalf("AcquireCapacityLease(1) error = %v", err)
+	}
+	if _, err := store.AcquireCapacityLease(ctx, "daemon-cap", "res-2", gateway.GatewayID, time.Minute); err != nil {
+		t.Fatalf("AcquireCapacityLease(2) error = %v", err)
+	}
+	if _, err := store.AcquireCapacityLease(ctx, "daemon-cap", "res-3", gateway.GatewayID, time.Minute); !errors.Is(err, ErrCapacityExceeded) {
+		t.Fatalf("AcquireCapacityLease(3) error = %v, want ErrCapacityExceeded", err)
+	}
+	released, err := store.ReleaseCapacityLease(ctx, "daemon-cap", "res-1")
+	if err != nil || !released {
+		t.Fatalf("ReleaseCapacityLease() = %v, %v", released, err)
+	}
+	if _, err := store.AcquireCapacityLease(ctx, "daemon-cap", "res-3", gateway.GatewayID, time.Minute); err != nil {
+		t.Fatalf("AcquireCapacityLease(after release) error = %v", err)
+	}
+}
+
+func TestNotificationClaimAndDedupe(t *testing.T) {
+	store := New(testPool(t))
+	ctx := context.Background()
+	first, err := store.EnqueueNotificationKey(ctx, "app.tool", "dedupe-1", json.RawMessage(`{"run_id":"run-1"}`))
+	if err != nil {
+		t.Fatalf("EnqueueNotificationKey() error = %v", err)
+	}
+	second, err := store.EnqueueNotificationKey(ctx, "app.tool", "dedupe-1", json.RawMessage(`{"run_id":"run-1"}`))
+	if err != nil || second.NotificationID != first.NotificationID {
+		t.Fatalf("dedupe notification = %+v, %v", second, err)
+	}
+	claimed, err := store.ClaimNotifications(ctx, "app.tool", "consumer-1", 10, time.Minute)
+	if err != nil || len(claimed) != 1 || claimed[0].ClaimedBy != "consumer-1" {
+		t.Fatalf("ClaimNotifications() = %+v, %v", claimed, err)
+	}
+	again, err := store.ClaimNotifications(ctx, "app.tool", "consumer-2", 10, time.Minute)
+	if err != nil || len(again) != 0 {
+		t.Fatalf("second claim = %+v, %v", again, err)
+	}
+	if err := store.MarkNotificationPublished(ctx, first.NotificationID); err != nil {
+		t.Fatalf("MarkNotificationPublished() error = %v", err)
+	}
+	pending, err := store.ListPendingNotifications(ctx, "app.tool", 10)
+	if err != nil || len(pending) != 0 {
+		t.Fatalf("pending after publish = %+v, %v", pending, err)
 	}
 }
 
