@@ -330,7 +330,13 @@ request_id
 | RuntimeTransport port | 已完成 | Control 通过 `ports.RuntimeTransport` 发送/释放 Runtime |
 | RuntimePlacement port | 已完成 | placement/reserve/disconnect 与 transport 分离 |
 | AppConnections port | 已完成 | HTTP/WS 层不再直接依赖具体 AppHub |
-| I3.1 角色拆分 | 进行中 | presence 和 ports 已落地；下一步按角色装配服务 |
+| Capacity Lease | 已完成 | `runtime_capacity_leases`，原子预留、释放、过期回收 |
+| Runtime 注册 fencing | 已完成 | 活跃 lease 下拒绝其他 gateway takeover |
+| Notification Claim | 已完成 | dedupe key、claim owner/lease、发布/重试 |
+| Tool invocation owner 字段 | 已完成 | owner gateway/connection、lease epoch、deadline schema |
+| Gateway internal address | 已完成 | `gateway_instances.internal_address` 字段 |
+| I3.0.1 契约补充 | 进行中 | 内部 RPC proto、App Bridge v2 实现、地址/配置接线 |
+| I3.1 角色拆分 | 进行中 | presence、RoleSet、ports、capacity 已落地；下一步装配服务 |
 | I3.2 Runtime Gateway | 待开始 | daemon 跨副本路由 |
 | I3.3 App Gateway | 待开始 | App 连接与事件 fanout |
 | I3.4 Local Tool 路由 | 待开始 | 定向投递与幂等 |
