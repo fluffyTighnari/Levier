@@ -91,6 +91,16 @@ func (g *gatewayLease) heartbeat(ctx context.Context) {
 	}
 }
 
+// Done closes when the heartbeat loop stops, including lease loss.
+func (g *gatewayLease) Done() <-chan struct{} {
+	if g == nil {
+		closed := make(chan struct{})
+		close(closed)
+		return closed
+	}
+	return g.done
+}
+
 func (g *gatewayLease) Stop() {
 	if g == nil {
 		return

@@ -124,6 +124,14 @@ func runServer(args []string) {
 		os.Exit(1)
 	}
 	defer gatewayLease.Stop()
+	go func() {
+		select {
+		case <-ctx.Done():
+		case <-gatewayLease.Done():
+			logger.Error("gateway lease lost; shutting down", "gateway_id", cfg.Gateway.InstanceID)
+			stop()
+		}
+	}()
 
 	hub := connection.New(connection.Config{
 		Authenticate: daemonAuthenticator(cfg.GRPC.DaemonTokens),
