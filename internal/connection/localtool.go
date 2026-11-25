@@ -34,6 +34,7 @@ type LocalToolError struct {
 type LocalToolResult struct {
 	CorrelationID string
 	InvocationID  string
+	ConnectionID  string
 	OK            bool
 	ResultJSON    string
 	Error         *LocalToolError
@@ -43,6 +44,7 @@ type pendingLocalCall struct {
 	appID         string
 	runID         string
 	correlationID string
+	conn          *AppConn
 	result        chan LocalToolResult
 }
 
@@ -61,16 +63,22 @@ func (h *AppHub) CallLocalTool(ctx context.Context, appID string, request LocalT
 		return LocalToolResult{}, fmt.Errorf("invocation_id and tool_name are required")
 	}
 	msgID := id.New()
-	pending := &pendingLocalCall{
-		appID:         appID,
-		runID:         request.RunID,
-		correlationID: msgID,
-		result:        make(chan LocalToolResult, 1),
-	}
 	h.mu.Lock()
 	if _, exists := h.pending[request.InvocationID]; exists {
 		h.mu.Unlock()
 		return LocalToolResult{}, fmt.Errorf("local tool call %q is already pending", request.InvocationID)
+	}
+	target := h.pickConnectionLocked(appID)
+	if target == nil {
+		h.mu.Unlock()
+		return LocalToolResult{}, ErrAppUnreachable
+	}
+	pending := &pendingLocalCall{
+		appID:         appID,
+		runID:         request.RunID,
+		correlationID: msgID,
+		conn:          target,
+		result:        make(chan LocalToolResult, 1),
 	}
 	h.pending[request.InvocationID] = pending
 	h.mu.Unlock()
@@ -80,25 +88,28 @@ func (h *AppHub) CallLocalTool(ctx context.Context, appID string, request LocalT
 		h.mu.Unlock()
 	}()
 
-	payload, err := json.Marshal(map[string]any{
-		"type":           "local_tool_call",
-		"msg_id":         msgID,
-		"invocation_id":  request.InvocationID,
-		"tool_name":      request.ToolName,
-		"arguments_json": request.ArgumentsJSON,
-		"timeout_ms":     request.TimeoutMS,
-	})
-	if err != nil {
-		return LocalToolResult{}, fmt.Errorf("encode local tool call: %w", err)
-	}
-	if !h.Broadcast(appID, payload) {
-		return LocalToolResult{}, ErrAppUnreachable
-	}
-
 	timeout := time.Duration(request.TimeoutMS) * time.Millisecond
 	if timeout <= 0 {
 		timeout = 60 * time.Second
 	}
+	payload, err := json.Marshal(map[string]any{
+		"type":           "local_tool_call",
+		"msg_id":         msgID,
+		"invocation_id":  request.InvocationID,
+		"run_id":         request.RunID,
+		"tool_name":      request.ToolName,
+		"arguments_json": request.ArgumentsJSON,
+		"timeout_ms":     request.TimeoutMS,
+		"deadline_ms":    time.Now().Add(timeout).UnixMilli(),
+		"idempotent":     true,
+	})
+	if err != nil {
+		return LocalToolResult{}, fmt.Errorf("encode local tool call: %w", err)
+	}
+	if err := target.Send(payload); err != nil {
+		return LocalToolResult{}, ErrAppUnreachable
+	}
+
 	timer := time.NewTimer(timeout)
 	defer timer.Stop()
 	select {
@@ -136,6 +147,11 @@ func (h *AppHub) ResolveLocalToolChecked(appID string, result LocalToolResult) L
 		return LocalToolUnknown
 	}
 	if pending.appID != appID {
+		h.mu.Unlock()
+		return LocalToolForbidden
+	}
+	if result.ConnectionID != "" && pending.conn != nil &&
+		result.ConnectionID != pending.conn.ConnectionID() {
 		h.mu.Unlock()
 		return LocalToolForbidden
 	}
@@ -188,7 +204,32 @@ func (h *AppHub) rememberCompletedLocked(invocationID, appID string, result Loca
 func (h *AppHub) CancelLocalTools(appID, runID, code, message string) {
 	h.failPendingWhere(func(call *pendingLocalCall) bool {
 		return call.appID == appID && (runID == "" || call.runID == runID)
-	}, code, message)
+	}, code, message, true)
+}
+
+// pickConnectionLocked chooses exactly one connection for a local tool call.
+// The caller must hold h.mu. Prefer a v2 connection so deadline/idempotency
+// fields are understood, but never broadcast the invocation.
+func (h *AppHub) pickConnectionLocked(appID string) *AppConn {
+	var fallback *AppConn
+	for conn := range h.apps[appID] {
+		if conn.Protocol() >= 2 {
+			return conn
+		}
+		if fallback == nil {
+			fallback = conn
+		}
+	}
+	return fallback
+}
+
+func (h *AppHub) failPendingForConn(conn *AppConn) {
+	if conn == nil {
+		return
+	}
+	h.failPendingWhere(func(call *pendingLocalCall) bool {
+		return call.conn == conn
+	}, string(errs.CodeAppUnreachable), "app connection closed", false)
 }
 
 func (h *AppHub) PendingLocalTools(appID string) int {
@@ -206,10 +247,14 @@ func (h *AppHub) PendingLocalTools(appID string) int {
 func (h *AppHub) failPending(appID, code, message string) {
 	h.failPendingWhere(func(call *pendingLocalCall) bool {
 		return call.appID == appID
-	}, code, message)
+	}, code, message, false)
 }
 
-func (h *AppHub) failPendingWhere(match func(*pendingLocalCall) bool, code, message string) {
+func (h *AppHub) failPendingWhere(
+	match func(*pendingLocalCall) bool,
+	code, message string,
+	notify bool,
+) {
 	h.mu.Lock()
 	pending := make([]*pendingLocalCall, 0)
 	invocations := make([]string, 0)
@@ -222,6 +267,15 @@ func (h *AppHub) failPendingWhere(match func(*pendingLocalCall) bool, code, mess
 	}
 	h.mu.Unlock()
 	for index, call := range pending {
+		if notify && call.conn != nil {
+			if payload, err := json.Marshal(map[string]any{
+				"type":          "cancel",
+				"invocation_id": invocations[index],
+				"reason":        message,
+			}); err == nil {
+				_ = call.conn.Send(payload)
+			}
+		}
 		select {
 		case call.result <- LocalToolResult{
 			InvocationID: invocations[index],

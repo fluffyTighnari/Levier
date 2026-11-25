@@ -2,6 +2,8 @@
   "type": "local_tool_result",
   "correlation_id": "msg-1",
   "invocation_id": "inv-1",
+  "run_id": "",
   "ok": true,
-  "result_json": "{\"value\":2}"
+  "result_json": "{\"value\":2}",
+  "idempotent": true
 }

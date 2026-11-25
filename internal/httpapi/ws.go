@@ -21,12 +21,44 @@ type ServerMessage interface {
 	isServerMessage()
 }
 
-// HelloMessage is the optional v1 handshake.
+// HelloMessage is the optional v1/v2 handshake.
 type HelloMessage struct {
-	Type     string `json:"type"`
-	Protocol int    `json:"protocol"`
-	Client   string `json:"client,omitempty"`
-	Version  string `json:"version,omitempty"`
+	Type            string        `json:"type"`
+	Protocol        int           `json:"protocol"`
+	ProtocolVersion int           `json:"protocol_version,omitempty"`
+	Client          string        `json:"client,omitempty"`
+	Version         string        `json:"version,omitempty"`
+	ConnectionID    string        `json:"connection_id,omitempty"`
+	AppID           string        `json:"app_id,omitempty"`
+	Capabilities    []string      `json:"capabilities,omitempty"`
+	ResumeCursor    *ResumeCursor `json:"resume_cursor,omitempty"`
+}
+
+// ResumeCursor is the last event position the App has processed for one Run.
+type ResumeCursor struct {
+	RunID   string `json:"run_id"`
+	Attempt int32  `json:"last_attempt"`
+	Seq     int64  `json:"last_seq"`
+}
+
+// NegotiatedVersion returns the protocol version requested by the client.
+// v2 clients may use either protocol_version or the legacy protocol field.
+func (m HelloMessage) NegotiatedVersion() int {
+	if m.ProtocolVersion != 0 {
+		return m.ProtocolVersion
+	}
+	return m.Protocol
+}
+
+// HelloAckMessage is the v2 handshake response.
+type HelloAckMessage struct {
+	Type                string   `json:"type"`
+	Protocol            int      `json:"protocol"`
+	ConnectionID        string   `json:"connection_id"`
+	AppID               string   `json:"app_id"`
+	Capabilities        []string `json:"capabilities"`
+	HeartbeatIntervalMS int64    `json:"heartbeat_interval_ms"`
+	ServerVersion       string   `json:"server_version,omitempty"`
 }
 
 // SubscribeMessage subscribes to a run stream.
@@ -42,9 +74,27 @@ type LocalToolResultMessage struct {
 	Type          string     `json:"type"`
 	CorrelationID string     `json:"correlation_id"`
 	InvocationID  string     `json:"invocation_id"`
+	RunID         string     `json:"run_id,omitempty"`
 	OK            bool       `json:"ok"`
 	ResultJSON    string     `json:"result_json,omitempty"`
 	Error         *ToolError `json:"error,omitempty"`
+	Idempotent    bool       `json:"idempotent,omitempty"`
+}
+
+// LocalToolProgressMessage reports progress for a running local tool call.
+type LocalToolProgressMessage struct {
+	Type          string          `json:"type"`
+	CorrelationID string          `json:"correlation_id,omitempty"`
+	InvocationID  string          `json:"invocation_id"`
+	RunID         string          `json:"run_id,omitempty"`
+	Progress      json.RawMessage `json:"progress_json"`
+}
+
+// CancelMessage asks the App to cancel one local tool call.
+type CancelMessage struct {
+	Type         string `json:"type"`
+	InvocationID string `json:"invocation_id"`
+	Reason       string `json:"reason,omitempty"`
 }
 
 // PingMessage is a client keepalive.
@@ -71,9 +121,12 @@ type LocalToolCallMessage struct {
 	Type          string `json:"type"`
 	MsgID         string `json:"msg_id"`
 	InvocationID  string `json:"invocation_id"`
+	RunID         string `json:"run_id,omitempty"`
 	ToolName      string `json:"tool_name"`
 	ArgumentsJSON string `json:"arguments_json"`
 	TimeoutMS     int64  `json:"timeout_ms"`
+	DeadlineMS    int64  `json:"deadline_ms,omitempty"`
+	Idempotent    bool   `json:"idempotent,omitempty"`
 }
 
 // RunCompletedMessage announces a terminal run.
@@ -110,13 +163,16 @@ type ToolError struct {
 	Retryable bool   `json:"retryable,omitempty"`
 }
 
-func (*HelloMessage) isClientMessage()           {}
-func (*SubscribeMessage) isClientMessage()       {}
-func (*LocalToolResultMessage) isClientMessage() {}
-func (*PingMessage) isClientMessage()            {}
+func (*HelloMessage) isClientMessage()             {}
+func (*SubscribeMessage) isClientMessage()         {}
+func (*LocalToolResultMessage) isClientMessage()   {}
+func (*LocalToolProgressMessage) isClientMessage() {}
+func (*PingMessage) isClientMessage()              {}
 
+func (*HelloAckMessage) isServerMessage()      {}
 func (*EventMessage) isServerMessage()         {}
 func (*LocalToolCallMessage) isServerMessage() {}
+func (*CancelMessage) isServerMessage()        {}
 func (*RunCompletedMessage) isServerMessage()  {}
 func (*PongMessage) isServerMessage()          {}
 func (*CaughtUpMessage) isServerMessage()      {}
@@ -159,6 +215,15 @@ func ParseClientMessage(data []byte) (ClientMessage, error) {
 			return nil, err
 		}
 		return &msg, nil
+	case contract.WSMessageLocalToolProgress:
+		var msg LocalToolProgressMessage
+		if err := json.Unmarshal(data, &msg); err != nil {
+			return nil, fmt.Errorf("decode local_tool_progress: %w", err)
+		}
+		if err := msg.Validate(); err != nil {
+			return nil, err
+		}
+		return &msg, nil
 	case contract.WSMessagePing:
 		var msg PingMessage
 		if err := json.Unmarshal(data, &msg); err != nil {
@@ -170,13 +235,26 @@ func ParseClientMessage(data []byte) (ClientMessage, error) {
 	}
 }
 
-// Validate checks the optional v1 handshake.
+// Validate checks the optional v1/v2 handshake.
 func (m HelloMessage) Validate() error {
 	if m.Type != contract.WSMessageHello {
 		return fmt.Errorf("hello.type must be %q", contract.WSMessageHello)
 	}
-	if m.Protocol != contract.WSProtocolVersion {
-		return fmt.Errorf("unsupported ws protocol %d", m.Protocol)
+	if m.Protocol != 0 && m.ProtocolVersion != 0 && m.Protocol != m.ProtocolVersion {
+		return fmt.Errorf("hello protocol and protocol_version disagree")
+	}
+	switch m.NegotiatedVersion() {
+	case contract.WSProtocolVersion, contract.WSProtocolVersionV2:
+	default:
+		return fmt.Errorf("unsupported ws protocol %d", m.NegotiatedVersion())
+	}
+	if m.ResumeCursor != nil {
+		if m.ResumeCursor.RunID == "" {
+			return fmt.Errorf("hello.resume_cursor.run_id is required")
+		}
+		if m.ResumeCursor.Attempt < 0 || m.ResumeCursor.Seq < 0 {
+			return fmt.Errorf("hello.resume_cursor cursors must not be negative")
+		}
 	}
 	return nil
 }
@@ -211,6 +289,20 @@ func (m LocalToolResultMessage) Validate() error {
 	}
 	if !m.OK && m.Error == nil {
 		return fmt.Errorf("local_tool_result.error is required when not ok")
+	}
+	return nil
+}
+
+// Validate checks a local tool progress message.
+func (m LocalToolProgressMessage) Validate() error {
+	if m.Type != contract.WSMessageLocalToolProgress {
+		return fmt.Errorf("local_tool_progress.type must be %q", contract.WSMessageLocalToolProgress)
+	}
+	if m.InvocationID == "" {
+		return fmt.Errorf("local_tool_progress.invocation_id is required")
+	}
+	if len(m.Progress) == 0 {
+		return fmt.Errorf("local_tool_progress.progress_json is required")
 	}
 	return nil
 }

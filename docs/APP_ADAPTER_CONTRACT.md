@@ -13,18 +13,33 @@
 
 ```text
 HTTP API            /api/v1
-WebSocket protocol  1
+WebSocket protocol  2（服务端继续接受 v1）
 Python adapter      0.1.0
 ```
 
 适配器启动时发送：
 
 ```json
-{"type":"hello","protocol":1,"client":"levier-app-python","version":"0.1.0"}
+{
+  "type": "hello",
+  "protocol": 2,
+  "protocol_version": 2,
+  "client": "levier-app-python",
+  "version": "0.1.0",
+  "capabilities": [
+    "tool_call_v2",
+    "tool_progress",
+    "tool_cancel",
+    "idempotent_result",
+    "resume_cursor"
+  ]
+}
 ```
 
-服务端当前将 `hello` 视为可选握手，并校验 `protocol`。适配器不兼容时必须
-直接失败，不应继续进入半连接状态。
+服务端返回 `hello_ack`，其中包含 `connection_id`、协商后的 `protocol`、
+服务端能力以及心跳间隔。v1 客户端继续使用 `protocol: 1`，服务端不发送
+`hello_ack`，旧语义保持不变。适配器不兼容时必须直接失败，不应继续进入
+半连接状态。
 
 ---
 
@@ -114,11 +129,18 @@ timeout_ms 必须为正整数
   "type": "local_tool_call",
   "msg_id": "01...",
   "invocation_id": "01...",
+  "run_id": "01...",
   "tool_name": "counter_add",
   "arguments_json": "{\"delta\": 2}",
-  "timeout_ms": 10000
+  "timeout_ms": 10000,
+  "deadline_ms": 1790000000000,
+  "idempotent": true
 }
 ```
+
+`run_id`、`deadline_ms`、`idempotent` 是 v2 增量字段；v1 客户端可以忽略。
+服务端只会把一次 invocation 投递给一个执行连接，不向同一 App 的所有连接
+广播。
 
 适配器要求：
 
@@ -130,6 +152,25 @@ handler 异常返回 TOOL_EXEC_ERROR
 handler 主动抛 ToolExecutionError 时保留 code/retryable
 correlation_id 必须等于收到的 msg_id
 invocation_id 必须原样返回
+v2 结果带 idempotent: true
+```
+
+handler 可以通过 `app.progress(value)` 发送进度：
+
+```json
+{
+  "type": "local_tool_progress",
+  "correlation_id": "<msg_id>",
+  "invocation_id": "<invocation_id>",
+  "run_id": "<run_id>",
+  "progress_json": "{\"percent\": 50}"
+}
+```
+
+服务端在取消一个 Run 的本地工具时发送：
+
+```json
+{"type":"cancel","invocation_id":"<invocation_id>","reason":"run cancelled"}
 ```
 
 成功结果：
@@ -139,8 +180,10 @@ invocation_id 必须原样返回
   "type": "local_tool_result",
   "correlation_id": "<msg_id>",
   "invocation_id": "<invocation_id>",
+  "run_id": "<run_id>",
   "ok": true,
-  "result_json": "{\"value\": 2}"
+  "result_json": "{\"value\": 2}",
+  "idempotent": true
 }
 ```
 

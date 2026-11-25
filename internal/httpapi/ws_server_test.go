@@ -67,6 +67,112 @@ func TestWebSocketSubscribeAndPublish(t *testing.T) {
 	}
 }
 
+func TestWebSocketV2HelloAndResume(t *testing.T) {
+	store := newFakeStore()
+	store.runs["run-1"] = runstore.Run{RunID: "run-1", AppID: "app-1", Status: "running"}
+	store.events = []runstore.Event{{
+		RunID: "run-1", Attempt: 1, Seq: 1, Source: "daemon",
+		Type: "RUN_STATUS", Payload: json.RawMessage(`{"status":"running"}`), TSMs: 1,
+	}}
+	appHub := connection.NewAppHub()
+	server := NewServer(store, &fakeQueue{}, Config{
+		BearerToken:       "legacy-token",
+		AllowLegacyBearer: true,
+		WSTokenTTL:        time.Minute,
+		AppHub:            appHub,
+	})
+	httpServer := httptest.NewServer(server.Handler())
+	defer httpServer.Close()
+
+	token := server.wsTokens.Issue("app-1")
+	wsURL := "ws" + strings.TrimPrefix(httpServer.URL, "http") +
+		"/api/v1/ws?app_id=app-1&token=" + token
+	conn, err := websocket.Dial(wsURL, "", httpServer.URL)
+	if err != nil {
+		t.Fatalf("Dial() error = %v", err)
+	}
+	defer conn.Close()
+
+	hello, _ := json.Marshal(HelloMessage{
+		Type: contract.WSMessageHello, Protocol: contract.WSProtocolVersionV2,
+		ProtocolVersion: contract.WSProtocolVersionV2,
+		AppID:           "app-1",
+		Capabilities:    []string{contract.WSCapabilityToolCallV2},
+		ResumeCursor:    &ResumeCursor{RunID: "run-1", Attempt: 1, Seq: 0},
+	})
+	if err := websocket.Message.Send(conn, string(hello)); err != nil {
+		t.Fatalf("Send(hello) error = %v", err)
+	}
+
+	var raw string
+	if err := websocket.Message.Receive(conn, &raw); err != nil {
+		t.Fatalf("Receive(hello_ack) error = %v", err)
+	}
+	var ack HelloAckMessage
+	if err := json.Unmarshal([]byte(raw), &ack); err != nil {
+		t.Fatalf("decode hello_ack: %v", err)
+	}
+	if ack.Type != contract.WSMessageHelloAck || ack.Protocol != contract.WSProtocolVersionV2 {
+		t.Fatalf("hello_ack = %s", raw)
+	}
+	if ack.ConnectionID == "" || ack.AppID != "app-1" {
+		t.Fatalf("hello_ack identity = %+v", ack)
+	}
+
+	if err := websocket.Message.Receive(conn, &raw); err != nil {
+		t.Fatalf("Receive(event) error = %v", err)
+	}
+	if !strings.Contains(raw, `"type":"event"`) || !strings.Contains(raw, `"seq":1`) {
+		t.Fatalf("replayed event = %s", raw)
+	}
+	if err := websocket.Message.Receive(conn, &raw); err != nil {
+		t.Fatalf("Receive(caught_up) error = %v", err)
+	}
+	if !strings.Contains(raw, `"type":"caught_up"`) {
+		t.Fatalf("caught_up = %s", raw)
+	}
+}
+
+func TestWebSocketRoutesLocalToolProgress(t *testing.T) {
+	store := newFakeStore()
+	appHub := connection.NewAppHub()
+	server := NewServer(store, &fakeQueue{}, Config{
+		BearerToken:       "legacy-token",
+		AllowLegacyBearer: true,
+		AppHub:            appHub,
+	})
+	httpServer := httptest.NewServer(server.Handler())
+	defer httpServer.Close()
+
+	token := server.wsTokens.Issue("app-1")
+	wsURL := "ws" + strings.TrimPrefix(httpServer.URL, "http") +
+		"/api/v1/ws?app_id=app-1&token=" + token
+	conn, err := websocket.Dial(wsURL, "", httpServer.URL)
+	if err != nil {
+		t.Fatalf("Dial() error = %v", err)
+	}
+	defer conn.Close()
+
+	progress, _ := json.Marshal(LocalToolProgressMessage{
+		Type: contract.WSMessageLocalToolProgress, InvocationID: "inv-1",
+		Progress: json.RawMessage(`{"percent":50}`),
+	})
+	if err := websocket.Message.Send(conn, string(progress)); err != nil {
+		t.Fatalf("Send(progress) error = %v", err)
+	}
+	ping, _ := json.Marshal(PingMessage{Type: contract.WSMessagePing})
+	if err := websocket.Message.Send(conn, string(ping)); err != nil {
+		t.Fatalf("Send(ping) error = %v", err)
+	}
+	var raw string
+	if err := websocket.Message.Receive(conn, &raw); err != nil {
+		t.Fatalf("Receive(pong) error = %v", err)
+	}
+	if !strings.Contains(raw, `"type":"pong"`) {
+		t.Fatalf("pong = %s", raw)
+	}
+}
+
 func TestWebSocketRoutesLocalToolResult(t *testing.T) {
 	store := newFakeStore()
 	appHub := connection.NewAppHub()

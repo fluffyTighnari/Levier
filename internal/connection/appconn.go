@@ -34,10 +34,13 @@ type replayBuffer struct {
 
 // AppConn is one registered App WebSocket connection.
 type AppConn struct {
-	appID string
-	sink  EventSink
+	appID        string
+	connectionID string
+	sink         EventSink
 
 	mu            sync.RWMutex
+	protocol      int
+	capabilities  map[string]struct{}
 	subscriptions map[string]struct{}
 	cursors       map[string]runCursor
 	replays       map[string]*replayBuffer
@@ -199,6 +202,46 @@ func (c *AppConn) advance(runID string, attempt int32, seq int64) {
 // AppID returns the connection's App identity.
 func (c *AppConn) AppID() string {
 	return c.appID
+}
+
+// ConnectionID returns the stable ID for this WebSocket connection.
+func (c *AppConn) ConnectionID() string {
+	return c.connectionID
+}
+
+// Protocol returns the negotiated App Bridge protocol version.
+func (c *AppConn) Protocol() int {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	return c.protocol
+}
+
+// SetProtocol records the negotiated App Bridge protocol version.
+func (c *AppConn) SetProtocol(version int) {
+	c.mu.Lock()
+	c.protocol = version
+	c.mu.Unlock()
+}
+
+// SetCapabilities records the capabilities advertised by a v2 client.
+func (c *AppConn) SetCapabilities(capabilities []string) {
+	set := make(map[string]struct{}, len(capabilities))
+	for _, capability := range capabilities {
+		if capability != "" {
+			set[capability] = struct{}{}
+		}
+	}
+	c.mu.Lock()
+	c.capabilities = set
+	c.mu.Unlock()
+}
+
+// HasCapability reports whether the v2 client advertised a capability.
+func (c *AppConn) HasCapability(capability string) bool {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	_, ok := c.capabilities[capability]
+	return ok
 }
 
 func (c *AppConn) close() {

@@ -112,6 +112,100 @@ func TestLocalToolTimeoutAndDisconnect(t *testing.T) {
 	}
 }
 
+func TestCallLocalToolTargetsOneConnection(t *testing.T) {
+	hub := NewAppHub()
+	firstSink := &recordingSink{}
+	secondSink := &recordingSink{}
+	first := hub.Register("app-1", firstSink)
+	second := hub.Register("app-1", secondSink)
+	defer hub.CloseConn(first)
+	defer hub.CloseConn(second)
+
+	resultCh := make(chan LocalToolResult, 1)
+	errCh := make(chan error, 1)
+	go func() {
+		result, err := hub.CallLocalTool(context.Background(), "app-1", LocalToolRequest{
+			InvocationID: "inv-directed", ToolName: "search", TimeoutMS: 1000,
+		})
+		resultCh <- result
+		errCh <- err
+	}()
+
+	deadline := time.Now().Add(time.Second)
+	for firstSink.count()+secondSink.count() == 0 && time.Now().Before(deadline) {
+		time.Sleep(5 * time.Millisecond)
+	}
+	firstCount, secondCount := firstSink.count(), secondSink.count()
+	if firstCount+secondCount != 1 {
+		t.Fatalf("local tool call fanout = %d, want exactly one", firstCount+secondCount)
+	}
+	target := first
+	targetSink := firstSink
+	if secondCount == 1 {
+		target = second
+		targetSink = secondSink
+	}
+	if !hub.ResolveLocalTool("app-1", LocalToolResult{
+		CorrelationID: lastCorrelationID(t, targetSink),
+		InvocationID:  "inv-directed",
+		ConnectionID:  target.ConnectionID(),
+		OK:            true,
+		ResultJSON:    "3",
+	}) {
+		t.Fatal("target connection result was rejected")
+	}
+	if err := <-errCh; err != nil {
+		t.Fatalf("CallLocalTool() error = %v", err)
+	}
+	if result := <-resultCh; !result.OK || result.ResultJSON != "3" {
+		t.Fatalf("result = %+v", result)
+	}
+}
+
+func TestLocalToolResultFromWrongConnectionIsRejected(t *testing.T) {
+	hub := NewAppHub()
+	firstSink := &recordingSink{}
+	secondSink := &recordingSink{}
+	first := hub.Register("app-1", firstSink)
+	second := hub.Register("app-1", secondSink)
+	defer hub.CloseConn(first)
+	defer hub.CloseConn(second)
+
+	go func() {
+		_, _ = hub.CallLocalTool(context.Background(), "app-1", LocalToolRequest{
+			InvocationID: "inv-wrong-conn", ToolName: "search", TimeoutMS: 2000,
+		})
+	}()
+	deadline := time.Now().Add(time.Second)
+	for firstSink.count()+secondSink.count() == 0 && time.Now().Before(deadline) {
+		time.Sleep(5 * time.Millisecond)
+	}
+	firstCount, secondCount := firstSink.count(), secondSink.count()
+	target, targetSink, other := first, firstSink, second
+	if secondCount == 1 {
+		target, targetSink, other = second, secondSink, first
+	}
+	if firstCount+secondCount != 1 {
+		t.Fatalf("local tool call fanout = %d, want exactly one", firstCount+secondCount)
+	}
+	if got := hub.ResolveLocalToolChecked("app-1", LocalToolResult{
+		CorrelationID: lastCorrelationID(t, targetSink),
+		InvocationID:  "inv-wrong-conn",
+		ConnectionID:  other.ConnectionID(),
+		OK:            true,
+	}); got != LocalToolForbidden {
+		t.Fatalf("wrong-connection result = %v, want LocalToolForbidden", got)
+	}
+	if got := hub.ResolveLocalToolChecked("app-1", LocalToolResult{
+		CorrelationID: lastCorrelationID(t, targetSink),
+		InvocationID:  "inv-wrong-conn",
+		ConnectionID:  target.ConnectionID(),
+		OK:            true,
+	}); got != LocalToolResolved {
+		t.Fatalf("target result = %v, want LocalToolResolved", got)
+	}
+}
+
 func TestCancelLocalToolsByRun(t *testing.T) {
 	hub := NewAppHub()
 	sink := &recordingSink{}

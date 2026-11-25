@@ -30,20 +30,39 @@ from .http import LevierClient, Transport
 from .websocket import WebSocketClient, websocket_url
 
 SDK_VERSION = "0.1.0"
-PROTOCOL_VERSION = 1
+PROTOCOL_VERSION = 2
+
+FEATURE_TOOL_CALL_V2 = "tool_call_v2"
+FEATURE_PROGRESS = "tool_progress"
+FEATURE_CANCEL = "tool_cancel"
+FEATURE_IDEMPOTENT_RESULT = "idempotent_result"
+FEATURE_RESUME_CURSOR = "resume_cursor"
+
+CLIENT_CAPABILITIES = [
+    FEATURE_TOOL_CALL_V2,
+    FEATURE_PROGRESS,
+    FEATURE_CANCEL,
+    FEATURE_IDEMPOTENT_RESULT,
+    FEATURE_RESUME_CURSOR,
+]
 
 Handler = Callable[[dict[str, Any]], Any]
 EventCallback = Callable[[dict[str, Any]], None]
 
 
-def hello_message() -> dict[str, Any]:
-    """Return the v1 adapter handshake sent immediately after connect."""
-    return {
+def hello_message(resume_cursor: dict[str, Any] | None = None) -> dict[str, Any]:
+    """Return the App Bridge v2 handshake sent immediately after connect."""
+    message: dict[str, Any] = {
         "type": "hello",
         "protocol": PROTOCOL_VERSION,
+        "protocol_version": PROTOCOL_VERSION,
         "client": "levier-app-python",
         "version": SDK_VERSION,
+        "capabilities": list(CLIENT_CAPABILITIES),
     }
+    if resume_cursor:
+        message["resume_cursor"] = resume_cursor
+    return message
 
 
 @dataclass(frozen=True)
@@ -99,6 +118,11 @@ class LevierApp:
         self._stop_requested = False
         self._active_ws: WebSocketClient | None = None
         self._connected_event = threading.Event()
+        self._protocol = PROTOCOL_VERSION
+        self._server_capabilities: set[str] = set()
+        self._connection_id = ""
+        self._resume_cursor: dict[str, Any] | None = None
+        self._current_invocation: dict[str, Any] | None = None
 
     @classmethod
     def from_credentials(
@@ -239,6 +263,35 @@ class LevierApp:
         """Wait until this App has completed its first WebSocket handshake."""
         return self._connected_event.wait(timeout)
 
+    def progress(self, value: Any) -> bool:
+        """Report progress for the local tool call currently executing.
+
+        Tool handlers may call this from inside their synchronous handler. The
+        message is advisory; a disconnected App keeps executing the tool so the
+        final result remains the source of truth.
+        """
+        invocation = self._current_invocation
+        ws = self._active_ws
+        if invocation is None or ws is None:
+            return False
+        try:
+            progress_json = json.dumps(value, separators=(",", ":"), allow_nan=False)
+        except (TypeError, ValueError):
+            return False
+        try:
+            ws.send_json(
+                {
+                    "type": "local_tool_progress",
+                    "correlation_id": invocation["correlation_id"],
+                    "invocation_id": invocation["invocation_id"],
+                    "run_id": invocation.get("run_id", ""),
+                    "progress_json": progress_json,
+                }
+            )
+        except (OSError, ProtocolError):
+            return False
+        return True
+
     @classmethod
     def run_cli(
         cls,
@@ -373,7 +426,7 @@ class LevierApp:
         )
         ws = WebSocketClient.connect(url)
         try:
-            ws.send_json(hello_message())
+            ws.send_json(hello_message(self._resume_cursor))
         except Exception:
             ws.close()
             raise
@@ -383,11 +436,27 @@ class LevierApp:
 
     def _handle_message(self, ws: WebSocketClient, message: dict[str, Any]) -> bool:
         kind = message.get("type")
+        if kind == "hello_ack":
+            self._handle_hello_ack(message)
+            return False
         if kind == "local_tool_call":
             result = self._dispatch_local_tool(message)
             if result is not None:
                 ws.send_json(result)
             return result is not None
+        if kind == "cancel":
+            self.logger.warning(
+                "server cancelled local tool invocation %s: %s",
+                message.get("invocation_id", ""),
+                message.get("reason", ""),
+            )
+            return False
+        if kind == "event":
+            self._remember_cursor(message)
+        elif kind == "run_completed":
+            cursor = self._resume_cursor
+            if cursor and cursor.get("run_id") == message.get("run_id"):
+                self._resume_cursor = None
         if kind == "ping":
             ws.send_json({"type": "pong"})
             return False
@@ -399,6 +468,35 @@ class LevierApp:
             except Exception:
                 self.logger.exception("event callback failed")
         return False
+
+    def _handle_hello_ack(self, message: dict[str, Any]) -> None:
+        self._protocol = int(message.get("protocol") or PROTOCOL_VERSION)
+        self._connection_id = str(message.get("connection_id") or "")
+        capabilities = message.get("capabilities")
+        if isinstance(capabilities, list):
+            self._server_capabilities = {str(item) for item in capabilities}
+        self.logger.info(
+            "app bridge negotiated",
+            extra={
+                "protocol": self._protocol,
+                "connection_id": self._connection_id,
+                "capabilities": sorted(self._server_capabilities),
+            },
+        )
+
+    def _remember_cursor(self, message: dict[str, Any]) -> None:
+        run_id = str(message.get("run_id") or "")
+        if not run_id:
+            return
+        attempt = int(message.get("attempt") or 0)
+        seq = int(message.get("seq") or 0)
+        if seq <= 0:
+            return
+        self._resume_cursor = {
+            "run_id": run_id,
+            "last_attempt": attempt,
+            "last_seq": seq,
+        }
 
     def _dispatch_local_tool(self, message: dict[str, Any]) -> dict[str, Any] | None:
         correlation_id = str(message.get("msg_id") or "")
@@ -418,11 +516,24 @@ class LevierApp:
             return _tool_error(
                 correlation_id, invocation_id, "TOOL_NOT_FOUND", f"unknown tool {name}"
             )
+        run_id = str(message.get("run_id") or "")
+        self._current_invocation = {
+            "correlation_id": correlation_id,
+            "invocation_id": invocation_id,
+            "run_id": run_id,
+        }
         try:
             result = spec.handler(arguments)
             result_json = json.dumps(result, separators=(",", ":"), allow_nan=False)
         except ToolExecutionError as exc:
-            return _tool_error(correlation_id, invocation_id, exc.code, exc.message, exc.retryable)
+            return _tool_error(
+                correlation_id,
+                invocation_id,
+                exc.code,
+                exc.message,
+                exc.retryable,
+                run_id=run_id,
+            )
         except Exception as exc:  # Handler failures must become tool results.
             self.logger.error(
                 "local tool failed",
@@ -435,14 +546,22 @@ class LevierApp:
                 },
             )
             return _tool_error(
-                correlation_id, invocation_id, "TOOL_EXEC_ERROR", str(exc)
+                correlation_id,
+                invocation_id,
+                "TOOL_EXEC_ERROR",
+                str(exc),
+                run_id=run_id,
             )
+        finally:
+            self._current_invocation = None
         return {
             "type": "local_tool_result",
             "correlation_id": correlation_id,
             "invocation_id": invocation_id,
+            "run_id": run_id,
             "ok": True,
             "result_json": result_json,
+            "idempotent": self._protocol >= 2,
         }
 
     def _sleep_backoff(self, seconds: float) -> bool:
@@ -469,12 +588,16 @@ def _tool_error(
     code: str,
     message: str,
     retryable: bool = False,
+    *,
+    run_id: str = "",
 ) -> dict[str, Any]:
     return {
         "type": "local_tool_result",
         "correlation_id": correlation_id,
         "invocation_id": invocation_id,
+        "run_id": run_id,
         "ok": False,
+        "idempotent": True,
         "error": {
             "code": code,
             "message": message,

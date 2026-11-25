@@ -17,7 +17,7 @@ FIXTURES = Path(__file__).parent / "fixtures"
 
 class AdapterContractTest(unittest.TestCase):
     def test_hello_fixture_and_versions(self) -> None:
-        self.assertEqual(PROTOCOL_VERSION, 1)
+        self.assertEqual(PROTOCOL_VERSION, 2)
         self.assertEqual(SDK_VERSION, "0.1.0")
         expected = json.loads((FIXTURES / "hello.json").read_text())
         self.assertEqual(hello_message(), expected)

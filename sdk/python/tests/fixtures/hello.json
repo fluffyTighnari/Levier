@@ -1,6 +1,14 @@
 {
   "type": "hello",
-  "protocol": 1,
+  "protocol": 2,
+  "protocol_version": 2,
   "client": "levier-app-python",
-  "version": "0.1.0"
+  "version": "0.1.0",
+  "capabilities": [
+    "tool_call_v2",
+    "tool_progress",
+    "tool_cancel",
+    "idempotent_result",
+    "resume_cursor"
+  ]
 }

@@ -8,6 +8,7 @@ import "github.com/fluffyTighnari/levier/internal/connection"
 // AppConnections is the App Gateway surface used by the HTTP/WebSocket layer.
 type AppConnections interface {
 	Register(appID string, sink connection.EventSink) *connection.AppConn
+	RegisterWithID(appID string, sink connection.EventSink, connectionID string) *connection.AppConn
 	CloseConn(conn *connection.AppConn)
 	ResolveLocalToolChecked(appID string, result connection.LocalToolResult) connection.LocalToolResolution
 	Count(appID string) int

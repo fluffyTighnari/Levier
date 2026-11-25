@@ -10,6 +10,7 @@ import (
 	"sync"
 
 	"github.com/fluffyTighnari/levier/internal/errs"
+	"github.com/fluffyTighnari/levier/internal/id"
 )
 
 // EventSink is the transport-neutral App connection writer.
@@ -57,10 +58,22 @@ func NewAppHub() *AppHub {
 	}
 }
 
-// Register adds one App connection.
+// Register adds one App connection with a generated connection ID.
 func (h *AppHub) Register(appID string, sink EventSink) *AppConn {
+	return h.RegisterWithID(appID, sink, id.New())
+}
+
+// RegisterWithID adds one App connection with an explicit connection ID.
+// The app-gateway uses the ID in the v2 hello acknowledgement and in
+// execution-lease fencing once the App Gateway role is split out.
+func (h *AppHub) RegisterWithID(appID string, sink EventSink, connectionID string) *AppConn {
+	if connectionID == "" {
+		connectionID = id.New()
+	}
 	conn := &AppConn{
 		appID:         appID,
+		connectionID:  connectionID,
+		protocol:      1,
 		sink:          sink,
 		subscriptions: make(map[string]struct{}),
 		cursors:       make(map[string]runCursor),
@@ -92,6 +105,7 @@ func (h *AppHub) CloseConn(conn *AppConn) {
 	remaining := len(h.apps[conn.appID])
 	h.mu.Unlock()
 	conn.close()
+	h.failPendingForConn(conn)
 	if remaining == 0 {
 		h.failPending(conn.appID, string(errs.CodeAppUnreachable), "app connection closed")
 	}

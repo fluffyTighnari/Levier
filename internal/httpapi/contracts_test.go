@@ -110,8 +110,13 @@ func TestParseClientMessages(t *testing.T) {
 			want: "local_tool_result",
 		},
 		{
-			name: "hello",
+			name: "hello v1",
 			data: `{"type":"hello","protocol":1}`,
+			want: "hello",
+		},
+		{
+			name: "hello v2",
+			data: `{"type":"hello","protocol":2,"protocol_version":2,"capabilities":["tool_call_v2"],"resume_cursor":{"run_id":"run-1","last_attempt":1,"last_seq":2}}`,
 			want: "hello",
 		},
 		{
@@ -156,7 +161,8 @@ func TestParseClientMessageErrors(t *testing.T) {
 		want string
 	}{
 		{"unknown", `{"type":"nope"}`, "unsupported ws message"},
-		{"bad protocol", `{"type":"hello","protocol":2}`, "unsupported ws protocol"},
+		{"bad protocol", `{"type":"hello","protocol":3}`, "unsupported ws protocol"},
+		{"ambiguous protocol", `{"type":"hello","protocol":1,"protocol_version":2}`, "disagree"},
 		{"missing run", `{"type":"subscribe","last_attempt":0,"last_seq":0}`, "run_id"},
 		{"bad tool result", `{"type":"local_tool_result","correlation_id":"c","invocation_id":"i","ok":false}`, "error is required"},
 		{"bad json", `{`, "decode ws message"},

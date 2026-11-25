@@ -19,6 +19,7 @@ import (
 	"golang.org/x/net/websocket"
 
 	"github.com/fluffyTighnari/levier/internal/connection"
+	"github.com/fluffyTighnari/levier/internal/id"
 	"github.com/fluffyTighnari/levier/internal/observe"
 )
 
@@ -183,19 +184,22 @@ func (s *Server) handleWS(conn *websocket.Conn) {
 			"app": appID, "tenant": tenantID,
 		}, -1)
 	}
+	connectionID := id.New()
 	s.log.Info("ws connected",
 		observe.FieldAppID, appID,
+		"connection_id", connectionID,
 		observe.FieldTenantID, tenantID,
 		observe.FieldRemoteAddr, conn.Request().RemoteAddr,
 	)
 	defer func() {
 		s.log.Info("ws disconnected",
 			observe.FieldAppID, appID,
+			"connection_id", connectionID,
 			observe.FieldDurationMS, time.Since(started).Milliseconds(),
 		)
 	}()
 
-	appConn := s.appHub.Register(appID, newWSSink(conn, appID, s.log))
+	appConn := s.appHub.RegisterWithID(appID, newWSSink(conn, appID, s.log), connectionID)
 	defer s.appHub.CloseConn(appConn)
 
 	for {
@@ -213,39 +217,39 @@ func (s *Server) handleWS(conn *websocket.Conn) {
 		}
 		switch typed := message.(type) {
 		case *HelloMessage:
-			continue
+			if err := s.handleHello(appConn, appID, typed); err != nil {
+				_ = s.sendWS(appConn, ErrorMessage{
+					Type:  contract.WSMessageError,
+					Error: ErrorBody{Code: string(errs.CodeBadMessage), Message: err.Error()},
+				})
+			}
 		case *PingMessage:
 			_ = s.sendWS(appConn, PongMessage{Type: contract.WSMessagePong})
 		case *SubscribeMessage:
-			run, err := s.runs.GetRun(context.Background(), typed.RunID)
-			if err != nil || run.AppID != appID {
+			if err := s.subscribeAndReplay(appConn, appID, typed.RunID, typed.LastAttempt, typed.LastSeq); err != nil {
+				code := string(errs.CodeReplayFailed)
+				message := err.Error()
+				if errors.Is(err, errRunNotFound) {
+					code = string(errs.CodeRunNotFound)
+					message = "run not found"
+				}
 				_ = s.sendWS(appConn, ErrorMessage{
 					Type:  contract.WSMessageError,
-					Error: ErrorBody{Code: string(errs.CodeRunNotFound), Message: "run not found"},
+					Error: ErrorBody{Code: code, Message: message},
 				})
-				continue
 			}
-			appConn.BeginReplay(typed.RunID, typed.LastAttempt, typed.LastSeq)
-			appConn.Subscribe(typed.RunID)
-			attempt, seq, err := s.replayWS(appConn, typed)
-			if endErr := appConn.EndReplay(typed.RunID, attempt, seq); err == nil {
-				err = endErr
-			}
-			if err != nil {
-				_ = s.sendWS(appConn, ErrorMessage{
-					Type:  contract.WSMessageError,
-					Error: ErrorBody{Code: string(errs.CodeReplayFailed), Message: err.Error()},
-				})
-				continue
-			}
-			_ = s.sendWS(appConn, CaughtUpMessage{
-				Type: contract.WSMessageCaughtUp, RunID: typed.RunID,
-				Attempt: attempt, Seq: seq,
-			})
+		case *LocalToolProgressMessage:
+			s.log.Info("app local tool progress",
+				observe.FieldAppID, appID,
+				"connection_id", appConn.ConnectionID(),
+				observe.FieldInvocationID, typed.InvocationID,
+				"progress", string(typed.Progress),
+			)
 		case *LocalToolResultMessage:
 			result := connection.LocalToolResult{
 				CorrelationID: typed.CorrelationID,
 				InvocationID:  typed.InvocationID,
+				ConnectionID:  appConn.ConnectionID(),
 				OK:            typed.OK,
 				ResultJSON:    typed.ResultJSON,
 			}
@@ -277,7 +281,83 @@ func (s *Server) handleWS(conn *websocket.Conn) {
 	}
 }
 
-const wsReplayPageSize = 1000
+const (
+	wsReplayPageSize      = 1000
+	wsHeartbeatIntervalMS = 20000
+)
+
+var errRunNotFound = errors.New("run not found")
+
+func (s *Server) handleHello(appConn *connection.AppConn, appID string, msg *HelloMessage) error {
+	if msg.AppID != "" && msg.AppID != appID {
+		return errors.New("hello.app_id does not match the authenticated app")
+	}
+	version := msg.NegotiatedVersion()
+	appConn.SetProtocol(version)
+	appConn.SetCapabilities(msg.Capabilities)
+	if version != contract.WSProtocolVersionV2 {
+		return nil
+	}
+
+	if err := s.sendWS(appConn, HelloAckMessage{
+		Type:                contract.WSMessageHelloAck,
+		Protocol:            contract.WSProtocolVersionV2,
+		ConnectionID:        appConn.ConnectionID(),
+		AppID:               appID,
+		Capabilities:        serverWSCapabilities(),
+		HeartbeatIntervalMS: wsHeartbeatIntervalMS,
+	}); err != nil {
+		return err
+	}
+	if msg.ResumeCursor == nil {
+		return nil
+	}
+	return s.subscribeAndReplay(
+		appConn,
+		appID,
+		msg.ResumeCursor.RunID,
+		msg.ResumeCursor.Attempt,
+		msg.ResumeCursor.Seq,
+	)
+}
+
+func serverWSCapabilities() []string {
+	return []string{
+		contract.WSCapabilityToolCallV2,
+		contract.WSCapabilityProgress,
+		contract.WSCapabilityCancel,
+		contract.WSCapabilityIdempotentResult,
+		contract.WSCapabilityResumeCursor,
+	}
+}
+
+func (s *Server) subscribeAndReplay(
+	appConn *connection.AppConn,
+	appID, runID string,
+	lastAttempt int32,
+	lastSeq int64,
+) error {
+	run, err := s.runs.GetRun(context.Background(), runID)
+	if err != nil || run.AppID != appID {
+		return errRunNotFound
+	}
+	appConn.BeginReplay(runID, lastAttempt, lastSeq)
+	appConn.Subscribe(runID)
+	attempt, seq, err := s.replayWS(appConn, &SubscribeMessage{
+		Type: contract.WSMessageSubscribe, RunID: runID,
+		LastAttempt: lastAttempt, LastSeq: lastSeq,
+	})
+	if endErr := appConn.EndReplay(runID, attempt, seq); err == nil {
+		err = endErr
+	}
+	if err != nil {
+		return err
+	}
+	return s.sendWS(appConn, CaughtUpMessage{
+		Type: contract.WSMessageCaughtUp, RunID: runID,
+		Attempt: attempt, Seq: seq,
+	})
+}
 
 func (s *Server) replayWS(appConn *connection.AppConn, msg *SubscribeMessage) (int32, int64, error) {
 	attempt, seq := msg.LastAttempt, msg.LastSeq

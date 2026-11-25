@@ -2,7 +2,9 @@
   "type": "local_tool_result",
   "correlation_id": "msg-1",
   "invocation_id": "inv-1",
+  "run_id": "",
   "ok": false,
+  "idempotent": true,
   "error": {
     "code": "TOOL_EXEC_ERROR",
     "message": "delta must be an integer",

@@ -76,5 +76,5 @@ python3 tests/app/app_check.py --credentials /path/app.json \
 
 ```text
 HTTP: OpenAPI 3.1
-WS:   protocol 1
+WS:   protocol 1 (v1) / 2 (App Bridge v2, additive)
 ```
