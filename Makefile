@@ -86,6 +86,7 @@ dev-down:
 proto:
 	@command -v $(BUF) >/dev/null 2>&1 || { echo "buf is not installed"; exit 1; }
 	PATH="$(PROTOC_BIN):$$PATH" $(BUF) generate
+	PATH="$(PROTOC_BIN):$$PATH" $(BUF) generate --template buf.gen.python.yaml --path proto/middleware/runtime/v1
 
 proto-check: proto
 	@git diff --exit-code -- gen execution/runtime_sdk/src

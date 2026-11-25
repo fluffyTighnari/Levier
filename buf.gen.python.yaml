@@ -1,0 +1,13 @@
+# Levier — Python Runtime SDK protobuf generation.
+#
+# Internal role RPCs are intentionally excluded from the Runtime SDK.
+# Copyright 2026 The Levier Authors.
+
+version: v2
+plugins:
+  - remote: buf.build/protocolbuffers/python
+    out: execution/runtime_sdk/src
+  - remote: buf.build/grpc/python
+    out: execution/runtime_sdk/src
+  - remote: buf.build/protocolbuffers/pyi
+    out: execution/runtime_sdk/src
