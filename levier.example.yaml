@@ -21,6 +21,8 @@ http:
 gateway:
   # Unique per process. Defaults to hostname-pid when omitted.
   instance_id: "levier-local-1"
+  # all keeps the single-process compatibility mode.
+  roles: ["all"]
   heartbeat_interval: "10s"
   lease_ttl: "30s"
 

@@ -15,6 +15,7 @@ import (
 
 	runtimev1 "github.com/fluffyTighnari/levier/gen/middleware/runtime/v1"
 	"github.com/fluffyTighnari/levier/internal/observe"
+	"github.com/fluffyTighnari/levier/internal/ports"
 	"github.com/fluffyTighnari/levier/internal/register"
 	"github.com/fluffyTighnari/levier/internal/runstore"
 	"github.com/fluffyTighnari/levier/internal/workflow"
@@ -97,12 +98,15 @@ type ModelProviderResolver interface {
 	ResolveDefaultModelProfile(ctx context.Context, params map[string]string) (register.ModelProfile, error)
 }
 
-// DaemonHub is the connection subset used by Control.
+// DaemonHub is the Runtime connection boundary used by Control.
+//
+// RuntimeTransport is the part a split runtime-gateway can replace with an
+// internal RPC client. Capacity and disconnect calls will move to a separate
+// Placement/Connection port when the gateway process is split.
 type DaemonHub interface {
+	ports.RuntimeTransport
 	PickHealthy(runtimeType runtimev1.RuntimeType, runtimeName string, labels map[string]string) (string, bool)
 	Reserve(daemonID string) bool
-	Release(daemonID string)
-	Send(daemonID string, env *runtimev1.Envelope) error
 	Disconnect(daemonID string)
 }
 

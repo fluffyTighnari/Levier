@@ -35,6 +35,7 @@ import (
 	"github.com/fluffyTighnari/levier/internal/httpapi"
 	"github.com/fluffyTighnari/levier/internal/observe"
 	"github.com/fluffyTighnari/levier/internal/register"
+	"github.com/fluffyTighnari/levier/internal/roles"
 	"github.com/fluffyTighnari/levier/internal/runstore"
 	"github.com/fluffyTighnari/levier/internal/selfdesc"
 	statuspkg "github.com/fluffyTighnari/levier/internal/status"
@@ -105,7 +106,19 @@ func runServer(args []string) {
 		os.Exit(1)
 	}
 
-	gatewayLease, err := startGatewayLease(ctx, cluster.New(pool), cfg, logger)
+	roleSet, err := roles.Parse(cfg.Gateway.Roles)
+	if err != nil {
+		logger.Error("invalid gateway roles", "roles", cfg.Gateway.Roles, "err", err)
+		os.Exit(1)
+	}
+	if !roleSet.IsAll() {
+		logger.Error("partial gateway roles require multi-role service composition",
+			"roles", roleSet.List(),
+			"fix", "use gateway.roles=[\"all\"] until the split gateway services land",
+		)
+		os.Exit(1)
+	}
+	gatewayLease, err := startGatewayLease(ctx, cluster.New(pool), cfg, roleSet, logger)
 	if err != nil {
 		logger.Error("register gateway failed", "gateway_id", cfg.Gateway.InstanceID, "err", err)
 		os.Exit(1)

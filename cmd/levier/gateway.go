@@ -11,6 +11,7 @@ import (
 
 	"github.com/fluffyTighnari/levier/internal/cluster"
 	"github.com/fluffyTighnari/levier/internal/config"
+	"github.com/fluffyTighnari/levier/internal/roles"
 	"github.com/fluffyTighnari/levier/internal/version"
 )
 
@@ -28,20 +29,16 @@ func startGatewayLease(
 	ctx context.Context,
 	store *cluster.Store,
 	cfg config.Config,
+	roleSet roles.Set,
 	logger *slog.Logger,
 ) (*gatewayLease, error) {
 	leaseCtx, cancel := context.WithCancel(ctx)
 	gateway, err := store.RegisterGateway(leaseCtx, cluster.GatewayRegistration{
 		GatewayID: cfg.Gateway.InstanceID,
-		Roles: []string{
-			cluster.RoleControl,
-			cluster.RoleAPI,
-			cluster.RoleRuntimeGateway,
-			cluster.RoleAppGateway,
-		},
-		Version: version.Version,
-		Address: cfg.HTTP.Addr,
-		Labels:  map[string]string{"grpc_addr": cfg.GRPC.Addr},
+		Roles:     roleSet.List(),
+		Version:   version.Version,
+		Address:   cfg.HTTP.Addr,
+		Labels:    map[string]string{"grpc_addr": cfg.GRPC.Addr},
 	}, cfg.Gateway.LeaseTTL.Std())
 	if err != nil {
 		cancel()

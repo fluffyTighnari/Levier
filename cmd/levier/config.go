@@ -157,6 +157,7 @@ func redactedConfig(cfg config.Config) map[string]any {
 		},
 		"gateway": map[string]any{
 			"instance_id":        cfg.Gateway.InstanceID,
+			"roles":              cfg.Gateway.Roles,
 			"heartbeat_interval": cfg.Gateway.HeartbeatInterval.Std().String(),
 			"lease_ttl":          cfg.Gateway.LeaseTTL.Std().String(),
 		},

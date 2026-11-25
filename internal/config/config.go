@@ -18,6 +18,8 @@ import (
 	"time"
 
 	"gopkg.in/yaml.v3"
+
+	"github.com/fluffyTighnari/levier/internal/roles"
 )
 
 // Config is the complete Levier runtime configuration.
@@ -61,6 +63,7 @@ type GRPCConfig struct {
 // GatewayConfig identifies one control / gateway process and its presence lease.
 type GatewayConfig struct {
 	InstanceID        string   `yaml:"instance_id"`
+	Roles             []string `yaml:"roles"`
 	HeartbeatInterval Duration `yaml:"heartbeat_interval"`
 	LeaseTTL          Duration `yaml:"lease_ttl"`
 }
@@ -123,6 +126,7 @@ func Default() Config {
 		},
 		Gateway: GatewayConfig{
 			InstanceID:        defaultGatewayInstanceID(),
+			Roles:             []string{roles.All},
 			HeartbeatInterval: Duration(10 * time.Second),
 			LeaseTTL:          Duration(30 * time.Second),
 		},
@@ -211,6 +215,9 @@ func ApplyEnv(cfg *Config, lookup func(string) (string, bool)) error {
 	}
 	stringOverride(lookup, "LEVIER_HTTP_WS_TOKEN_SECRET", &cfg.HTTP.WSTokenSecret)
 	stringOverride(lookup, "LEVIER_GATEWAY_INSTANCE_ID", &cfg.Gateway.InstanceID)
+	if value, ok := lookupEnv(lookup, "LEVIER_GATEWAY_ROLES"); ok {
+		cfg.Gateway.Roles = splitList(value)
+	}
 	stringOverride(lookup, "LEVIER_GRPC_ADDR", &cfg.GRPC.Addr)
 	stringOverride(lookup, "LEVIER_GRPC_DAEMON_TOKENS_FILE", &cfg.GRPC.DaemonTokensFile)
 	stringOverride(lookup, "LEVIER_DATABASE_URL", &cfg.Database.URL)
@@ -465,6 +472,9 @@ func (c Config) Validate() error {
 	if strings.TrimSpace(c.Gateway.InstanceID) == "" {
 		problems = append(problems, "gateway.instance_id is required")
 	}
+	if _, err := roles.Parse(c.Gateway.Roles); err != nil {
+		problems = append(problems, "gateway.roles: "+err.Error())
+	}
 	if c.Gateway.HeartbeatInterval.Std() <= 0 {
 		problems = append(problems, "gateway.heartbeat_interval must be positive")
 	}
@@ -588,6 +598,18 @@ func boolOverride(lookup func(string) (string, bool), key string, dst *bool) err
 	}
 	*dst = parsed
 	return nil
+}
+
+func splitList(value string) []string {
+	parts := strings.Split(value, ",")
+	result := make([]string, 0, len(parts))
+	for _, part := range parts {
+		part = strings.TrimSpace(part)
+		if part != "" {
+			result = append(result, part)
+		}
+	}
+	return result
 }
 
 func defaultGatewayInstanceID() string {

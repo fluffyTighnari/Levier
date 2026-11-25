@@ -57,6 +57,9 @@ func TestParseDefaultsAndOverrides(t *testing.T) {
 	if cfg.Gateway.LeaseTTL.Std() != 30*time.Second {
 		t.Fatalf("Gateway.LeaseTTL default = %v", cfg.Gateway.LeaseTTL.Std())
 	}
+	if len(cfg.Gateway.Roles) != 1 || cfg.Gateway.Roles[0] != "all" {
+		t.Fatalf("Gateway.Roles default = %v", cfg.Gateway.Roles)
+	}
 	if cfg.Retention.Enabled {
 		t.Fatal("Retention.Enabled default = true, want false")
 	}
@@ -65,6 +68,16 @@ func TestParseDefaultsAndOverrides(t *testing.T) {
 	}
 	if cfg.Log.Level != "debug" || cfg.Log.Format != "text" {
 		t.Fatalf("Log = %+v", cfg.Log)
+	}
+}
+
+func TestParseRejectsUnknownGatewayRole(t *testing.T) {
+	_, err := Parse([]byte(validYAML + `
+gateway:
+  roles: ["control", "worker"]
+`))
+	if err == nil || !strings.Contains(err.Error(), "gateway.roles") {
+		t.Fatalf("Parse() error = %v", err)
 	}
 }
 
