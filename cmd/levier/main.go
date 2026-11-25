@@ -33,6 +33,7 @@ import (
 	"github.com/fluffyTighnari/levier/internal/gateway"
 	"github.com/fluffyTighnari/levier/internal/gateway/executor"
 	"github.com/fluffyTighnari/levier/internal/httpapi"
+	"github.com/fluffyTighnari/levier/internal/internalapi"
 	"github.com/fluffyTighnari/levier/internal/observe"
 	"github.com/fluffyTighnari/levier/internal/register"
 	"github.com/fluffyTighnari/levier/internal/roles"
@@ -117,6 +118,25 @@ func runServer(args []string) {
 			"fix", "use gateway.roles=[\"all\"] until the split gateway services land",
 		)
 		os.Exit(1)
+	}
+	var internalServer *internalapi.Server
+	if strings.TrimSpace(cfg.GRPC.InternalAddr) != "" {
+		internalServer, err = internalapi.Start(ctx, internalapi.ServerOptions{
+			Addr:            cfg.GRPC.InternalAddr,
+			Token:           cfg.GRPC.InternalToken,
+			MaxRecvMsgBytes: cfg.GRPC.MaxRecvMsgBytes,
+			MaxSendMsgBytes: cfg.GRPC.MaxSendMsgBytes,
+			Logger:          logger,
+		})
+		if err != nil {
+			logger.Error("start internal grpc failed", "addr", cfg.GRPC.InternalAddr, "err", err)
+			os.Exit(1)
+		}
+		defer func() {
+			shutdownCtx, cancel := context.WithTimeout(context.Background(), cfg.GRPC.ShutdownTimeout.Std())
+			defer cancel()
+			internalServer.Stop(shutdownCtx)
+		}()
 	}
 	gatewayLease, err := startGatewayLease(ctx, cluster.New(pool), cfg, roleSet, logger)
 	if err != nil {
@@ -345,6 +365,7 @@ func runServer(args []string) {
 		AllowLegacyBearer:    cfg.HTTP.AllowLegacyBearer,
 		WSTokenTTL:           cfg.HTTP.WSTokenTTL.Std(),
 		WSTokenSecret:        cfg.HTTP.WSTokenSecret,
+		PublicWSURL:          cfg.HTTP.PublicWSURL,
 		DefaultRunTimeoutMS:  selfdesc.DefaultRunTimeoutMS,
 		DefaultToolTimeoutMS: selfdesc.DefaultToolTimeoutMS,
 		Meta: selfdesc.New(selfdesc.Options{
@@ -387,6 +408,7 @@ func runServer(args []string) {
 	logger.Info("levier ready",
 		"config", *configPath,
 		"grpc_addr", cfg.GRPC.Addr,
+		"internal_grpc_addr", cfg.GRPC.InternalAddr,
 		"http_addr", cfg.HTTP.Addr,
 	)
 	<-ctx.Done()

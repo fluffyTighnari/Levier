@@ -34,11 +34,12 @@ func startGatewayLease(
 ) (*gatewayLease, error) {
 	leaseCtx, cancel := context.WithCancel(ctx)
 	gateway, err := store.RegisterGateway(leaseCtx, cluster.GatewayRegistration{
-		GatewayID: cfg.Gateway.InstanceID,
-		Roles:     roleSet.List(),
-		Version:   version.Version,
-		Address:   cfg.HTTP.Addr,
-		Labels:    map[string]string{"grpc_addr": cfg.GRPC.Addr},
+		GatewayID:       cfg.Gateway.InstanceID,
+		Roles:           roleSet.List(),
+		Version:         version.Version,
+		Address:         cfg.HTTP.Addr,
+		InternalAddress: cfg.GRPC.InternalAddr,
+		Labels:          map[string]string{"grpc_addr": cfg.GRPC.Addr},
 	}, cfg.Gateway.LeaseTTL.Std())
 	if err != nil {
 		cancel()

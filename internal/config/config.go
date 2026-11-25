@@ -48,16 +48,20 @@ type HTTPConfig struct {
 	AllowLegacyBearer bool     `yaml:"allow_legacy_bearer"`
 	WSTokenTTL        Duration `yaml:"ws_token_ttl"`
 	WSTokenSecret     string   `yaml:"ws_token_secret"`
+	PublicWSURL       string   `yaml:"public_ws_url"`
 }
 
-// GRPCConfig configures the daemon-facing gRPC server.
+// GRPCConfig configures the daemon-facing and internal gRPC servers.
 type GRPCConfig struct {
-	Addr             string            `yaml:"addr"`
-	MaxRecvMsgBytes  int               `yaml:"max_recv_msg_bytes"`
-	MaxSendMsgBytes  int               `yaml:"max_send_msg_bytes"`
-	ShutdownTimeout  Duration          `yaml:"shutdown_timeout"`
-	DaemonTokens     map[string]string `yaml:"daemon_tokens"`
-	DaemonTokensFile string            `yaml:"daemon_tokens_file"`
+	Addr              string            `yaml:"addr"`
+	InternalAddr      string            `yaml:"internal_addr"`
+	InternalToken     string            `yaml:"internal_token"`
+	InternalTokenFile string            `yaml:"internal_token_file"`
+	MaxRecvMsgBytes   int               `yaml:"max_recv_msg_bytes"`
+	MaxSendMsgBytes   int               `yaml:"max_send_msg_bytes"`
+	ShutdownTimeout   Duration          `yaml:"shutdown_timeout"`
+	DaemonTokens      map[string]string `yaml:"daemon_tokens"`
+	DaemonTokensFile  string            `yaml:"daemon_tokens_file"`
 }
 
 // GatewayConfig identifies one control / gateway process and its presence lease.
@@ -214,11 +218,15 @@ func ApplyEnv(cfg *Config, lookup func(string) (string, bool)) error {
 		return err
 	}
 	stringOverride(lookup, "LEVIER_HTTP_WS_TOKEN_SECRET", &cfg.HTTP.WSTokenSecret)
+	stringOverride(lookup, "LEVIER_HTTP_PUBLIC_WS_URL", &cfg.HTTP.PublicWSURL)
 	stringOverride(lookup, "LEVIER_GATEWAY_INSTANCE_ID", &cfg.Gateway.InstanceID)
 	if value, ok := lookupEnv(lookup, "LEVIER_GATEWAY_ROLES"); ok {
 		cfg.Gateway.Roles = splitList(value)
 	}
 	stringOverride(lookup, "LEVIER_GRPC_ADDR", &cfg.GRPC.Addr)
+	stringOverride(lookup, "LEVIER_GRPC_INTERNAL_ADDR", &cfg.GRPC.InternalAddr)
+	stringOverride(lookup, "LEVIER_GRPC_INTERNAL_TOKEN", &cfg.GRPC.InternalToken)
+	stringOverride(lookup, "LEVIER_GRPC_INTERNAL_TOKEN_FILE", &cfg.GRPC.InternalTokenFile)
 	stringOverride(lookup, "LEVIER_GRPC_DAEMON_TOKENS_FILE", &cfg.GRPC.DaemonTokensFile)
 	stringOverride(lookup, "LEVIER_DATABASE_URL", &cfg.Database.URL)
 	stringOverride(lookup, "LEVIER_DATABASE_URL_FILE", &cfg.Database.URLFile)
@@ -318,6 +326,13 @@ func resolveSecretFiles(cfg *Config, lookup func(string) (string, bool)) error {
 		}
 		cfg.HTTP.BearerToken = value
 	}
+	if cfg.GRPC.InternalTokenFile != "" && !envPresent(lookup, "LEVIER_GRPC_INTERNAL_TOKEN") {
+		value, err := readSecretText(cfg.GRPC.InternalTokenFile)
+		if err != nil {
+			return fmt.Errorf("read grpc.internal_token_file: %w", err)
+		}
+		cfg.GRPC.InternalToken = value
+	}
 	if cfg.GRPC.DaemonTokensFile != "" {
 		values, err := readSecretMap(cfg.GRPC.DaemonTokensFile)
 		if err != nil {
@@ -389,6 +404,7 @@ func (c Config) SecretFileWarnings() []string {
 		c.HTTP.AdminTokenFile,
 		c.HTTP.BearerTokenFile,
 		c.GRPC.DaemonTokensFile,
+		c.GRPC.InternalTokenFile,
 		c.Database.URLFile,
 	}
 	var warnings []string
@@ -424,6 +440,9 @@ func (c Config) ValidateProduction() error {
 			problems = append(problems, fmt.Sprintf("grpc.daemon_tokens[%q] is empty or a development placeholder", id))
 		}
 	}
+	if strings.TrimSpace(c.GRPC.InternalAddr) != "" && placeholderSecret(c.GRPC.InternalToken) {
+		problems = append(problems, "grpc.internal_token is required when grpc.internal_addr is set")
+	}
 	if placeholderSecret(c.Database.URL) {
 		problems = append(problems, "database.url is empty or contains a development placeholder")
 	}
@@ -457,6 +476,14 @@ func (c Config) Validate() error {
 	if err := validateAddr("grpc.addr", c.GRPC.Addr); err != nil {
 		problems = append(problems, err.Error())
 	}
+	if strings.TrimSpace(c.GRPC.InternalAddr) != "" {
+		if err := validateAddr("grpc.internal_addr", c.GRPC.InternalAddr); err != nil {
+			problems = append(problems, err.Error())
+		}
+		if strings.TrimSpace(c.GRPC.InternalToken) == "" {
+			problems = append(problems, "grpc.internal_token is required when grpc.internal_addr is set")
+		}
+	}
 	if c.HTTP.ReadTimeout.Std() <= 0 {
 		problems = append(problems, "http.read_timeout must be positive")
 	}
@@ -468,6 +495,11 @@ func (c Config) Validate() error {
 	}
 	if c.HTTP.WSTokenTTL.Std() <= 0 {
 		problems = append(problems, "http.ws_token_ttl must be positive")
+	}
+	if c.HTTP.PublicWSURL != "" &&
+		!strings.HasPrefix(c.HTTP.PublicWSURL, "ws://") &&
+		!strings.HasPrefix(c.HTTP.PublicWSURL, "wss://") {
+		problems = append(problems, "http.public_ws_url must start with ws:// or wss://")
 	}
 	if strings.TrimSpace(c.Gateway.InstanceID) == "" {
 		problems = append(problems, "gateway.instance_id is required")

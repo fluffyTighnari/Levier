@@ -170,7 +170,7 @@ func (s *Server) handleCreateRun(w http.ResponseWriter, r *http.Request) {
 		RunID:     run.RunID,
 		Status:    RunStatus(run.Status),
 		SessionID: run.SessionID,
-		WSURL:     WSURL,
+		WSURL:     s.wsURL(),
 		WSToken:   s.wsTokens.Issue(appID),
 	})
 }

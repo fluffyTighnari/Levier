@@ -17,6 +17,7 @@ import (
 	"log/slog"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/fluffyTighnari/levier/internal/connection"
@@ -135,6 +136,7 @@ type Config struct {
 	MaxBodyBytes         int64
 	WSTokenTTL           time.Duration
 	WSTokenSecret        string
+	PublicWSURL          string
 	AppHub               ports.AppConnections
 	Daemons              DaemonSource
 	ReadinessCheck       func(context.Context) error
@@ -215,6 +217,13 @@ func NewServer(runs RunStore, queue TaskQueue, cfg Config, registries ...AppRegi
 // Handler returns the HTTP handler.
 func (s *Server) Handler() http.Handler {
 	return requestIDMiddleware(s.instrumentHandler(s.mux))
+}
+
+func (s *Server) wsURL() string {
+	if s != nil && strings.TrimSpace(s.cfg.PublicWSURL) != "" {
+		return s.cfg.PublicWSURL
+	}
+	return WSURL
 }
 
 func (s *Server) routes() {

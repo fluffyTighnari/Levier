@@ -21,7 +21,7 @@ func (s *Server) handleIssueWSToken(w http.ResponseWriter, r *http.Request) {
 	}
 	setResponseTenant(w, s.tenantForApp(r.Context(), appID))
 	writeJSON(w, http.StatusOK, WSTokenResponse{
-		WSURL:     WSURL,
+		WSURL:     s.wsURL(),
 		WSToken:   token,
 		ExpiresIn: int64(s.wsTokens.TTL().Seconds()),
 	})

@@ -17,6 +17,8 @@ http:
   ws_token_ttl: "10m"
   # Production: use the same secret on every control/API replica.
   # ws_token_secret: "change-me"
+  # Set when Apps reach the gateway through a proxy or load balancer.
+  # public_ws_url: "wss://levier.example.com/api/v1/ws"
 
 gateway:
   # Unique per process. Defaults to hostname-pid when omitted.
@@ -28,6 +30,11 @@ gateway:
 
 grpc:
   addr: ":9090"
+  # Separate role-to-role listener for control/api, runtime-gateway, and
+  # app-gateway. Leave empty in single-process mode.
+  # internal_addr: ":9091"
+  # internal_token: "change-me"
+  # internal_token_file: "/run/secrets/levier_internal_token"
   max_recv_msg_bytes: 16777216
   max_send_msg_bytes: 16777216
   shutdown_timeout: "10s"
