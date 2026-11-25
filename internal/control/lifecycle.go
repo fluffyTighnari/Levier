@@ -155,7 +155,7 @@ func (c *Control) ReconcileDaemon(info connection.DaemonInfo) {
 		envelope, err := protocol.New(&runtimev1.Reconcile{CancelRunIds: cancelIDs})
 		if err != nil {
 			c.log.Warn("control build reconcile failed", "daemon_id", info.DaemonID, "err", err)
-		} else if err := c.hub.Send(info.DaemonID, envelope); err != nil {
+		} else if err := c.transport.Send(info.DaemonID, envelope); err != nil {
 			c.log.Warn("control send reconcile failed", "daemon_id", info.DaemonID, "err", err)
 		}
 	}
@@ -294,7 +294,7 @@ func (c *Control) requeueRun(ctx context.Context, run runstore.Run, reason strin
 		return
 	}
 	c.appendMWStatus(ctx, requeued, runstore.StatusQueued, reason)
-	c.hub.Release(run.AssignedDaemonID)
+	c.transport.Release(run.AssignedDaemonID)
 	c.cancelLocalTools(run.AppID, run.RunID, string(errs.CodeDaemonLost), reason)
 	if c.cfg.Tasks != nil {
 		if _, err := c.cfg.Tasks.Enqueue(ctx, workflow.NewTask(
@@ -341,7 +341,7 @@ func (c *Control) CancelRun(ctx context.Context, runID, reason string) (runstore
 	}
 	c.sendCancel(ctx, cancelled, reason)
 	c.appendMWStatus(ctx, cancelled, runstore.StatusCancelled, reason)
-	c.hub.Release(run.AssignedDaemonID)
+	c.transport.Release(run.AssignedDaemonID)
 	c.cancelTasks(ctx, runID, reason)
 	c.cancelLocalTools(run.AppID, runID, string(errs.CodeRunCancelled), reason)
 	c.publishCompleted(run.AppID, runID, runstore.StatusCancelled, run.Attempt)
@@ -382,7 +382,7 @@ func (c *Control) handleTimeout(ctx context.Context, runID string) error {
 	}
 	c.sendCancel(ctx, timedOut, "timeout")
 	c.appendMWStatus(ctx, timedOut, runstore.StatusTimeout, "timeout")
-	c.hub.Release(run.AssignedDaemonID)
+	c.transport.Release(run.AssignedDaemonID)
 	c.cancelTasks(ctx, runID, "timeout")
 	c.cancelLocalTools(run.AppID, runID, string(errs.CodeRunTimeout), "run timed out")
 	c.publishCompleted(run.AppID, runID, runstore.StatusTimeout, timedOut.Attempt)
@@ -405,7 +405,7 @@ func (c *Control) sendCancel(ctx context.Context, run runstore.Run, reason strin
 		c.log.Warn("control build cancel failed", "run_id", run.RunID, "err", err)
 		return
 	}
-	if err := c.hub.Send(run.AssignedDaemonID, envelope); err != nil {
+	if err := c.transport.Send(run.AssignedDaemonID, envelope); err != nil {
 		c.log.Warn("control send cancel failed", "run_id", run.RunID, "err", err)
 	}
 }

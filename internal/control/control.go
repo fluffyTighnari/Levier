@@ -105,9 +105,7 @@ type ModelProviderResolver interface {
 // Placement/Connection port when the gateway process is split.
 type DaemonHub interface {
 	ports.RuntimeTransport
-	PickHealthy(runtimeType runtimev1.RuntimeType, runtimeName string, labels map[string]string) (string, bool)
-	Reserve(daemonID string) bool
-	Disconnect(daemonID string)
+	ports.RuntimePlacement
 }
 
 type daemonCapabilities struct {
@@ -119,7 +117,8 @@ type daemonCapabilities struct {
 // Control claims RUN_DISPATCH tasks, assigns daemons, and drives run state.
 type Control struct {
 	runs      RunStore
-	hub       DaemonHub
+	transport ports.RuntimeTransport
+	placement ports.RuntimePlacement
 	materials MaterialAssembler
 	cfg       Config
 	log       *slog.Logger
@@ -147,8 +146,19 @@ type Control struct {
 	criticalEvents  atomic.Int64
 }
 
-// New returns a Control instance.
+// New returns a Control instance with one combined Runtime hub.
 func New(runs RunStore, hub DaemonHub, cfg Config, assemblers ...MaterialAssembler) *Control {
+	return NewWithPorts(runs, hub, hub, cfg, assemblers...)
+}
+
+// NewWithPorts returns a Control with transport and placement split.
+func NewWithPorts(
+	runs RunStore,
+	transport ports.RuntimeTransport,
+	placement ports.RuntimePlacement,
+	cfg Config,
+	assemblers ...MaterialAssembler,
+) *Control {
 	if cfg.AckTimeout <= 0 {
 		cfg.AckTimeout = 5 * time.Second
 	}
@@ -172,7 +182,8 @@ func New(runs RunStore, hub DaemonHub, cfg Config, assemblers ...MaterialAssembl
 	}
 	control := &Control{
 		runs:         runs,
-		hub:          hub,
+		transport:    transport,
+		placement:    placement,
 		cfg:          cfg,
 		log:          cfg.Logger,
 		metrics:      cfg.Metrics,

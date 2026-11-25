@@ -33,7 +33,7 @@ func (c *Control) HandleToolCall(daemonID string, env *runtimev1.Envelope) error
 	if err != nil {
 		return fmt.Errorf("build tool call result: %w", err)
 	}
-	if err := c.hub.Send(daemonID, response); err != nil {
+	if err := c.transport.Send(daemonID, response); err != nil {
 		return fmt.Errorf("send tool call result: %w", err)
 	}
 	return nil
@@ -97,7 +97,7 @@ func (c *Control) rejectToolCall(daemonID string, env *runtimev1.Envelope, code,
 		)
 		return
 	}
-	if err := c.hub.Send(daemonID, response); err != nil {
+	if err := c.transport.Send(daemonID, response); err != nil {
 		c.log.Warn("control send busy tool response failed",
 			observe.FieldDaemonID, daemonID,
 			observe.FieldRunID, env.GetRunId(),

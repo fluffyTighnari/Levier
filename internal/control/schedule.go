@@ -112,7 +112,7 @@ func (c *Control) Handle(ctx context.Context, task workflow.Task, _ workflow.Lea
 		if !ok {
 			break
 		}
-		if !c.hub.Reserve(daemonID) {
+		if !c.placement.Reserve(daemonID) {
 			excluded[daemonID] = struct{}{}
 			continue
 		}
@@ -127,7 +127,7 @@ func (c *Control) Handle(ctx context.Context, task workflow.Task, _ workflow.Lea
 			DaemonID:           daemonID,
 		})
 		if err != nil {
-			c.hub.Release(daemonID)
+			c.transport.Release(daemonID)
 			if errors.Is(err, runstore.ErrRunNotAssignable) {
 				return nil
 			}
@@ -155,7 +155,7 @@ func (c *Control) Handle(ctx context.Context, task workflow.Task, _ workflow.Lea
 
 		envelope, err := protocol.NewRun(run.RunID, int32(attempt), leaseEpoch, assign)
 		if err != nil {
-			c.hub.Release(daemonID)
+			c.transport.Release(daemonID)
 			return workflow.Permanent(fmt.Errorf("build task assign: %w", err))
 		}
 		ackCh := make(chan *runtimev1.TaskAck, 1)
@@ -163,9 +163,9 @@ func (c *Control) Handle(ctx context.Context, task workflow.Task, _ workflow.Lea
 		c.pending[envelope.GetMsgId()] = ackCh
 		c.pendingMu.Unlock()
 
-		if err := c.hub.Send(daemonID, envelope); err != nil {
+		if err := c.transport.Send(daemonID, envelope); err != nil {
 			c.removePending(envelope.GetMsgId())
-			c.hub.Release(daemonID)
+			c.transport.Release(daemonID)
 			return fmt.Errorf("send task assign: %w", err)
 		}
 
@@ -174,11 +174,11 @@ func (c *Control) Handle(ctx context.Context, task workflow.Task, _ workflow.Lea
 		case <-ctx.Done():
 			timer.Stop()
 			c.removePending(envelope.GetMsgId())
-			c.hub.Release(daemonID)
+			c.transport.Release(daemonID)
 			return ctx.Err()
 		case <-timer.C:
 			c.removePending(envelope.GetMsgId())
-			c.hub.Release(daemonID)
+			c.transport.Release(daemonID)
 			lastErr = errAckTimeout
 			if c.cfg.Scheduler == nil {
 				return errAckTimeout
@@ -193,7 +193,7 @@ func (c *Control) Handle(ctx context.Context, task workflow.Task, _ workflow.Lea
 			if ack.GetAccepted() {
 				return nil
 			}
-			c.hub.Release(daemonID)
+			c.transport.Release(daemonID)
 			excluded[daemonID] = struct{}{}
 			lastErr = fmt.Errorf("daemon %q rejected task: %s", daemonID, ack.GetReason())
 			if c.cfg.Scheduler == nil {
@@ -210,7 +210,7 @@ func (c *Control) pick(placement PlacementRequest) (string, bool) {
 	if c.cfg.Scheduler != nil {
 		return c.cfg.Scheduler.Pick(placement)
 	}
-	return c.hub.PickHealthy(placement.Runtime, placement.RuntimeName, placement.Labels)
+	return c.placement.PickHealthy(placement.Runtime, placement.RuntimeName, placement.Labels)
 }
 
 func (c *Control) removePending(msgID string) {

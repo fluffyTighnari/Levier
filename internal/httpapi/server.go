@@ -21,6 +21,7 @@ import (
 
 	"github.com/fluffyTighnari/levier/internal/connection"
 	"github.com/fluffyTighnari/levier/internal/observe"
+	"github.com/fluffyTighnari/levier/internal/ports"
 	"github.com/fluffyTighnari/levier/internal/register"
 	"github.com/fluffyTighnari/levier/internal/runstore"
 	"github.com/fluffyTighnari/levier/internal/selfdesc"
@@ -134,7 +135,7 @@ type Config struct {
 	MaxBodyBytes         int64
 	WSTokenTTL           time.Duration
 	WSTokenSecret        string
-	AppHub               *connection.AppHub
+	AppHub               ports.AppConnections
 	Daemons              DaemonSource
 	ReadinessCheck       func(context.Context) error
 	Canceller            Canceller
@@ -153,7 +154,7 @@ type Server struct {
 	queue     TaskQueue
 	apps      AppRegistry
 	sessions  SessionStore
-	appHub    *connection.AppHub
+	appHub    ports.AppConnections
 	wsTokens  *WSTokenStore
 	canceller Canceller
 	resumer   Resumer

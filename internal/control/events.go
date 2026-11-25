@@ -102,8 +102,8 @@ func (c *Control) dropDaemonForCriticalEvent(daemonID string) {
 		observe.FieldDaemonID, daemonID,
 	)
 	c.HandleDaemonOffline(daemonID)
-	if c.hub != nil {
-		c.hub.Disconnect(daemonID)
+	if c.placement != nil {
+		c.placement.Disconnect(daemonID)
 	}
 }
 
@@ -336,7 +336,7 @@ func (c *Control) handleEvent(env *runtimev1.Envelope) {
 		return
 	}
 	if status == runstore.StatusWaiting {
-		c.hub.Release(run.AssignedDaemonID)
+		c.transport.Release(run.AssignedDaemonID)
 		c.cancelTasks(ctx, env.GetRunId(), "run waiting")
 		c.log.Info("control run waiting",
 			observe.FieldRunID, run.RunID,
@@ -361,7 +361,7 @@ func (c *Control) handleEvent(env *runtimev1.Envelope) {
 				"status": status, "runtime": run.Runtime, "tenant": run.TenantID,
 			})
 		}
-		c.hub.Release(run.AssignedDaemonID)
+		c.transport.Release(run.AssignedDaemonID)
 		if status == runstore.StatusCancelled {
 			c.cancelLocalTools(run.AppID, env.GetRunId(), string(errs.CodeRunCancelled), "run cancelled")
 		}
