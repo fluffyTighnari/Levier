@@ -153,7 +153,7 @@ func TestCancelAckRace(t *testing.T) {
 	for i := 0; i < 5; i++ {
 		runID := fmt.Sprintf("run-race-%d", i)
 		insertRunForTest(t, pool, runID)
-		if _, err := store.Enqueue(ctx, NewTask(runID, TaskDispatch, time.Now().UTC(), 0)); err != nil {
+		if _, err := store.Enqueue(ctx, NewTask(runID, TaskDispatch, time.Now().Add(-time.Second), 0)); err != nil {
 			t.Fatalf("Enqueue() error = %v", err)
 		}
 		task, lease, err := store.Claim(ctx, fmt.Sprintf("worker-%d", i), 30*time.Second)

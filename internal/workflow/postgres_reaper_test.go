@@ -83,7 +83,7 @@ func TestReapExpiredLimit(t *testing.T) {
 	for i := 0; i < 3; i++ {
 		runID := fmt.Sprintf("run-reap-limit-%d", i)
 		insertRunForTest(t, pool, runID)
-		if _, err := store.Enqueue(ctx, NewTask(runID, TaskDispatch, time.Now().UTC(), 0)); err != nil {
+		if _, err := store.Enqueue(ctx, NewTask(runID, TaskDispatch, time.Now().Add(-time.Second), 0)); err != nil {
 			t.Fatalf("Enqueue() error = %v", err)
 		}
 		if _, _, err := store.Claim(ctx, fmt.Sprintf("worker-%d", i), 30*time.Second); err != nil {
