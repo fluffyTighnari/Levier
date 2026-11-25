@@ -19,7 +19,7 @@ import (
 )
 
 // MetadataToken is the metadata key used for internal role authentication.
-const MetadataToken = "x-levier-internal-token"
+const MetadataToken = "x-levier-role-token"
 
 var errMissingInternalToken = errors.New("missing internal service token")
 
