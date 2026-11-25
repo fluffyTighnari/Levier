@@ -1,4 +1,3 @@
-// Levier internal role-to-role RPC.
 //
 // These services are not public App/Runtime APIs. They are used only between
 // control/api, runtime-gateway, and app-gateway roles.
@@ -9,9 +8,9 @@
 // versions:
 // - protoc-gen-go-grpc v1.6.2
 // - protoc             (unknown)
-// source: middleware/internal/v1/internal.proto
+// source: middleware/role/v1/role.proto
 
-package internalv1
+package rolev1
 
 import (
 	context "context"
@@ -27,12 +26,12 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	RuntimeGatewayService_Dispatch_FullMethodName     = "/middleware.internal.v1.RuntimeGatewayService/Dispatch"
-	RuntimeGatewayService_Send_FullMethodName         = "/middleware.internal.v1.RuntimeGatewayService/Send"
-	RuntimeGatewayService_Reserve_FullMethodName      = "/middleware.internal.v1.RuntimeGatewayService/Reserve"
-	RuntimeGatewayService_Release_FullMethodName      = "/middleware.internal.v1.RuntimeGatewayService/Release"
-	RuntimeGatewayService_Disconnect_FullMethodName   = "/middleware.internal.v1.RuntimeGatewayService/Disconnect"
-	RuntimeGatewayService_ListRuntimes_FullMethodName = "/middleware.internal.v1.RuntimeGatewayService/ListRuntimes"
+	RuntimeGatewayService_Dispatch_FullMethodName     = "/middleware.role.v1.RuntimeGatewayService/Dispatch"
+	RuntimeGatewayService_Send_FullMethodName         = "/middleware.role.v1.RuntimeGatewayService/Send"
+	RuntimeGatewayService_Reserve_FullMethodName      = "/middleware.role.v1.RuntimeGatewayService/Reserve"
+	RuntimeGatewayService_Release_FullMethodName      = "/middleware.role.v1.RuntimeGatewayService/Release"
+	RuntimeGatewayService_Disconnect_FullMethodName   = "/middleware.role.v1.RuntimeGatewayService/Disconnect"
+	RuntimeGatewayService_ListRuntimes_FullMethodName = "/middleware.role.v1.RuntimeGatewayService/ListRuntimes"
 )
 
 // RuntimeGatewayServiceClient is the client API for RuntimeGatewayService service.
@@ -302,7 +301,7 @@ func _RuntimeGatewayService_ListRuntimes_Handler(srv interface{}, ctx context.Co
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
 var RuntimeGatewayService_ServiceDesc = grpc.ServiceDesc{
-	ServiceName: "middleware.internal.v1.RuntimeGatewayService",
+	ServiceName: "middleware.role.v1.RuntimeGatewayService",
 	HandlerType: (*RuntimeGatewayServiceServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
@@ -331,13 +330,13 @@ var RuntimeGatewayService_ServiceDesc = grpc.ServiceDesc{
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
-	Metadata: "middleware/internal/v1/internal.proto",
+	Metadata: "middleware/role/v1/role.proto",
 }
 
 const (
-	ControlService_DeliverEnvelope_FullMethodName = "/middleware.internal.v1.ControlService/DeliverEnvelope"
-	ControlService_CancelRun_FullMethodName       = "/middleware.internal.v1.ControlService/CancelRun"
-	ControlService_ResumeRun_FullMethodName       = "/middleware.internal.v1.ControlService/ResumeRun"
+	ControlService_DeliverEnvelope_FullMethodName = "/middleware.role.v1.ControlService/DeliverEnvelope"
+	ControlService_CancelRun_FullMethodName       = "/middleware.role.v1.ControlService/CancelRun"
+	ControlService_ResumeRun_FullMethodName       = "/middleware.role.v1.ControlService/ResumeRun"
 )
 
 // ControlServiceClient is the client API for ControlService service.
@@ -502,7 +501,7 @@ func _ControlService_ResumeRun_Handler(srv interface{}, ctx context.Context, dec
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
 var ControlService_ServiceDesc = grpc.ServiceDesc{
-	ServiceName: "middleware.internal.v1.ControlService",
+	ServiceName: "middleware.role.v1.ControlService",
 	HandlerType: (*ControlServiceServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
@@ -519,14 +518,14 @@ var ControlService_ServiceDesc = grpc.ServiceDesc{
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
-	Metadata: "middleware/internal/v1/internal.proto",
+	Metadata: "middleware/role/v1/role.proto",
 }
 
 const (
-	AppGatewayService_CallLocalTool_FullMethodName       = "/middleware.internal.v1.AppGatewayService/CallLocalTool"
-	AppGatewayService_CancelLocalTools_FullMethodName    = "/middleware.internal.v1.AppGatewayService/CancelLocalTools"
-	AppGatewayService_PublishRunEvent_FullMethodName     = "/middleware.internal.v1.AppGatewayService/PublishRunEvent"
-	AppGatewayService_PublishRunCompleted_FullMethodName = "/middleware.internal.v1.AppGatewayService/PublishRunCompleted"
+	AppGatewayService_CallLocalTool_FullMethodName       = "/middleware.role.v1.AppGatewayService/CallLocalTool"
+	AppGatewayService_CancelLocalTools_FullMethodName    = "/middleware.role.v1.AppGatewayService/CancelLocalTools"
+	AppGatewayService_PublishRunEvent_FullMethodName     = "/middleware.role.v1.AppGatewayService/PublishRunEvent"
+	AppGatewayService_PublishRunCompleted_FullMethodName = "/middleware.role.v1.AppGatewayService/PublishRunCompleted"
 )
 
 // AppGatewayServiceClient is the client API for AppGatewayService service.
@@ -726,7 +725,7 @@ func _AppGatewayService_PublishRunCompleted_Handler(srv interface{}, ctx context
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
 var AppGatewayService_ServiceDesc = grpc.ServiceDesc{
-	ServiceName: "middleware.internal.v1.AppGatewayService",
+	ServiceName: "middleware.role.v1.AppGatewayService",
 	HandlerType: (*AppGatewayServiceServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
@@ -747,5 +746,5 @@ var AppGatewayService_ServiceDesc = grpc.ServiceDesc{
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
-	Metadata: "middleware/internal/v1/internal.proto",
+	Metadata: "middleware/role/v1/role.proto",
 }

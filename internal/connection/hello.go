@@ -89,6 +89,9 @@ func (h *Hub) readLoop(conn *daemonConn) error {
 				}
 			})
 		default:
+			if ack := env.GetTaskAck(); ack != nil {
+				h.resolveAck(env.GetCorrelationId(), ack)
+			}
 			h.mu.RLock()
 			handler := h.onEnvelope
 			h.mu.RUnlock()

@@ -1,4 +1,3 @@
-// Levier internal role-to-role RPC.
 //
 // These services are not public App/Runtime APIs. They are used only between
 // control/api, runtime-gateway, and app-gateway roles.
@@ -9,9 +8,9 @@
 // versions:
 // 	protoc-gen-go v1.36.12
 // 	protoc        (unknown)
-// source: middleware/internal/v1/internal.proto
+// source: middleware/role/v1/role.proto
 
-package internalv1
+package rolev1
 
 import (
 	v1 "github.com/fluffyTighnari/levier/gen/middleware/runtime/v1"
@@ -41,7 +40,7 @@ type DispatchRequest struct {
 
 func (x *DispatchRequest) Reset() {
 	*x = DispatchRequest{}
-	mi := &file_middleware_internal_v1_internal_proto_msgTypes[0]
+	mi := &file_middleware_role_v1_role_proto_msgTypes[0]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -53,7 +52,7 @@ func (x *DispatchRequest) String() string {
 func (*DispatchRequest) ProtoMessage() {}
 
 func (x *DispatchRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_middleware_internal_v1_internal_proto_msgTypes[0]
+	mi := &file_middleware_role_v1_role_proto_msgTypes[0]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -66,7 +65,7 @@ func (x *DispatchRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DispatchRequest.ProtoReflect.Descriptor instead.
 func (*DispatchRequest) Descriptor() ([]byte, []int) {
-	return file_middleware_internal_v1_internal_proto_rawDescGZIP(), []int{0}
+	return file_middleware_role_v1_role_proto_rawDescGZIP(), []int{0}
 }
 
 func (x *DispatchRequest) GetDaemonId() string {
@@ -101,7 +100,7 @@ type DispatchResponse struct {
 
 func (x *DispatchResponse) Reset() {
 	*x = DispatchResponse{}
-	mi := &file_middleware_internal_v1_internal_proto_msgTypes[1]
+	mi := &file_middleware_role_v1_role_proto_msgTypes[1]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -113,7 +112,7 @@ func (x *DispatchResponse) String() string {
 func (*DispatchResponse) ProtoMessage() {}
 
 func (x *DispatchResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_middleware_internal_v1_internal_proto_msgTypes[1]
+	mi := &file_middleware_role_v1_role_proto_msgTypes[1]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -126,7 +125,7 @@ func (x *DispatchResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DispatchResponse.ProtoReflect.Descriptor instead.
 func (*DispatchResponse) Descriptor() ([]byte, []int) {
-	return file_middleware_internal_v1_internal_proto_rawDescGZIP(), []int{1}
+	return file_middleware_role_v1_role_proto_rawDescGZIP(), []int{1}
 }
 
 func (x *DispatchResponse) GetAccepted() bool {
@@ -161,7 +160,7 @@ type SendRequest struct {
 
 func (x *SendRequest) Reset() {
 	*x = SendRequest{}
-	mi := &file_middleware_internal_v1_internal_proto_msgTypes[2]
+	mi := &file_middleware_role_v1_role_proto_msgTypes[2]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -173,7 +172,7 @@ func (x *SendRequest) String() string {
 func (*SendRequest) ProtoMessage() {}
 
 func (x *SendRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_middleware_internal_v1_internal_proto_msgTypes[2]
+	mi := &file_middleware_role_v1_role_proto_msgTypes[2]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -186,7 +185,7 @@ func (x *SendRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SendRequest.ProtoReflect.Descriptor instead.
 func (*SendRequest) Descriptor() ([]byte, []int) {
-	return file_middleware_internal_v1_internal_proto_rawDescGZIP(), []int{2}
+	return file_middleware_role_v1_role_proto_rawDescGZIP(), []int{2}
 }
 
 func (x *SendRequest) GetDaemonId() string {
@@ -222,7 +221,7 @@ type ReserveRequest struct {
 
 func (x *ReserveRequest) Reset() {
 	*x = ReserveRequest{}
-	mi := &file_middleware_internal_v1_internal_proto_msgTypes[3]
+	mi := &file_middleware_role_v1_role_proto_msgTypes[3]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -234,7 +233,7 @@ func (x *ReserveRequest) String() string {
 func (*ReserveRequest) ProtoMessage() {}
 
 func (x *ReserveRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_middleware_internal_v1_internal_proto_msgTypes[3]
+	mi := &file_middleware_role_v1_role_proto_msgTypes[3]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -247,7 +246,7 @@ func (x *ReserveRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ReserveRequest.ProtoReflect.Descriptor instead.
 func (*ReserveRequest) Descriptor() ([]byte, []int) {
-	return file_middleware_internal_v1_internal_proto_rawDescGZIP(), []int{3}
+	return file_middleware_role_v1_role_proto_rawDescGZIP(), []int{3}
 }
 
 func (x *ReserveRequest) GetDaemonId() string {
@@ -288,7 +287,7 @@ type ReserveResponse struct {
 
 func (x *ReserveResponse) Reset() {
 	*x = ReserveResponse{}
-	mi := &file_middleware_internal_v1_internal_proto_msgTypes[4]
+	mi := &file_middleware_role_v1_role_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -300,7 +299,7 @@ func (x *ReserveResponse) String() string {
 func (*ReserveResponse) ProtoMessage() {}
 
 func (x *ReserveResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_middleware_internal_v1_internal_proto_msgTypes[4]
+	mi := &file_middleware_role_v1_role_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -313,7 +312,7 @@ func (x *ReserveResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ReserveResponse.ProtoReflect.Descriptor instead.
 func (*ReserveResponse) Descriptor() ([]byte, []int) {
-	return file_middleware_internal_v1_internal_proto_rawDescGZIP(), []int{4}
+	return file_middleware_role_v1_role_proto_rawDescGZIP(), []int{4}
 }
 
 func (x *ReserveResponse) GetAccepted() bool {
@@ -340,7 +339,7 @@ type ReleaseRequest struct {
 
 func (x *ReleaseRequest) Reset() {
 	*x = ReleaseRequest{}
-	mi := &file_middleware_internal_v1_internal_proto_msgTypes[5]
+	mi := &file_middleware_role_v1_role_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -352,7 +351,7 @@ func (x *ReleaseRequest) String() string {
 func (*ReleaseRequest) ProtoMessage() {}
 
 func (x *ReleaseRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_middleware_internal_v1_internal_proto_msgTypes[5]
+	mi := &file_middleware_role_v1_role_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -365,7 +364,7 @@ func (x *ReleaseRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ReleaseRequest.ProtoReflect.Descriptor instead.
 func (*ReleaseRequest) Descriptor() ([]byte, []int) {
-	return file_middleware_internal_v1_internal_proto_rawDescGZIP(), []int{5}
+	return file_middleware_role_v1_role_proto_rawDescGZIP(), []int{5}
 }
 
 func (x *ReleaseRequest) GetDaemonId() string {
@@ -392,7 +391,7 @@ type DisconnectRequest struct {
 
 func (x *DisconnectRequest) Reset() {
 	*x = DisconnectRequest{}
-	mi := &file_middleware_internal_v1_internal_proto_msgTypes[6]
+	mi := &file_middleware_role_v1_role_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -404,7 +403,7 @@ func (x *DisconnectRequest) String() string {
 func (*DisconnectRequest) ProtoMessage() {}
 
 func (x *DisconnectRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_middleware_internal_v1_internal_proto_msgTypes[6]
+	mi := &file_middleware_role_v1_role_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -417,7 +416,7 @@ func (x *DisconnectRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DisconnectRequest.ProtoReflect.Descriptor instead.
 func (*DisconnectRequest) Descriptor() ([]byte, []int) {
-	return file_middleware_internal_v1_internal_proto_rawDescGZIP(), []int{6}
+	return file_middleware_role_v1_role_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *DisconnectRequest) GetDaemonId() string {
@@ -442,7 +441,7 @@ type ListRuntimesRequest struct {
 
 func (x *ListRuntimesRequest) Reset() {
 	*x = ListRuntimesRequest{}
-	mi := &file_middleware_internal_v1_internal_proto_msgTypes[7]
+	mi := &file_middleware_role_v1_role_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -454,7 +453,7 @@ func (x *ListRuntimesRequest) String() string {
 func (*ListRuntimesRequest) ProtoMessage() {}
 
 func (x *ListRuntimesRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_middleware_internal_v1_internal_proto_msgTypes[7]
+	mi := &file_middleware_role_v1_role_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -467,7 +466,7 @@ func (x *ListRuntimesRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListRuntimesRequest.ProtoReflect.Descriptor instead.
 func (*ListRuntimesRequest) Descriptor() ([]byte, []int) {
-	return file_middleware_internal_v1_internal_proto_rawDescGZIP(), []int{7}
+	return file_middleware_role_v1_role_proto_rawDescGZIP(), []int{7}
 }
 
 type RuntimeSnapshot struct {
@@ -488,7 +487,7 @@ type RuntimeSnapshot struct {
 
 func (x *RuntimeSnapshot) Reset() {
 	*x = RuntimeSnapshot{}
-	mi := &file_middleware_internal_v1_internal_proto_msgTypes[8]
+	mi := &file_middleware_role_v1_role_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -500,7 +499,7 @@ func (x *RuntimeSnapshot) String() string {
 func (*RuntimeSnapshot) ProtoMessage() {}
 
 func (x *RuntimeSnapshot) ProtoReflect() protoreflect.Message {
-	mi := &file_middleware_internal_v1_internal_proto_msgTypes[8]
+	mi := &file_middleware_role_v1_role_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -513,7 +512,7 @@ func (x *RuntimeSnapshot) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RuntimeSnapshot.ProtoReflect.Descriptor instead.
 func (*RuntimeSnapshot) Descriptor() ([]byte, []int) {
-	return file_middleware_internal_v1_internal_proto_rawDescGZIP(), []int{8}
+	return file_middleware_role_v1_role_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *RuntimeSnapshot) GetDaemonId() string {
@@ -595,7 +594,7 @@ type ListRuntimesResponse struct {
 
 func (x *ListRuntimesResponse) Reset() {
 	*x = ListRuntimesResponse{}
-	mi := &file_middleware_internal_v1_internal_proto_msgTypes[9]
+	mi := &file_middleware_role_v1_role_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -607,7 +606,7 @@ func (x *ListRuntimesResponse) String() string {
 func (*ListRuntimesResponse) ProtoMessage() {}
 
 func (x *ListRuntimesResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_middleware_internal_v1_internal_proto_msgTypes[9]
+	mi := &file_middleware_role_v1_role_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -620,7 +619,7 @@ func (x *ListRuntimesResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListRuntimesResponse.ProtoReflect.Descriptor instead.
 func (*ListRuntimesResponse) Descriptor() ([]byte, []int) {
-	return file_middleware_internal_v1_internal_proto_rawDescGZIP(), []int{9}
+	return file_middleware_role_v1_role_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *ListRuntimesResponse) GetRuntimes() []*RuntimeSnapshot {
@@ -641,7 +640,7 @@ type DeliverEnvelopeRequest struct {
 
 func (x *DeliverEnvelopeRequest) Reset() {
 	*x = DeliverEnvelopeRequest{}
-	mi := &file_middleware_internal_v1_internal_proto_msgTypes[10]
+	mi := &file_middleware_role_v1_role_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -653,7 +652,7 @@ func (x *DeliverEnvelopeRequest) String() string {
 func (*DeliverEnvelopeRequest) ProtoMessage() {}
 
 func (x *DeliverEnvelopeRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_middleware_internal_v1_internal_proto_msgTypes[10]
+	mi := &file_middleware_role_v1_role_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -666,7 +665,7 @@ func (x *DeliverEnvelopeRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeliverEnvelopeRequest.ProtoReflect.Descriptor instead.
 func (*DeliverEnvelopeRequest) Descriptor() ([]byte, []int) {
-	return file_middleware_internal_v1_internal_proto_rawDescGZIP(), []int{10}
+	return file_middleware_role_v1_role_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *DeliverEnvelopeRequest) GetGatewayId() string {
@@ -700,7 +699,7 @@ type CancelRunRequest struct {
 
 func (x *CancelRunRequest) Reset() {
 	*x = CancelRunRequest{}
-	mi := &file_middleware_internal_v1_internal_proto_msgTypes[11]
+	mi := &file_middleware_role_v1_role_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -712,7 +711,7 @@ func (x *CancelRunRequest) String() string {
 func (*CancelRunRequest) ProtoMessage() {}
 
 func (x *CancelRunRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_middleware_internal_v1_internal_proto_msgTypes[11]
+	mi := &file_middleware_role_v1_role_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -725,7 +724,7 @@ func (x *CancelRunRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CancelRunRequest.ProtoReflect.Descriptor instead.
 func (*CancelRunRequest) Descriptor() ([]byte, []int) {
-	return file_middleware_internal_v1_internal_proto_rawDescGZIP(), []int{11}
+	return file_middleware_role_v1_role_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *CancelRunRequest) GetRunId() string {
@@ -752,7 +751,7 @@ type CancelRunResponse struct {
 
 func (x *CancelRunResponse) Reset() {
 	*x = CancelRunResponse{}
-	mi := &file_middleware_internal_v1_internal_proto_msgTypes[12]
+	mi := &file_middleware_role_v1_role_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -764,7 +763,7 @@ func (x *CancelRunResponse) String() string {
 func (*CancelRunResponse) ProtoMessage() {}
 
 func (x *CancelRunResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_middleware_internal_v1_internal_proto_msgTypes[12]
+	mi := &file_middleware_role_v1_role_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -777,7 +776,7 @@ func (x *CancelRunResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CancelRunResponse.ProtoReflect.Descriptor instead.
 func (*CancelRunResponse) Descriptor() ([]byte, []int) {
-	return file_middleware_internal_v1_internal_proto_rawDescGZIP(), []int{12}
+	return file_middleware_role_v1_role_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *CancelRunResponse) GetRunId() string {
@@ -804,7 +803,7 @@ type ResumeRunRequest struct {
 
 func (x *ResumeRunRequest) Reset() {
 	*x = ResumeRunRequest{}
-	mi := &file_middleware_internal_v1_internal_proto_msgTypes[13]
+	mi := &file_middleware_role_v1_role_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -816,7 +815,7 @@ func (x *ResumeRunRequest) String() string {
 func (*ResumeRunRequest) ProtoMessage() {}
 
 func (x *ResumeRunRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_middleware_internal_v1_internal_proto_msgTypes[13]
+	mi := &file_middleware_role_v1_role_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -829,7 +828,7 @@ func (x *ResumeRunRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ResumeRunRequest.ProtoReflect.Descriptor instead.
 func (*ResumeRunRequest) Descriptor() ([]byte, []int) {
-	return file_middleware_internal_v1_internal_proto_rawDescGZIP(), []int{13}
+	return file_middleware_role_v1_role_proto_rawDescGZIP(), []int{13}
 }
 
 func (x *ResumeRunRequest) GetRunId() string {
@@ -857,7 +856,7 @@ type ResumeRunResponse struct {
 
 func (x *ResumeRunResponse) Reset() {
 	*x = ResumeRunResponse{}
-	mi := &file_middleware_internal_v1_internal_proto_msgTypes[14]
+	mi := &file_middleware_role_v1_role_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -869,7 +868,7 @@ func (x *ResumeRunResponse) String() string {
 func (*ResumeRunResponse) ProtoMessage() {}
 
 func (x *ResumeRunResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_middleware_internal_v1_internal_proto_msgTypes[14]
+	mi := &file_middleware_role_v1_role_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -882,7 +881,7 @@ func (x *ResumeRunResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ResumeRunResponse.ProtoReflect.Descriptor instead.
 func (*ResumeRunResponse) Descriptor() ([]byte, []int) {
-	return file_middleware_internal_v1_internal_proto_rawDescGZIP(), []int{14}
+	return file_middleware_role_v1_role_proto_rawDescGZIP(), []int{14}
 }
 
 func (x *ResumeRunResponse) GetRunId() string {
@@ -918,7 +917,7 @@ type CallLocalToolRequest struct {
 
 func (x *CallLocalToolRequest) Reset() {
 	*x = CallLocalToolRequest{}
-	mi := &file_middleware_internal_v1_internal_proto_msgTypes[15]
+	mi := &file_middleware_role_v1_role_proto_msgTypes[15]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -930,7 +929,7 @@ func (x *CallLocalToolRequest) String() string {
 func (*CallLocalToolRequest) ProtoMessage() {}
 
 func (x *CallLocalToolRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_middleware_internal_v1_internal_proto_msgTypes[15]
+	mi := &file_middleware_role_v1_role_proto_msgTypes[15]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -943,7 +942,7 @@ func (x *CallLocalToolRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CallLocalToolRequest.ProtoReflect.Descriptor instead.
 func (*CallLocalToolRequest) Descriptor() ([]byte, []int) {
-	return file_middleware_internal_v1_internal_proto_rawDescGZIP(), []int{15}
+	return file_middleware_role_v1_role_proto_rawDescGZIP(), []int{15}
 }
 
 func (x *CallLocalToolRequest) GetAppId() string {
@@ -983,7 +982,7 @@ type CallLocalToolResponse struct {
 
 func (x *CallLocalToolResponse) Reset() {
 	*x = CallLocalToolResponse{}
-	mi := &file_middleware_internal_v1_internal_proto_msgTypes[16]
+	mi := &file_middleware_role_v1_role_proto_msgTypes[16]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -995,7 +994,7 @@ func (x *CallLocalToolResponse) String() string {
 func (*CallLocalToolResponse) ProtoMessage() {}
 
 func (x *CallLocalToolResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_middleware_internal_v1_internal_proto_msgTypes[16]
+	mi := &file_middleware_role_v1_role_proto_msgTypes[16]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1008,7 +1007,7 @@ func (x *CallLocalToolResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CallLocalToolResponse.ProtoReflect.Descriptor instead.
 func (*CallLocalToolResponse) Descriptor() ([]byte, []int) {
-	return file_middleware_internal_v1_internal_proto_rawDescGZIP(), []int{16}
+	return file_middleware_role_v1_role_proto_rawDescGZIP(), []int{16}
 }
 
 func (x *CallLocalToolResponse) GetResult() *v1.ToolCallResult {
@@ -1030,7 +1029,7 @@ type CancelLocalToolsRequest struct {
 
 func (x *CancelLocalToolsRequest) Reset() {
 	*x = CancelLocalToolsRequest{}
-	mi := &file_middleware_internal_v1_internal_proto_msgTypes[17]
+	mi := &file_middleware_role_v1_role_proto_msgTypes[17]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1042,7 +1041,7 @@ func (x *CancelLocalToolsRequest) String() string {
 func (*CancelLocalToolsRequest) ProtoMessage() {}
 
 func (x *CancelLocalToolsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_middleware_internal_v1_internal_proto_msgTypes[17]
+	mi := &file_middleware_role_v1_role_proto_msgTypes[17]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1055,7 +1054,7 @@ func (x *CancelLocalToolsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CancelLocalToolsRequest.ProtoReflect.Descriptor instead.
 func (*CancelLocalToolsRequest) Descriptor() ([]byte, []int) {
-	return file_middleware_internal_v1_internal_proto_rawDescGZIP(), []int{17}
+	return file_middleware_role_v1_role_proto_rawDescGZIP(), []int{17}
 }
 
 func (x *CancelLocalToolsRequest) GetAppId() string {
@@ -1097,7 +1096,7 @@ type PublishRunEventRequest struct {
 
 func (x *PublishRunEventRequest) Reset() {
 	*x = PublishRunEventRequest{}
-	mi := &file_middleware_internal_v1_internal_proto_msgTypes[18]
+	mi := &file_middleware_role_v1_role_proto_msgTypes[18]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1109,7 +1108,7 @@ func (x *PublishRunEventRequest) String() string {
 func (*PublishRunEventRequest) ProtoMessage() {}
 
 func (x *PublishRunEventRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_middleware_internal_v1_internal_proto_msgTypes[18]
+	mi := &file_middleware_role_v1_role_proto_msgTypes[18]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1122,7 +1121,7 @@ func (x *PublishRunEventRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PublishRunEventRequest.ProtoReflect.Descriptor instead.
 func (*PublishRunEventRequest) Descriptor() ([]byte, []int) {
-	return file_middleware_internal_v1_internal_proto_rawDescGZIP(), []int{18}
+	return file_middleware_role_v1_role_proto_rawDescGZIP(), []int{18}
 }
 
 func (x *PublishRunEventRequest) GetAppId() string {
@@ -1158,7 +1157,7 @@ type PublishRunCompletedRequest struct {
 
 func (x *PublishRunCompletedRequest) Reset() {
 	*x = PublishRunCompletedRequest{}
-	mi := &file_middleware_internal_v1_internal_proto_msgTypes[19]
+	mi := &file_middleware_role_v1_role_proto_msgTypes[19]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1170,7 +1169,7 @@ func (x *PublishRunCompletedRequest) String() string {
 func (*PublishRunCompletedRequest) ProtoMessage() {}
 
 func (x *PublishRunCompletedRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_middleware_internal_v1_internal_proto_msgTypes[19]
+	mi := &file_middleware_role_v1_role_proto_msgTypes[19]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1183,7 +1182,7 @@ func (x *PublishRunCompletedRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PublishRunCompletedRequest.ProtoReflect.Descriptor instead.
 func (*PublishRunCompletedRequest) Descriptor() ([]byte, []int) {
-	return file_middleware_internal_v1_internal_proto_rawDescGZIP(), []int{19}
+	return file_middleware_role_v1_role_proto_rawDescGZIP(), []int{19}
 }
 
 func (x *PublishRunCompletedRequest) GetAppId() string {
@@ -1214,11 +1213,11 @@ func (x *PublishRunCompletedRequest) GetAttempt() int32 {
 	return 0
 }
 
-var File_middleware_internal_v1_internal_proto protoreflect.FileDescriptor
+var File_middleware_role_v1_role_proto protoreflect.FileDescriptor
 
-const file_middleware_internal_v1_internal_proto_rawDesc = "" +
+const file_middleware_role_v1_role_proto_rawDesc = "" +
 	"\n" +
-	"%middleware/internal/v1/internal.proto\x12\x16middleware.internal.v1\x1a\x1bgoogle/protobuf/empty.proto\x1a#middleware/runtime/v1/runtime.proto\"\x91\x01\n" +
+	"\x1dmiddleware/role/v1/role.proto\x12\x12middleware.role.v1\x1a\x1bgoogle/protobuf/empty.proto\x1a#middleware/runtime/v1/runtime.proto\"\x91\x01\n" +
 	"\x0fDispatchRequest\x12\x1b\n" +
 	"\tdaemon_id\x18\x01 \x01(\tR\bdaemonId\x12;\n" +
 	"\benvelope\x18\x02 \x01(\v2\x1f.middleware.runtime.v1.EnvelopeR\benvelope\x12$\n" +
@@ -1245,7 +1244,7 @@ const file_middleware_internal_v1_internal_proto_rawDesc = "" +
 	"\x11DisconnectRequest\x12\x1b\n" +
 	"\tdaemon_id\x18\x01 \x01(\tR\bdaemonId\x12)\n" +
 	"\x10connection_epoch\x18\x02 \x01(\x03R\x0fconnectionEpoch\"\x15\n" +
-	"\x13ListRuntimesRequest\"\xd7\x04\n" +
+	"\x13ListRuntimesRequest\"\xcf\x04\n" +
 	"\x0fRuntimeSnapshot\x12\x1b\n" +
 	"\tdaemon_id\x18\x01 \x01(\tR\bdaemonId\x12\x1d\n" +
 	"\n" +
@@ -1255,18 +1254,18 @@ const file_middleware_internal_v1_internal_proto_rawDesc = "" +
 	"\fruntime_type\x18\x05 \x01(\tR\vruntimeType\x12.\n" +
 	"\x13max_concurrent_runs\x18\x06 \x01(\x05R\x11maxConcurrentRuns\x12#\n" +
 	"\rrunning_count\x18\a \x01(\x05R\frunningCount\x12\x1a\n" +
-	"\breserved\x18\b \x01(\x05R\breserved\x12K\n" +
-	"\x06labels\x18\t \x03(\v23.middleware.internal.v1.RuntimeSnapshot.LabelsEntryR\x06labels\x12]\n" +
+	"\breserved\x18\b \x01(\x05R\breserved\x12G\n" +
+	"\x06labels\x18\t \x03(\v2/.middleware.role.v1.RuntimeSnapshot.LabelsEntryR\x06labels\x12Y\n" +
 	"\fcapabilities\x18\n" +
-	" \x03(\v29.middleware.internal.v1.RuntimeSnapshot.CapabilitiesEntryR\fcapabilities\x1a9\n" +
+	" \x03(\v25.middleware.role.v1.RuntimeSnapshot.CapabilitiesEntryR\fcapabilities\x1a9\n" +
 	"\vLabelsEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\x1a?\n" +
 	"\x11CapabilitiesEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"[\n" +
-	"\x14ListRuntimesResponse\x12C\n" +
-	"\bruntimes\x18\x01 \x03(\v2'.middleware.internal.v1.RuntimeSnapshotR\bruntimes\"\x91\x01\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"W\n" +
+	"\x14ListRuntimesResponse\x12?\n" +
+	"\bruntimes\x18\x01 \x03(\v2#.middleware.role.v1.RuntimeSnapshotR\bruntimes\"\x91\x01\n" +
 	"\x16DeliverEnvelopeRequest\x12\x1d\n" +
 	"\n" +
 	"gateway_id\x18\x01 \x01(\tR\tgatewayId\x12\x1b\n" +
@@ -1307,103 +1306,103 @@ const file_middleware_internal_v1_internal_proto_rawDesc = "" +
 	"\x06app_id\x18\x01 \x01(\tR\x05appId\x12\x15\n" +
 	"\x06run_id\x18\x02 \x01(\tR\x05runId\x12\x16\n" +
 	"\x06status\x18\x03 \x01(\tR\x06status\x12\x18\n" +
-	"\aattempt\x18\x04 \x01(\x05R\aattempt2\x9e\x04\n" +
-	"\x15RuntimeGatewayService\x12]\n" +
-	"\bDispatch\x12'.middleware.internal.v1.DispatchRequest\x1a(.middleware.internal.v1.DispatchResponse\x12C\n" +
-	"\x04Send\x12#.middleware.internal.v1.SendRequest\x1a\x16.google.protobuf.Empty\x12Z\n" +
-	"\aReserve\x12&.middleware.internal.v1.ReserveRequest\x1a'.middleware.internal.v1.ReserveResponse\x12I\n" +
-	"\aRelease\x12&.middleware.internal.v1.ReleaseRequest\x1a\x16.google.protobuf.Empty\x12O\n" +
+	"\aattempt\x18\x04 \x01(\x05R\aattempt2\xfa\x03\n" +
+	"\x15RuntimeGatewayService\x12U\n" +
+	"\bDispatch\x12#.middleware.role.v1.DispatchRequest\x1a$.middleware.role.v1.DispatchResponse\x12?\n" +
+	"\x04Send\x12\x1f.middleware.role.v1.SendRequest\x1a\x16.google.protobuf.Empty\x12R\n" +
+	"\aReserve\x12\".middleware.role.v1.ReserveRequest\x1a#.middleware.role.v1.ReserveResponse\x12E\n" +
+	"\aRelease\x12\".middleware.role.v1.ReleaseRequest\x1a\x16.google.protobuf.Empty\x12K\n" +
 	"\n" +
-	"Disconnect\x12).middleware.internal.v1.DisconnectRequest\x1a\x16.google.protobuf.Empty\x12i\n" +
-	"\fListRuntimes\x12+.middleware.internal.v1.ListRuntimesRequest\x1a,.middleware.internal.v1.ListRuntimesResponse2\xaf\x02\n" +
-	"\x0eControlService\x12Y\n" +
-	"\x0fDeliverEnvelope\x12..middleware.internal.v1.DeliverEnvelopeRequest\x1a\x16.google.protobuf.Empty\x12`\n" +
-	"\tCancelRun\x12(.middleware.internal.v1.CancelRunRequest\x1a).middleware.internal.v1.CancelRunResponse\x12`\n" +
-	"\tResumeRun\x12(.middleware.internal.v1.ResumeRunRequest\x1a).middleware.internal.v1.ResumeRunResponse2\x9c\x03\n" +
-	"\x11AppGatewayService\x12l\n" +
-	"\rCallLocalTool\x12,.middleware.internal.v1.CallLocalToolRequest\x1a-.middleware.internal.v1.CallLocalToolResponse\x12[\n" +
-	"\x10CancelLocalTools\x12/.middleware.internal.v1.CancelLocalToolsRequest\x1a\x16.google.protobuf.Empty\x12Y\n" +
-	"\x0fPublishRunEvent\x12..middleware.internal.v1.PublishRunEventRequest\x1a\x16.google.protobuf.Empty\x12a\n" +
-	"\x13PublishRunCompleted\x122.middleware.internal.v1.PublishRunCompletedRequest\x1a\x16.google.protobuf.EmptyBHZFgithub.com/fluffyTighnari/levier/gen/middleware/internal/v1;internalv1b\x06proto3"
+	"Disconnect\x12%.middleware.role.v1.DisconnectRequest\x1a\x16.google.protobuf.Empty\x12a\n" +
+	"\fListRuntimes\x12'.middleware.role.v1.ListRuntimesRequest\x1a(.middleware.role.v1.ListRuntimesResponse2\x9b\x02\n" +
+	"\x0eControlService\x12U\n" +
+	"\x0fDeliverEnvelope\x12*.middleware.role.v1.DeliverEnvelopeRequest\x1a\x16.google.protobuf.Empty\x12X\n" +
+	"\tCancelRun\x12$.middleware.role.v1.CancelRunRequest\x1a%.middleware.role.v1.CancelRunResponse\x12X\n" +
+	"\tResumeRun\x12$.middleware.role.v1.ResumeRunRequest\x1a%.middleware.role.v1.ResumeRunResponse2\x88\x03\n" +
+	"\x11AppGatewayService\x12d\n" +
+	"\rCallLocalTool\x12(.middleware.role.v1.CallLocalToolRequest\x1a).middleware.role.v1.CallLocalToolResponse\x12W\n" +
+	"\x10CancelLocalTools\x12+.middleware.role.v1.CancelLocalToolsRequest\x1a\x16.google.protobuf.Empty\x12U\n" +
+	"\x0fPublishRunEvent\x12*.middleware.role.v1.PublishRunEventRequest\x1a\x16.google.protobuf.Empty\x12]\n" +
+	"\x13PublishRunCompleted\x12..middleware.role.v1.PublishRunCompletedRequest\x1a\x16.google.protobuf.EmptyB@Z>github.com/fluffyTighnari/levier/gen/middleware/role/v1;rolev1b\x06proto3"
 
 var (
-	file_middleware_internal_v1_internal_proto_rawDescOnce sync.Once
-	file_middleware_internal_v1_internal_proto_rawDescData []byte
+	file_middleware_role_v1_role_proto_rawDescOnce sync.Once
+	file_middleware_role_v1_role_proto_rawDescData []byte
 )
 
-func file_middleware_internal_v1_internal_proto_rawDescGZIP() []byte {
-	file_middleware_internal_v1_internal_proto_rawDescOnce.Do(func() {
-		file_middleware_internal_v1_internal_proto_rawDescData = protoimpl.X.CompressGZIP(unsafe.Slice(unsafe.StringData(file_middleware_internal_v1_internal_proto_rawDesc), len(file_middleware_internal_v1_internal_proto_rawDesc)))
+func file_middleware_role_v1_role_proto_rawDescGZIP() []byte {
+	file_middleware_role_v1_role_proto_rawDescOnce.Do(func() {
+		file_middleware_role_v1_role_proto_rawDescData = protoimpl.X.CompressGZIP(unsafe.Slice(unsafe.StringData(file_middleware_role_v1_role_proto_rawDesc), len(file_middleware_role_v1_role_proto_rawDesc)))
 	})
-	return file_middleware_internal_v1_internal_proto_rawDescData
+	return file_middleware_role_v1_role_proto_rawDescData
 }
 
-var file_middleware_internal_v1_internal_proto_msgTypes = make([]protoimpl.MessageInfo, 22)
-var file_middleware_internal_v1_internal_proto_goTypes = []any{
-	(*DispatchRequest)(nil),            // 0: middleware.internal.v1.DispatchRequest
-	(*DispatchResponse)(nil),           // 1: middleware.internal.v1.DispatchResponse
-	(*SendRequest)(nil),                // 2: middleware.internal.v1.SendRequest
-	(*ReserveRequest)(nil),             // 3: middleware.internal.v1.ReserveRequest
-	(*ReserveResponse)(nil),            // 4: middleware.internal.v1.ReserveResponse
-	(*ReleaseRequest)(nil),             // 5: middleware.internal.v1.ReleaseRequest
-	(*DisconnectRequest)(nil),          // 6: middleware.internal.v1.DisconnectRequest
-	(*ListRuntimesRequest)(nil),        // 7: middleware.internal.v1.ListRuntimesRequest
-	(*RuntimeSnapshot)(nil),            // 8: middleware.internal.v1.RuntimeSnapshot
-	(*ListRuntimesResponse)(nil),       // 9: middleware.internal.v1.ListRuntimesResponse
-	(*DeliverEnvelopeRequest)(nil),     // 10: middleware.internal.v1.DeliverEnvelopeRequest
-	(*CancelRunRequest)(nil),           // 11: middleware.internal.v1.CancelRunRequest
-	(*CancelRunResponse)(nil),          // 12: middleware.internal.v1.CancelRunResponse
-	(*ResumeRunRequest)(nil),           // 13: middleware.internal.v1.ResumeRunRequest
-	(*ResumeRunResponse)(nil),          // 14: middleware.internal.v1.ResumeRunResponse
-	(*CallLocalToolRequest)(nil),       // 15: middleware.internal.v1.CallLocalToolRequest
-	(*CallLocalToolResponse)(nil),      // 16: middleware.internal.v1.CallLocalToolResponse
-	(*CancelLocalToolsRequest)(nil),    // 17: middleware.internal.v1.CancelLocalToolsRequest
-	(*PublishRunEventRequest)(nil),     // 18: middleware.internal.v1.PublishRunEventRequest
-	(*PublishRunCompletedRequest)(nil), // 19: middleware.internal.v1.PublishRunCompletedRequest
-	nil,                                // 20: middleware.internal.v1.RuntimeSnapshot.LabelsEntry
-	nil,                                // 21: middleware.internal.v1.RuntimeSnapshot.CapabilitiesEntry
+var file_middleware_role_v1_role_proto_msgTypes = make([]protoimpl.MessageInfo, 22)
+var file_middleware_role_v1_role_proto_goTypes = []any{
+	(*DispatchRequest)(nil),            // 0: middleware.role.v1.DispatchRequest
+	(*DispatchResponse)(nil),           // 1: middleware.role.v1.DispatchResponse
+	(*SendRequest)(nil),                // 2: middleware.role.v1.SendRequest
+	(*ReserveRequest)(nil),             // 3: middleware.role.v1.ReserveRequest
+	(*ReserveResponse)(nil),            // 4: middleware.role.v1.ReserveResponse
+	(*ReleaseRequest)(nil),             // 5: middleware.role.v1.ReleaseRequest
+	(*DisconnectRequest)(nil),          // 6: middleware.role.v1.DisconnectRequest
+	(*ListRuntimesRequest)(nil),        // 7: middleware.role.v1.ListRuntimesRequest
+	(*RuntimeSnapshot)(nil),            // 8: middleware.role.v1.RuntimeSnapshot
+	(*ListRuntimesResponse)(nil),       // 9: middleware.role.v1.ListRuntimesResponse
+	(*DeliverEnvelopeRequest)(nil),     // 10: middleware.role.v1.DeliverEnvelopeRequest
+	(*CancelRunRequest)(nil),           // 11: middleware.role.v1.CancelRunRequest
+	(*CancelRunResponse)(nil),          // 12: middleware.role.v1.CancelRunResponse
+	(*ResumeRunRequest)(nil),           // 13: middleware.role.v1.ResumeRunRequest
+	(*ResumeRunResponse)(nil),          // 14: middleware.role.v1.ResumeRunResponse
+	(*CallLocalToolRequest)(nil),       // 15: middleware.role.v1.CallLocalToolRequest
+	(*CallLocalToolResponse)(nil),      // 16: middleware.role.v1.CallLocalToolResponse
+	(*CancelLocalToolsRequest)(nil),    // 17: middleware.role.v1.CancelLocalToolsRequest
+	(*PublishRunEventRequest)(nil),     // 18: middleware.role.v1.PublishRunEventRequest
+	(*PublishRunCompletedRequest)(nil), // 19: middleware.role.v1.PublishRunCompletedRequest
+	nil,                                // 20: middleware.role.v1.RuntimeSnapshot.LabelsEntry
+	nil,                                // 21: middleware.role.v1.RuntimeSnapshot.CapabilitiesEntry
 	(*v1.Envelope)(nil),                // 22: middleware.runtime.v1.Envelope
 	(*v1.TaskAck)(nil),                 // 23: middleware.runtime.v1.TaskAck
 	(*v1.ToolCallRequest)(nil),         // 24: middleware.runtime.v1.ToolCallRequest
 	(*v1.ToolCallResult)(nil),          // 25: middleware.runtime.v1.ToolCallResult
 	(*emptypb.Empty)(nil),              // 26: google.protobuf.Empty
 }
-var file_middleware_internal_v1_internal_proto_depIdxs = []int32{
-	22, // 0: middleware.internal.v1.DispatchRequest.envelope:type_name -> middleware.runtime.v1.Envelope
-	23, // 1: middleware.internal.v1.DispatchResponse.ack:type_name -> middleware.runtime.v1.TaskAck
-	22, // 2: middleware.internal.v1.SendRequest.envelope:type_name -> middleware.runtime.v1.Envelope
-	20, // 3: middleware.internal.v1.RuntimeSnapshot.labels:type_name -> middleware.internal.v1.RuntimeSnapshot.LabelsEntry
-	21, // 4: middleware.internal.v1.RuntimeSnapshot.capabilities:type_name -> middleware.internal.v1.RuntimeSnapshot.CapabilitiesEntry
-	8,  // 5: middleware.internal.v1.ListRuntimesResponse.runtimes:type_name -> middleware.internal.v1.RuntimeSnapshot
-	22, // 6: middleware.internal.v1.DeliverEnvelopeRequest.envelope:type_name -> middleware.runtime.v1.Envelope
-	24, // 7: middleware.internal.v1.CallLocalToolRequest.request:type_name -> middleware.runtime.v1.ToolCallRequest
-	25, // 8: middleware.internal.v1.CallLocalToolResponse.result:type_name -> middleware.runtime.v1.ToolCallResult
-	0,  // 9: middleware.internal.v1.RuntimeGatewayService.Dispatch:input_type -> middleware.internal.v1.DispatchRequest
-	2,  // 10: middleware.internal.v1.RuntimeGatewayService.Send:input_type -> middleware.internal.v1.SendRequest
-	3,  // 11: middleware.internal.v1.RuntimeGatewayService.Reserve:input_type -> middleware.internal.v1.ReserveRequest
-	5,  // 12: middleware.internal.v1.RuntimeGatewayService.Release:input_type -> middleware.internal.v1.ReleaseRequest
-	6,  // 13: middleware.internal.v1.RuntimeGatewayService.Disconnect:input_type -> middleware.internal.v1.DisconnectRequest
-	7,  // 14: middleware.internal.v1.RuntimeGatewayService.ListRuntimes:input_type -> middleware.internal.v1.ListRuntimesRequest
-	10, // 15: middleware.internal.v1.ControlService.DeliverEnvelope:input_type -> middleware.internal.v1.DeliverEnvelopeRequest
-	11, // 16: middleware.internal.v1.ControlService.CancelRun:input_type -> middleware.internal.v1.CancelRunRequest
-	13, // 17: middleware.internal.v1.ControlService.ResumeRun:input_type -> middleware.internal.v1.ResumeRunRequest
-	15, // 18: middleware.internal.v1.AppGatewayService.CallLocalTool:input_type -> middleware.internal.v1.CallLocalToolRequest
-	17, // 19: middleware.internal.v1.AppGatewayService.CancelLocalTools:input_type -> middleware.internal.v1.CancelLocalToolsRequest
-	18, // 20: middleware.internal.v1.AppGatewayService.PublishRunEvent:input_type -> middleware.internal.v1.PublishRunEventRequest
-	19, // 21: middleware.internal.v1.AppGatewayService.PublishRunCompleted:input_type -> middleware.internal.v1.PublishRunCompletedRequest
-	1,  // 22: middleware.internal.v1.RuntimeGatewayService.Dispatch:output_type -> middleware.internal.v1.DispatchResponse
-	26, // 23: middleware.internal.v1.RuntimeGatewayService.Send:output_type -> google.protobuf.Empty
-	4,  // 24: middleware.internal.v1.RuntimeGatewayService.Reserve:output_type -> middleware.internal.v1.ReserveResponse
-	26, // 25: middleware.internal.v1.RuntimeGatewayService.Release:output_type -> google.protobuf.Empty
-	26, // 26: middleware.internal.v1.RuntimeGatewayService.Disconnect:output_type -> google.protobuf.Empty
-	9,  // 27: middleware.internal.v1.RuntimeGatewayService.ListRuntimes:output_type -> middleware.internal.v1.ListRuntimesResponse
-	26, // 28: middleware.internal.v1.ControlService.DeliverEnvelope:output_type -> google.protobuf.Empty
-	12, // 29: middleware.internal.v1.ControlService.CancelRun:output_type -> middleware.internal.v1.CancelRunResponse
-	14, // 30: middleware.internal.v1.ControlService.ResumeRun:output_type -> middleware.internal.v1.ResumeRunResponse
-	16, // 31: middleware.internal.v1.AppGatewayService.CallLocalTool:output_type -> middleware.internal.v1.CallLocalToolResponse
-	26, // 32: middleware.internal.v1.AppGatewayService.CancelLocalTools:output_type -> google.protobuf.Empty
-	26, // 33: middleware.internal.v1.AppGatewayService.PublishRunEvent:output_type -> google.protobuf.Empty
-	26, // 34: middleware.internal.v1.AppGatewayService.PublishRunCompleted:output_type -> google.protobuf.Empty
+var file_middleware_role_v1_role_proto_depIdxs = []int32{
+	22, // 0: middleware.role.v1.DispatchRequest.envelope:type_name -> middleware.runtime.v1.Envelope
+	23, // 1: middleware.role.v1.DispatchResponse.ack:type_name -> middleware.runtime.v1.TaskAck
+	22, // 2: middleware.role.v1.SendRequest.envelope:type_name -> middleware.runtime.v1.Envelope
+	20, // 3: middleware.role.v1.RuntimeSnapshot.labels:type_name -> middleware.role.v1.RuntimeSnapshot.LabelsEntry
+	21, // 4: middleware.role.v1.RuntimeSnapshot.capabilities:type_name -> middleware.role.v1.RuntimeSnapshot.CapabilitiesEntry
+	8,  // 5: middleware.role.v1.ListRuntimesResponse.runtimes:type_name -> middleware.role.v1.RuntimeSnapshot
+	22, // 6: middleware.role.v1.DeliverEnvelopeRequest.envelope:type_name -> middleware.runtime.v1.Envelope
+	24, // 7: middleware.role.v1.CallLocalToolRequest.request:type_name -> middleware.runtime.v1.ToolCallRequest
+	25, // 8: middleware.role.v1.CallLocalToolResponse.result:type_name -> middleware.runtime.v1.ToolCallResult
+	0,  // 9: middleware.role.v1.RuntimeGatewayService.Dispatch:input_type -> middleware.role.v1.DispatchRequest
+	2,  // 10: middleware.role.v1.RuntimeGatewayService.Send:input_type -> middleware.role.v1.SendRequest
+	3,  // 11: middleware.role.v1.RuntimeGatewayService.Reserve:input_type -> middleware.role.v1.ReserveRequest
+	5,  // 12: middleware.role.v1.RuntimeGatewayService.Release:input_type -> middleware.role.v1.ReleaseRequest
+	6,  // 13: middleware.role.v1.RuntimeGatewayService.Disconnect:input_type -> middleware.role.v1.DisconnectRequest
+	7,  // 14: middleware.role.v1.RuntimeGatewayService.ListRuntimes:input_type -> middleware.role.v1.ListRuntimesRequest
+	10, // 15: middleware.role.v1.ControlService.DeliverEnvelope:input_type -> middleware.role.v1.DeliverEnvelopeRequest
+	11, // 16: middleware.role.v1.ControlService.CancelRun:input_type -> middleware.role.v1.CancelRunRequest
+	13, // 17: middleware.role.v1.ControlService.ResumeRun:input_type -> middleware.role.v1.ResumeRunRequest
+	15, // 18: middleware.role.v1.AppGatewayService.CallLocalTool:input_type -> middleware.role.v1.CallLocalToolRequest
+	17, // 19: middleware.role.v1.AppGatewayService.CancelLocalTools:input_type -> middleware.role.v1.CancelLocalToolsRequest
+	18, // 20: middleware.role.v1.AppGatewayService.PublishRunEvent:input_type -> middleware.role.v1.PublishRunEventRequest
+	19, // 21: middleware.role.v1.AppGatewayService.PublishRunCompleted:input_type -> middleware.role.v1.PublishRunCompletedRequest
+	1,  // 22: middleware.role.v1.RuntimeGatewayService.Dispatch:output_type -> middleware.role.v1.DispatchResponse
+	26, // 23: middleware.role.v1.RuntimeGatewayService.Send:output_type -> google.protobuf.Empty
+	4,  // 24: middleware.role.v1.RuntimeGatewayService.Reserve:output_type -> middleware.role.v1.ReserveResponse
+	26, // 25: middleware.role.v1.RuntimeGatewayService.Release:output_type -> google.protobuf.Empty
+	26, // 26: middleware.role.v1.RuntimeGatewayService.Disconnect:output_type -> google.protobuf.Empty
+	9,  // 27: middleware.role.v1.RuntimeGatewayService.ListRuntimes:output_type -> middleware.role.v1.ListRuntimesResponse
+	26, // 28: middleware.role.v1.ControlService.DeliverEnvelope:output_type -> google.protobuf.Empty
+	12, // 29: middleware.role.v1.ControlService.CancelRun:output_type -> middleware.role.v1.CancelRunResponse
+	14, // 30: middleware.role.v1.ControlService.ResumeRun:output_type -> middleware.role.v1.ResumeRunResponse
+	16, // 31: middleware.role.v1.AppGatewayService.CallLocalTool:output_type -> middleware.role.v1.CallLocalToolResponse
+	26, // 32: middleware.role.v1.AppGatewayService.CancelLocalTools:output_type -> google.protobuf.Empty
+	26, // 33: middleware.role.v1.AppGatewayService.PublishRunEvent:output_type -> google.protobuf.Empty
+	26, // 34: middleware.role.v1.AppGatewayService.PublishRunCompleted:output_type -> google.protobuf.Empty
 	22, // [22:35] is the sub-list for method output_type
 	9,  // [9:22] is the sub-list for method input_type
 	9,  // [9:9] is the sub-list for extension type_name
@@ -1411,26 +1410,26 @@ var file_middleware_internal_v1_internal_proto_depIdxs = []int32{
 	0,  // [0:9] is the sub-list for field type_name
 }
 
-func init() { file_middleware_internal_v1_internal_proto_init() }
-func file_middleware_internal_v1_internal_proto_init() {
-	if File_middleware_internal_v1_internal_proto != nil {
+func init() { file_middleware_role_v1_role_proto_init() }
+func file_middleware_role_v1_role_proto_init() {
+	if File_middleware_role_v1_role_proto != nil {
 		return
 	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
-			RawDescriptor: unsafe.Slice(unsafe.StringData(file_middleware_internal_v1_internal_proto_rawDesc), len(file_middleware_internal_v1_internal_proto_rawDesc)),
+			RawDescriptor: unsafe.Slice(unsafe.StringData(file_middleware_role_v1_role_proto_rawDesc), len(file_middleware_role_v1_role_proto_rawDesc)),
 			NumEnums:      0,
 			NumMessages:   22,
 			NumExtensions: 0,
 			NumServices:   3,
 		},
-		GoTypes:           file_middleware_internal_v1_internal_proto_goTypes,
-		DependencyIndexes: file_middleware_internal_v1_internal_proto_depIdxs,
-		MessageInfos:      file_middleware_internal_v1_internal_proto_msgTypes,
+		GoTypes:           file_middleware_role_v1_role_proto_goTypes,
+		DependencyIndexes: file_middleware_role_v1_role_proto_depIdxs,
+		MessageInfos:      file_middleware_role_v1_role_proto_msgTypes,
 	}.Build()
-	File_middleware_internal_v1_internal_proto = out.File
-	file_middleware_internal_v1_internal_proto_goTypes = nil
-	file_middleware_internal_v1_internal_proto_depIdxs = nil
+	File_middleware_role_v1_role_proto = out.File
+	file_middleware_role_v1_role_proto_goTypes = nil
+	file_middleware_role_v1_role_proto_depIdxs = nil
 }

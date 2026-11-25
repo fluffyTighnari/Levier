@@ -104,6 +104,8 @@ type Hub struct {
 
 	mu         sync.RWMutex
 	daemons    map[string]*daemonConn
+	ackMu      sync.Mutex
+	acks       map[string]chan *runtimev1.TaskAck
 	onEnvelope func(daemonID string, env *runtimev1.Envelope)
 	onHello    func(info DaemonInfo)
 	onOffline  func(daemonID string)
@@ -155,6 +157,7 @@ func New(cfg Config) *Hub {
 	hub := &Hub{
 		cfg:        cfg,
 		daemons:    make(map[string]*daemonConn),
+		acks:       make(map[string]chan *runtimev1.TaskAck),
 		onEnvelope: cfg.OnEnvelope,
 		onHello:    cfg.OnHello,
 		onOffline:  cfg.OnOffline,

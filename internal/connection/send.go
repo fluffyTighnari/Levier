@@ -5,12 +5,81 @@
 package connection
 
 import (
+	"context"
 	"fmt"
 	"time"
 
 	runtimev1 "github.com/fluffyTighnari/levier/gen/middleware/runtime/v1"
 	"github.com/fluffyTighnari/levier/internal/protocol"
 )
+
+var (
+	// ErrAckTimeout reports that a TaskAssign was not acknowledged in time.
+	ErrAckTimeout = fmt.Errorf("task ack timed out")
+)
+
+// Dispatch sends one envelope and waits for its TaskAck on the same stream.
+// The blocking result is what lets a split control replica avoid a
+// process-local pending map.
+func (h *Hub) Dispatch(
+	ctx context.Context,
+	daemonID string,
+	env *runtimev1.Envelope,
+	timeout time.Duration,
+) (*runtimev1.TaskAck, error) {
+	if env == nil {
+		return nil, fmt.Errorf("envelope is nil")
+	}
+	if env.GetMsgId() == "" {
+		return nil, fmt.Errorf("dispatch msg_id is required")
+	}
+	if timeout <= 0 {
+		timeout = h.cfg.SendTimeout + 5*time.Second
+	}
+	ackCh := make(chan *runtimev1.TaskAck, 1)
+	h.ackMu.Lock()
+	if _, exists := h.acks[env.GetMsgId()]; exists {
+		h.ackMu.Unlock()
+		return nil, fmt.Errorf("dispatch %q is already pending", env.GetMsgId())
+	}
+	h.acks[env.GetMsgId()] = ackCh
+	h.ackMu.Unlock()
+	defer func() {
+		h.ackMu.Lock()
+		delete(h.acks, env.GetMsgId())
+		h.ackMu.Unlock()
+	}()
+
+	if err := h.Send(daemonID, env); err != nil {
+		return nil, err
+	}
+	timer := time.NewTimer(timeout)
+	defer timer.Stop()
+	select {
+	case ack := <-ackCh:
+		return ack, nil
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	case <-timer.C:
+		return nil, ErrAckTimeout
+	}
+}
+
+func (h *Hub) resolveAck(correlationID string, ack *runtimev1.TaskAck) {
+	if correlationID == "" {
+		return
+	}
+	h.ackMu.Lock()
+	ch := h.acks[correlationID]
+	h.ackMu.Unlock()
+	if ch == nil {
+		return
+	}
+	select {
+	case ch <- ack:
+	default:
+	}
+}
 
 // Send queues one envelope to a daemon.
 func (h *Hub) Send(daemonID string, env *runtimev1.Envelope) error {

@@ -1,4 +1,4 @@
-// Levier internal role-to-role RPC.
+﻿// Levier internal role-to-role RPC.
 //
 // These services are not public App/Runtime APIs. They are used only between
 // control/api, runtime-gateway, and app-gateway roles.
@@ -6,9 +6,9 @@
 // Copyright 2026 The Levier Authors.
 syntax = "proto3";
 
-package middleware.internal.v1;
+package middleware.role.v1;
 
-option go_package = "github.com/fluffyTighnari/levier/gen/middleware/internal/v1;internalv1";
+option go_package = "github.com/fluffyTighnari/levier/gen/middleware/role/v1;rolev1";
 
 import "google/protobuf/empty.proto";
 import "middleware/runtime/v1/runtime.proto";

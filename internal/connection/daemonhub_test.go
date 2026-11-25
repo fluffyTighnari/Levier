@@ -117,6 +117,43 @@ func TestHelloAuthHeartbeatAndCleanup(t *testing.T) {
 	}
 }
 
+func TestDispatchWaitsForTaskAck(t *testing.T) {
+	hub, addr := startHub(t, Config{
+		HelloTimeout:     time.Second,
+		HeartbeatTimeout: 5 * time.Second,
+		Authenticate: func(daemonID, token string) bool {
+			return daemonID == "daemon-1" && token == "token-1"
+		},
+	})
+	cfg := fakedaemon.DefaultConfig()
+	cfg.DaemonID = "daemon-1"
+	cfg.AuthToken = "token-1"
+	daemon, err := fakedaemon.Dial(context.Background(), addr, cfg)
+	if err != nil {
+		t.Fatalf("Dial() error = %v", err)
+	}
+	defer daemon.Close()
+	if !waitFor(t, time.Second, func() bool { return hub.Count() == 1 }) {
+		t.Fatal("daemon was not registered")
+	}
+
+	env, err := protocol.NewRun("run-1", 1, 1, &runtimev1.TaskAssign{
+		RunId:    "run-1",
+		AppId:    "app-1",
+		Timeouts: &runtimev1.TimeoutProfile{RunTimeoutMs: 1000, ToolTimeoutMs: 1000},
+	})
+	if err != nil {
+		t.Fatalf("NewRun() error = %v", err)
+	}
+	ack, err := hub.Dispatch(context.Background(), "daemon-1", env, time.Second)
+	if err != nil {
+		t.Fatalf("Dispatch() error = %v", err)
+	}
+	if !ack.GetAccepted() {
+		t.Fatalf("ack = %+v, want accepted", ack)
+	}
+}
+
 func TestHelloTimeout(t *testing.T) {
 	_, addr := startHub(t, Config{
 		HelloTimeout: 50 * time.Millisecond,

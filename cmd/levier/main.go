@@ -38,6 +38,7 @@ import (
 	"github.com/fluffyTighnari/levier/internal/register"
 	"github.com/fluffyTighnari/levier/internal/roles"
 	"github.com/fluffyTighnari/levier/internal/runstore"
+	"github.com/fluffyTighnari/levier/internal/runtimegateway"
 	"github.com/fluffyTighnari/levier/internal/selfdesc"
 	statuspkg "github.com/fluffyTighnari/levier/internal/status"
 	"github.com/fluffyTighnari/levier/internal/version"
@@ -157,6 +158,9 @@ func runServer(args []string) {
 		Authenticate: daemonAuthenticator(cfg.GRPC.DaemonTokens),
 	})
 	defer hub.Close()
+	if internalServer != nil {
+		runtimegateway.New(hub, 6*time.Second).Register(internalServer.GRPC())
+	}
 
 	metrics := observe.NewRegistry()
 	runs := runstore.New(pool)
