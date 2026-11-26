@@ -342,8 +342,9 @@ request_id
 | Tool invocation owner 字段 | 已完成 | owner gateway/connection、lease epoch、deadline schema |
 | Gateway internal address | 已完成 | `gateway_instances.internal_address` 字段 |
 | I3.0.1 契约补充 | 已完成 | 内部 RPC proto、App Bridge v2、地址/配置接线 |
-| I3.1 角色拆分 | 进行中 | presence、RoleSet、ports、capacity 已落地；下一步装配服务 |
-| I3.2 Runtime Gateway | 进行中 | 内部服务骨架已完成；daemon 跨副本路由待开始 |
+| I3.1 角色拆分 | 进行中 | `control+api` 与 `runtime-gateway` 拆分已跑通；app-gateway 未完成 |
+| I3.2 Runtime Gateway | 进行中 | 跨进程 TaskAssign/Cancel/事件已跑通；多 gateway 故障迁移、事件补偿待完成 |
+| I3.2 跨进程 smoke | 已完成 | split control/api + runtime-gateway + echo runtime 完成一次 Run |
 | I3.3 App Gateway | 待开始 | App 连接与事件 fanout |
 | I3.4 Local Tool 路由 | 待开始 | 定向投递与幂等 |
 | I3.5 通知与恢复 | 待开始 | 补偿与 reaper |

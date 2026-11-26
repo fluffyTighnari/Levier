@@ -26,7 +26,7 @@
 
 - `normal` Runtime 已经可用。
 - `sandbox` 和 `longterm` 目前是目标语义，不是完整生产能力。
-- 控制面是单机架构，连接、会话和任务确认依赖进程内状态。
+- 控制面支持 `all` 单进程，以及 `control+api` + `runtime-gateway` 拆分；app-gateway 拆分、多副本故障迁移和事件补偿仍未完成。
 - PostgreSQL 已经承担 Run、事件、任务和 lease，是可靠基础。
 - 当前 Runtime 一个进程只服务一个 Runtime 定义。
 - 当前 App SDK 以 Python 为主，协议是 JSON 消息。
