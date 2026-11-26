@@ -288,6 +288,10 @@ const (
 
 var errRunNotFound = errors.New("run not found")
 
+type appConnectionMetadataUpdater interface {
+	UpdateConnectionMetadata(appID, connectionID string, protocolVersion int, capabilities []string)
+}
+
 func (s *Server) handleHello(appConn *connection.AppConn, appID string, msg *HelloMessage) error {
 	if msg.AppID != "" && msg.AppID != appID {
 		return errors.New("hello.app_id does not match the authenticated app")
@@ -295,6 +299,9 @@ func (s *Server) handleHello(appConn *connection.AppConn, appID string, msg *Hel
 	version := msg.NegotiatedVersion()
 	appConn.SetProtocol(version)
 	appConn.SetCapabilities(msg.Capabilities)
+	if updater, ok := s.appHub.(appConnectionMetadataUpdater); ok {
+		updater.UpdateConnectionMetadata(appID, appConn.ConnectionID(), version, msg.Capabilities)
+	}
 	if version != contract.WSProtocolVersionV2 {
 		return nil
 	}

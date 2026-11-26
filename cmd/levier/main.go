@@ -351,15 +351,30 @@ func runServer(args []string) {
 	recoveryDone := make(chan struct{})
 	go func() {
 		defer close(recoveryDone)
-		timer := time.NewTimer(cfg.Workflow.RecoveryDelay.Std())
+		interval := cfg.Workflow.RecoveryDelay.Std()
+		if interval <= 0 {
+			interval = 10 * time.Second
+		}
+		timer := time.NewTimer(interval)
 		defer timer.Stop()
 		select {
 		case <-ctx.Done():
 			return
 		case <-timer.C:
 		}
-		if err := controller.RecoverActive(ctx); err != nil {
-			logger.Warn("recover active runs failed", "err", err)
+		// Continue reconciling after startup: a lost offline callback from a
+		// crashed Runtime Gateway must not strand an active Run until timeout.
+		ticker := time.NewTicker(interval)
+		defer ticker.Stop()
+		for {
+			if err := controller.RecoverActive(ctx); err != nil {
+				logger.Warn("recover active runs failed", "err", err)
+			}
+			select {
+			case <-ctx.Done():
+				return
+			case <-ticker.C:
+			}
 		}
 	}()
 

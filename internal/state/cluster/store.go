@@ -433,6 +433,41 @@ func (s *Store) HeartbeatAppConnection(ctx context.Context, connectionID, gatewa
 	return connection, nil
 }
 
+// UpdateAppConnectionMetadata records the negotiated App Bridge version and
+// capabilities after the WebSocket hello is processed.
+func (s *Store) UpdateAppConnectionMetadata(
+	ctx context.Context,
+	connectionID string,
+	protocolVersion int,
+	capabilities map[string]string,
+) error {
+	if err := s.ready(); err != nil {
+		return err
+	}
+	if connectionID == "" || protocolVersion <= 0 {
+		return fmt.Errorf("%w: connection_id and protocol_version are required", ErrInvalidRegistration)
+	}
+	encoded, err := marshalMap(capabilities)
+	if err != nil {
+		return err
+	}
+	tag, err := s.pool.Exec(ctx, `
+		UPDATE app_connections
+		SET protocol_version = $2,
+		    capabilities_json = $3,
+		    updated_at = now()
+		WHERE connection_id = $1
+		  AND status = 'online'
+	`, connectionID, protocolVersion, encoded)
+	if err != nil {
+		return fmt.Errorf("update app connection metadata: %w", err)
+	}
+	if tag.RowsAffected() == 0 {
+		return ErrLeaseLost
+	}
+	return nil
+}
+
 // MarkAppConnectionOffline releases an App connection lease.
 func (s *Store) MarkAppConnectionOffline(ctx context.Context, connectionID string, epoch int64) error {
 	if err := s.ready(); err != nil {

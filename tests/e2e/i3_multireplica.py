@@ -809,6 +809,13 @@ def scenario_baseline(config, credentials, app_log) -> str:
         raise MatrixError("baseline tool invocation was not persisted exactly once")
     wait_app_ws(app_log, "MESSAGE_COMPLETED")
     wait_app_completed(app_log)
+    app_id = str(read_credentials(credentials)["app_id"])
+    if sql_int(
+        "SELECT count(*) FROM app_connections "
+        f"WHERE app_id={sql_quote(app_id)} AND status='online' "
+        "AND protocol_version=2"
+    ) < 1:
+        raise MatrixError("App connection metadata did not record the v2 hello")
     if app_tool_count(app_log, "counter_add") < 1:
         raise MatrixError("baseline App did not execute counter_add")
     return f"run {run_id} completed, event and local tool observed"
@@ -933,6 +940,27 @@ def scenario_runtime_gateway_failure(config, credentials, app_log) -> str:
     if gateway != "runtime-gateway-b":
         raise MatrixError(f"daemon migrated to {gateway!r}, want runtime-gateway-b")
     return f"run {run_id} completed after daemon migrated to Runtime Gateway B"
+
+
+def scenario_active_run_recovery(config, credentials, app_log) -> str:
+    start_daemon(config, "rtgwB", delay="30s")
+    run_id = submit(config["controlB"]["url"], credentials)
+    wait_run(config["controlB"]["url"], credentials, run_id, {"running"}, 20)
+    # Drop both the daemon and its gateway. The offline callback cannot be
+    # delivered, so only lease expiry plus periodic active-run reconciliation
+    # can put this Run back on the queue.
+    stop("daemon", force=True)
+    stop("rtgwB", force=True)
+    wait_runtime_gone(20)
+    wait_run(config["controlB"]["url"], credentials, run_id, {"queued"}, 30)
+    start_role("rtgwB", "rtgwB", config)
+    wait_gateway("runtime-gateway-b")
+    start_daemon(config, "rtgwB", delay="200ms")
+    final = wait_terminal(config["controlB"]["url"], credentials, run_id, 60)
+    if final.get("status") != "completed":
+        raise MatrixError(f"run {run_id} after active recovery: {final}")
+    assert_run_clean(run_id)
+    return f"run {run_id} was recovered without a daemon offline callback"
 
 
 def scenario_app_gateway_failure(config, credentials, app_log, proxy: WSProxy) -> str:
@@ -1081,6 +1109,7 @@ def main() -> int:
             ("app_disconnect_pending", lambda: scenario_app_disconnect_pending(config, credentials, app_log)),
             ("worker_lease_expiry", lambda: scenario_worker_lease_expiry(config, credentials, app_log)),
             ("runtime_gateway_failure", lambda: scenario_runtime_gateway_failure(config, credentials, app_log)),
+            ("active_run_recovery", lambda: scenario_active_run_recovery(config, credentials, app_log)),
             ("app_gateway_failure", lambda: scenario_app_gateway_failure(config, credentials, app_log, proxy)),
             ("local_tool_idempotency", lambda: scenario_local_tool_idempotency(config, credentials, app_log)),
             ("v1_app_compat", lambda: scenario_v1_compat(config, credentials, app_log)),

@@ -97,6 +97,33 @@ func (h *TrackedHub) RegisterWithID(appID string, sink connection.EventSink, con
 	return conn
 }
 
+// UpdateConnectionMetadata mirrors the negotiated protocol and capabilities
+// after the App Bridge hello. Registration happens before hello so a rejected
+// token never creates a lease; metadata is therefore a follow-up update.
+func (h *TrackedHub) UpdateConnectionMetadata(
+	appID, connectionID string,
+	protocolVersion int,
+	capabilities []string,
+) {
+	values := make(map[string]string, len(capabilities))
+	for _, capability := range capabilities {
+		if capability != "" {
+			values[capability] = "true"
+		}
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+	if err := h.store.UpdateAppConnectionMetadata(ctx, connectionID, protocolVersion, values); err != nil &&
+		err != cluster.ErrLeaseLost {
+		h.logger.Warn("update app connection metadata failed",
+			"app_id", appID,
+			"connection_id", connectionID,
+			"protocol_version", protocolVersion,
+			"err", err,
+		)
+	}
+}
+
 // CloseConn removes one tracked App connection.
 func (h *TrackedHub) CloseConn(conn *connection.AppConn) {
 	if conn == nil {
