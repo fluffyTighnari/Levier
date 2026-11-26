@@ -34,9 +34,11 @@ func runAppGatewayOnly(
 	}
 	baseHub := connection.NewAppHub()
 	defer baseHub.Close()
+	store := cluster.New(pool)
+	startConnectionReaper(ctx, store, cfg.Workflow.ReapInterval.Std(), cfg.Workflow.ReapLimit, logger)
 	appHub := appgateway.NewTrackedHub(
 		baseHub,
-		cluster.New(pool),
+		store,
 		cfg.Gateway.InstanceID,
 		30*time.Second,
 		logger,

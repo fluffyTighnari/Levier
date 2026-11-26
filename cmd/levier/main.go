@@ -184,6 +184,8 @@ func runServer(args []string) {
 		return
 	}
 
+	startConnectionReaper(ctx, cluster.New(pool), cfg.Workflow.ReapInterval.Std(), cfg.Workflow.ReapLimit, logger)
+
 	var hub *connection.Hub
 	if roleSet.IsAll() {
 		hub = connection.New(connection.Config{

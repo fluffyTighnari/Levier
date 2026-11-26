@@ -40,6 +40,7 @@ func runRuntimeGatewayOnly(
 	defer hub.Close()
 
 	store := cluster.New(pool)
+	startConnectionReaper(ctx, store, cfg.Workflow.ReapInterval.Std(), cfg.Workflow.ReapLimit, logger)
 	runtimeLeaseTTL := cfg.Gateway.LeaseTTL.Std()
 	if runtimeLeaseTTL < 30*time.Second {
 		// Daemon heartbeats are independent of this process's presence lease.
