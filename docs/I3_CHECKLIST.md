@@ -352,7 +352,7 @@ request_id
 | I3.3 App Gateway | 已完成 | app-gateway 拆分、v2 handshake/订阅、WSToken 跨副本、连接迁移均通过矩阵 |
 | I3.4 Local Tool 路由 | 已完成 | 定向投递、重复 invocation 去重、App 断线 pending 失败、不跨连接重试均通过 |
 | I3.5 通知与恢复 | 已完成 | outbox/claim TTL 重放、expired lease reaper、跨 Control envelope 消费均通过 |
-| I3.6 多副本测试 | 已完成 | `tests/e2e/i3_multireplica.py` 通过 10 个场景，CI job `i3-multireplica` 通过 |
+| I3.6 多副本测试 | 已完成 | `tests/e2e/i3_multireplica.py` 通过 11 个场景，CI job `i3-multireplica` 通过 |
 | I3 退出评审 | 已完成 | 2026-11-26 通过本地与 GitHub Actions 多副本验收 |
 | R1 Runtime 接入层收敛 | 待开始（I3 后置） | 核心与 Agent 框架适配器分层；不阻塞 I3 退出 |
 
@@ -463,13 +463,14 @@ make i3-multireplica
 
 | 场景 | 验收点 |
 |---|---|
-| baseline | Run 完成；事件持久化；local tool 仅执行一次；v2 App 收到 WebSocket 事件 |
+| baseline | Run 完成；事件持久化；local tool 仅执行一次；v2 App 收到 WebSocket 事件；`app_connections` 记录 v2 协议与能力 |
 | notification_replay | 故意延迟通知 claim 后仍能重放，且不重复写入事件 |
 | cross_replica_cancel | 从 control A 提交，从 control B 取消，Runtime 收到取消且无活动任务 |
 | control_failure | control A 被杀后，control B 继续消费 envelope 并完成 Run |
 | app_disconnect_pending | App 断线后 pending local tool 直接失败，不自动换连接重试 |
 | worker_lease_expiry | 伪造过期 worker lease 后由 reaper 回到 PENDING 并完成 Run |
 | runtime_gateway_failure | 杀掉 runtime-gateway A 后 daemon 迁移到 B，Run 完成 |
+| active_run_recovery | daemon 与 gateway 同时消失、offline 通知丢失时，lease 过期后的周期性 active-run 对账仍能恢复 Run |
 | app_gateway_failure | 杀掉 app-gateway A 后 App 重连 B，执行租约迁移，local tool 与事件继续 |
 | local_tool_idempotency | 同一 invocation 投递两次只产生一次 tool_invocations 记录和一次 App 执行 |
 | v1_app_compat | 不发 hello 的 v1 App 可连接并收到 Run 事件 |
