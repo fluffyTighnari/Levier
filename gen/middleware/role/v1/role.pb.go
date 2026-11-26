@@ -1087,6 +1087,7 @@ type CallLocalToolRequest struct {
 	ConnectionId  string                 `protobuf:"bytes,2,opt,name=connection_id,json=connectionId,proto3" json:"connection_id,omitempty"`
 	Request       *v1.ToolCallRequest    `protobuf:"bytes,3,opt,name=request,proto3" json:"request,omitempty"`
 	TimeoutMs     int64                  `protobuf:"varint,4,opt,name=timeout_ms,json=timeoutMs,proto3" json:"timeout_ms,omitempty"`
+	RunId         string                 `protobuf:"bytes,5,opt,name=run_id,json=runId,proto3" json:"run_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1147,6 +1148,13 @@ func (x *CallLocalToolRequest) GetTimeoutMs() int64 {
 		return x.TimeoutMs
 	}
 	return 0
+}
+
+func (x *CallLocalToolRequest) GetRunId() string {
+	if x != nil {
+		return x.RunId
+	}
+	return ""
 }
 
 type CallLocalToolResponse struct {
@@ -1484,13 +1492,14 @@ const file_middleware_role_v1_role_proto_rawDesc = "" +
 	"\tDaemonRun\x12\x15\n" +
 	"\x06run_id\x18\x01 \x01(\tR\x05runId\x12\x1f\n" +
 	"\vlease_epoch\x18\x02 \x01(\x03R\n" +
-	"leaseEpoch\"\xb3\x01\n" +
+	"leaseEpoch\"\xca\x01\n" +
 	"\x14CallLocalToolRequest\x12\x15\n" +
 	"\x06app_id\x18\x01 \x01(\tR\x05appId\x12#\n" +
 	"\rconnection_id\x18\x02 \x01(\tR\fconnectionId\x12@\n" +
 	"\arequest\x18\x03 \x01(\v2&.middleware.runtime.v1.ToolCallRequestR\arequest\x12\x1d\n" +
 	"\n" +
-	"timeout_ms\x18\x04 \x01(\x03R\ttimeoutMs\"V\n" +
+	"timeout_ms\x18\x04 \x01(\x03R\ttimeoutMs\x12\x15\n" +
+	"\x06run_id\x18\x05 \x01(\tR\x05runId\"V\n" +
 	"\x15CallLocalToolResponse\x12=\n" +
 	"\x06result\x18\x01 \x01(\v2%.middleware.runtime.v1.ToolCallResultR\x06result\"u\n" +
 	"\x17CancelLocalToolsRequest\x12\x15\n" +

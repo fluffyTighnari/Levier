@@ -117,8 +117,9 @@ func runServer(args []string) {
 	}
 	if !roleSet.IsAll() {
 		switch {
-		case roleSet.Has(roles.AppGateway):
-			logger.Error("app-gateway role is not available yet", "roles", roleSet.List())
+		case roleSet.Has(roles.AppGateway) &&
+			(roleSet.Has(roles.Control) || roleSet.Has(roles.API) || roleSet.Has(roles.RuntimeGateway)):
+			logger.Error("app-gateway must run as its own deployment unit in this stage", "roles", roleSet.List())
 			os.Exit(1)
 		case roleSet.Has(roles.API) && !roleSet.Has(roles.Control):
 			logger.Error("api role requires control in the current deployment unit", "roles", roleSet.List())
@@ -126,8 +127,12 @@ func runServer(args []string) {
 		case roleSet.Has(roles.Control) && !roleSet.Has(roles.API):
 			logger.Error("control role requires api in the current deployment unit", "roles", roleSet.List())
 			os.Exit(1)
-		case !roleSet.Has(roles.Control) && !roleSet.Has(roles.RuntimeGateway):
-			logger.Error("partial roles must include control or runtime-gateway", "roles", roleSet.List())
+		case !roleSet.Has(roles.Control) && !roleSet.Has(roles.RuntimeGateway) && !roleSet.Has(roles.AppGateway):
+			logger.Error("partial roles must include control, runtime-gateway, or app-gateway", "roles", roleSet.List())
+			os.Exit(1)
+		}
+		if roleSet.Has(roles.AppGateway) && strings.TrimSpace(cfg.HTTP.WSTokenSecret) == "" {
+			logger.Error("app-gateway requires http.ws_token_secret shared with control/api", "roles", roleSet.List())
 			os.Exit(1)
 		}
 		if strings.TrimSpace(cfg.GRPC.InternalAddr) == "" || strings.TrimSpace(cfg.GRPC.InternalToken) == "" {
@@ -172,6 +177,10 @@ func runServer(args []string) {
 	if !roleSet.IsAll() && roleSet.Has(roles.RuntimeGateway) &&
 		!roleSet.Has(roles.Control) && !roleSet.Has(roles.API) {
 		runRuntimeGatewayOnly(ctx, cfg, pool, internalServer, logger)
+		return
+	}
+	if !roleSet.IsAll() && roleSet.Has(roles.AppGateway) {
+		runAppGatewayOnly(ctx, cfg, pool, internalServer, logger)
 		return
 	}
 
@@ -237,9 +246,22 @@ func runServer(args []string) {
 	}()
 	appHub := connection.NewAppHub()
 	defer appHub.Close()
+	var appPlane *controlremote.AppPlane
+	if hub == nil {
+		appPlane = controlremote.NewAppPlane(cluster.New(pool), cfg.GRPC.InternalToken, 3*time.Second, logger)
+		defer appPlane.Close()
+	}
+	var publisher control.EventPublisher = appHub
+	var localTools control.LocalToolCanceller = appHub
+	var localToolCaller gateway.LocalToolCaller = appHub
+	if appPlane != nil {
+		publisher = appPlane
+		localTools = appPlane
+		localToolCaller = appPlane
+	}
 	toolInvoker := gateway.NewInvoker(
 		registry,
-		appHub,
+		localToolCaller,
 		gateway.NewExecutorRegistry(map[string]gateway.GlobalExecutor{
 			"builtin:http":    executor.NewHTTP(),
 			"builtin:webhook": executor.NewWebhook(),
@@ -249,11 +271,11 @@ func runServer(args []string) {
 	)
 	controlCfg := control.Config{
 		Logger:         logger,
-		Publisher:      appHub,
+		Publisher:      publisher,
 		Tools:          toolInvoker,
 		Tasks:          queue,
 		EventBuffer:    cfg.Workflow.EventBuffer,
-		LocalTools:     appHub,
+		LocalTools:     localTools,
 		ModelProviders: registry,
 		Checkpoints:    runs,
 		Metrics:        metrics,
@@ -424,6 +446,7 @@ func runServer(args []string) {
 		WSTokenTTL:           cfg.HTTP.WSTokenTTL.Std(),
 		WSTokenSecret:        cfg.HTTP.WSTokenSecret,
 		PublicWSURL:          cfg.HTTP.PublicWSURL,
+		DisableWS:            appPlane != nil,
 		DefaultRunTimeoutMS:  selfdesc.DefaultRunTimeoutMS,
 		DefaultToolTimeoutMS: selfdesc.DefaultToolTimeoutMS,
 		Meta: selfdesc.New(selfdesc.Options{

@@ -163,6 +163,7 @@ message CallLocalToolRequest {
   string connection_id = 2;
   middleware.runtime.v1.ToolCallRequest request = 3;
   int64 timeout_ms = 4;
+  string run_id = 5;
 }
 
 message CallLocalToolResponse {

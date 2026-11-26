@@ -1,0 +1,73 @@
+// Levier - app-gateway role assembly.
+//
+// Copyright 2026 The Levier Authors.
+package main
+
+import (
+	"context"
+	"log/slog"
+	"net/http"
+
+	"github.com/jackc/pgx/v5/pgxpool"
+
+	"github.com/fluffyTighnari/levier/internal/appgateway"
+	"github.com/fluffyTighnari/levier/internal/config"
+	"github.com/fluffyTighnari/levier/internal/connection"
+	"github.com/fluffyTighnari/levier/internal/httpapi"
+	"github.com/fluffyTighnari/levier/internal/internalapi"
+	"github.com/fluffyTighnari/levier/internal/runstore"
+)
+
+// runAppGatewayOnly serves the App WebSocket role on its own listener.
+func runAppGatewayOnly(
+	ctx context.Context,
+	cfg config.Config,
+	pool *pgxpool.Pool,
+	internalServer *internalapi.Server,
+	logger *slog.Logger,
+) {
+	if internalServer == nil {
+		logger.Error("app-gateway role requires grpc.internal_addr and grpc.internal_token")
+		return
+	}
+	appHub := connection.NewAppHub()
+	defer appHub.Close()
+
+	appgateway.New(appHub).Register(internalServer.GRPC())
+	internalServer.Serve()
+
+	runs := runstore.New(pool)
+	api := httpapi.NewServer(runs, nil, httpapi.Config{
+		WSTokenTTL:    cfg.HTTP.WSTokenTTL.Std(),
+		WSTokenSecret: cfg.HTTP.WSTokenSecret,
+		PublicWSURL:   cfg.HTTP.PublicWSURL,
+		AppHub:        appHub,
+		Logger:        logger,
+	})
+
+	mux := http.NewServeMux()
+	mux.Handle(httpapi.APIPrefix+"/ws", api.WSHandler())
+	mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(`{"status":"ok"}`))
+	})
+	server := &http.Server{
+		Addr:         cfg.HTTP.Addr,
+		Handler:      mux,
+		ReadTimeout:  cfg.HTTP.ReadTimeout.Std(),
+		WriteTimeout: cfg.HTTP.WriteTimeout.Std(),
+	}
+	go func() {
+		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			logger.Error("app gateway http server stopped", "err", err)
+		}
+	}()
+	logger.Info("levier app-gateway ready",
+		"http_addr", cfg.HTTP.Addr,
+		"internal_grpc_addr", cfg.GRPC.InternalAddr,
+	)
+	<-ctx.Done()
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), cfg.HTTP.ShutdownTimeout.Std())
+	_ = server.Shutdown(shutdownCtx)
+	cancel()
+}

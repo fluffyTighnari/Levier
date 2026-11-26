@@ -137,6 +137,7 @@ type Config struct {
 	WSTokenTTL           time.Duration
 	WSTokenSecret        string
 	PublicWSURL          string
+	DisableWS            bool
 	AppHub               ports.AppConnections
 	Daemons              DaemonSource
 	ReadinessCheck       func(context.Context) error
@@ -219,6 +220,12 @@ func (s *Server) Handler() http.Handler {
 	return requestIDMiddleware(s.instrumentHandler(s.mux))
 }
 
+// WSHandler returns only the App WebSocket handler. The app-gateway role uses
+// this on its own listener without exposing the control-plane HTTP API.
+func (s *Server) WSHandler() http.Handler {
+	return s.websocketHandler(s.handleWS)
+}
+
 func (s *Server) wsURL() string {
 	if s != nil && strings.TrimSpace(s.cfg.PublicWSURL) != "" {
 		return s.cfg.PublicWSURL
@@ -265,7 +272,9 @@ func (s *Server) routes() {
 	s.mux.HandleFunc("POST /admin/apps/{app_id}/rotate-key", s.handleAdminRotateKey)
 	s.mux.HandleFunc("POST "+APIPrefix+"/apps", s.handleUpdateApp)
 	s.mux.HandleFunc("GET "+APIPrefix+"/apps/{app_id}", s.handleGetApp)
-	s.mux.Handle(APIPrefix+"/ws", s.websocketHandler(s.handleWS))
+	if !s.cfg.DisableWS {
+		s.mux.Handle(APIPrefix+"/ws", s.websocketHandler(s.handleWS))
+	}
 }
 
 func (s *Server) handleHealth(w http.ResponseWriter, _ *http.Request) {
