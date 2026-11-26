@@ -23,6 +23,8 @@ I3 不做：
 - 完整计费；
 - exactly-once。
 
+> R1（Runtime 接入层收敛）是 I3 后置工作流，不阻塞 I3 退出，详见第 11 节。默认在 I3.6 退出后启动，I4 sandbox 设计/落地前必须完成。
+
 ## 2. 已确认决策
 
 | 决策 | 结论 |
@@ -312,6 +314,8 @@ request_id
 4. **v1/v2 兼容**：不能假设所有 App 同日升级。
 5. **控制面路由延迟**：避免每次 dispatch 全表扫描；registry 查询要可控。
 6. **过早引入 Redis/NATS**：只有数据库通知成为真实瓶颈才评估。
+7. **R1 不能提前混入 I3**：先完成 I3.1–I3.6 和退出评审；R1 只做接入层收敛，不扩大多副本范围。
+8. **框架适配器有版本耦合**：LangGraph checkpointer 内部字段等必须隔离在适配器包，不能进入核心。
 
 ## 10. 当前进展
 
@@ -325,6 +329,8 @@ request_id
 | Notification Outbox | 已完成 | 持久化通知、待发送查询、发布/重试标记 |
 | WSToken 无状态化 | 已完成 | 共享 secret HMAC token，可跨副本验证 |
 | App Bridge v2 契约 | 已完成 | 协议版本、幂等、进度、取消的最小契约 |
+| App Bridge v2 实现 | 已完成 | v2 hello/ack、resume cursor、progress、idempotent result、Python SDK |
+| 内部角色 RPC | 已完成 | `RuntimeGatewayService`、内部 listener/token、同步 TaskAck 骨架 |
 | Gateway presence 接线 | 已完成 | 启动注册 gateway instance，心跳续租，退出标记 offline |
 | RoleSet 配置 | 已完成 | `gateway.roles`，支持 all 展开和未知角色校验 |
 | RuntimeTransport port | 已完成 | Control 通过 `ports.RuntimeTransport` 发送/释放 Runtime |
@@ -335,11 +341,107 @@ request_id
 | Notification Claim | 已完成 | dedupe key、claim owner/lease、发布/重试 |
 | Tool invocation owner 字段 | 已完成 | owner gateway/connection、lease epoch、deadline schema |
 | Gateway internal address | 已完成 | `gateway_instances.internal_address` 字段 |
-| I3.0.1 契约补充 | 进行中 | 内部 RPC proto、App Bridge v2 实现、地址/配置接线 |
+| I3.0.1 契约补充 | 已完成 | 内部 RPC proto、App Bridge v2、地址/配置接线 |
 | I3.1 角色拆分 | 进行中 | presence、RoleSet、ports、capacity 已落地；下一步装配服务 |
-| I3.2 Runtime Gateway | 待开始 | daemon 跨副本路由 |
+| I3.2 Runtime Gateway | 进行中 | 内部服务骨架已完成；daemon 跨副本路由待开始 |
 | I3.3 App Gateway | 待开始 | App 连接与事件 fanout |
 | I3.4 Local Tool 路由 | 待开始 | 定向投递与幂等 |
 | I3.5 通知与恢复 | 待开始 | 补偿与 reaper |
 | I3.6 多副本测试 | 待开始 | 故障矩阵 |
 | I3 退出评审 | 待开始 | 多副本验收 |
+| R1 Runtime 接入层收敛 | 待开始（I3 后置） | 核心与 Agent 框架适配器分层；不阻塞 I3 退出 |
+
+## 11. R1：Runtime 接入层收敛（I3 后置）
+
+> 状态：待开始
+>
+> 触发：I3.1–I3.6 退出评审通过；若 I4 设计提前启动，至少先完成边界评审。
+>
+> 不阻塞 I3 退出，但必须在 I4 sandbox 设计和落地前完成。
+
+### 11.1 目标
+
+- 核心 SDK 只提供通用 Runtime 接入：协议、生命周期、`RunContext` 基础操作、事件、取消、checkpoint 和工具桥。
+- LangGraph、CrewAI、React 等 Agent 框架作为可选适配器或示例，不进入基础安装和默认 runtime 镜像。
+- 框架内部观测、错误、重试、取消与 Levier Run 语义有明确 ownership，避免双重处理。
+- Sandbox 留在 I4，并且与 Agent 框架解耦。
+
+### 11.2 当前事实
+
+- `levier-runtime` 基础包仍包含 `llm`、`tools`、`mcp`、`react` helper；`Toolbox` 在顶层 import 链中加载 MCP client。
+- `ctx.chat`、`ctx.toolbox`、`ctx.invoke_all` 是便利层，不应成为框架中立核心。
+- `langgraph_runtime` 已经是独立包，使用官方 `langgraph`，但 checkpoint adapter 依赖 `InMemorySaver` 内部字段。
+- `react_runtime` + `agent_core` 仍是默认 runtime 镜像和主要 E2E 路径。
+- CrewAI 没有官方适配器。
+- `sandbox` 仍只是类型占位，没有 Launcher/Job/Workspace。
+
+### 11.3 改造项
+
+1. 基础 `levier-runtime` 不在顶层导入 MCP/React/LLM/Toolbox helper。
+2. 增加可选 extras 或独立包：`llm`、`mcp`、`react`、`langgraph`、`crewai-example`。
+3. 基础 runtime 镜像只含核心 SDK 和 Echo；React 使用独立 demo 镜像。
+4. `ctx.call_tool`、`ctx.emit`、`ctx.checkpoint`、`ctx.wait` 保留为核心；`ctx.chat`、`ctx.invoke_all`、`ctx.toolbox` 降级为 optional helper。
+5. LangGraph 保留可选官方适配器，补齐工具桥、错误/取消/事件投影契约和版本契约测试。
+6. CrewAI 先提供 `run(ctx)` 示例，明确不保证 checkpoint/resume。
+7. 增加框架 adapter 契约：输入映射、事件投影、工具桥、错误归一化、checkpoint codec、取消传播。
+8. 默认 Compose 不再把 React 作为唯一主路径；文档把自定义 runtime 作为正常接入方式。
+
+### 11.4 能力分层
+
+```text
+L0  wire 契约
+    proto + 生成代码
+
+L1  levier-runtime core
+    Runtime / RunContext / channel / manager / events / cancellation /
+    call_tool / checkpoint
+
+L2  optional adapters
+    llm / mcp / react / langgraph / crewai-example
+
+L3  examples and images
+    echo / react-demo / user runtime image
+
+L4  sandbox
+    I4 Launcher / Workspace / Job，与 Agent 框架无关
+```
+
+### 11.5 职责边界
+
+| 层 | 责任 |
+|---|---|
+| Levier 核心 | Run 生命周期、lease、调度、事件存储、checkpoint 存储、App/global tool bridge、取消、Run 级重试 |
+| 框架适配器 | TaskAssign→框架输入、框架事件→Levier 事件投影、工具桥、错误归一化、checkpoint codec、取消传播 |
+| Agent 框架 | 自身循环、模型、图/任务、内部工具、内部 trace、受限内部重试 |
+
+### 11.6 必须固定的语义
+
+- **单一事件源**：框架原生 trace 不直接写入 Run Event Store；适配器只做白名单投影。
+- **单一重试源**：Run 级重试归 Levier；框架内部重试必须受限，工具调用保持 `invocation_id` 幂等。
+- **单一取消源**：Levier 取消 Run；适配器传播取消，框架不支持时明确标注 best-effort。
+- **checkpoint 不透明**：Levier 只存 bytes；适配器拥有格式、版本和 session/run 校验。
+- **timeout 层级**：Levier run/tool timeout 为最终权威；框架 timeout 是内层预算。
+- **工具事件不重复**：经过 `ctx.call_tool` 的工具由 Levier 发事件；框架内部工具如需可见，由适配器显式映射，不重复发同一事件。
+
+### 11.7 退出条件
+
+- 基础安装和基础镜像不包含 Agent 框架依赖；`import levier_runtime` 不加载 MCP/React/LLM helper。
+- Echo 和手写 `run(ctx)` 通过 conforming runtime 测试。
+- 官方 LangGraph 可选适配器可以运行并完成 checkpoint/resume。
+- CrewAI 示例可以运行，并明确不保证 resume。
+- 默认部署不再把 React 当作唯一主路径。
+- Runtime wire 协议不变，v1/v2 兼容不变。
+
+### 11.8 不做
+
+- 不抽象统一所有 Agent 框架状态。
+- 不因 R1 修改 Runtime wire 协议。
+- 不在 R1 做 sandbox（属于 I4）。
+- 不承诺 CrewAI 完整 checkpoint/resume。
+
+### 11.9 与现有实现的关系
+
+- **LangGraph**：保留为可选官方适配器，因为 interrupt/checkpoint/resume 有真实集成价值；但必须隔离版本和内部字段依赖。
+- **React / agent_core**：移出默认镜像，保留示例和兼容 shim。
+- **CrewAI**：先示例，不做深度内置；其同步/线程模型和缺少标准 checkpoint 不适合作为核心依赖。
+- **Sandbox**：I4 独立基础设施，不属于 R1，也不属于 Agent 框架。

@@ -22,6 +22,15 @@ MAP.md          仓库地图
 | `CONFIG.md` | 配置盘点、环境变量矩阵与外部化契约 |
 | `CODE_STYLE.md` | 代码组织与评审约定 |
 
+## 计划与执行
+
+| 文档 | 内容 |
+|---|---|
+| `INDUSTRIAL_ROADMAP.md` | **权威版本路线**：I1–I5、R1 后置工作流、决策和退出条件 |
+| `I1_CHECKLIST.md` | 单机稳定版执行清单 |
+| `I2_CHECKLIST.md` | Runtime 扩展版执行清单 |
+| `I3_CHECKLIST.md` | 多副本控制面执行清单；R1 执行项见第 11 节 |
+
 ## 接入与运行
 
 | 文档 | 内容 |
@@ -55,6 +64,7 @@ MAP.md          仓库地图
 
 ```text
 SCOPE → MAP → 你的任务对应文档
+看版本路线    → INDUSTRIAL_ROADMAP.md + 对应阶段 CHECKLIST
 第一次接入    → QUICKSTART.md
 接 Python App → examples/counter_agent + sdk/python/README.md + APP_ADAPTER_CONTRACT.md
 底层 App 协议 → APP_ONBOARDING.md
