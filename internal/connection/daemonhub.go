@@ -102,17 +102,18 @@ type Hub struct {
 
 	cfg Config
 
-	mu         sync.RWMutex
-	daemons    map[string]*daemonConn
-	ackMu      sync.Mutex
-	acks       map[string]chan *runtimev1.TaskAck
-	onEnvelope func(daemonID string, env *runtimev1.Envelope)
-	onHello    func(info DaemonInfo)
-	onOffline  func(daemonID string)
-	closed     bool
-	wg         sync.WaitGroup
-	stopCh     chan struct{}
-	stopOnce   sync.Once
+	mu          sync.RWMutex
+	daemons     map[string]*daemonConn
+	ackMu       sync.Mutex
+	acks        map[string]chan *runtimev1.TaskAck
+	onEnvelope  func(daemonID string, env *runtimev1.Envelope)
+	onHello     func(info DaemonInfo)
+	onHeartbeat func(daemonID string, runningCount int32)
+	onOffline   func(daemonID string)
+	closed      bool
+	wg          sync.WaitGroup
+	stopCh      chan struct{}
+	stopOnce    sync.Once
 }
 
 type daemonConn struct {
@@ -155,13 +156,14 @@ func New(cfg Config) *Hub {
 		cfg.Now = func() time.Time { return time.Now().UTC() }
 	}
 	hub := &Hub{
-		cfg:        cfg,
-		daemons:    make(map[string]*daemonConn),
-		acks:       make(map[string]chan *runtimev1.TaskAck),
-		onEnvelope: cfg.OnEnvelope,
-		onHello:    cfg.OnHello,
-		onOffline:  cfg.OnOffline,
-		stopCh:     make(chan struct{}),
+		cfg:         cfg,
+		daemons:     make(map[string]*daemonConn),
+		acks:        make(map[string]chan *runtimev1.TaskAck),
+		onEnvelope:  cfg.OnEnvelope,
+		onHello:     cfg.OnHello,
+		onHeartbeat: cfg.OnHeartbeat,
+		onOffline:   cfg.OnOffline,
+		stopCh:      make(chan struct{}),
 	}
 	go hub.reaper()
 	return hub
@@ -185,6 +187,13 @@ func (h *Hub) SetOnHello(handler func(info DaemonInfo)) {
 func (h *Hub) SetOnOffline(handler func(daemonID string)) {
 	h.mu.Lock()
 	h.onOffline = handler
+	h.mu.Unlock()
+}
+
+// SetOnHeartbeat replaces the heartbeat callback.
+func (h *Hub) SetOnHeartbeat(handler func(daemonID string, runningCount int32)) {
+	h.mu.Lock()
+	h.onHeartbeat = handler
 	h.mu.Unlock()
 }
 

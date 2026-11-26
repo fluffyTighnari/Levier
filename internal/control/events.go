@@ -1,4 +1,4 @@
-// Levier — control
+// Levier â€” control
 //
 // Split from control.go (P8R.3).
 // Copyright 2026 The Levier Authors.
@@ -336,7 +336,7 @@ func (c *Control) handleEvent(env *runtimev1.Envelope) {
 		return
 	}
 	if status == runstore.StatusWaiting {
-		c.transport.Release(run.AssignedDaemonID)
+		c.transport.Release(run.AssignedDaemonID, run.RunID)
 		c.cancelTasks(ctx, env.GetRunId(), "run waiting")
 		c.log.Info("control run waiting",
 			observe.FieldRunID, run.RunID,
@@ -361,7 +361,7 @@ func (c *Control) handleEvent(env *runtimev1.Envelope) {
 				"status": status, "runtime": run.Runtime, "tenant": run.TenantID,
 			})
 		}
-		c.transport.Release(run.AssignedDaemonID)
+		c.transport.Release(run.AssignedDaemonID, run.RunID)
 		if status == runstore.StatusCancelled {
 			c.cancelLocalTools(run.AppID, env.GetRunId(), string(errs.CodeRunCancelled), "run cancelled")
 		}

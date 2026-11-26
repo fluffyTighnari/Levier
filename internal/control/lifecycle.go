@@ -1,4 +1,4 @@
-// Levier — control
+// Levier â€” control
 //
 // Split from control.go (P8R.3).
 // Copyright 2026 The Levier Authors.
@@ -294,7 +294,7 @@ func (c *Control) requeueRun(ctx context.Context, run runstore.Run, reason strin
 		return
 	}
 	c.appendMWStatus(ctx, requeued, runstore.StatusQueued, reason)
-	c.transport.Release(run.AssignedDaemonID)
+	c.transport.Release(run.AssignedDaemonID, run.RunID)
 	c.cancelLocalTools(run.AppID, run.RunID, string(errs.CodeDaemonLost), reason)
 	if c.cfg.Tasks != nil {
 		if _, err := c.cfg.Tasks.Enqueue(ctx, workflow.NewTask(
@@ -341,7 +341,7 @@ func (c *Control) CancelRun(ctx context.Context, runID, reason string) (runstore
 	}
 	c.sendCancel(ctx, cancelled, reason)
 	c.appendMWStatus(ctx, cancelled, runstore.StatusCancelled, reason)
-	c.transport.Release(run.AssignedDaemonID)
+	c.transport.Release(run.AssignedDaemonID, run.RunID)
 	c.cancelTasks(ctx, runID, reason)
 	c.cancelLocalTools(run.AppID, runID, string(errs.CodeRunCancelled), reason)
 	c.publishCompleted(run.AppID, runID, runstore.StatusCancelled, run.Attempt)
@@ -382,7 +382,7 @@ func (c *Control) handleTimeout(ctx context.Context, runID string) error {
 	}
 	c.sendCancel(ctx, timedOut, "timeout")
 	c.appendMWStatus(ctx, timedOut, runstore.StatusTimeout, "timeout")
-	c.transport.Release(run.AssignedDaemonID)
+	c.transport.Release(run.AssignedDaemonID, run.RunID)
 	c.cancelTasks(ctx, runID, "timeout")
 	c.cancelLocalTools(run.AppID, runID, string(errs.CodeRunTimeout), "run timed out")
 	c.publishCompleted(run.AppID, runID, runstore.StatusTimeout, timedOut.Attempt)

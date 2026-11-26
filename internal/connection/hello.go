@@ -83,9 +83,12 @@ func (h *Hub) readLoop(conn *daemonConn) error {
 		case *runtimev1.Envelope_Heartbeat:
 			count := payload.Heartbeat.GetRunningCount()
 			h.updateHeartbeat(conn, count)
+			h.mu.RLock()
+			heartbeat := h.onHeartbeat
+			h.mu.RUnlock()
 			h.safeCall(func() {
-				if h.cfg.OnHeartbeat != nil {
-					h.cfg.OnHeartbeat(conn.info.DaemonID, count)
+				if heartbeat != nil {
+					heartbeat(conn.info.DaemonID, count)
 				}
 			})
 		default:

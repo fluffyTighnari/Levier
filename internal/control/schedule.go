@@ -15,6 +15,7 @@ import (
 	"google.golang.org/protobuf/types/known/structpb"
 
 	runtimev1 "github.com/fluffyTighnari/levier/gen/middleware/runtime/v1"
+	"github.com/fluffyTighnari/levier/internal/connection"
 	"github.com/fluffyTighnari/levier/internal/observe"
 	"github.com/fluffyTighnari/levier/internal/protocol"
 	"github.com/fluffyTighnari/levier/internal/register"
@@ -112,7 +113,7 @@ func (c *Control) Handle(ctx context.Context, task workflow.Task, _ workflow.Lea
 		if !ok {
 			break
 		}
-		if !c.placement.Reserve(daemonID) {
+		if !c.placement.Reserve(daemonID, run.RunID, capacityLeaseTTL(run)) {
 			excluded[daemonID] = struct{}{}
 			continue
 		}
@@ -127,7 +128,7 @@ func (c *Control) Handle(ctx context.Context, task workflow.Task, _ workflow.Lea
 			DaemonID:           daemonID,
 		})
 		if err != nil {
-			c.transport.Release(daemonID)
+			c.transport.Release(daemonID, run.RunID)
 			if errors.Is(err, runstore.ErrRunNotAssignable) {
 				return nil
 			}
@@ -155,9 +156,39 @@ func (c *Control) Handle(ctx context.Context, task workflow.Task, _ workflow.Lea
 
 		envelope, err := protocol.NewRun(run.RunID, int32(attempt), leaseEpoch, assign)
 		if err != nil {
-			c.transport.Release(daemonID)
+			c.transport.Release(daemonID, run.RunID)
 			return workflow.Permanent(fmt.Errorf("build task assign: %w", err))
 		}
+		if c.dispatcher != nil {
+			ack, dispatchErr := c.dispatcher.Dispatch(ctx, daemonID, envelope, c.cfg.AckTimeout)
+			if dispatchErr != nil {
+				c.transport.Release(daemonID, run.RunID)
+				if errors.Is(dispatchErr, connection.ErrAckTimeout) {
+					lastErr = errAckTimeout
+					if c.cfg.Scheduler == nil {
+						return errAckTimeout
+					}
+					excluded[daemonID] = struct{}{}
+					attempt++
+					leaseEpoch++
+					continue
+				}
+				return fmt.Errorf("dispatch task assign: %w", dispatchErr)
+			}
+			if ack.GetAccepted() {
+				return nil
+			}
+			c.transport.Release(daemonID, run.RunID)
+			excluded[daemonID] = struct{}{}
+			lastErr = fmt.Errorf("daemon %q rejected task: %s", daemonID, ack.GetReason())
+			if c.cfg.Scheduler == nil {
+				return lastErr
+			}
+			attempt++
+			leaseEpoch++
+			continue
+		}
+
 		ackCh := make(chan *runtimev1.TaskAck, 1)
 		c.pendingMu.Lock()
 		c.pending[envelope.GetMsgId()] = ackCh
@@ -165,7 +196,7 @@ func (c *Control) Handle(ctx context.Context, task workflow.Task, _ workflow.Lea
 
 		if err := c.transport.Send(daemonID, envelope); err != nil {
 			c.removePending(envelope.GetMsgId())
-			c.transport.Release(daemonID)
+			c.transport.Release(daemonID, run.RunID)
 			return fmt.Errorf("send task assign: %w", err)
 		}
 
@@ -174,11 +205,11 @@ func (c *Control) Handle(ctx context.Context, task workflow.Task, _ workflow.Lea
 		case <-ctx.Done():
 			timer.Stop()
 			c.removePending(envelope.GetMsgId())
-			c.transport.Release(daemonID)
+			c.transport.Release(daemonID, run.RunID)
 			return ctx.Err()
 		case <-timer.C:
 			c.removePending(envelope.GetMsgId())
-			c.transport.Release(daemonID)
+			c.transport.Release(daemonID, run.RunID)
 			lastErr = errAckTimeout
 			if c.cfg.Scheduler == nil {
 				return errAckTimeout
@@ -193,7 +224,7 @@ func (c *Control) Handle(ctx context.Context, task workflow.Task, _ workflow.Lea
 			if ack.GetAccepted() {
 				return nil
 			}
-			c.transport.Release(daemonID)
+			c.transport.Release(daemonID, run.RunID)
 			excluded[daemonID] = struct{}{}
 			lastErr = fmt.Errorf("daemon %q rejected task: %s", daemonID, ack.GetReason())
 			if c.cfg.Scheduler == nil {
@@ -217,6 +248,16 @@ func (c *Control) removePending(msgID string) {
 	c.pendingMu.Lock()
 	delete(c.pending, msgID)
 	c.pendingMu.Unlock()
+}
+
+// capacityLeaseTTL keeps the DB reservation alive for the run deadline plus a
+// small teardown grace period. A missing run timeout falls back to the same
+// conservative hour used by the local workflow lease.
+func capacityLeaseTTL(run runstore.Run) time.Duration {
+	if run.RunTimeoutMS > 0 {
+		return time.Duration(run.RunTimeoutMS)*time.Millisecond + time.Minute
+	}
+	return time.Hour
 }
 
 func buildTaskAssign(run runstore.Run, attempt int) (*runtimev1.TaskAssign, error) {

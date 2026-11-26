@@ -334,9 +334,10 @@ var RuntimeGatewayService_ServiceDesc = grpc.ServiceDesc{
 }
 
 const (
-	ControlService_DeliverEnvelope_FullMethodName = "/middleware.role.v1.ControlService/DeliverEnvelope"
-	ControlService_CancelRun_FullMethodName       = "/middleware.role.v1.ControlService/CancelRun"
-	ControlService_ResumeRun_FullMethodName       = "/middleware.role.v1.ControlService/ResumeRun"
+	ControlService_DeliverEnvelope_FullMethodName   = "/middleware.role.v1.ControlService/DeliverEnvelope"
+	ControlService_CancelRun_FullMethodName         = "/middleware.role.v1.ControlService/CancelRun"
+	ControlService_ResumeRun_FullMethodName         = "/middleware.role.v1.ControlService/ResumeRun"
+	ControlService_UpdateDaemonState_FullMethodName = "/middleware.role.v1.ControlService/UpdateDaemonState"
 )
 
 // ControlServiceClient is the client API for ControlService service.
@@ -351,6 +352,8 @@ type ControlServiceClient interface {
 	CancelRun(ctx context.Context, in *CancelRunRequest, opts ...grpc.CallOption) (*CancelRunResponse, error)
 	// ResumeRun resumes one waiting Run with an optional external value.
 	ResumeRun(ctx context.Context, in *ResumeRunRequest, opts ...grpc.CallOption) (*ResumeRunResponse, error)
+	// UpdateDaemonState mirrors Runtime Gateway lifecycle changes into Control.
+	UpdateDaemonState(ctx context.Context, in *DaemonStateRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 }
 
 type controlServiceClient struct {
@@ -391,6 +394,16 @@ func (c *controlServiceClient) ResumeRun(ctx context.Context, in *ResumeRunReque
 	return out, nil
 }
 
+func (c *controlServiceClient) UpdateDaemonState(ctx context.Context, in *DaemonStateRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(emptypb.Empty)
+	err := c.cc.Invoke(ctx, ControlService_UpdateDaemonState_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // ControlServiceServer is the server API for ControlService service.
 // All implementations must embed UnimplementedControlServiceServer
 // for forward compatibility.
@@ -403,6 +416,8 @@ type ControlServiceServer interface {
 	CancelRun(context.Context, *CancelRunRequest) (*CancelRunResponse, error)
 	// ResumeRun resumes one waiting Run with an optional external value.
 	ResumeRun(context.Context, *ResumeRunRequest) (*ResumeRunResponse, error)
+	// UpdateDaemonState mirrors Runtime Gateway lifecycle changes into Control.
+	UpdateDaemonState(context.Context, *DaemonStateRequest) (*emptypb.Empty, error)
 	mustEmbedUnimplementedControlServiceServer()
 }
 
@@ -421,6 +436,9 @@ func (UnimplementedControlServiceServer) CancelRun(context.Context, *CancelRunRe
 }
 func (UnimplementedControlServiceServer) ResumeRun(context.Context, *ResumeRunRequest) (*ResumeRunResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ResumeRun not implemented")
+}
+func (UnimplementedControlServiceServer) UpdateDaemonState(context.Context, *DaemonStateRequest) (*emptypb.Empty, error) {
+	return nil, status.Error(codes.Unimplemented, "method UpdateDaemonState not implemented")
 }
 func (UnimplementedControlServiceServer) mustEmbedUnimplementedControlServiceServer() {}
 func (UnimplementedControlServiceServer) testEmbeddedByValue()                        {}
@@ -497,6 +515,24 @@ func _ControlService_ResumeRun_Handler(srv interface{}, ctx context.Context, dec
 	return interceptor(ctx, in, info, handler)
 }
 
+func _ControlService_UpdateDaemonState_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DaemonStateRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ControlServiceServer).UpdateDaemonState(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ControlService_UpdateDaemonState_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ControlServiceServer).UpdateDaemonState(ctx, req.(*DaemonStateRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // ControlService_ServiceDesc is the grpc.ServiceDesc for ControlService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -515,6 +551,10 @@ var ControlService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ResumeRun",
 			Handler:    _ControlService_ResumeRun_Handler,
+		},
+		{
+			MethodName: "UpdateDaemonState",
+			Handler:    _ControlService_UpdateDaemonState_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

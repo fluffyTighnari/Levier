@@ -96,6 +96,8 @@ service ControlService {
   rpc CancelRun(CancelRunRequest) returns (CancelRunResponse);
   // ResumeRun resumes one waiting Run with an optional external value.
   rpc ResumeRun(ResumeRunRequest) returns (ResumeRunResponse);
+  // UpdateDaemonState mirrors Runtime Gateway lifecycle changes into Control.
+  rpc UpdateDaemonState(DaemonStateRequest) returns (google.protobuf.Empty);
 }
 
 message DeliverEnvelopeRequest {
@@ -123,6 +125,25 @@ message ResumeRunResponse {
   string run_id = 1;
   string session_id = 2;
   string status = 3;
+}
+
+message DaemonStateRequest {
+  string gateway_id = 1;
+  string daemon_id = 2;
+  string status = 3;
+  int64 connection_epoch = 4;
+  string runtime_name = 5;
+  string runtime_type = 6;
+  int32 max_concurrent_runs = 7;
+  repeated DaemonRun running_runs = 8;
+  map<string, string> labels = 9;
+  map<string, string> capabilities = 10;
+  int64 connected_at_ms = 11;
+}
+
+message DaemonRun {
+  string run_id = 1;
+  int64 lease_epoch = 2;
 }
 
 // AppGatewayService owns App WebSocket connections and local tool transport.

@@ -29,6 +29,8 @@ import (
 	"github.com/fluffyTighnari/levier/internal/config"
 	"github.com/fluffyTighnari/levier/internal/connection"
 	"github.com/fluffyTighnari/levier/internal/control"
+	"github.com/fluffyTighnari/levier/internal/controlremote"
+	"github.com/fluffyTighnari/levier/internal/controlservice"
 	"github.com/fluffyTighnari/levier/internal/db"
 	"github.com/fluffyTighnari/levier/internal/gateway"
 	"github.com/fluffyTighnari/levier/internal/gateway/executor"
@@ -114,15 +116,28 @@ func runServer(args []string) {
 		os.Exit(1)
 	}
 	if !roleSet.IsAll() {
-		logger.Error("partial gateway roles require multi-role service composition",
-			"roles", roleSet.List(),
-			"fix", "use gateway.roles=[\"all\"] until the split gateway services land",
-		)
-		os.Exit(1)
+		switch {
+		case roleSet.Has(roles.AppGateway):
+			logger.Error("app-gateway role is not available yet", "roles", roleSet.List())
+			os.Exit(1)
+		case roleSet.Has(roles.API) && !roleSet.Has(roles.Control):
+			logger.Error("api role requires control in the current deployment unit", "roles", roleSet.List())
+			os.Exit(1)
+		case roleSet.Has(roles.Control) && !roleSet.Has(roles.API):
+			logger.Error("control role requires api in the current deployment unit", "roles", roleSet.List())
+			os.Exit(1)
+		case !roleSet.Has(roles.Control) && !roleSet.Has(roles.RuntimeGateway):
+			logger.Error("partial roles must include control or runtime-gateway", "roles", roleSet.List())
+			os.Exit(1)
+		}
+		if strings.TrimSpace(cfg.GRPC.InternalAddr) == "" || strings.TrimSpace(cfg.GRPC.InternalToken) == "" {
+			logger.Error("partial roles require grpc.internal_addr and grpc.internal_token", "roles", roleSet.List())
+			os.Exit(1)
+		}
 	}
 	var internalServer *internalapi.Server
 	if strings.TrimSpace(cfg.GRPC.InternalAddr) != "" {
-		internalServer, err = internalapi.Start(ctx, internalapi.ServerOptions{
+		internalServer, err = internalapi.New(internalapi.ServerOptions{
 			Addr:            cfg.GRPC.InternalAddr,
 			Token:           cfg.GRPC.InternalToken,
 			MaxRecvMsgBytes: cfg.GRPC.MaxRecvMsgBytes,
@@ -154,12 +169,21 @@ func runServer(args []string) {
 		}
 	}()
 
-	hub := connection.New(connection.Config{
-		Authenticate: daemonAuthenticator(cfg.GRPC.DaemonTokens),
-	})
-	defer hub.Close()
-	if internalServer != nil {
-		runtimegateway.New(hub, 6*time.Second).Register(internalServer.GRPC())
+	if !roleSet.IsAll() && roleSet.Has(roles.RuntimeGateway) &&
+		!roleSet.Has(roles.Control) && !roleSet.Has(roles.API) {
+		runRuntimeGatewayOnly(ctx, cfg, pool, internalServer, logger)
+		return
+	}
+
+	var hub *connection.Hub
+	if roleSet.IsAll() {
+		hub = connection.New(connection.Config{
+			Authenticate: daemonAuthenticator(cfg.GRPC.DaemonTokens),
+		})
+		defer hub.Close()
+		if internalServer != nil {
+			runtimegateway.New(hub, 6*time.Second).Register(internalServer.GRPC())
+		}
 	}
 
 	metrics := observe.NewRegistry()
@@ -223,33 +247,55 @@ func runServer(args []string) {
 		gateway.WithInvocationStore(gateway.NewPostgresInvocationStore(pool)),
 		gateway.WithMetrics(metrics),
 	)
-	controller := control.New(runs, hub, control.Config{
+	controlCfg := control.Config{
 		Logger:         logger,
 		Publisher:      appHub,
-		Scheduler:      control.NewHubScheduler(hub),
 		Tools:          toolInvoker,
 		Tasks:          queue,
 		EventBuffer:    cfg.Workflow.EventBuffer,
 		LocalTools:     appHub,
 		ModelProviders: registry,
 		Checkpoints:    runs,
-		DaemonAvailable: func(daemonID string) bool {
+		Metrics:        metrics,
+	}
+	var controller *control.Control
+	var remotePlane *controlremote.Plane
+	if hub != nil {
+		controlCfg.Scheduler = control.NewHubScheduler(hub)
+		controlCfg.DaemonAvailable = func(daemonID string) bool {
 			_, ok := hub.Get(daemonID)
 			return ok
-		},
-		Metrics: metrics,
-	}, registry)
-	hub.SetOnEnvelope(func(daemonID string, env *runtimev1.Envelope) {
-		if env.GetToolCallRequest() != nil {
-			controller.DispatchToolCall(daemonID, env)
-			return
 		}
-		controller.HandleEnvelope(daemonID, env)
-	})
-	hub.SetOnHello(controller.ReconcileDaemon)
-	hub.SetOnOffline(controller.HandleDaemonOffline)
+		controller = control.New(runs, hub, controlCfg, registry)
+		hub.SetOnEnvelope(func(daemonID string, env *runtimev1.Envelope) {
+			if env.GetToolCallRequest() != nil {
+				controller.DispatchToolCall(daemonID, env)
+				return
+			}
+			controller.HandleEnvelope(daemonID, env)
+		})
+		hub.SetOnHello(controller.ReconcileDaemon)
+		hub.SetOnOffline(controller.HandleDaemonOffline)
+	} else {
+		remotePlane = controlremote.New(controlremote.Options{
+			Store:       cluster.New(pool),
+			Token:       cfg.GRPC.InternalToken,
+			DialTimeout: 3 * time.Second,
+			Logger:      logger,
+		})
+		defer remotePlane.Close()
+		controlCfg.Scheduler = remotePlane
+		controlCfg.DaemonAvailable = remotePlane.DaemonAvailable
+		controller = control.NewWithPorts(runs, remotePlane, remotePlane, controlCfg, registry)
+	}
+	if internalServer != nil {
+		controlservice.New(controller).Register(internalServer.GRPC())
+	}
 	controller.Start(ctx)
 	defer controller.Close()
+	if internalServer != nil {
+		internalServer.Serve()
+	}
 
 	if err := controller.RecoverQueued(ctx); err != nil {
 		logger.Warn("recover queued runs failed", "err", err)
@@ -313,6 +359,9 @@ func runServer(args []string) {
 		metrics.SetCounter(observe.MetricStaleDaemonEventsTotal, "Dropped stale-epoch events.", nil, float64(controller.StaleEvents()))
 		metrics.SetCounter(observe.MetricEventGapsTotal, "Event sequence gaps.", nil, float64(controller.GapEvents()))
 		metrics.SetCounter(observe.MetricEphemeralEventsTotal, "Skipped ephemeral events.", nil, float64(controller.EphemeralEvents()))
+		if hub == nil {
+			return
+		}
 		for _, daemon := range hub.List() {
 			used := daemon.RunningCount
 			if daemon.Reserved > used {
@@ -334,21 +383,15 @@ func runServer(args []string) {
 		}
 	}
 
-	listener, err := net.Listen("tcp", cfg.GRPC.Addr)
-	if err != nil {
-		logger.Error("listen grpc failed", "addr", cfg.GRPC.Addr, "err", err)
-		os.Exit(1)
-	}
-	grpcServer := grpc.NewServer(
-		grpc.MaxRecvMsgSize(cfg.GRPC.MaxRecvMsgBytes),
-		grpc.MaxSendMsgSize(cfg.GRPC.MaxSendMsgBytes),
-	)
-	hub.Register(grpcServer)
-	go func() {
-		if err := grpcServer.Serve(listener); err != nil {
-			logger.Error("grpc server stopped", "err", err)
+	var daemonListener net.Listener
+	var grpcServer *grpc.Server
+	if hub != nil {
+		daemonListener, grpcServer, err = startDaemonGRPC(cfg, hub)
+		if err != nil {
+			logger.Error("listen grpc failed", "addr", cfg.GRPC.Addr, "err", err)
+			os.Exit(1)
 		}
-	}()
+	}
 
 	statusService := statuspkg.New(statuspkg.Options{
 		Hub:      hub,
@@ -424,25 +467,29 @@ func runServer(args []string) {
 	logger.Info("workflow workers stopped")
 	controller.Close()
 	logger.Info("control stopped")
-	hub.Close()
-	logger.Info("daemon hub stopped")
+	if hub != nil {
+		hub.Close()
+		logger.Info("daemon hub stopped")
+	}
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), cfg.HTTP.ShutdownTimeout.Std())
 	_ = httpServer.Shutdown(shutdownCtx)
 	cancel()
 	_ = httpListener.Close()
-	stopped := make(chan struct{})
-	go func() {
-		grpcServer.GracefulStop()
-		close(stopped)
-	}()
-	select {
-	case <-stopped:
-	case <-time.After(cfg.GRPC.ShutdownTimeout.Std()):
-		forcedShutdown = true
-		logger.Warn("grpc graceful shutdown timed out; forcing stop")
-		grpcServer.Stop()
+	if grpcServer != nil {
+		stopped := make(chan struct{})
+		go func() {
+			grpcServer.GracefulStop()
+			close(stopped)
+		}()
+		select {
+		case <-stopped:
+		case <-time.After(cfg.GRPC.ShutdownTimeout.Std()):
+			forcedShutdown = true
+			logger.Warn("grpc graceful shutdown timed out; forcing stop")
+			grpcServer.Stop()
+		}
+		_ = daemonListener.Close()
 	}
-	_ = listener.Close()
 	<-recoveryDone
 	<-reaperDone
 	logger.Info("levier stopped",

@@ -8,6 +8,7 @@ import (
 	"errors"
 	"log/slog"
 	"net"
+	"sync"
 	"time"
 
 	"google.golang.org/grpc"
@@ -31,10 +32,12 @@ type Server struct {
 	listener net.Listener
 	logger   *slog.Logger
 	health   *health.Server
+	serve    sync.Once
 }
 
-// Start binds the internal listener and serves until stopped.
-func Start(_ context.Context, opts ServerOptions) (*Server, error) {
+// New binds the internal listener without serving it, so role services can be
+// registered before the server accepts RPCs. Call Serve after registration.
+func New(opts ServerOptions) (*Server, error) {
 	if opts.Token == "" {
 		return nil, errors.New("internal token is required")
 	}
@@ -58,21 +61,40 @@ func Start(_ context.Context, opts ServerOptions) (*Server, error) {
 	server := grpc.NewServer(options...)
 	healthServer := health.NewServer()
 	healthpb.RegisterHealthServer(server, healthServer)
-	healthServer.SetServingStatus("", healthpb.HealthCheckResponse_SERVING)
-
-	internal := &Server{
+	return &Server{
 		grpc:     server,
 		listener: listener,
 		logger:   opts.Logger,
 		health:   healthServer,
+	}, nil
+}
+
+// Serve starts the internal listener. It is safe to call once.
+func (s *Server) Serve() {
+	if s == nil {
+		return
 	}
-	go func() {
-		if err := server.Serve(listener); err != nil && !errors.Is(err, grpc.ErrServerStopped) {
-			internal.logger.Error("internal grpc server stopped", "addr", listener.Addr().String(), "err", err)
+	s.serve.Do(func() {
+		if s.health != nil {
+			s.health.SetServingStatus("", healthpb.HealthCheckResponse_SERVING)
 		}
-	}()
-	internal.logger.Info("internal grpc listening", "addr", listener.Addr().String())
-	return internal, nil
+		go func() {
+			if err := s.grpc.Serve(s.listener); err != nil && !errors.Is(err, grpc.ErrServerStopped) {
+				s.logger.Error("internal grpc server stopped", "addr", s.listener.Addr().String(), "err", err)
+			}
+		}()
+		s.logger.Info("internal grpc listening", "addr", s.listener.Addr().String())
+	})
+}
+
+// Start binds and serves the internal listener.
+func Start(_ context.Context, opts ServerOptions) (*Server, error) {
+	server, err := New(opts)
+	if err != nil {
+		return nil, err
+	}
+	server.Serve()
+	return server, nil
 }
 
 // GRPC returns the underlying server so role services can be registered.

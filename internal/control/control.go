@@ -98,14 +98,16 @@ type ModelProviderResolver interface {
 	ResolveDefaultModelProfile(ctx context.Context, params map[string]string) (register.ModelProfile, error)
 }
 
-// DaemonHub is the Runtime connection boundary used by Control.
+// DaemonHub is the local Runtime connection boundary used by Control.
 //
-// RuntimeTransport is the part a split runtime-gateway can replace with an
-// internal RPC client. Capacity and disconnect calls will move to a separate
-// Placement/Connection port when the gateway process is split.
+// The split runtime-gateway path uses the narrow ports.RuntimeTransport and
+// ports.RuntimePlacement interfaces instead.
 type DaemonHub interface {
-	ports.RuntimeTransport
-	ports.RuntimePlacement
+	Send(daemonID string, env *runtimev1.Envelope) error
+	Reserve(daemonID string) bool
+	Release(daemonID string)
+	Disconnect(daemonID string)
+	PickHealthy(runtimeType runtimev1.RuntimeType, runtimeName string, labels map[string]string) (string, bool)
 }
 
 type daemonCapabilities struct {
@@ -116,13 +118,14 @@ type daemonCapabilities struct {
 
 // Control claims RUN_DISPATCH tasks, assigns daemons, and drives run state.
 type Control struct {
-	runs      RunStore
-	transport ports.RuntimeTransport
-	placement ports.RuntimePlacement
-	materials MaterialAssembler
-	cfg       Config
-	log       *slog.Logger
-	metrics   *observe.Registry
+	runs       RunStore
+	transport  ports.RuntimeTransport
+	dispatcher ports.RuntimeDispatcher
+	placement  ports.RuntimePlacement
+	materials  MaterialAssembler
+	cfg        Config
+	log        *slog.Logger
+	metrics    *observe.Registry
 
 	pendingMu      sync.Mutex
 	pending        map[string]chan *runtimev1.TaskAck
@@ -146,9 +149,13 @@ type Control struct {
 	criticalEvents  atomic.Int64
 }
 
-// New returns a Control instance with one combined Runtime hub.
+// New returns a Control instance with one combined local Runtime hub.
 func New(runs RunStore, hub DaemonHub, cfg Config, assemblers ...MaterialAssembler) *Control {
-	return NewWithPorts(runs, hub, hub, cfg, assemblers...)
+	control := NewWithPorts(runs, hubTransport{hub: hub}, hubPlacement{hub: hub}, cfg, assemblers...)
+	if dispatcher, ok := hub.(ports.RuntimeDispatcher); ok {
+		control.dispatcher = dispatcher
+	}
+	return control
 }
 
 // NewWithPorts returns a Control with transport and placement split.
@@ -191,6 +198,9 @@ func NewWithPorts(
 		capabilities: make(map[string]daemonCapabilities),
 		events:       make(chan *runtimev1.Envelope, cfg.EventBuffer),
 		toolSlots:    make(chan struct{}, cfg.ToolConcurrency),
+	}
+	if dispatcher, ok := transport.(ports.RuntimeDispatcher); ok {
+		control.dispatcher = dispatcher
 	}
 	if len(assemblers) > 0 {
 		control.materials = assemblers[0]

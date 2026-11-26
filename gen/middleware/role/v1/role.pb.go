@@ -905,6 +905,182 @@ func (x *ResumeRunResponse) GetStatus() string {
 	return ""
 }
 
+type DaemonStateRequest struct {
+	state             protoimpl.MessageState `protogen:"open.v1"`
+	GatewayId         string                 `protobuf:"bytes,1,opt,name=gateway_id,json=gatewayId,proto3" json:"gateway_id,omitempty"`
+	DaemonId          string                 `protobuf:"bytes,2,opt,name=daemon_id,json=daemonId,proto3" json:"daemon_id,omitempty"`
+	Status            string                 `protobuf:"bytes,3,opt,name=status,proto3" json:"status,omitempty"`
+	ConnectionEpoch   int64                  `protobuf:"varint,4,opt,name=connection_epoch,json=connectionEpoch,proto3" json:"connection_epoch,omitempty"`
+	RuntimeName       string                 `protobuf:"bytes,5,opt,name=runtime_name,json=runtimeName,proto3" json:"runtime_name,omitempty"`
+	RuntimeType       string                 `protobuf:"bytes,6,opt,name=runtime_type,json=runtimeType,proto3" json:"runtime_type,omitempty"`
+	MaxConcurrentRuns int32                  `protobuf:"varint,7,opt,name=max_concurrent_runs,json=maxConcurrentRuns,proto3" json:"max_concurrent_runs,omitempty"`
+	RunningRuns       []*DaemonRun           `protobuf:"bytes,8,rep,name=running_runs,json=runningRuns,proto3" json:"running_runs,omitempty"`
+	Labels            map[string]string      `protobuf:"bytes,9,rep,name=labels,proto3" json:"labels,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	Capabilities      map[string]string      `protobuf:"bytes,10,rep,name=capabilities,proto3" json:"capabilities,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	ConnectedAtMs     int64                  `protobuf:"varint,11,opt,name=connected_at_ms,json=connectedAtMs,proto3" json:"connected_at_ms,omitempty"`
+	unknownFields     protoimpl.UnknownFields
+	sizeCache         protoimpl.SizeCache
+}
+
+func (x *DaemonStateRequest) Reset() {
+	*x = DaemonStateRequest{}
+	mi := &file_middleware_role_v1_role_proto_msgTypes[15]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DaemonStateRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DaemonStateRequest) ProtoMessage() {}
+
+func (x *DaemonStateRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_middleware_role_v1_role_proto_msgTypes[15]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DaemonStateRequest.ProtoReflect.Descriptor instead.
+func (*DaemonStateRequest) Descriptor() ([]byte, []int) {
+	return file_middleware_role_v1_role_proto_rawDescGZIP(), []int{15}
+}
+
+func (x *DaemonStateRequest) GetGatewayId() string {
+	if x != nil {
+		return x.GatewayId
+	}
+	return ""
+}
+
+func (x *DaemonStateRequest) GetDaemonId() string {
+	if x != nil {
+		return x.DaemonId
+	}
+	return ""
+}
+
+func (x *DaemonStateRequest) GetStatus() string {
+	if x != nil {
+		return x.Status
+	}
+	return ""
+}
+
+func (x *DaemonStateRequest) GetConnectionEpoch() int64 {
+	if x != nil {
+		return x.ConnectionEpoch
+	}
+	return 0
+}
+
+func (x *DaemonStateRequest) GetRuntimeName() string {
+	if x != nil {
+		return x.RuntimeName
+	}
+	return ""
+}
+
+func (x *DaemonStateRequest) GetRuntimeType() string {
+	if x != nil {
+		return x.RuntimeType
+	}
+	return ""
+}
+
+func (x *DaemonStateRequest) GetMaxConcurrentRuns() int32 {
+	if x != nil {
+		return x.MaxConcurrentRuns
+	}
+	return 0
+}
+
+func (x *DaemonStateRequest) GetRunningRuns() []*DaemonRun {
+	if x != nil {
+		return x.RunningRuns
+	}
+	return nil
+}
+
+func (x *DaemonStateRequest) GetLabels() map[string]string {
+	if x != nil {
+		return x.Labels
+	}
+	return nil
+}
+
+func (x *DaemonStateRequest) GetCapabilities() map[string]string {
+	if x != nil {
+		return x.Capabilities
+	}
+	return nil
+}
+
+func (x *DaemonStateRequest) GetConnectedAtMs() int64 {
+	if x != nil {
+		return x.ConnectedAtMs
+	}
+	return 0
+}
+
+type DaemonRun struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	RunId         string                 `protobuf:"bytes,1,opt,name=run_id,json=runId,proto3" json:"run_id,omitempty"`
+	LeaseEpoch    int64                  `protobuf:"varint,2,opt,name=lease_epoch,json=leaseEpoch,proto3" json:"lease_epoch,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *DaemonRun) Reset() {
+	*x = DaemonRun{}
+	mi := &file_middleware_role_v1_role_proto_msgTypes[16]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DaemonRun) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DaemonRun) ProtoMessage() {}
+
+func (x *DaemonRun) ProtoReflect() protoreflect.Message {
+	mi := &file_middleware_role_v1_role_proto_msgTypes[16]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DaemonRun.ProtoReflect.Descriptor instead.
+func (*DaemonRun) Descriptor() ([]byte, []int) {
+	return file_middleware_role_v1_role_proto_rawDescGZIP(), []int{16}
+}
+
+func (x *DaemonRun) GetRunId() string {
+	if x != nil {
+		return x.RunId
+	}
+	return ""
+}
+
+func (x *DaemonRun) GetLeaseEpoch() int64 {
+	if x != nil {
+		return x.LeaseEpoch
+	}
+	return 0
+}
+
 type CallLocalToolRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	AppId         string                 `protobuf:"bytes,1,opt,name=app_id,json=appId,proto3" json:"app_id,omitempty"`
@@ -917,7 +1093,7 @@ type CallLocalToolRequest struct {
 
 func (x *CallLocalToolRequest) Reset() {
 	*x = CallLocalToolRequest{}
-	mi := &file_middleware_role_v1_role_proto_msgTypes[15]
+	mi := &file_middleware_role_v1_role_proto_msgTypes[17]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -929,7 +1105,7 @@ func (x *CallLocalToolRequest) String() string {
 func (*CallLocalToolRequest) ProtoMessage() {}
 
 func (x *CallLocalToolRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_middleware_role_v1_role_proto_msgTypes[15]
+	mi := &file_middleware_role_v1_role_proto_msgTypes[17]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -942,7 +1118,7 @@ func (x *CallLocalToolRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CallLocalToolRequest.ProtoReflect.Descriptor instead.
 func (*CallLocalToolRequest) Descriptor() ([]byte, []int) {
-	return file_middleware_role_v1_role_proto_rawDescGZIP(), []int{15}
+	return file_middleware_role_v1_role_proto_rawDescGZIP(), []int{17}
 }
 
 func (x *CallLocalToolRequest) GetAppId() string {
@@ -982,7 +1158,7 @@ type CallLocalToolResponse struct {
 
 func (x *CallLocalToolResponse) Reset() {
 	*x = CallLocalToolResponse{}
-	mi := &file_middleware_role_v1_role_proto_msgTypes[16]
+	mi := &file_middleware_role_v1_role_proto_msgTypes[18]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -994,7 +1170,7 @@ func (x *CallLocalToolResponse) String() string {
 func (*CallLocalToolResponse) ProtoMessage() {}
 
 func (x *CallLocalToolResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_middleware_role_v1_role_proto_msgTypes[16]
+	mi := &file_middleware_role_v1_role_proto_msgTypes[18]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1007,7 +1183,7 @@ func (x *CallLocalToolResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CallLocalToolResponse.ProtoReflect.Descriptor instead.
 func (*CallLocalToolResponse) Descriptor() ([]byte, []int) {
-	return file_middleware_role_v1_role_proto_rawDescGZIP(), []int{16}
+	return file_middleware_role_v1_role_proto_rawDescGZIP(), []int{18}
 }
 
 func (x *CallLocalToolResponse) GetResult() *v1.ToolCallResult {
@@ -1029,7 +1205,7 @@ type CancelLocalToolsRequest struct {
 
 func (x *CancelLocalToolsRequest) Reset() {
 	*x = CancelLocalToolsRequest{}
-	mi := &file_middleware_role_v1_role_proto_msgTypes[17]
+	mi := &file_middleware_role_v1_role_proto_msgTypes[19]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1041,7 +1217,7 @@ func (x *CancelLocalToolsRequest) String() string {
 func (*CancelLocalToolsRequest) ProtoMessage() {}
 
 func (x *CancelLocalToolsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_middleware_role_v1_role_proto_msgTypes[17]
+	mi := &file_middleware_role_v1_role_proto_msgTypes[19]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1054,7 +1230,7 @@ func (x *CancelLocalToolsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CancelLocalToolsRequest.ProtoReflect.Descriptor instead.
 func (*CancelLocalToolsRequest) Descriptor() ([]byte, []int) {
-	return file_middleware_role_v1_role_proto_rawDescGZIP(), []int{17}
+	return file_middleware_role_v1_role_proto_rawDescGZIP(), []int{19}
 }
 
 func (x *CancelLocalToolsRequest) GetAppId() string {
@@ -1096,7 +1272,7 @@ type PublishRunEventRequest struct {
 
 func (x *PublishRunEventRequest) Reset() {
 	*x = PublishRunEventRequest{}
-	mi := &file_middleware_role_v1_role_proto_msgTypes[18]
+	mi := &file_middleware_role_v1_role_proto_msgTypes[20]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1108,7 +1284,7 @@ func (x *PublishRunEventRequest) String() string {
 func (*PublishRunEventRequest) ProtoMessage() {}
 
 func (x *PublishRunEventRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_middleware_role_v1_role_proto_msgTypes[18]
+	mi := &file_middleware_role_v1_role_proto_msgTypes[20]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1121,7 +1297,7 @@ func (x *PublishRunEventRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PublishRunEventRequest.ProtoReflect.Descriptor instead.
 func (*PublishRunEventRequest) Descriptor() ([]byte, []int) {
-	return file_middleware_role_v1_role_proto_rawDescGZIP(), []int{18}
+	return file_middleware_role_v1_role_proto_rawDescGZIP(), []int{20}
 }
 
 func (x *PublishRunEventRequest) GetAppId() string {
@@ -1157,7 +1333,7 @@ type PublishRunCompletedRequest struct {
 
 func (x *PublishRunCompletedRequest) Reset() {
 	*x = PublishRunCompletedRequest{}
-	mi := &file_middleware_role_v1_role_proto_msgTypes[19]
+	mi := &file_middleware_role_v1_role_proto_msgTypes[21]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1169,7 +1345,7 @@ func (x *PublishRunCompletedRequest) String() string {
 func (*PublishRunCompletedRequest) ProtoMessage() {}
 
 func (x *PublishRunCompletedRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_middleware_role_v1_role_proto_msgTypes[19]
+	mi := &file_middleware_role_v1_role_proto_msgTypes[21]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1182,7 +1358,7 @@ func (x *PublishRunCompletedRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PublishRunCompletedRequest.ProtoReflect.Descriptor instead.
 func (*PublishRunCompletedRequest) Descriptor() ([]byte, []int) {
-	return file_middleware_role_v1_role_proto_rawDescGZIP(), []int{19}
+	return file_middleware_role_v1_role_proto_rawDescGZIP(), []int{21}
 }
 
 func (x *PublishRunCompletedRequest) GetAppId() string {
@@ -1284,7 +1460,31 @@ const file_middleware_role_v1_role_proto_rawDesc = "" +
 	"\x06run_id\x18\x01 \x01(\tR\x05runId\x12\x1d\n" +
 	"\n" +
 	"session_id\x18\x02 \x01(\tR\tsessionId\x12\x16\n" +
-	"\x06status\x18\x03 \x01(\tR\x06status\"\xb3\x01\n" +
+	"\x06status\x18\x03 \x01(\tR\x06status\"\x99\x05\n" +
+	"\x12DaemonStateRequest\x12\x1d\n" +
+	"\n" +
+	"gateway_id\x18\x01 \x01(\tR\tgatewayId\x12\x1b\n" +
+	"\tdaemon_id\x18\x02 \x01(\tR\bdaemonId\x12\x16\n" +
+	"\x06status\x18\x03 \x01(\tR\x06status\x12)\n" +
+	"\x10connection_epoch\x18\x04 \x01(\x03R\x0fconnectionEpoch\x12!\n" +
+	"\fruntime_name\x18\x05 \x01(\tR\vruntimeName\x12!\n" +
+	"\fruntime_type\x18\x06 \x01(\tR\vruntimeType\x12.\n" +
+	"\x13max_concurrent_runs\x18\a \x01(\x05R\x11maxConcurrentRuns\x12@\n" +
+	"\frunning_runs\x18\b \x03(\v2\x1d.middleware.role.v1.DaemonRunR\vrunningRuns\x12J\n" +
+	"\x06labels\x18\t \x03(\v22.middleware.role.v1.DaemonStateRequest.LabelsEntryR\x06labels\x12\\\n" +
+	"\fcapabilities\x18\n" +
+	" \x03(\v28.middleware.role.v1.DaemonStateRequest.CapabilitiesEntryR\fcapabilities\x12&\n" +
+	"\x0fconnected_at_ms\x18\v \x01(\x03R\rconnectedAtMs\x1a9\n" +
+	"\vLabelsEntry\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\x1a?\n" +
+	"\x11CapabilitiesEntry\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"C\n" +
+	"\tDaemonRun\x12\x15\n" +
+	"\x06run_id\x18\x01 \x01(\tR\x05runId\x12\x1f\n" +
+	"\vlease_epoch\x18\x02 \x01(\x03R\n" +
+	"leaseEpoch\"\xb3\x01\n" +
 	"\x14CallLocalToolRequest\x12\x15\n" +
 	"\x06app_id\x18\x01 \x01(\tR\x05appId\x12#\n" +
 	"\rconnection_id\x18\x02 \x01(\tR\fconnectionId\x12@\n" +
@@ -1314,11 +1514,12 @@ const file_middleware_role_v1_role_proto_rawDesc = "" +
 	"\aRelease\x12\".middleware.role.v1.ReleaseRequest\x1a\x16.google.protobuf.Empty\x12K\n" +
 	"\n" +
 	"Disconnect\x12%.middleware.role.v1.DisconnectRequest\x1a\x16.google.protobuf.Empty\x12a\n" +
-	"\fListRuntimes\x12'.middleware.role.v1.ListRuntimesRequest\x1a(.middleware.role.v1.ListRuntimesResponse2\x9b\x02\n" +
+	"\fListRuntimes\x12'.middleware.role.v1.ListRuntimesRequest\x1a(.middleware.role.v1.ListRuntimesResponse2\xf0\x02\n" +
 	"\x0eControlService\x12U\n" +
 	"\x0fDeliverEnvelope\x12*.middleware.role.v1.DeliverEnvelopeRequest\x1a\x16.google.protobuf.Empty\x12X\n" +
 	"\tCancelRun\x12$.middleware.role.v1.CancelRunRequest\x1a%.middleware.role.v1.CancelRunResponse\x12X\n" +
-	"\tResumeRun\x12$.middleware.role.v1.ResumeRunRequest\x1a%.middleware.role.v1.ResumeRunResponse2\x88\x03\n" +
+	"\tResumeRun\x12$.middleware.role.v1.ResumeRunRequest\x1a%.middleware.role.v1.ResumeRunResponse\x12S\n" +
+	"\x11UpdateDaemonState\x12&.middleware.role.v1.DaemonStateRequest\x1a\x16.google.protobuf.Empty2\x88\x03\n" +
 	"\x11AppGatewayService\x12d\n" +
 	"\rCallLocalTool\x12(.middleware.role.v1.CallLocalToolRequest\x1a).middleware.role.v1.CallLocalToolResponse\x12W\n" +
 	"\x10CancelLocalTools\x12+.middleware.role.v1.CancelLocalToolsRequest\x1a\x16.google.protobuf.Empty\x12U\n" +
@@ -1337,7 +1538,7 @@ func file_middleware_role_v1_role_proto_rawDescGZIP() []byte {
 	return file_middleware_role_v1_role_proto_rawDescData
 }
 
-var file_middleware_role_v1_role_proto_msgTypes = make([]protoimpl.MessageInfo, 22)
+var file_middleware_role_v1_role_proto_msgTypes = make([]protoimpl.MessageInfo, 26)
 var file_middleware_role_v1_role_proto_goTypes = []any{
 	(*DispatchRequest)(nil),            // 0: middleware.role.v1.DispatchRequest
 	(*DispatchResponse)(nil),           // 1: middleware.role.v1.DispatchResponse
@@ -1354,60 +1555,69 @@ var file_middleware_role_v1_role_proto_goTypes = []any{
 	(*CancelRunResponse)(nil),          // 12: middleware.role.v1.CancelRunResponse
 	(*ResumeRunRequest)(nil),           // 13: middleware.role.v1.ResumeRunRequest
 	(*ResumeRunResponse)(nil),          // 14: middleware.role.v1.ResumeRunResponse
-	(*CallLocalToolRequest)(nil),       // 15: middleware.role.v1.CallLocalToolRequest
-	(*CallLocalToolResponse)(nil),      // 16: middleware.role.v1.CallLocalToolResponse
-	(*CancelLocalToolsRequest)(nil),    // 17: middleware.role.v1.CancelLocalToolsRequest
-	(*PublishRunEventRequest)(nil),     // 18: middleware.role.v1.PublishRunEventRequest
-	(*PublishRunCompletedRequest)(nil), // 19: middleware.role.v1.PublishRunCompletedRequest
-	nil,                                // 20: middleware.role.v1.RuntimeSnapshot.LabelsEntry
-	nil,                                // 21: middleware.role.v1.RuntimeSnapshot.CapabilitiesEntry
-	(*v1.Envelope)(nil),                // 22: middleware.runtime.v1.Envelope
-	(*v1.TaskAck)(nil),                 // 23: middleware.runtime.v1.TaskAck
-	(*v1.ToolCallRequest)(nil),         // 24: middleware.runtime.v1.ToolCallRequest
-	(*v1.ToolCallResult)(nil),          // 25: middleware.runtime.v1.ToolCallResult
-	(*emptypb.Empty)(nil),              // 26: google.protobuf.Empty
+	(*DaemonStateRequest)(nil),         // 15: middleware.role.v1.DaemonStateRequest
+	(*DaemonRun)(nil),                  // 16: middleware.role.v1.DaemonRun
+	(*CallLocalToolRequest)(nil),       // 17: middleware.role.v1.CallLocalToolRequest
+	(*CallLocalToolResponse)(nil),      // 18: middleware.role.v1.CallLocalToolResponse
+	(*CancelLocalToolsRequest)(nil),    // 19: middleware.role.v1.CancelLocalToolsRequest
+	(*PublishRunEventRequest)(nil),     // 20: middleware.role.v1.PublishRunEventRequest
+	(*PublishRunCompletedRequest)(nil), // 21: middleware.role.v1.PublishRunCompletedRequest
+	nil,                                // 22: middleware.role.v1.RuntimeSnapshot.LabelsEntry
+	nil,                                // 23: middleware.role.v1.RuntimeSnapshot.CapabilitiesEntry
+	nil,                                // 24: middleware.role.v1.DaemonStateRequest.LabelsEntry
+	nil,                                // 25: middleware.role.v1.DaemonStateRequest.CapabilitiesEntry
+	(*v1.Envelope)(nil),                // 26: middleware.runtime.v1.Envelope
+	(*v1.TaskAck)(nil),                 // 27: middleware.runtime.v1.TaskAck
+	(*v1.ToolCallRequest)(nil),         // 28: middleware.runtime.v1.ToolCallRequest
+	(*v1.ToolCallResult)(nil),          // 29: middleware.runtime.v1.ToolCallResult
+	(*emptypb.Empty)(nil),              // 30: google.protobuf.Empty
 }
 var file_middleware_role_v1_role_proto_depIdxs = []int32{
-	22, // 0: middleware.role.v1.DispatchRequest.envelope:type_name -> middleware.runtime.v1.Envelope
-	23, // 1: middleware.role.v1.DispatchResponse.ack:type_name -> middleware.runtime.v1.TaskAck
-	22, // 2: middleware.role.v1.SendRequest.envelope:type_name -> middleware.runtime.v1.Envelope
-	20, // 3: middleware.role.v1.RuntimeSnapshot.labels:type_name -> middleware.role.v1.RuntimeSnapshot.LabelsEntry
-	21, // 4: middleware.role.v1.RuntimeSnapshot.capabilities:type_name -> middleware.role.v1.RuntimeSnapshot.CapabilitiesEntry
+	26, // 0: middleware.role.v1.DispatchRequest.envelope:type_name -> middleware.runtime.v1.Envelope
+	27, // 1: middleware.role.v1.DispatchResponse.ack:type_name -> middleware.runtime.v1.TaskAck
+	26, // 2: middleware.role.v1.SendRequest.envelope:type_name -> middleware.runtime.v1.Envelope
+	22, // 3: middleware.role.v1.RuntimeSnapshot.labels:type_name -> middleware.role.v1.RuntimeSnapshot.LabelsEntry
+	23, // 4: middleware.role.v1.RuntimeSnapshot.capabilities:type_name -> middleware.role.v1.RuntimeSnapshot.CapabilitiesEntry
 	8,  // 5: middleware.role.v1.ListRuntimesResponse.runtimes:type_name -> middleware.role.v1.RuntimeSnapshot
-	22, // 6: middleware.role.v1.DeliverEnvelopeRequest.envelope:type_name -> middleware.runtime.v1.Envelope
-	24, // 7: middleware.role.v1.CallLocalToolRequest.request:type_name -> middleware.runtime.v1.ToolCallRequest
-	25, // 8: middleware.role.v1.CallLocalToolResponse.result:type_name -> middleware.runtime.v1.ToolCallResult
-	0,  // 9: middleware.role.v1.RuntimeGatewayService.Dispatch:input_type -> middleware.role.v1.DispatchRequest
-	2,  // 10: middleware.role.v1.RuntimeGatewayService.Send:input_type -> middleware.role.v1.SendRequest
-	3,  // 11: middleware.role.v1.RuntimeGatewayService.Reserve:input_type -> middleware.role.v1.ReserveRequest
-	5,  // 12: middleware.role.v1.RuntimeGatewayService.Release:input_type -> middleware.role.v1.ReleaseRequest
-	6,  // 13: middleware.role.v1.RuntimeGatewayService.Disconnect:input_type -> middleware.role.v1.DisconnectRequest
-	7,  // 14: middleware.role.v1.RuntimeGatewayService.ListRuntimes:input_type -> middleware.role.v1.ListRuntimesRequest
-	10, // 15: middleware.role.v1.ControlService.DeliverEnvelope:input_type -> middleware.role.v1.DeliverEnvelopeRequest
-	11, // 16: middleware.role.v1.ControlService.CancelRun:input_type -> middleware.role.v1.CancelRunRequest
-	13, // 17: middleware.role.v1.ControlService.ResumeRun:input_type -> middleware.role.v1.ResumeRunRequest
-	15, // 18: middleware.role.v1.AppGatewayService.CallLocalTool:input_type -> middleware.role.v1.CallLocalToolRequest
-	17, // 19: middleware.role.v1.AppGatewayService.CancelLocalTools:input_type -> middleware.role.v1.CancelLocalToolsRequest
-	18, // 20: middleware.role.v1.AppGatewayService.PublishRunEvent:input_type -> middleware.role.v1.PublishRunEventRequest
-	19, // 21: middleware.role.v1.AppGatewayService.PublishRunCompleted:input_type -> middleware.role.v1.PublishRunCompletedRequest
-	1,  // 22: middleware.role.v1.RuntimeGatewayService.Dispatch:output_type -> middleware.role.v1.DispatchResponse
-	26, // 23: middleware.role.v1.RuntimeGatewayService.Send:output_type -> google.protobuf.Empty
-	4,  // 24: middleware.role.v1.RuntimeGatewayService.Reserve:output_type -> middleware.role.v1.ReserveResponse
-	26, // 25: middleware.role.v1.RuntimeGatewayService.Release:output_type -> google.protobuf.Empty
-	26, // 26: middleware.role.v1.RuntimeGatewayService.Disconnect:output_type -> google.protobuf.Empty
-	9,  // 27: middleware.role.v1.RuntimeGatewayService.ListRuntimes:output_type -> middleware.role.v1.ListRuntimesResponse
-	26, // 28: middleware.role.v1.ControlService.DeliverEnvelope:output_type -> google.protobuf.Empty
-	12, // 29: middleware.role.v1.ControlService.CancelRun:output_type -> middleware.role.v1.CancelRunResponse
-	14, // 30: middleware.role.v1.ControlService.ResumeRun:output_type -> middleware.role.v1.ResumeRunResponse
-	16, // 31: middleware.role.v1.AppGatewayService.CallLocalTool:output_type -> middleware.role.v1.CallLocalToolResponse
-	26, // 32: middleware.role.v1.AppGatewayService.CancelLocalTools:output_type -> google.protobuf.Empty
-	26, // 33: middleware.role.v1.AppGatewayService.PublishRunEvent:output_type -> google.protobuf.Empty
-	26, // 34: middleware.role.v1.AppGatewayService.PublishRunCompleted:output_type -> google.protobuf.Empty
-	22, // [22:35] is the sub-list for method output_type
-	9,  // [9:22] is the sub-list for method input_type
-	9,  // [9:9] is the sub-list for extension type_name
-	9,  // [9:9] is the sub-list for extension extendee
-	0,  // [0:9] is the sub-list for field type_name
+	26, // 6: middleware.role.v1.DeliverEnvelopeRequest.envelope:type_name -> middleware.runtime.v1.Envelope
+	16, // 7: middleware.role.v1.DaemonStateRequest.running_runs:type_name -> middleware.role.v1.DaemonRun
+	24, // 8: middleware.role.v1.DaemonStateRequest.labels:type_name -> middleware.role.v1.DaemonStateRequest.LabelsEntry
+	25, // 9: middleware.role.v1.DaemonStateRequest.capabilities:type_name -> middleware.role.v1.DaemonStateRequest.CapabilitiesEntry
+	28, // 10: middleware.role.v1.CallLocalToolRequest.request:type_name -> middleware.runtime.v1.ToolCallRequest
+	29, // 11: middleware.role.v1.CallLocalToolResponse.result:type_name -> middleware.runtime.v1.ToolCallResult
+	0,  // 12: middleware.role.v1.RuntimeGatewayService.Dispatch:input_type -> middleware.role.v1.DispatchRequest
+	2,  // 13: middleware.role.v1.RuntimeGatewayService.Send:input_type -> middleware.role.v1.SendRequest
+	3,  // 14: middleware.role.v1.RuntimeGatewayService.Reserve:input_type -> middleware.role.v1.ReserveRequest
+	5,  // 15: middleware.role.v1.RuntimeGatewayService.Release:input_type -> middleware.role.v1.ReleaseRequest
+	6,  // 16: middleware.role.v1.RuntimeGatewayService.Disconnect:input_type -> middleware.role.v1.DisconnectRequest
+	7,  // 17: middleware.role.v1.RuntimeGatewayService.ListRuntimes:input_type -> middleware.role.v1.ListRuntimesRequest
+	10, // 18: middleware.role.v1.ControlService.DeliverEnvelope:input_type -> middleware.role.v1.DeliverEnvelopeRequest
+	11, // 19: middleware.role.v1.ControlService.CancelRun:input_type -> middleware.role.v1.CancelRunRequest
+	13, // 20: middleware.role.v1.ControlService.ResumeRun:input_type -> middleware.role.v1.ResumeRunRequest
+	15, // 21: middleware.role.v1.ControlService.UpdateDaemonState:input_type -> middleware.role.v1.DaemonStateRequest
+	17, // 22: middleware.role.v1.AppGatewayService.CallLocalTool:input_type -> middleware.role.v1.CallLocalToolRequest
+	19, // 23: middleware.role.v1.AppGatewayService.CancelLocalTools:input_type -> middleware.role.v1.CancelLocalToolsRequest
+	20, // 24: middleware.role.v1.AppGatewayService.PublishRunEvent:input_type -> middleware.role.v1.PublishRunEventRequest
+	21, // 25: middleware.role.v1.AppGatewayService.PublishRunCompleted:input_type -> middleware.role.v1.PublishRunCompletedRequest
+	1,  // 26: middleware.role.v1.RuntimeGatewayService.Dispatch:output_type -> middleware.role.v1.DispatchResponse
+	30, // 27: middleware.role.v1.RuntimeGatewayService.Send:output_type -> google.protobuf.Empty
+	4,  // 28: middleware.role.v1.RuntimeGatewayService.Reserve:output_type -> middleware.role.v1.ReserveResponse
+	30, // 29: middleware.role.v1.RuntimeGatewayService.Release:output_type -> google.protobuf.Empty
+	30, // 30: middleware.role.v1.RuntimeGatewayService.Disconnect:output_type -> google.protobuf.Empty
+	9,  // 31: middleware.role.v1.RuntimeGatewayService.ListRuntimes:output_type -> middleware.role.v1.ListRuntimesResponse
+	30, // 32: middleware.role.v1.ControlService.DeliverEnvelope:output_type -> google.protobuf.Empty
+	12, // 33: middleware.role.v1.ControlService.CancelRun:output_type -> middleware.role.v1.CancelRunResponse
+	14, // 34: middleware.role.v1.ControlService.ResumeRun:output_type -> middleware.role.v1.ResumeRunResponse
+	30, // 35: middleware.role.v1.ControlService.UpdateDaemonState:output_type -> google.protobuf.Empty
+	18, // 36: middleware.role.v1.AppGatewayService.CallLocalTool:output_type -> middleware.role.v1.CallLocalToolResponse
+	30, // 37: middleware.role.v1.AppGatewayService.CancelLocalTools:output_type -> google.protobuf.Empty
+	30, // 38: middleware.role.v1.AppGatewayService.PublishRunEvent:output_type -> google.protobuf.Empty
+	30, // 39: middleware.role.v1.AppGatewayService.PublishRunCompleted:output_type -> google.protobuf.Empty
+	26, // [26:40] is the sub-list for method output_type
+	12, // [12:26] is the sub-list for method input_type
+	12, // [12:12] is the sub-list for extension type_name
+	12, // [12:12] is the sub-list for extension extendee
+	0,  // [0:12] is the sub-list for field type_name
 }
 
 func init() { file_middleware_role_v1_role_proto_init() }
@@ -1421,7 +1631,7 @@ func file_middleware_role_v1_role_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_middleware_role_v1_role_proto_rawDesc), len(file_middleware_role_v1_role_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   22,
+			NumMessages:   26,
 			NumExtensions: 0,
 			NumServices:   3,
 		},
