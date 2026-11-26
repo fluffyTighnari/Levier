@@ -137,7 +137,7 @@ func (h *Hub) Sweep(now time.Time) {
 	h.mu.Unlock()
 	for _, conn := range stale {
 		conn.close()
-		h.notifyOffline(conn.info.DaemonID)
+		h.notifyOfflineInfo(conn.info)
 	}
 }
 

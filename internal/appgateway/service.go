@@ -52,10 +52,12 @@ func (s *Service) ownsExecutionLease(ctx context.Context, req *rolev1.CallLocalT
 		return status.Error(codes.FailedPrecondition, "app execution lease is required")
 	}
 	lease, err := s.store.GetAppExecutionLease(ctx, req.GetAppId())
+	// The epoch is advisory fencing against a disconnected old connection. A
+	// heartbeat may renew the lease epoch concurrently, so the authoritative
+	// test is that this connection still owns the current lease.
 	if err != nil ||
 		lease.ConnectionID != req.GetConnectionId() ||
-		lease.GatewayID != s.gatewayID ||
-		lease.LeaseEpoch != req.GetExecutionLeaseEpoch() {
+		lease.GatewayID != s.gatewayID {
 		return status.Error(codes.FailedPrecondition, "app execution lease is stale")
 	}
 	connection, err := s.store.GetAppConnection(ctx, req.GetConnectionId())

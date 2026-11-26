@@ -38,11 +38,20 @@ type Controller interface {
 type Service struct {
 	rolev1.UnimplementedControlServiceServer
 	control Controller
+	store   *cluster.Store
 }
 
 // New returns a Control service.
 func New(control Controller) *Service {
 	return &Service{control: control}
+}
+
+// WithRuntimeStore enables daemon-state fencing against PostgreSQL.
+func (s *Service) WithRuntimeStore(store *cluster.Store) *Service {
+	if s != nil {
+		s.store = store
+	}
+	return s
 }
 
 // Register registers the service on an internal gRPC server.
@@ -73,6 +82,16 @@ func (s *Service) UpdateDaemonState(ctx context.Context, req *rolev1.DaemonState
 	}
 	if req.GetDaemonId() == "" {
 		return nil, status.Error(codes.InvalidArgument, "daemon_id is required")
+	}
+	if s.store != nil {
+		runtime, err := s.store.GetRuntime(ctx, req.GetDaemonId())
+		offline := req.GetStatus() == cluster.StatusOffline
+		if err != nil ||
+			runtime.GatewayID != req.GetGatewayId() ||
+			runtime.ConnectionEpoch != req.GetConnectionEpoch() ||
+			(!offline && runtime.Status != cluster.StatusOnline) {
+			return nil, status.Error(codes.FailedPrecondition, "daemon state is stale")
+		}
 	}
 	if req.GetStatus() == cluster.StatusOffline {
 		s.control.HandleDaemonOffline(req.GetDaemonId())

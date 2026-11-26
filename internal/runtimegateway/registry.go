@@ -31,8 +31,8 @@ type Registry struct {
 
 // DaemonLifecycleSink forwards daemon lifecycle snapshots to Control.
 type DaemonLifecycleSink interface {
-	DaemonOnline(info connection.DaemonInfo) error
-	DaemonOffline(info connection.DaemonInfo) error
+	DaemonOnline(info connection.DaemonInfo, epoch int64) error
+	DaemonOffline(info connection.DaemonInfo, epoch int64) error
 }
 
 // SetSink installs a Control lifecycle forwarder.
@@ -97,7 +97,7 @@ func (r *Registry) OnHello(info connection.DaemonInfo) {
 		"connection_epoch", registered.ConnectionEpoch,
 	)
 	if r.sink != nil {
-		if err := r.sink.DaemonOnline(info); err != nil {
+		if err := r.sink.DaemonOnline(info, registered.ConnectionEpoch); err != nil {
 			r.logger.Warn("forward daemon online failed",
 				"daemon_id", info.DaemonID,
 				"err", err,
@@ -188,7 +188,7 @@ func (r *Registry) OnOfflineInfo(info connection.DaemonInfo) {
 		)
 	}
 	if r.sink != nil {
-		if err := r.sink.DaemonOffline(info); err != nil {
+		if err := r.sink.DaemonOffline(info, epoch); err != nil {
 			r.logger.Warn("forward daemon offline failed",
 				"daemon_id", info.DaemonID,
 				"err", err,

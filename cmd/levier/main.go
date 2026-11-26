@@ -254,7 +254,7 @@ func runServer(args []string) {
 	var appPlane *controlremote.AppPlane
 	if hub == nil {
 		appPlane = controlremote.NewAppPlane(cluster.New(pool), cfg.GRPC.InternalToken, 3*time.Second, logger)
-		appPlane.StartFanout(ctx, 4)
+		appPlane.StartFanout(ctx, 1)
 		defer appPlane.Close()
 	}
 	var publisher control.EventPublisher = appHub
@@ -316,7 +316,7 @@ func runServer(args []string) {
 		controlCfg.DaemonAvailable = remotePlane.DaemonAvailable
 		controller = control.NewWithPorts(runs, remotePlane, remotePlane, controlCfg, registry)
 	}
-	controlSvc := controlservice.New(controller)
+	controlSvc := controlservice.New(controller).WithRuntimeStore(cluster.New(pool))
 	if internalServer != nil {
 		controlSvc.Register(internalServer.GRPC())
 	}

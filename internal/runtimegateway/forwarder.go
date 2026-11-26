@@ -83,16 +83,16 @@ func (f *Forwarder) ForwardEnvelope(daemonID string, env *runtimev1.Envelope) er
 }
 
 // DaemonOnline mirrors a live daemon snapshot into Control.
-func (f *Forwarder) DaemonOnline(info connection.DaemonInfo) error {
-	return f.sendDaemonState(info.DaemonID, cluster.StatusOnline, info)
+func (f *Forwarder) DaemonOnline(info connection.DaemonInfo, epoch int64) error {
+	return f.sendDaemonState(info.DaemonID, cluster.StatusOnline, info, epoch)
 }
 
 // DaemonOffline mirrors a closed daemon stream into Control.
-func (f *Forwarder) DaemonOffline(info connection.DaemonInfo) error {
-	return f.sendDaemonState(info.DaemonID, cluster.StatusOffline, info)
+func (f *Forwarder) DaemonOffline(info connection.DaemonInfo, epoch int64) error {
+	return f.sendDaemonState(info.DaemonID, cluster.StatusOffline, info, epoch)
 }
 
-func (f *Forwarder) sendDaemonState(daemonID, status string, info connection.DaemonInfo) error {
+func (f *Forwarder) sendDaemonState(daemonID, status string, info connection.DaemonInfo, epoch int64) error {
 	ctx, cancel := context.WithTimeout(context.Background(), f.dialTimeout+3*time.Second)
 	defer cancel()
 	gateway, client, err := f.controlClient(ctx, daemonID)
@@ -107,6 +107,7 @@ func (f *Forwarder) sendDaemonState(daemonID, status string, info connection.Dae
 		GatewayId:         f.gatewayID,
 		DaemonId:          daemonID,
 		Status:            status,
+		ConnectionEpoch:   epoch,
 		RuntimeName:       info.RuntimeName,
 		RuntimeType:       info.RuntimeType.String(),
 		MaxConcurrentRuns: info.MaxConcurrentRuns,

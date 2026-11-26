@@ -160,7 +160,14 @@ func (h *TrackedHub) RunHeartbeat(ctx context.Context) {
 				h.mu.Lock()
 				h.epochs[connectionID] = updated.ConnectionEpoch
 				h.mu.Unlock()
-				_, _ = h.store.AcquireAppExecutionLease(heartbeatCtx, updated.AppID, connectionID, h.gatewayID, h.ttl)
+				lease, leaseErr := h.store.AcquireAppExecutionLease(heartbeatCtx, updated.AppID, connectionID, h.gatewayID, h.ttl)
+				if leaseErr == nil {
+					h.mu.Lock()
+					h.leaseEpochs[connectionID] = lease.LeaseEpoch
+					h.mu.Unlock()
+				} else if leaseErr != cluster.ErrLeaseHeld {
+					h.logger.Debug("renew app execution lease failed", "connection_id", connectionID, "err", leaseErr)
+				}
 			}
 			cancel()
 			if err != nil && err != cluster.ErrLeaseLost {

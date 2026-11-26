@@ -207,11 +207,14 @@ func (p *Plane) Pick(request control.PlacementRequest) (string, bool) {
 func (p *Plane) Disconnect(daemonID string) {
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 	defer cancel()
-	_, gateway, client, err := p.clientFor(ctx, daemonID)
+	runtime, gateway, client, err := p.clientFor(ctx, daemonID)
 	if err != nil {
 		return
 	}
-	if _, err := client.Disconnect(ctx, &rolev1.DisconnectRequest{DaemonId: daemonID}); err != nil {
+	if _, err := client.Disconnect(ctx, &rolev1.DisconnectRequest{
+		DaemonId:        daemonID,
+		ConnectionEpoch: runtime.ConnectionEpoch,
+	}); err != nil {
 		p.dropGateway(gateway.GatewayID)
 		p.logger.Warn("disconnect runtime failed", "daemon_id", daemonID, "err", err)
 	}
