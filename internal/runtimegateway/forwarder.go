@@ -17,6 +17,7 @@ import (
 	runtimev1 "github.com/fluffyTighnari/levier/gen/middleware/runtime/v1"
 	"github.com/fluffyTighnari/levier/internal/cluster"
 	"github.com/fluffyTighnari/levier/internal/connection"
+	"github.com/fluffyTighnari/levier/internal/controlservice"
 	"github.com/fluffyTighnari/levier/internal/internalapi"
 )
 
@@ -56,25 +57,27 @@ func NewForwarder(store *cluster.Store, gatewayID, token string, dialTimeout tim
 	}
 }
 
-// ForwardEnvelope delivers one non-TaskAck envelope to Control.
+// ForwardEnvelope durably enqueues one non-TaskAck envelope for Control.
+// Control claims the outbox row and applies it; if no Control is online the
+// envelope remains pending instead of being lost.
 func (f *Forwarder) ForwardEnvelope(daemonID string, env *runtimev1.Envelope) error {
 	if env == nil || env.GetTaskAck() != nil {
 		return nil
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), f.dialTimeout+3*time.Second)
-	defer cancel()
-	gateway, client, err := f.controlClient(ctx, daemonID)
+	payload, err := controlservice.EncodeEnvelope(f.gatewayID, daemonID, env)
 	if err != nil {
-		return err
+		return fmt.Errorf("encode control envelope: %w", err)
 	}
-	_, err = client.DeliverEnvelope(ctx, &rolev1.DeliverEnvelopeRequest{
-		GatewayId: f.gatewayID,
-		DaemonId:  daemonID,
-		Envelope:  env,
-	})
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+	_, err = f.store.EnqueueNotificationKey(
+		ctx,
+		controlservice.EnvelopeOutboxChannel,
+		"control-envelope:"+env.GetMsgId(),
+		payload,
+	)
 	if err != nil {
-		f.dropControl(gateway.GatewayID)
-		return fmt.Errorf("deliver envelope to control %s: %w", gateway.GatewayID, err)
+		return fmt.Errorf("enqueue control envelope: %w", err)
 	}
 	return nil
 }

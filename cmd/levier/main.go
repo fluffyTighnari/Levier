@@ -288,13 +288,24 @@ func runServer(args []string) {
 		controlCfg.DaemonAvailable = remotePlane.DaemonAvailable
 		controller = control.NewWithPorts(runs, remotePlane, remotePlane, controlCfg, registry)
 	}
+	controlSvc := controlservice.New(controller)
 	if internalServer != nil {
-		controlservice.New(controller).Register(internalServer.GRPC())
+		controlSvc.Register(internalServer.GRPC())
 	}
 	controller.Start(ctx)
 	defer controller.Close()
 	if internalServer != nil {
 		internalServer.Serve()
+	}
+	if hub == nil {
+		go controlservice.ConsumeEnvelopeOutbox(
+			ctx,
+			cluster.New(pool),
+			controlSvc,
+			"control:"+cfg.Gateway.InstanceID,
+			100*time.Millisecond,
+			logger,
+		)
 	}
 
 	if err := controller.RecoverQueued(ctx); err != nil {
