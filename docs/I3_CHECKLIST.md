@@ -347,9 +347,11 @@ request_id
 | I3.2 跨进程 smoke | 已完成 | split control/api + runtime-gateway + echo runtime 完成一次 Run |
 | I3.2 gateway failover smoke | 已完成 | 杀掉 gateway A 后，同 daemon 以 epoch 2 注册到 gateway B，后续 Run 完成 |
 | Runtime envelope outbox | 已完成 | Runtime Gateway 先落 `gateway_notifications`，Control claim 后应用并标记 published |
-| I3.3 App Gateway | 待开始 | App 连接与事件 fanout |
-| I3.4 Local Tool 路由 | 待开始 | 定向投递与幂等 |
-| I3.5 通知与恢复 | 待开始 | 补偿与 reaper |
+| App Gateway split smoke | 已完成 | app-gateway WS v2 hello/ack；`app_connections` 与 `app_execution_leases` 落库 |
+| App Gateway 多副本 | 待开始 | 需要 2 个 app-gateway 的连接迁移和事件 fanout 验收 |
+| I3.3 App Gateway | 进行中 | app-gateway 拆分、WS v2 handshake、app connection/execution lease 已跑通；多 app-gateway 故障矩阵待完成 |
+| I3.4 Local Tool 路由 | 进行中 | Control 按 execution lease + connection id 定向投递；跨 app-gateway 幂等验收待完成 |
+| I3.5 通知与恢复 | 进行中 | envelope outbox/claim/publish 已完成；通知丢失补偿与 connection reaper 待完成 |
 | I3.6 多副本测试 | 待开始 | 故障矩阵 |
 | I3 退出评审 | 待开始 | 多副本验收 |
 | R1 Runtime 接入层收敛 | 待开始（I3 后置） | 核心与 Agent 框架适配器分层；不阻塞 I3 退出 |
