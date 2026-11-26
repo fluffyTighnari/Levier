@@ -18,18 +18,54 @@ import (
 
 	rolev1 "github.com/fluffyTighnari/levier/gen/middleware/role/v1"
 	runtimev1 "github.com/fluffyTighnari/levier/gen/middleware/runtime/v1"
+	"github.com/fluffyTighnari/levier/internal/cluster"
 	"github.com/fluffyTighnari/levier/internal/connection"
 )
 
 // Service implements rolev1.AppGatewayService.
 type Service struct {
 	rolev1.UnimplementedAppGatewayServiceServer
-	hub *connection.AppHub
+	hub       *connection.AppHub
+	store     *cluster.Store
+	gatewayID string
 }
 
 // New returns an App Gateway service.
 func New(hub *connection.AppHub) *Service {
 	return &Service{hub: hub}
+}
+
+// WithLeaseStore enables enforcement of PostgreSQL execution leases.
+func (s *Service) WithLeaseStore(store *cluster.Store, gatewayID string) *Service {
+	if s != nil {
+		s.store = store
+		s.gatewayID = gatewayID
+	}
+	return s
+}
+
+func (s *Service) ownsExecutionLease(ctx context.Context, req *rolev1.CallLocalToolRequest) error {
+	if s.store == nil {
+		return nil
+	}
+	if req.GetConnectionId() == "" || req.GetExecutionLeaseEpoch() <= 0 {
+		return status.Error(codes.FailedPrecondition, "app execution lease is required")
+	}
+	lease, err := s.store.GetAppExecutionLease(ctx, req.GetAppId())
+	if err != nil ||
+		lease.ConnectionID != req.GetConnectionId() ||
+		lease.GatewayID != s.gatewayID ||
+		lease.LeaseEpoch != req.GetExecutionLeaseEpoch() {
+		return status.Error(codes.FailedPrecondition, "app execution lease is stale")
+	}
+	connection, err := s.store.GetAppConnection(ctx, req.GetConnectionId())
+	if err != nil ||
+		connection.AppID != req.GetAppId() ||
+		connection.GatewayID != s.gatewayID ||
+		connection.Status != cluster.StatusOnline {
+		return status.Error(codes.FailedPrecondition, "app connection is stale")
+	}
+	return nil
 }
 
 // Register registers the internal service.
@@ -44,6 +80,9 @@ func (s *Service) CallLocalTool(ctx context.Context, req *rolev1.CallLocalToolRe
 	}
 	if req.GetAppId() == "" || req.GetRequest() == nil {
 		return nil, status.Error(codes.InvalidArgument, "app_id and request are required")
+	}
+	if err := s.ownsExecutionLease(ctx, req); err != nil {
+		return nil, err
 	}
 	request := connection.LocalToolRequest{
 		InvocationID:  req.GetRequest().GetInvocationId(),

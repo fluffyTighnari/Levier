@@ -103,14 +103,15 @@ func (p *Plane) Dispatch(
 	env *runtimev1.Envelope,
 	timeout time.Duration,
 ) (*runtimev1.TaskAck, error) {
-	_, gateway, client, err := p.clientFor(ctx, daemonID)
+	runtime, gateway, client, err := p.clientFor(ctx, daemonID)
 	if err != nil {
 		return nil, err
 	}
 	resp, err := client.Dispatch(ctx, &rolev1.DispatchRequest{
-		DaemonId:     daemonID,
-		Envelope:     env,
-		AckTimeoutMs: timeout.Milliseconds(),
+		DaemonId:        daemonID,
+		Envelope:        env,
+		AckTimeoutMs:    timeout.Milliseconds(),
+		ConnectionEpoch: runtime.ConnectionEpoch,
 	})
 	if err != nil {
 		p.dropGateway(gateway.GatewayID)

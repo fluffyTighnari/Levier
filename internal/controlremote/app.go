@@ -19,12 +19,19 @@ import (
 	"github.com/fluffyTighnari/levier/internal/internalapi"
 )
 
+type appEvent struct {
+	appID   string
+	runID   string
+	payload []byte
+}
+
 // AppPlane routes local tools and run events to App Gateway replicas.
 type AppPlane struct {
 	store       *cluster.Store
 	token       string
 	dialTimeout time.Duration
 	logger      *slog.Logger
+	events      chan appEvent
 
 	mu    sync.Mutex
 	conns map[string]*appClient
@@ -49,7 +56,30 @@ func NewAppPlane(store *cluster.Store, token string, dialTimeout time.Duration, 
 		token:       token,
 		dialTimeout: dialTimeout,
 		logger:      logger,
+		events:      make(chan appEvent, 1024),
 		conns:       make(map[string]*appClient),
+	}
+}
+
+// StartFanout drains run events off Control's hot path. The bounded queue
+// isolates a slow/hung App Gateway from run event persistence.
+func (a *AppPlane) StartFanout(ctx context.Context, workers int) {
+	if workers <= 0 {
+		workers = 2
+	}
+	for range workers {
+		go a.fanoutLoop(ctx)
+	}
+}
+
+func (a *AppPlane) fanoutLoop(ctx context.Context) {
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case event := <-a.events:
+			a.publishDirect(event.appID, event.runID, event.payload)
+		}
 	}
 }
 
@@ -57,18 +87,21 @@ func NewAppPlane(store *cluster.Store, token string, dialTimeout time.Duration, 
 func (a *AppPlane) CallLocalTool(ctx context.Context, appID string, request connection.LocalToolRequest) (connection.LocalToolResult, error) {
 	connectionID := ""
 	gatewayID := ""
+	leaseEpoch := int64(0)
 	if lease, err := a.store.GetAppExecutionLease(ctx, appID); err == nil {
 		connectionID = lease.ConnectionID
 		gatewayID = lease.GatewayID
+		leaseEpoch = lease.LeaseEpoch
 	}
 	gateway, client, err := a.firstGateway(ctx, gatewayID)
 	if err != nil {
 		return connection.LocalToolResult{}, err
 	}
 	response, err := client.CallLocalTool(ctx, &rolev1.CallLocalToolRequest{
-		AppId:        appID,
-		ConnectionId: connectionID,
-		RunId:        request.RunID,
+		AppId:               appID,
+		ConnectionId:        connectionID,
+		RunId:               request.RunID,
+		ExecutionLeaseEpoch: leaseEpoch,
 		Request: &runtimev1.ToolCallRequest{
 			InvocationId:  request.InvocationID,
 			ToolName:      request.ToolName,
@@ -94,8 +127,17 @@ func (a *AppPlane) CallLocalTool(ctx context.Context, appID string, request conn
 }
 
 // Publish fans out one run event to every App Gateway; each gateway only
-// delivers to its subscribed local sockets.
+// delivers to its subscribed local sockets. This never blocks Control.
 func (a *AppPlane) Publish(appID, runID string, payload []byte) {
+	event := appEvent{appID: appID, runID: runID, payload: payload}
+	select {
+	case a.events <- event:
+	default:
+		a.logger.Warn("app event fanout queue full", "app_id", appID, "run_id", runID)
+	}
+}
+
+func (a *AppPlane) publishDirect(appID, runID string, payload []byte) {
 	gateways, err := a.gateways(context.Background())
 	if err != nil {
 		a.logger.Warn("list app gateways failed", "err", err)
@@ -106,10 +148,14 @@ func (a *AppPlane) Publish(appID, runID string, payload []byte) {
 		if err != nil {
 			continue
 		}
-		if _, err := client.PublishRunEvent(context.Background(), &rolev1.PublishRunEventRequest{
+		ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+		_, err = client.PublishRunEvent(ctx, &rolev1.PublishRunEventRequest{
 			AppId: appID, RunId: runID, Payload: payload,
-		}); err != nil {
+		})
+		cancel()
+		if err != nil {
 			a.dropGateway(gateway.GatewayID)
+			a.logger.Warn("publish app event failed", "gateway_id", gateway.GatewayID, "err", err)
 		}
 	}
 }

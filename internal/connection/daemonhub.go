@@ -102,18 +102,19 @@ type Hub struct {
 
 	cfg Config
 
-	mu          sync.RWMutex
-	daemons     map[string]*daemonConn
-	ackMu       sync.Mutex
-	acks        map[string]chan *runtimev1.TaskAck
-	onEnvelope  func(daemonID string, env *runtimev1.Envelope)
-	onHello     func(info DaemonInfo)
-	onHeartbeat func(daemonID string, runningCount int32)
-	onOffline   func(daemonID string)
-	closed      bool
-	wg          sync.WaitGroup
-	stopCh      chan struct{}
-	stopOnce    sync.Once
+	mu            sync.RWMutex
+	daemons       map[string]*daemonConn
+	ackMu         sync.Mutex
+	acks          map[string]chan *runtimev1.TaskAck
+	onEnvelope    func(daemonID string, env *runtimev1.Envelope)
+	onHello       func(info DaemonInfo)
+	onHeartbeat   func(daemonID string, runningCount int32)
+	onOffline     func(daemonID string)
+	onOfflineInfo func(info DaemonInfo)
+	closed        bool
+	wg            sync.WaitGroup
+	stopCh        chan struct{}
+	stopOnce      sync.Once
 }
 
 type daemonConn struct {
@@ -187,6 +188,14 @@ func (h *Hub) SetOnHello(handler func(info DaemonInfo)) {
 func (h *Hub) SetOnOffline(handler func(daemonID string)) {
 	h.mu.Lock()
 	h.onOffline = handler
+	h.mu.Unlock()
+}
+
+// SetOnOfflineInfo replaces the offline callback with a snapshot carrying the
+// connection identity. It takes precedence over SetOnOffline when installed.
+func (h *Hub) SetOnOfflineInfo(handler func(info DaemonInfo)) {
+	h.mu.Lock()
+	h.onOfflineInfo = handler
 	h.mu.Unlock()
 }
 
@@ -268,7 +277,7 @@ func (h *Hub) Channel(stream runtimev1.RuntimeService_ChannelServer) error {
 	defer h.wg.Done()
 	defer func() {
 		if h.remove(conn) {
-			h.notifyOffline(conn.info.DaemonID)
+			h.notifyOfflineInfo(conn.info)
 		}
 	}()
 	go conn.writeLoop()

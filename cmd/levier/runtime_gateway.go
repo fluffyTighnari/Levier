@@ -65,7 +65,7 @@ func runRuntimeGatewayOnly(
 
 	hub.SetOnHello(registry.OnHello)
 	hub.SetOnHeartbeat(registry.OnHeartbeat)
-	hub.SetOnOffline(registry.OnOffline)
+	hub.SetOnOfflineInfo(registry.OnOfflineInfo)
 	hub.SetOnEnvelope(func(daemonID string, env *runtimev1.Envelope) {
 		if err := forwarder.ForwardEnvelope(daemonID, env); err != nil {
 			logger.Warn("runtime gateway forward envelope failed",

@@ -24,14 +24,15 @@ type Registry struct {
 	logger    *slog.Logger
 	sink      DaemonLifecycleSink
 
-	mu     sync.Mutex
-	epochs map[string]int64
+	mu       sync.Mutex
+	epochs   map[string]int64
+	arrivals map[string]time.Time
 }
 
 // DaemonLifecycleSink forwards daemon lifecycle snapshots to Control.
 type DaemonLifecycleSink interface {
 	DaemonOnline(info connection.DaemonInfo) error
-	DaemonOffline(daemonID string) error
+	DaemonOffline(info connection.DaemonInfo) error
 }
 
 // SetSink installs a Control lifecycle forwarder.
@@ -54,6 +55,7 @@ func NewRegistry(store *cluster.Store, gatewayID string, ttl time.Duration, hub 
 		hub:       hub,
 		logger:    logger,
 		epochs:    make(map[string]int64),
+		arrivals:  make(map[string]time.Time),
 	}
 }
 
@@ -87,6 +89,7 @@ func (r *Registry) OnHello(info connection.DaemonInfo) {
 	}
 	r.mu.Lock()
 	r.epochs[info.DaemonID] = registered.ConnectionEpoch
+	r.arrivals[info.DaemonID] = info.ConnectedAt
 	r.mu.Unlock()
 	r.logger.Info("runtime connection registered",
 		"daemon_id", info.DaemonID,
@@ -149,30 +152,45 @@ func (r *Registry) OnHeartbeat(daemonID string, runningCount int32) {
 	}
 }
 
-// OnOffline marks the Runtime connection offline.
-func (r *Registry) OnOffline(daemonID string) {
+// OnOffline marks the Runtime connection offline only when the callback still
+// belongs to the most recently registered connection generation.
+func (r *Registry) OnOfflineInfo(info connection.DaemonInfo) {
 	r.mu.Lock()
-	epoch, ok := r.epochs[daemonID]
-	delete(r.epochs, daemonID)
+	epoch, hasEpoch := r.epochs[info.DaemonID]
+	arrival, _ := r.arrivals[info.DaemonID]
+	stale := !hasEpoch || (!info.ConnectedAt.IsZero() && info.ConnectedAt != arrival)
+	if stale {
+		r.mu.Unlock()
+		r.logger.Debug("ignore stale runtime offline callback",
+			"daemon_id", info.DaemonID,
+			"connection_epoch", epoch,
+		)
+		return
+	}
+	delete(r.epochs, info.DaemonID)
+	delete(r.arrivals, info.DaemonID)
 	r.mu.Unlock()
-	if !ok {
+	if !hasEpoch {
 		return
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
-	if err := r.store.MarkRuntimeOffline(ctx, daemonID, epoch); err != nil &&
-		!errors.Is(err, cluster.ErrLeaseLost) {
+	err := r.store.MarkRuntimeOffline(ctx, info.DaemonID, epoch)
+	if errors.Is(err, cluster.ErrLeaseLost) {
+		return
+	}
+	if err != nil {
 		r.logger.Warn("mark runtime offline failed",
-			"daemon_id", daemonID,
+			"daemon_id", info.DaemonID,
 			"gateway_id", r.gatewayID,
 			"connection_epoch", epoch,
 			"err", err,
 		)
 	}
 	if r.sink != nil {
-		if err := r.sink.DaemonOffline(daemonID); err != nil {
+		if err := r.sink.DaemonOffline(info); err != nil {
 			r.logger.Warn("forward daemon offline failed",
-				"daemon_id", daemonID,
+				"daemon_id", info.DaemonID,
 				"err", err,
 			)
 		}

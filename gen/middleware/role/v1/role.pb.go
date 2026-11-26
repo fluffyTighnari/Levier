@@ -30,12 +30,13 @@ const (
 )
 
 type DispatchRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	DaemonId      string                 `protobuf:"bytes,1,opt,name=daemon_id,json=daemonId,proto3" json:"daemon_id,omitempty"`
-	Envelope      *v1.Envelope           `protobuf:"bytes,2,opt,name=envelope,proto3" json:"envelope,omitempty"`
-	AckTimeoutMs  int64                  `protobuf:"varint,3,opt,name=ack_timeout_ms,json=ackTimeoutMs,proto3" json:"ack_timeout_ms,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state           protoimpl.MessageState `protogen:"open.v1"`
+	DaemonId        string                 `protobuf:"bytes,1,opt,name=daemon_id,json=daemonId,proto3" json:"daemon_id,omitempty"`
+	Envelope        *v1.Envelope           `protobuf:"bytes,2,opt,name=envelope,proto3" json:"envelope,omitempty"`
+	AckTimeoutMs    int64                  `protobuf:"varint,3,opt,name=ack_timeout_ms,json=ackTimeoutMs,proto3" json:"ack_timeout_ms,omitempty"`
+	ConnectionEpoch int64                  `protobuf:"varint,4,opt,name=connection_epoch,json=connectionEpoch,proto3" json:"connection_epoch,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
 }
 
 func (x *DispatchRequest) Reset() {
@@ -85,6 +86,13 @@ func (x *DispatchRequest) GetEnvelope() *v1.Envelope {
 func (x *DispatchRequest) GetAckTimeoutMs() int64 {
 	if x != nil {
 		return x.AckTimeoutMs
+	}
+	return 0
+}
+
+func (x *DispatchRequest) GetConnectionEpoch() int64 {
+	if x != nil {
+		return x.ConnectionEpoch
 	}
 	return 0
 }
@@ -1082,14 +1090,15 @@ func (x *DaemonRun) GetLeaseEpoch() int64 {
 }
 
 type CallLocalToolRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	AppId         string                 `protobuf:"bytes,1,opt,name=app_id,json=appId,proto3" json:"app_id,omitempty"`
-	ConnectionId  string                 `protobuf:"bytes,2,opt,name=connection_id,json=connectionId,proto3" json:"connection_id,omitempty"`
-	Request       *v1.ToolCallRequest    `protobuf:"bytes,3,opt,name=request,proto3" json:"request,omitempty"`
-	TimeoutMs     int64                  `protobuf:"varint,4,opt,name=timeout_ms,json=timeoutMs,proto3" json:"timeout_ms,omitempty"`
-	RunId         string                 `protobuf:"bytes,5,opt,name=run_id,json=runId,proto3" json:"run_id,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state               protoimpl.MessageState `protogen:"open.v1"`
+	AppId               string                 `protobuf:"bytes,1,opt,name=app_id,json=appId,proto3" json:"app_id,omitempty"`
+	ConnectionId        string                 `protobuf:"bytes,2,opt,name=connection_id,json=connectionId,proto3" json:"connection_id,omitempty"`
+	Request             *v1.ToolCallRequest    `protobuf:"bytes,3,opt,name=request,proto3" json:"request,omitempty"`
+	TimeoutMs           int64                  `protobuf:"varint,4,opt,name=timeout_ms,json=timeoutMs,proto3" json:"timeout_ms,omitempty"`
+	RunId               string                 `protobuf:"bytes,5,opt,name=run_id,json=runId,proto3" json:"run_id,omitempty"`
+	ExecutionLeaseEpoch int64                  `protobuf:"varint,6,opt,name=execution_lease_epoch,json=executionLeaseEpoch,proto3" json:"execution_lease_epoch,omitempty"`
+	unknownFields       protoimpl.UnknownFields
+	sizeCache           protoimpl.SizeCache
 }
 
 func (x *CallLocalToolRequest) Reset() {
@@ -1155,6 +1164,13 @@ func (x *CallLocalToolRequest) GetRunId() string {
 		return x.RunId
 	}
 	return ""
+}
+
+func (x *CallLocalToolRequest) GetExecutionLeaseEpoch() int64 {
+	if x != nil {
+		return x.ExecutionLeaseEpoch
+	}
+	return 0
 }
 
 type CallLocalToolResponse struct {
@@ -1401,11 +1417,12 @@ var File_middleware_role_v1_role_proto protoreflect.FileDescriptor
 
 const file_middleware_role_v1_role_proto_rawDesc = "" +
 	"\n" +
-	"\x1dmiddleware/role/v1/role.proto\x12\x12middleware.role.v1\x1a\x1bgoogle/protobuf/empty.proto\x1a#middleware/runtime/v1/runtime.proto\"\x91\x01\n" +
+	"\x1dmiddleware/role/v1/role.proto\x12\x12middleware.role.v1\x1a\x1bgoogle/protobuf/empty.proto\x1a#middleware/runtime/v1/runtime.proto\"\xbc\x01\n" +
 	"\x0fDispatchRequest\x12\x1b\n" +
 	"\tdaemon_id\x18\x01 \x01(\tR\bdaemonId\x12;\n" +
 	"\benvelope\x18\x02 \x01(\v2\x1f.middleware.runtime.v1.EnvelopeR\benvelope\x12$\n" +
-	"\x0eack_timeout_ms\x18\x03 \x01(\x03R\fackTimeoutMs\"x\n" +
+	"\x0eack_timeout_ms\x18\x03 \x01(\x03R\fackTimeoutMs\x12)\n" +
+	"\x10connection_epoch\x18\x04 \x01(\x03R\x0fconnectionEpoch\"x\n" +
 	"\x10DispatchResponse\x12\x1a\n" +
 	"\baccepted\x18\x01 \x01(\bR\baccepted\x12\x16\n" +
 	"\x06reason\x18\x02 \x01(\tR\x06reason\x120\n" +
@@ -1492,14 +1509,15 @@ const file_middleware_role_v1_role_proto_rawDesc = "" +
 	"\tDaemonRun\x12\x15\n" +
 	"\x06run_id\x18\x01 \x01(\tR\x05runId\x12\x1f\n" +
 	"\vlease_epoch\x18\x02 \x01(\x03R\n" +
-	"leaseEpoch\"\xca\x01\n" +
+	"leaseEpoch\"\xfe\x01\n" +
 	"\x14CallLocalToolRequest\x12\x15\n" +
 	"\x06app_id\x18\x01 \x01(\tR\x05appId\x12#\n" +
 	"\rconnection_id\x18\x02 \x01(\tR\fconnectionId\x12@\n" +
 	"\arequest\x18\x03 \x01(\v2&.middleware.runtime.v1.ToolCallRequestR\arequest\x12\x1d\n" +
 	"\n" +
 	"timeout_ms\x18\x04 \x01(\x03R\ttimeoutMs\x12\x15\n" +
-	"\x06run_id\x18\x05 \x01(\tR\x05runId\"V\n" +
+	"\x06run_id\x18\x05 \x01(\tR\x05runId\x122\n" +
+	"\x15execution_lease_epoch\x18\x06 \x01(\x03R\x13executionLeaseEpoch\"V\n" +
 	"\x15CallLocalToolResponse\x12=\n" +
 	"\x06result\x18\x01 \x01(\v2%.middleware.runtime.v1.ToolCallResultR\x06result\"u\n" +
 	"\x17CancelLocalToolsRequest\x12\x15\n" +

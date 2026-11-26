@@ -45,7 +45,8 @@ func runAppGatewayOnly(
 	)
 	go appHub.RunHeartbeat(ctx)
 
-	appgateway.New(baseHub).Register(internalServer.GRPC())
+	appgateway.New(baseHub).WithLeaseStore(store, cfg.Gateway.InstanceID).
+		Register(internalServer.GRPC())
 	internalServer.Serve()
 
 	runs := runstore.New(pool)

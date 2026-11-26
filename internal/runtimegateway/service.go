@@ -77,7 +77,7 @@ func (s *Service) Dispatch(ctx context.Context, req *rolev1.DispatchRequest) (*r
 	if req.GetDaemonId() == "" || req.GetEnvelope() == nil {
 		return nil, status.Error(codes.InvalidArgument, "daemon_id and envelope are required")
 	}
-	if err := s.owns(ctx, req.GetDaemonId(), 0); err != nil {
+	if err := s.owns(ctx, req.GetDaemonId(), req.GetConnectionEpoch()); err != nil {
 		return nil, err
 	}
 	timeout := time.Duration(req.GetAckTimeoutMs()) * time.Millisecond

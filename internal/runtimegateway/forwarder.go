@@ -88,8 +88,8 @@ func (f *Forwarder) DaemonOnline(info connection.DaemonInfo) error {
 }
 
 // DaemonOffline mirrors a closed daemon stream into Control.
-func (f *Forwarder) DaemonOffline(daemonID string) error {
-	return f.sendDaemonState(daemonID, cluster.StatusOffline, connection.DaemonInfo{DaemonID: daemonID})
+func (f *Forwarder) DaemonOffline(info connection.DaemonInfo) error {
+	return f.sendDaemonState(info.DaemonID, cluster.StatusOffline, info)
 }
 
 func (f *Forwarder) sendDaemonState(daemonID, status string, info connection.DaemonInfo) error {

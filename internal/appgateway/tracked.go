@@ -23,8 +23,9 @@ type TrackedHub struct {
 	ttl       time.Duration
 	logger    *slog.Logger
 
-	mu     sync.Mutex
-	epochs map[string]int64
+	mu          sync.Mutex
+	epochs      map[string]int64
+	leaseEpochs map[string]int64
 }
 
 // NewTrackedHub returns an AppHub that mirrors connections into PostgreSQL.
@@ -42,12 +43,13 @@ func NewTrackedHub(
 		logger = slog.Default()
 	}
 	return &TrackedHub{
-		AppHub:    hub,
-		store:     store,
-		gatewayID: gatewayID,
-		ttl:       ttl,
-		logger:    logger,
-		epochs:    make(map[string]int64),
+		AppHub:      hub,
+		store:       store,
+		gatewayID:   gatewayID,
+		ttl:         ttl,
+		logger:      logger,
+		epochs:      make(map[string]int64),
+		leaseEpochs: make(map[string]int64),
 	}
 }
 
@@ -81,8 +83,11 @@ func (h *TrackedHub) RegisterWithID(appID string, sink connection.EventSink, con
 	h.mu.Lock()
 	h.epochs[connectionID] = registered.ConnectionEpoch
 	h.mu.Unlock()
-	if _, err := h.store.AcquireAppExecutionLease(ctx, appID, connectionID, h.gatewayID, h.ttl); err != nil &&
-		err != cluster.ErrLeaseHeld {
+	if lease, err := h.store.AcquireAppExecutionLease(ctx, appID, connectionID, h.gatewayID, h.ttl); err == nil {
+		h.mu.Lock()
+		h.leaseEpochs[connectionID] = lease.LeaseEpoch
+		h.mu.Unlock()
+	} else if err != cluster.ErrLeaseHeld {
 		h.logger.Warn("acquire app execution lease failed",
 			"app_id", appID,
 			"connection_id", connectionID,
@@ -99,7 +104,9 @@ func (h *TrackedHub) CloseConn(conn *connection.AppConn) {
 	}
 	h.mu.Lock()
 	epoch := h.epochs[conn.ConnectionID()]
+	leaseEpoch := h.leaseEpochs[conn.ConnectionID()]
 	delete(h.epochs, conn.ConnectionID())
+	delete(h.leaseEpochs, conn.ConnectionID())
 	h.mu.Unlock()
 	h.AppHub.CloseConn(conn)
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
@@ -110,6 +117,15 @@ func (h *TrackedHub) CloseConn(conn *connection.AppConn) {
 			"connection_id", conn.ConnectionID(),
 			"err", err,
 		)
+	}
+	if leaseEpoch > 0 {
+		if _, err := h.store.ReleaseAppExecutionLease(ctx, conn.AppID(), conn.ConnectionID(), leaseEpoch); err != nil {
+			h.logger.Debug("release app execution lease failed",
+				"app_id", conn.AppID(),
+				"connection_id", conn.ConnectionID(),
+				"err", err,
+			)
+		}
 	}
 }
 

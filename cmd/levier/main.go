@@ -121,6 +121,9 @@ func runServer(args []string) {
 			(roleSet.Has(roles.Control) || roleSet.Has(roles.API) || roleSet.Has(roles.RuntimeGateway)):
 			logger.Error("app-gateway must run as its own deployment unit in this stage", "roles", roleSet.List())
 			os.Exit(1)
+		case roleSet.Has(roles.RuntimeGateway) && (roleSet.Has(roles.Control) || roleSet.Has(roles.API)):
+			logger.Error("runtime-gateway must run as its own deployment unit in this stage", "roles", roleSet.List())
+			os.Exit(1)
 		case roleSet.Has(roles.API) && !roleSet.Has(roles.Control):
 			logger.Error("api role requires control in the current deployment unit", "roles", roleSet.List())
 			os.Exit(1)
@@ -251,6 +254,7 @@ func runServer(args []string) {
 	var appPlane *controlremote.AppPlane
 	if hub == nil {
 		appPlane = controlremote.NewAppPlane(cluster.New(pool), cfg.GRPC.InternalToken, 3*time.Second, logger)
+		appPlane.StartFanout(ctx, 4)
 		defer appPlane.Close()
 	}
 	var publisher control.EventPublisher = appHub

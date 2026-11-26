@@ -33,6 +33,7 @@ message DispatchRequest {
   string daemon_id = 1;
   middleware.runtime.v1.Envelope envelope = 2;
   int64 ack_timeout_ms = 3;
+  int64 connection_epoch = 4;
 }
 
 message DispatchResponse {
@@ -164,6 +165,7 @@ message CallLocalToolRequest {
   middleware.runtime.v1.ToolCallRequest request = 3;
   int64 timeout_ms = 4;
   string run_id = 5;
+  int64 execution_lease_epoch = 6;
 }
 
 message CallLocalToolResponse {

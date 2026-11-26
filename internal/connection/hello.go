@@ -132,12 +132,21 @@ func (h *Hub) notifyHello(info DaemonInfo) {
 }
 
 func (h *Hub) notifyOffline(daemonID string) {
+	h.notifyOfflineInfo(DaemonInfo{DaemonID: daemonID})
+}
+
+func (h *Hub) notifyOfflineInfo(info DaemonInfo) {
 	h.mu.RLock()
+	infoHandler := h.onOfflineInfo
 	handler := h.onOffline
 	h.mu.RUnlock()
 	h.safeCall(func() {
+		if infoHandler != nil {
+			infoHandler(info)
+			return
+		}
 		if handler != nil {
-			handler(daemonID)
+			handler(info.DaemonID)
 		}
 	})
 }
