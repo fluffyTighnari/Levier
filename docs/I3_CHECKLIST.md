@@ -342,8 +342,8 @@ request_id
 | Tool invocation owner 字段 | 已完成 | owner gateway/connection、lease epoch、deadline schema |
 | Gateway internal address | 已完成 | `gateway_instances.internal_address` 字段 |
 | I3.0.1 契约补充 | 已完成 | 内部 RPC proto、App Bridge v2、地址/配置接线 |
-| I3.1 角色拆分 | 进行中 | `control+api` 与 `runtime-gateway` 拆分已跑通；app-gateway 未完成 |
-| I3.2 Runtime Gateway | 进行中 | 跨进程 TaskAssign/Cancel/事件已跑通；epoch fencing、durable envelope outbox、同 daemon 跨 gateway 迁移已验证；claim 后写入窗口待 I3.5 收口 |
+| I3.1 角色拆分 | 进行中 | `control+api`、`runtime-gateway`、`app-gateway` 拆分已跑通；不允许未实现的混合角色静默启动 |
+| I3.2 Runtime Gateway | 进行中 | 跨进程路由、Dispatch/daemon-state fencing、outbox、同 daemon 跨 gateway 迁移已验证；故障矩阵待 I3.6 |
 | I3.2 跨进程 smoke | 已完成 | split control/api + runtime-gateway + echo runtime 完成一次 Run |
 | I3.2 gateway failover smoke | 已完成 | 杀掉 gateway A 后，同 daemon 以 epoch 2 注册到 gateway B，后续 Run 完成 |
 | Runtime envelope outbox | 已完成 | Runtime Gateway 先落 `gateway_notifications`，Control claim 后应用并标记 published |
@@ -351,7 +351,7 @@ request_id
 | App Gateway 多副本 | 待开始 | 需要 2 个 app-gateway 的连接迁移和事件 fanout 验收 |
 | I3.3 App Gateway | 进行中 | app-gateway 拆分、WS v2 handshake、app connection/execution lease 已跑通；多 app-gateway 故障矩阵待完成 |
 | I3.4 Local Tool 路由 | 进行中 | Control 按 execution lease + connection id 定向投递；跨 app-gateway 幂等验收待完成 |
-| I3.5 通知与恢复 | 进行中 | envelope outbox/claim/publish、expired lease reaper 已完成；claim 崩溃重放验收待完成 |
+| I3.5 通知与恢复 | 进行中 | envelope outbox/claim/publish、expired lease reaper、claim TTL 重放测试已完成；claim 后崩溃全链路验收待做 |
 | I3.6 多副本测试 | 待开始 | 需要 2×control、2×runtime-gateway、2×app-gateway 故障矩阵 |
 | I3 退出评审 | 待开始 | 多副本验收 |
 | R1 Runtime 接入层收敛 | 待开始（I3 后置） | 核心与 Agent 框架适配器分层；不阻塞 I3 退出 |
