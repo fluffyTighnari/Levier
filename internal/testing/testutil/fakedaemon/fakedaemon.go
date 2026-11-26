@@ -241,7 +241,7 @@ func (d *Daemon) SendEvent(runID string, attempt int32, leaseEpoch int64, eventT
 		return fmt.Errorf("build event data: %w", err)
 	}
 	event := &runtimev1.Event{
-		Seq:    d.nextSeq(runID),
+		Seq:    d.nextSeq(runID, attempt),
 		Type:   eventType,
 		Source: protocol.EventSourceDaemon,
 		Data:   value,
@@ -375,11 +375,13 @@ func (d *Daemon) handleTaskAssign(env *runtimev1.Envelope) error {
 	return nil
 }
 
-func (d *Daemon) nextSeq(runID string) int64 {
+func (d *Daemon) nextSeq(runID string, attempt int32) int64 {
 	d.seqMu.Lock()
 	defer d.seqMu.Unlock()
-	d.seq[runID]++
-	return d.seq[runID]
+	// The wire sequence is scoped to a Run attempt; a retry starts at 1.
+	key := fmt.Sprintf("%s/%d", runID, attempt)
+	d.seq[key]++
+	return d.seq[key]
 }
 
 func (d *Daemon) setErr(err error) {
