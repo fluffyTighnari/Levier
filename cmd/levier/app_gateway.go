@@ -7,10 +7,12 @@ import (
 	"context"
 	"log/slog"
 	"net/http"
+	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/fluffyTighnari/levier/internal/appgateway"
+	"github.com/fluffyTighnari/levier/internal/cluster"
 	"github.com/fluffyTighnari/levier/internal/config"
 	"github.com/fluffyTighnari/levier/internal/connection"
 	"github.com/fluffyTighnari/levier/internal/httpapi"
@@ -30,10 +32,18 @@ func runAppGatewayOnly(
 		logger.Error("app-gateway role requires grpc.internal_addr and grpc.internal_token")
 		return
 	}
-	appHub := connection.NewAppHub()
-	defer appHub.Close()
+	baseHub := connection.NewAppHub()
+	defer baseHub.Close()
+	appHub := appgateway.NewTrackedHub(
+		baseHub,
+		cluster.New(pool),
+		cfg.Gateway.InstanceID,
+		30*time.Second,
+		logger,
+	)
+	go appHub.RunHeartbeat(ctx)
 
-	appgateway.New(appHub).Register(internalServer.GRPC())
+	appgateway.New(baseHub).Register(internalServer.GRPC())
 	internalServer.Serve()
 
 	runs := runstore.New(pool)
