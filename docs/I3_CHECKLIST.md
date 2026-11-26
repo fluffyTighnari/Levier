@@ -343,8 +343,9 @@ request_id
 | Gateway internal address | 已完成 | `gateway_instances.internal_address` 字段 |
 | I3.0.1 契约补充 | 已完成 | 内部 RPC proto、App Bridge v2、地址/配置接线 |
 | I3.1 角色拆分 | 进行中 | `control+api` 与 `runtime-gateway` 拆分已跑通；app-gateway 未完成 |
-| I3.2 Runtime Gateway | 进行中 | 跨进程 TaskAssign/Cancel/事件已跑通；epoch fencing 与 durable envelope outbox 已接入；多 gateway 故障迁移待完成 |
+| I3.2 Runtime Gateway | 进行中 | 跨进程 TaskAssign/Cancel/事件已跑通；epoch fencing、durable envelope outbox、同 daemon 跨 gateway 迁移已验证；claim 后写入窗口待 I3.5 收口 |
 | I3.2 跨进程 smoke | 已完成 | split control/api + runtime-gateway + echo runtime 完成一次 Run |
+| I3.2 gateway failover smoke | 已完成 | 杀掉 gateway A 后，同 daemon 以 epoch 2 注册到 gateway B，后续 Run 完成 |
 | Runtime envelope outbox | 已完成 | Runtime Gateway 先落 `gateway_notifications`，Control claim 后应用并标记 published |
 | I3.3 App Gateway | 待开始 | App 连接与事件 fanout |
 | I3.4 Local Tool 路由 | 待开始 | 定向投递与幂等 |
