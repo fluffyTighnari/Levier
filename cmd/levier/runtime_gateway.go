@@ -11,11 +11,11 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	runtimev1 "github.com/fluffyTighnari/levier/gen/middleware/runtime/v1"
-	"github.com/fluffyTighnari/levier/internal/cluster"
-	"github.com/fluffyTighnari/levier/internal/config"
-	"github.com/fluffyTighnari/levier/internal/connection"
-	"github.com/fluffyTighnari/levier/internal/internalapi"
-	"github.com/fluffyTighnari/levier/internal/runtimegateway"
+	"github.com/fluffyTighnari/levier/internal/state/cluster"
+	"github.com/fluffyTighnari/levier/internal/platform/config"
+	"github.com/fluffyTighnari/levier/internal/runtime/connection"
+	"github.com/fluffyTighnari/levier/internal/runtime/internalapi"
+	"github.com/fluffyTighnari/levier/internal/runtime/runtimegateway"
 )
 
 // runRuntimeGatewayOnly serves the daemon-facing Runtime Gateway role.

@@ -24,32 +24,32 @@ MODULE = "github.com/fluffyTighnari/levier/"
 
 # package -> prefixes it must not import
 DENY = {
-    "internal/runstore": [
-        "internal/control", "internal/gateway", "internal/httpapi",
-        "internal/connection", "internal/register", "internal/workflow",
+    "internal/state/runstore": [
+        "internal/controlplane/control", "internal/runtime/gateway", "internal/app/httpapi",
+        "internal/runtime/connection", "internal/state/register", "internal/state/workflow",
     ],
-    "internal/register": [
-        "internal/control", "internal/gateway", "internal/httpapi",
-        "internal/connection",
+    "internal/state/register": [
+        "internal/controlplane/control", "internal/runtime/gateway", "internal/app/httpapi",
+        "internal/runtime/connection",
     ],
-    "internal/connection": [
-        "internal/control", "internal/gateway", "internal/httpapi",
-        "internal/register", "internal/runstore",
+    "internal/runtime/connection": [
+        "internal/controlplane/control", "internal/runtime/gateway", "internal/app/httpapi",
+        "internal/state/register", "internal/state/runstore",
     ],
-    "internal/workflow": [
-        "internal/control", "internal/gateway", "internal/httpapi",
-        "internal/connection", "internal/register",
+    "internal/state/workflow": [
+        "internal/controlplane/control", "internal/runtime/gateway", "internal/app/httpapi",
+        "internal/runtime/connection", "internal/state/register",
     ],
-    "internal/gateway": [
-        "internal/control", "internal/httpapi",
+    "internal/runtime/gateway": [
+        "internal/controlplane/control", "internal/app/httpapi",
     ],
-    "internal/httpapi": [
-        "internal/control",
+    "internal/app/httpapi": [
+        "internal/controlplane/control",
     ],
-    "internal/control": [
-        "internal/httpapi",
+    "internal/controlplane/control": [
+        "internal/app/httpapi",
     ],
-    "internal/config": [
+    "internal/platform/config": [
         "internal/",
     ],
     "internal/contract": [

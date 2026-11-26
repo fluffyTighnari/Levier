@@ -16,7 +16,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/fluffyTighnari/levier/internal/daemoncheck"
+	"github.com/fluffyTighnari/levier/internal/runtime/daemoncheck"
 )
 
 func main() {

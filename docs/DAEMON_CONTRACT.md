@@ -191,7 +191,7 @@ Ack 拒绝            → 换 daemon / 重试
 参考客户端：
 
 ```text
-internal/testutil/fakedaemon
+internal/testing/testutil/fakedaemon
 ```
 
 自检命令：

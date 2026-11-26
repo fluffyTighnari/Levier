@@ -17,7 +17,7 @@
 |---|---|
 | `docs/api/openapi.yaml` | App/Admin HTTP API（OpenAPI 3.1） |
 | `contracts/app-ws.schema.json` | App WebSocket v1（JSON Schema 2020-12） |
-| `internal/errs/errors.go` | 错误码、retryable、HTTP 映射 |
+| `internal/platform/errs/errors.go` | 错误码、retryable、HTTP 映射 |
 | `docs/DAEMON_CONTRACT.md` | Daemon RuntimeChannel 契约与自检 |
 
 ## HTTP
@@ -61,7 +61,7 @@ correlation_id 必须等于收到的 msg_id
 
 ## 错误
 
-错误码以 `internal/errs/errors.go` 为准。
+错误码以 `internal/platform/errs/errors.go` 为准。
 HTTP 状态由错误码推导，客户端应读取 `error.code`，不要只依赖状态码。
 
 ## 自检

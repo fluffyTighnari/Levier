@@ -61,7 +61,7 @@
 buf lint
 buf build
 buf breaking --against '.git#branch=main'
-go test ./internal/protocol -run TestContractGolden
+go test ./internal/contract/protocol -run TestContractGolden
 PYTHONPATH=execution/runtime_sdk/src:execution/react_runtime/src python3 tests/contract/test_contract.py -v
 ```
 

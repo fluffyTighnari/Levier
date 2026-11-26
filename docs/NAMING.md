@@ -379,7 +379,7 @@ secret resolver 同时接受 MIDDLEWARE_SECRET_<NAME>
 ```text
 docker-compose.yml 中 middleware / mcp-runtime 的注入变量
 deploy/middleware-entrypoint.sh 的配置路径
-internal/config 测试（新名、旧名回退、新名优先）
+internal/platform/config 测试（新名、旧名回退、新名优先）
 mcp_runtime secret 测试
 ```
 

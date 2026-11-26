@@ -13,7 +13,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/fluffyTighnari/levier/internal/selfdesc"
+	"github.com/fluffyTighnari/levier/internal/ops/selfdesc"
 )
 
 func runDescribe(args []string, stdout, stderr io.Writer) int {

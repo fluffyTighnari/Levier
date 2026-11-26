@@ -8,7 +8,7 @@ import (
 	"log/slog"
 	"time"
 
-	"github.com/fluffyTighnari/levier/internal/cluster"
+	"github.com/fluffyTighnari/levier/internal/state/cluster"
 )
 
 func startConnectionReaper(

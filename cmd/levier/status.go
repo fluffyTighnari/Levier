@@ -13,7 +13,7 @@ import (
 	"strings"
 	"time"
 
-	statuspkg "github.com/fluffyTighnari/levier/internal/status"
+	statuspkg "github.com/fluffyTighnari/levier/internal/ops/status"
 )
 
 type statusReport struct {

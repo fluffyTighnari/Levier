@@ -9,7 +9,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/fluffyTighnari/levier/internal/selfdesc"
+	"github.com/fluffyTighnari/levier/internal/ops/selfdesc"
 )
 
 func TestReadAppCredentials(t *testing.T) {

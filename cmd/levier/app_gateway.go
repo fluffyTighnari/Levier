@@ -10,13 +10,13 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"github.com/fluffyTighnari/levier/internal/appgateway"
-	"github.com/fluffyTighnari/levier/internal/cluster"
-	"github.com/fluffyTighnari/levier/internal/config"
-	"github.com/fluffyTighnari/levier/internal/connection"
-	"github.com/fluffyTighnari/levier/internal/httpapi"
-	"github.com/fluffyTighnari/levier/internal/internalapi"
-	"github.com/fluffyTighnari/levier/internal/runstore"
+	"github.com/fluffyTighnari/levier/internal/app/appgateway"
+	"github.com/fluffyTighnari/levier/internal/state/cluster"
+	"github.com/fluffyTighnari/levier/internal/platform/config"
+	"github.com/fluffyTighnari/levier/internal/runtime/connection"
+	"github.com/fluffyTighnari/levier/internal/app/httpapi"
+	"github.com/fluffyTighnari/levier/internal/runtime/internalapi"
+	"github.com/fluffyTighnari/levier/internal/state/runstore"
 )
 
 // runAppGatewayOnly serves the App WebSocket role on its own listener.

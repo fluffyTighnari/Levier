@@ -8,7 +8,7 @@ import (
 	"runtime"
 	"strings"
 
-	"github.com/fluffyTighnari/levier/internal/version"
+	"github.com/fluffyTighnari/levier/internal/platform/version"
 )
 
 type versionInfo struct {

@@ -23,9 +23,9 @@ endif
 VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo dev)
 COMMIT ?= $(shell git rev-parse --short HEAD 2>/dev/null || echo unknown)
 BUILD_TIME ?= $(shell date -u +%Y-%m-%dT%H:%M:%SZ)
-LDFLAGS := -X github.com/fluffyTighnari/levier/internal/version.Version=$(VERSION) \
-	-X github.com/fluffyTighnari/levier/internal/version.Commit=$(COMMIT) \
-	-X github.com/fluffyTighnari/levier/internal/version.Built=$(BUILD_TIME)
+LDFLAGS := -X github.com/fluffyTighnari/levier/internal/platform/version.Version=$(VERSION) \
+	-X github.com/fluffyTighnari/levier/internal/platform/version.Commit=$(COMMIT) \
+	-X github.com/fluffyTighnari/levier/internal/platform/version.Built=$(BUILD_TIME)
 
 .PHONY: all build install wheels test test-postgres lint fmt fmt-check vet run clean dev-up dev-down migrate proto proto-check proto-lint contract-check react-runtime-test runtime-sdk-test langgraph-runtime-test mcp-runtime-test sdk-test image-runtime image-mcp-runtime counter-agent counter-agent-test http-smoke retrofit-e2e mcp-e2e global-e2e deps-check structure-check scripts-check size-report daemon-check agent-core-test mvp-demo mvp-demo-react fault-matrix i3-multireplica secrets-check docker-up docker-down docker-smoke docker-logs docker-reset release-dist
 
@@ -102,7 +102,7 @@ proto-lint:
 	$(BUF) breaking --against '.git#branch=main'
 
 contract-check: proto-lint
-	$(GO) test ./internal/protocol -run TestContractGolden -v
+	$(GO) test ./internal/contract/protocol -run TestContractGolden -v
 	PYTHONPATH="$(CONTRACT_PYTHONPATH)" $(PYTHON) tests/contract/test_contract.py -v
 
 react-runtime-test:

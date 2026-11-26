@@ -897,6 +897,25 @@ def scenario_notification_replay(config, credentials, app_log) -> str:
     return f"notification {notification_id} survived a dead claim and replayed idempotently"
 
 
+def scenario_worker_lease_expiry(config, credentials, app_log) -> str:
+    stop("daemon", force=True)
+    run_id = submit(config["controlB"]["url"], credentials)
+    wait_run(config["controlB"]["url"], credentials, run_id, {"queued"}, 20)
+    sql(
+        "UPDATE run_tasks SET status='LEASED', lease_owner='dead-control', "
+        "lease_expires_at=now() - interval '1 second', "
+        "attempt=GREATEST(attempt, 1), lease_token=lease_token+1, updated_at=now() "
+        f"WHERE run_id={sql_quote(run_id)} AND task_type='DISPATCH' "
+        "AND status IN ('PENDING','LEASED')"
+    )
+    start_daemon(config, "rtgwB", delay="200ms")
+    final = wait_terminal(config["controlB"]["url"], credentials, run_id, 60)
+    if final.get("status") != "completed":
+        raise MatrixError(f"run {run_id} after worker lease expiry: {final}")
+    assert_run_clean(run_id)
+    return f"run {run_id} recovered after a control worker lease expired"
+
+
 def scenario_runtime_gateway_failure(config, credentials, app_log) -> str:
     stop("daemon", force=True)
     stop("rtgwA", force=True)
@@ -1060,6 +1079,7 @@ def main() -> int:
             ("cross_replica_cancel", lambda: scenario_cross_replica_cancel(config, credentials, app_log)),
             ("control_failure", lambda: scenario_control_failure(config, credentials, app_log)),
             ("app_disconnect_pending", lambda: scenario_app_disconnect_pending(config, credentials, app_log)),
+            ("worker_lease_expiry", lambda: scenario_worker_lease_expiry(config, credentials, app_log)),
             ("runtime_gateway_failure", lambda: scenario_runtime_gateway_failure(config, credentials, app_log)),
             ("app_gateway_failure", lambda: scenario_app_gateway_failure(config, credentials, app_log, proxy)),
             ("local_tool_idempotency", lambda: scenario_local_tool_idempotency(config, credentials, app_log)),

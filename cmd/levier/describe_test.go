@@ -7,7 +7,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/fluffyTighnari/levier/internal/selfdesc"
+	"github.com/fluffyTighnari/levier/internal/ops/selfdesc"
 )
 
 func TestRunDescribeJSON(t *testing.T) {

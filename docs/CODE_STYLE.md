@@ -18,7 +18,7 @@
 ```go
 // Package workflow implements the PostgreSQL-backed RunTaskQueue.
 //
-// Levier — internal/workflow
+// Levier — internal/state/workflow
 // Copyright 2026 The Levier Authors.
 package workflow
 ```
@@ -26,7 +26,7 @@ package workflow
 实现文件（非 `doc.go`）：
 
 ```go
-// Levier — internal/workflow
+// Levier — internal/state/workflow
 //
 // Claim and lease semantics for run tasks.
 //
@@ -37,7 +37,7 @@ package workflow
 规则：
 
 - `doc.go` 的第一句必须是 `Package <name> ...`。
-- 路径使用仓库相对路径，例如 `internal/workflow`、`cmd/levier`。
+- 路径使用仓库相对路径，例如 `internal/state/workflow`、`cmd/levier`。
 - 不在头部写作者个人姓名或邮箱。
 
 ## 3. Python

@@ -48,7 +48,7 @@ mkdir -p "$OUT_DIR"
 WORK=$(mktemp -d "${TMPDIR:-/tmp}/levier-release.XXXXXX")
 trap 'rm -rf "$WORK"' EXIT INT TERM
 
-LDFLAGS="-X ${MODULE}/internal/version.Version=${VERSION} -X ${MODULE}/internal/version.Commit=${COMMIT} -X ${MODULE}/internal/version.Built=${BUILT}"
+LDFLAGS="-X ${MODULE}/internal/platform/version.Version=${VERSION} -X ${MODULE}/internal/platform/version.Commit=${COMMIT} -X ${MODULE}/internal/platform/version.Built=${BUILT}"
 
 sha256_file() {
 	if command -v sha256sum >/dev/null 2>&1; then

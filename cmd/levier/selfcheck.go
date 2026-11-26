@@ -11,7 +11,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/fluffyTighnari/levier/internal/selfcheck"
+	"github.com/fluffyTighnari/levier/internal/ops/selfcheck"
 )
 
 func runSelfcheck(args []string, stdout, stderr io.Writer) int {

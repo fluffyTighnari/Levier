@@ -10,7 +10,7 @@ import (
 	"sort"
 	"time"
 
-	"github.com/fluffyTighnari/levier/internal/daemoncheck"
+	"github.com/fluffyTighnari/levier/internal/runtime/daemoncheck"
 	"google.golang.org/grpc/codes"
 	grpcstatus "google.golang.org/grpc/status"
 )

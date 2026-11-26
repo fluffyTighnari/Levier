@@ -274,7 +274,7 @@ longterm run
 | D11 WS 订阅 | 校验 app 归属 | ADR-0002 |
 | D12 Checkpoint | 复合 watermark | ADR-0002 |
 | D13 存储 | 统一 PostgreSQL | ADR-0001 |
-| D14 模块 | 根模块 + `internal/workflow` + `harness/` | 本 ADR |
+| D14 模块 | 根模块 + `internal/state/workflow` + `harness/` | 本 ADR |
 | D15 工具链 | Go 1.26 / Python 3.12 / PG 16+ | 本 ADR |
 | D16 旧能力 | 归档 DAG/Effect/Saga | 工作流引擎已归档 |
 | D17 MCP | 独立 `mcp_runtime`，总控只存目录/ACL | ADR-0002、ADR-0004 |

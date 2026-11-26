@@ -10,8 +10,8 @@ import (
 	"log/slog"
 	"os"
 
-	"github.com/fluffyTighnari/levier/internal/config"
-	"github.com/fluffyTighnari/levier/internal/db"
+	"github.com/fluffyTighnari/levier/internal/platform/config"
+	"github.com/fluffyTighnari/levier/internal/platform/db"
 )
 
 func main() {

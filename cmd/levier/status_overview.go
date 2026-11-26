@@ -10,7 +10,7 @@ import (
 	"sort"
 	"strconv"
 
-	statuspkg "github.com/fluffyTighnari/levier/internal/status"
+	statuspkg "github.com/fluffyTighnari/levier/internal/ops/status"
 )
 
 func printStatusOverview(server string, snapshot statuspkg.Snapshot, asJSON bool, stdout, stderr io.Writer) int {

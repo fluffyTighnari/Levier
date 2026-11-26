@@ -9,10 +9,10 @@ import (
 	"log/slog"
 	"time"
 
-	"github.com/fluffyTighnari/levier/internal/cluster"
-	"github.com/fluffyTighnari/levier/internal/config"
-	"github.com/fluffyTighnari/levier/internal/roles"
-	"github.com/fluffyTighnari/levier/internal/version"
+	"github.com/fluffyTighnari/levier/internal/state/cluster"
+	"github.com/fluffyTighnari/levier/internal/platform/config"
+	"github.com/fluffyTighnari/levier/internal/contract/roles"
+	"github.com/fluffyTighnari/levier/internal/platform/version"
 )
 
 type gatewayLease struct {

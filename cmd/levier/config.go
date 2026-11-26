@@ -8,7 +8,7 @@ import (
 
 	"gopkg.in/yaml.v3"
 
-	"github.com/fluffyTighnari/levier/internal/config"
+	"github.com/fluffyTighnari/levier/internal/platform/config"
 )
 
 type configCheckResult struct {

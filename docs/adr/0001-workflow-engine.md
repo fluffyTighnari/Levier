@@ -29,7 +29,7 @@ middleware 需要把一次 Run 的调度做成可靠、可恢复的任务，但�
 
 ## 2. 决策
 
-在 middleware 主模块的 `internal/workflow` 中实现 **PostgreSQL 持久化 RunTaskQueue**：
+在 middleware 主模块的 `internal/state/workflow` 中实现 **PostgreSQL 持久化 RunTaskQueue**：
 
 - 任务类型只覆盖 Run 级调度：`RUN_DISPATCH`、`RUN_RETRY`、`RUN_TIMEOUT`、`RUN_RECONCILE`。
 - 任务状态：`PENDING`、`LEASED`、`DONE`、`DEAD`、`CANCELLED`。

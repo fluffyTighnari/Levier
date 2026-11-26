@@ -10,8 +10,8 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"github.com/fluffyTighnari/levier/internal/config"
-	"github.com/fluffyTighnari/levier/internal/db"
+	"github.com/fluffyTighnari/levier/internal/platform/config"
+	"github.com/fluffyTighnari/levier/internal/platform/db"
 )
 
 type migrateStatusResult struct {

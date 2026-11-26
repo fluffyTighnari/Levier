@@ -12,9 +12,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/fluffyTighnari/levier/internal/config"
-	"github.com/fluffyTighnari/levier/internal/db"
-	"github.com/fluffyTighnari/levier/internal/selfdesc"
+	"github.com/fluffyTighnari/levier/internal/platform/config"
+	"github.com/fluffyTighnari/levier/internal/platform/db"
+	"github.com/fluffyTighnari/levier/internal/ops/selfdesc"
 )
 
 type doctorCheck struct {

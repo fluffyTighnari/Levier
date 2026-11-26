@@ -36,7 +36,7 @@
 
 ```text
 Levier 控制面
-  internal/config + levier.example.yaml + LEVIER_* 环境变量
+  internal/platform/config + levier.example.yaml + LEVIER_* 环境变量
 
 React Runtime
   execution/react_runtime/react.example.yaml + LEVIER_RUNTIME_* / LEVIER_MIDDLEWARE_* environment variables
@@ -59,7 +59,7 @@ CLI
 ## 3. 控制面配置
 
 文件：`levier.example.yaml`
-代码：`internal/config/config.go`
+代码：`internal/platform/config/config.go`
 
 ### 3.0 版本与环境
 
@@ -568,7 +568,7 @@ admin token 只用于控制面和测试初始化，不进入 Agent 运行时
 6E 已采用：
 
 ```text
-internal/config：解析、未知字段、非法类型、环境变量优先级、secret 文件测试
+internal/platform/config：解析、未知字段、非法类型、环境变量优先级、secret 文件测试
 cmd/levier：config check、config check --json、config print --json、脱敏测试
 docs：CONFIG / CLI_REFERENCE / INSTALL / 迁移说明
 Compose smoke：本地开发栈已通过

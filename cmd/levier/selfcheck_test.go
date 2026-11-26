@@ -9,7 +9,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/fluffyTighnari/levier/internal/selfcheck"
+	"github.com/fluffyTighnari/levier/internal/ops/selfcheck"
 )
 
 func TestRunSelfcheckJSON(t *testing.T) {

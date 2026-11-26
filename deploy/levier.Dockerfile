@@ -16,7 +16,7 @@ COPY go.mod go.sum ./
 RUN go mod download
 COPY . .
 RUN CGO_ENABLED=0 go build -trimpath \
-      -ldflags "-X github.com/fluffyTighnari/levier/internal/version.Version=$VERSION -X github.com/fluffyTighnari/levier/internal/version.Commit=$COMMIT -X github.com/fluffyTighnari/levier/internal/version.Built=$BUILD_TIME" \
+      -ldflags "-X github.com/fluffyTighnari/levier/internal/platform/version.Version=$VERSION -X github.com/fluffyTighnari/levier/internal/platform/version.Commit=$COMMIT -X github.com/fluffyTighnari/levier/internal/platform/version.Built=$BUILD_TIME" \
       -o /out/levier ./cmd/levier \
  && CGO_ENABLED=0 go build -trimpath -o /out/migrate ./cmd/migrate
 

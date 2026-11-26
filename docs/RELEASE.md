@@ -243,7 +243,7 @@ $(go env GOPATH)/bin/levier version
 ```
 
 `go install` 不会传入本项目 Makefile 的 ldflags。
-`internal/version` 会从 `debug.BuildInfo` 读取模块版本，因此：
+`internal/platform/version` 会从 `debug.BuildInfo` 读取模块版本，因此：
 
 ```text
 version 正确
@@ -268,9 +268,9 @@ release workflow 的 `go-install` job 只在仓库公开时运行：
 构建时注入：
 
 ```text
-internal/version.Version = VERSION
-internal/version.Commit  = short commit
-internal/version.Built   = UTC build time
+internal/platform/version.Version = VERSION
+internal/platform/version.Commit  = short commit
+internal/platform/version.Built   = UTC build time
 ```
 
 `levier version` 输出：

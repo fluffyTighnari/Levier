@@ -8,8 +8,8 @@ import (
 
 	"google.golang.org/grpc"
 
-	"github.com/fluffyTighnari/levier/internal/config"
-	"github.com/fluffyTighnari/levier/internal/connection"
+	"github.com/fluffyTighnari/levier/internal/platform/config"
+	"github.com/fluffyTighnari/levier/internal/runtime/connection"
 )
 
 func startDaemonGRPC(cfg config.Config, hub *connection.Hub) (net.Listener, *grpc.Server, error) {

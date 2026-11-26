@@ -9,7 +9,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	statuspkg "github.com/fluffyTighnari/levier/internal/status"
+	statuspkg "github.com/fluffyTighnari/levier/internal/ops/status"
 )
 
 func TestParseMetricLine(t *testing.T) {

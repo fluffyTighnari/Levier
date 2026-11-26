@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/fluffyTighnari/levier/internal/config"
+	"github.com/fluffyTighnari/levier/internal/platform/config"
 )
 
 func TestRunMaintenanceHelp(t *testing.T) {
