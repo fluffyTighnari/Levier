@@ -14,6 +14,7 @@ import (
 
 	rolev1 "github.com/fluffyTighnari/levier/gen/middleware/role/v1"
 	runtimev1 "github.com/fluffyTighnari/levier/gen/middleware/runtime/v1"
+	"github.com/fluffyTighnari/levier/internal/platform/observe"
 	"github.com/fluffyTighnari/levier/internal/runtime/connection"
 	"github.com/fluffyTighnari/levier/internal/runtime/internalapi"
 	"github.com/fluffyTighnari/levier/internal/state/cluster"
@@ -31,6 +32,7 @@ type AppPlane struct {
 	token       string
 	dialTimeout time.Duration
 	logger      *slog.Logger
+	metrics     *observe.Registry
 	events      chan appEvent
 
 	mu    sync.Mutex
@@ -58,6 +60,21 @@ func NewAppPlane(store *cluster.Store, token string, dialTimeout time.Duration, 
 		logger:      logger,
 		events:      make(chan appEvent, 1024),
 		conns:       make(map[string]*appClient),
+	}
+}
+
+// WithMetrics attaches cross-replica route metrics.
+func (a *AppPlane) WithMetrics(metrics *observe.Registry) *AppPlane {
+	if a != nil {
+		a.metrics = metrics
+	}
+	return a
+}
+
+func (a *AppPlane) recordRoute(route string) {
+	if a != nil && a.metrics != nil {
+		a.metrics.Inc(observe.MetricCrossReplicaRoutesTotal,
+			"Cross-replica routes by route kind.", map[string]string{"route": route})
 	}
 }
 
@@ -123,6 +140,7 @@ func (a *AppPlane) CallLocalTool(ctx context.Context, appID string, request conn
 			}
 		}
 	}
+	a.recordRoute("app.local_tool")
 	return result, nil
 }
 
@@ -156,7 +174,9 @@ func (a *AppPlane) publishDirect(appID, runID string, payload []byte) {
 		if err != nil {
 			a.dropGateway(gateway.GatewayID)
 			a.logger.Warn("publish app event failed", "gateway_id", gateway.GatewayID, "err", err)
+			continue
 		}
+		a.recordRoute("app.publish")
 	}
 }
 

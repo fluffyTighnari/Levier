@@ -23,6 +23,7 @@ import (
 	rolev1 "github.com/fluffyTighnari/levier/gen/middleware/role/v1"
 	runtimev1 "github.com/fluffyTighnari/levier/gen/middleware/runtime/v1"
 	"github.com/fluffyTighnari/levier/internal/controlplane/control"
+	"github.com/fluffyTighnari/levier/internal/platform/observe"
 	"github.com/fluffyTighnari/levier/internal/runtime/connection"
 	"github.com/fluffyTighnari/levier/internal/runtime/internalapi"
 	"github.com/fluffyTighnari/levier/internal/runtime/ports"
@@ -44,6 +45,7 @@ type Plane struct {
 	token       string
 	dialTimeout time.Duration
 	logger      *slog.Logger
+	metrics     *observe.Registry
 
 	mu    sync.Mutex
 	conns map[string]*gatewayClient
@@ -72,6 +74,21 @@ func New(opts Options) *Plane {
 	}
 }
 
+// WithMetrics attaches cross-replica route metrics.
+func (p *Plane) WithMetrics(metrics *observe.Registry) *Plane {
+	if p != nil {
+		p.metrics = metrics
+	}
+	return p
+}
+
+func (p *Plane) recordRoute(route string) {
+	if p != nil && p.metrics != nil {
+		p.metrics.Inc(observe.MetricCrossReplicaRoutesTotal,
+			"Cross-replica routes by route kind.", map[string]string{"route": route})
+	}
+}
+
 // Send forwards a non-dispatch envelope to the owning Runtime Gateway.
 func (p *Plane) Send(daemonID string, env *runtimev1.Envelope) error {
 	if env == nil {
@@ -92,6 +109,7 @@ func (p *Plane) Send(daemonID string, env *runtimev1.Envelope) error {
 		p.dropGateway(gateway.GatewayID)
 		return fmt.Errorf("send to runtime gateway %s: %w", gateway.GatewayID, err)
 	}
+	p.recordRoute("runtime.send")
 	return nil
 }
 
@@ -123,6 +141,7 @@ func (p *Plane) Dispatch(
 	if resp.GetAck() == nil {
 		return nil, fmt.Errorf("runtime gateway returned no task ack")
 	}
+	p.recordRoute("runtime.dispatch")
 	return resp.GetAck(), nil
 }
 

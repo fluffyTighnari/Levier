@@ -76,4 +76,18 @@ const (
 	MetricEphemeralEventsTotal = "levier_ephemeral_events_total"
 	// MetricTokenUsageTotal counts token usage from USAGE events.
 	MetricTokenUsageTotal = "levier_token_usage_total"
+	// MetricGatewayInstances reports gateway instances by role and status.
+	MetricGatewayInstances = "levier_gateway_instances"
+	// MetricRuntimeConnectionLease reports Runtime connection leases by status.
+	MetricRuntimeConnectionLease = "levier_runtime_connection_lease"
+	// MetricAppConnectionLease reports App connection leases by status.
+	MetricAppConnectionLease = "levier_app_connection_lease"
+	// MetricConnectionReapedTotal counts expired control-plane leases reclaimed.
+	MetricConnectionReapedTotal = "levier_connection_reaped_total"
+	// MetricNotificationLagSeconds reports the age of the oldest unpublished notification.
+	MetricNotificationLagSeconds = "levier_notification_lag_seconds"
+	// MetricCrossReplicaRoutesTotal counts routes between control-plane replicas.
+	MetricCrossReplicaRoutesTotal = "levier_cross_replica_routes_total"
+	// MetricToolDuplicateSuppressedTotal counts duplicate tool results suppressed.
+	MetricToolDuplicateSuppressedTotal = "levier_tool_duplicate_suppressed_total"
 )

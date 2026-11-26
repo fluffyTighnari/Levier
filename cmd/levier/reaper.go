@@ -8,6 +8,7 @@ import (
 	"log/slog"
 	"time"
 
+	"github.com/fluffyTighnari/levier/internal/platform/observe"
 	"github.com/fluffyTighnari/levier/internal/state/cluster"
 )
 
@@ -17,6 +18,7 @@ func startConnectionReaper(
 	interval time.Duration,
 	limit int,
 	logger *slog.Logger,
+	metrics ...*observe.Registry,
 ) {
 	if interval <= 0 {
 		interval = 10 * time.Second
@@ -39,8 +41,13 @@ func startConnectionReaper(
 				}
 				continue
 			}
-			if result.Gateways+result.Runtimes+result.Apps+result.Exec+result.Capacity == 0 {
+			total := result.Gateways + result.Runtimes + result.Apps + result.Exec + result.Capacity
+			if total == 0 {
 				continue
+			}
+			if len(metrics) > 0 && metrics[0] != nil {
+				metrics[0].Add(observe.MetricConnectionReapedTotal,
+					"Cumulative expired control-plane leases reclaimed.", nil, float64(total))
 			}
 			logger.Info("connection reaper reclaimed expired leases",
 				"gateways", result.Gateways,

@@ -187,7 +187,8 @@ func runServer(args []string) {
 		return
 	}
 
-	startConnectionReaper(ctx, cluster.New(pool), cfg.Workflow.ReapInterval.Std(), cfg.Workflow.ReapLimit, logger)
+	metrics := observe.NewRegistry()
+	startConnectionReaper(ctx, cluster.New(pool), cfg.Workflow.ReapInterval.Std(), cfg.Workflow.ReapLimit, logger, metrics)
 
 	var hub *connection.Hub
 	if roleSet.IsAll() {
@@ -200,7 +201,6 @@ func runServer(args []string) {
 		}
 	}
 
-	metrics := observe.NewRegistry()
 	runs := runstore.New(pool)
 	registry := register.New(pool)
 	resolvers := []register.SecretResolver{register.EnvSecretResolver{}}
@@ -253,7 +253,8 @@ func runServer(args []string) {
 	defer appHub.Close()
 	var appPlane *controlremote.AppPlane
 	if hub == nil {
-		appPlane = controlremote.NewAppPlane(cluster.New(pool), cfg.GRPC.InternalToken, 3*time.Second, logger)
+		appPlane = controlremote.NewAppPlane(cluster.New(pool), cfg.GRPC.InternalToken, 3*time.Second, logger).
+			WithMetrics(metrics)
 		appPlane.StartFanout(ctx, 1)
 		defer appPlane.Close()
 	}
@@ -310,7 +311,7 @@ func runServer(args []string) {
 			Token:       cfg.GRPC.InternalToken,
 			DialTimeout: 3 * time.Second,
 			Logger:      logger,
-		})
+		}).WithMetrics(metrics)
 		defer remotePlane.Close()
 		controlCfg.Scheduler = remotePlane
 		controlCfg.DaemonAvailable = remotePlane.DaemonAvailable
@@ -379,6 +380,7 @@ func runServer(args []string) {
 	}()
 
 	metricsCollector := func(ctx context.Context) {
+		collectControlPlaneMetrics(ctx, pool, metrics)
 		stats, err := queue.Stats(ctx)
 		if err != nil {
 			logger.Warn("collect workflow metrics failed", "err", err)

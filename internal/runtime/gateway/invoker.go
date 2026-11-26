@@ -150,6 +150,7 @@ func (i *Invoker) Invoke(
 	invocationID := request.GetInvocationId()
 
 	if cached, ok := i.state.get(invocationID); ok {
+		i.recordDuplicate()
 		return cached
 	}
 	pending, owner := i.state.acquire(invocationID)
@@ -174,6 +175,13 @@ func (i *Invoker) Invoke(
 
 // executeSafe contains panics so one bad tool cannot kill the process or leave
 // the single-flight entry stuck.
+func (i *Invoker) recordDuplicate() {
+	if i != nil && i.metrics != nil {
+		i.metrics.Inc(observe.MetricToolDuplicateSuppressedTotal,
+			"Duplicate tool invocation results suppressed.", nil)
+	}
+}
+
 func (i *Invoker) executeSafe(
 	ctx context.Context,
 	runID, appID string,
@@ -210,6 +218,7 @@ func (i *Invoker) execute(
 		}
 		if !owner {
 			if stored != nil && stored.Result != nil {
+				i.recordDuplicate()
 				i.state.put(invocationID, stored.Result)
 				return stored.Result
 			}

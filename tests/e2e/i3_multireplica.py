@@ -204,6 +204,11 @@ def http(
         return exc.code, parsed
 
 
+def metrics_text(base: str) -> str:
+    with urllib.request.urlopen(base + "/metrics", timeout=10) as response:
+        return response.read().decode("utf-8", "replace")
+
+
 def wait_http(base: str, path: str = "/healthz", timeout: float = 20) -> None:
     def ready() -> bool:
         try:
@@ -818,6 +823,16 @@ def scenario_baseline(config, credentials, app_log) -> str:
         raise MatrixError("App connection metadata did not record the v2 hello")
     if app_tool_count(app_log, "counter_add") < 1:
         raise MatrixError("baseline App did not execute counter_add")
+    metrics = metrics_text(config["controlA"]["url"])
+    for metric in (
+        "levier_gateway_instances",
+        "levier_runtime_connection_lease",
+        "levier_app_connection_lease",
+        "levier_notification_lag_seconds",
+        "levier_cross_replica_routes_total",
+    ):
+        if metric not in metrics:
+            raise MatrixError(f"control metrics missing {metric}")
     return f"run {run_id} completed, event and local tool observed"
 
 
@@ -1016,6 +1031,13 @@ def scenario_local_tool_idempotency(config, credentials, app_log) -> str:
     )
     if count != 1:
         raise MatrixError(f"duplicate invocation produced {count} tool_invocations rows")
+    wait_until(
+        lambda: "levier_tool_duplicate_suppressed_total" in metrics_text(
+            config["controlB"]["url"]
+        ),
+        10,
+        "duplicate suppression metric",
+    )
     assert_run_clean(run_id)
     return f"run {run_id} delivered the same invocation twice but executed it once"
 
