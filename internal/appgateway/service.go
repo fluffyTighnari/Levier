@@ -60,7 +60,7 @@ func (s *Service) CallLocalTool(ctx context.Context, req *rolev1.CallLocalToolRe
 	}
 	// The execution lease already selected the connection; AppHub currently
 	// has one pending namespace per App, so the service passes through.
-	result, err := s.hub.CallLocalTool(ctx, req.GetAppId(), request)
+	result, err := s.hub.CallLocalToolTo(ctx, req.GetAppId(), req.GetConnectionId(), request)
 	if err != nil {
 		return nil, status.Error(codes.Unavailable, err.Error())
 	}

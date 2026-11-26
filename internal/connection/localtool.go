@@ -59,6 +59,15 @@ type completedLocalCall struct {
 
 // CallLocalTool sends a local tool call and waits for the App result.
 func (h *AppHub) CallLocalTool(ctx context.Context, appID string, request LocalToolRequest) (LocalToolResult, error) {
+	return h.callLocalTool(ctx, appID, "", request)
+}
+
+// CallLocalToolTo sends a local tool call to one execution connection.
+func (h *AppHub) CallLocalToolTo(ctx context.Context, appID, connectionID string, request LocalToolRequest) (LocalToolResult, error) {
+	return h.callLocalTool(ctx, appID, connectionID, request)
+}
+
+func (h *AppHub) callLocalTool(ctx context.Context, appID, connectionID string, request LocalToolRequest) (LocalToolResult, error) {
 	if request.InvocationID == "" || request.ToolName == "" {
 		return LocalToolResult{}, fmt.Errorf("invocation_id and tool_name are required")
 	}
@@ -69,6 +78,9 @@ func (h *AppHub) CallLocalTool(ctx context.Context, appID string, request LocalT
 		return LocalToolResult{}, fmt.Errorf("local tool call %q is already pending", request.InvocationID)
 	}
 	target := h.pickConnectionLocked(appID)
+	if connectionID != "" {
+		target = h.connectionByIDLocked(appID, connectionID)
+	}
 	if target == nil {
 		h.mu.Unlock()
 		return LocalToolResult{}, ErrAppUnreachable
@@ -221,6 +233,15 @@ func (h *AppHub) pickConnectionLocked(appID string) *AppConn {
 		}
 	}
 	return fallback
+}
+
+func (h *AppHub) connectionByIDLocked(appID, connectionID string) *AppConn {
+	for conn := range h.apps[appID] {
+		if conn.ConnectionID() == connectionID {
+			return conn
+		}
+	}
+	return nil
 }
 
 func (h *AppHub) failPendingForConn(conn *AppConn) {

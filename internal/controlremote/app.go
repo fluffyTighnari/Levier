@@ -55,13 +55,20 @@ func NewAppPlane(store *cluster.Store, token string, dialTimeout time.Duration, 
 
 // CallLocalTool routes one invocation to a live App Gateway.
 func (a *AppPlane) CallLocalTool(ctx context.Context, appID string, request connection.LocalToolRequest) (connection.LocalToolResult, error) {
-	gateway, client, err := a.firstGateway(ctx, appID)
+	connectionID := ""
+	gatewayID := ""
+	if lease, err := a.store.GetAppExecutionLease(ctx, appID); err == nil {
+		connectionID = lease.ConnectionID
+		gatewayID = lease.GatewayID
+	}
+	gateway, client, err := a.firstGateway(ctx, gatewayID)
 	if err != nil {
 		return connection.LocalToolResult{}, err
 	}
 	response, err := client.CallLocalTool(ctx, &rolev1.CallLocalToolRequest{
-		AppId: appID,
-		RunId: request.RunID,
+		AppId:        appID,
+		ConnectionId: connectionID,
+		RunId:        request.RunID,
 		Request: &runtimev1.ToolCallRequest{
 			InvocationId:  request.InvocationID,
 			ToolName:      request.ToolName,
@@ -140,7 +147,10 @@ func (a *AppPlane) Close() {
 	}
 }
 
-func (a *AppPlane) firstGateway(ctx context.Context, appID string) (cluster.GatewayInstance, rolev1.AppGatewayServiceClient, error) {
+func (a *AppPlane) firstGateway(
+	ctx context.Context,
+	preferredGatewayID string,
+) (cluster.GatewayInstance, rolev1.AppGatewayServiceClient, error) {
 	gateways, err := a.gateways(ctx)
 	if err != nil {
 		return cluster.GatewayInstance{}, nil, err
@@ -149,6 +159,14 @@ func (a *AppPlane) firstGateway(ctx context.Context, appID string) (cluster.Gate
 		return cluster.GatewayInstance{}, nil, connection.ErrAppUnreachable
 	}
 	gateway := gateways[0]
+	if preferredGatewayID != "" {
+		for _, candidate := range gateways {
+			if candidate.GatewayID == preferredGatewayID {
+				gateway = candidate
+				break
+			}
+		}
+	}
 	client, err := a.client(ctx, gateway)
 	return gateway, client, err
 }
