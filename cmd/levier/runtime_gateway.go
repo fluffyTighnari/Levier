@@ -73,7 +73,9 @@ func runRuntimeGatewayOnly(
 			)
 		}
 	})
-	runtimegateway.New(hub, 6*time.Second).Register(internalServer.GRPC())
+	runtimegateway.New(hub, 6*time.Second).
+		WithOwnership(store, cfg.Gateway.InstanceID).
+		Register(internalServer.GRPC())
 	internalServer.Serve()
 
 	listener, grpcServer, err := startDaemonGRPC(cfg, hub)
