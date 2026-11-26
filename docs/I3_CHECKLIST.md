@@ -351,8 +351,8 @@ request_id
 | App Gateway 多副本 | 待开始 | 需要 2 个 app-gateway 的连接迁移和事件 fanout 验收 |
 | I3.3 App Gateway | 进行中 | app-gateway 拆分、WS v2 handshake、app connection/execution lease 已跑通；多 app-gateway 故障矩阵待完成 |
 | I3.4 Local Tool 路由 | 进行中 | Control 按 execution lease + connection id 定向投递；跨 app-gateway 幂等验收待完成 |
-| I3.5 通知与恢复 | 进行中 | envelope outbox/claim/publish 已完成；通知丢失补偿与 connection reaper 待完成 |
-| I3.6 多副本测试 | 待开始 | 故障矩阵 |
+| I3.5 通知与恢复 | 进行中 | envelope outbox/claim/publish、expired lease reaper 已完成；claim 崩溃重放验收待完成 |
+| I3.6 多副本测试 | 待开始 | 需要 2×control、2×runtime-gateway、2×app-gateway 故障矩阵 |
 | I3 退出评审 | 待开始 | 多副本验收 |
 | R1 Runtime 接入层收敛 | 待开始（I3 后置） | 核心与 Agent 框架适配器分层；不阻塞 I3 退出 |
 
