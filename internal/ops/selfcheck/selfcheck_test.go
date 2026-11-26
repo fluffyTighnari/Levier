@@ -14,9 +14,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/fluffyTighnari/levier/internal/runtime/connection"
 	"github.com/fluffyTighnari/levier/internal/ops/selfdesc"
 	statuspkg "github.com/fluffyTighnari/levier/internal/ops/status"
+	"github.com/fluffyTighnari/levier/internal/runtime/connection"
 )
 
 func TestRunnerHTTPHops(t *testing.T) {

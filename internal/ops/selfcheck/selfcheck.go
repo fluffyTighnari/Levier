@@ -17,11 +17,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/fluffyTighnari/levier/internal/platform/config"
-	"github.com/fluffyTighnari/levier/internal/runtime/daemoncheck"
-	"github.com/fluffyTighnari/levier/internal/platform/db"
 	"github.com/fluffyTighnari/levier/internal/ops/selfdesc"
 	statuspkg "github.com/fluffyTighnari/levier/internal/ops/status"
+	"github.com/fluffyTighnari/levier/internal/platform/config"
+	"github.com/fluffyTighnari/levier/internal/platform/db"
+	"github.com/fluffyTighnari/levier/internal/runtime/daemoncheck"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"golang.org/x/net/websocket"
 )

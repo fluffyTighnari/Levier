@@ -11,8 +11,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/fluffyTighnari/levier/internal/state/cluster"
 	"github.com/fluffyTighnari/levier/internal/runtime/connection"
+	"github.com/fluffyTighnari/levier/internal/state/cluster"
 )
 
 // Registry mirrors daemon connections into PostgreSQL leases.

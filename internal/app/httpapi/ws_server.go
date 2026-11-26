@@ -18,9 +18,9 @@ import (
 
 	"golang.org/x/net/websocket"
 
-	"github.com/fluffyTighnari/levier/internal/runtime/connection"
 	"github.com/fluffyTighnari/levier/internal/platform/id"
 	"github.com/fluffyTighnari/levier/internal/platform/observe"
+	"github.com/fluffyTighnari/levier/internal/runtime/connection"
 )
 
 const (

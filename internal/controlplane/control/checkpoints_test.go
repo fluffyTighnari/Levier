@@ -11,8 +11,8 @@ import (
 	"testing"
 
 	runtimev1 "github.com/fluffyTighnari/levier/gen/middleware/runtime/v1"
-	"github.com/fluffyTighnari/levier/internal/platform/observe"
 	"github.com/fluffyTighnari/levier/internal/contract/protocol"
+	"github.com/fluffyTighnari/levier/internal/platform/observe"
 	"github.com/fluffyTighnari/levier/internal/state/runstore"
 )
 

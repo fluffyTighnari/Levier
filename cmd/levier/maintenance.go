@@ -14,9 +14,9 @@ import (
 	"strings"
 	"time"
 
+	"github.com/fluffyTighnari/levier/internal/ops/maintenance"
 	"github.com/fluffyTighnari/levier/internal/platform/config"
 	"github.com/fluffyTighnari/levier/internal/platform/db"
-	"github.com/fluffyTighnari/levier/internal/ops/maintenance"
 )
 
 func runMaintenance(args []string, stdout, stderr io.Writer) int {

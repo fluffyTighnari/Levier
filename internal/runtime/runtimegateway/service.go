@@ -17,8 +17,8 @@ import (
 	"google.golang.org/protobuf/types/known/emptypb"
 
 	rolev1 "github.com/fluffyTighnari/levier/gen/middleware/role/v1"
-	"github.com/fluffyTighnari/levier/internal/state/cluster"
 	"github.com/fluffyTighnari/levier/internal/runtime/connection"
+	"github.com/fluffyTighnari/levier/internal/state/cluster"
 )
 
 // Service implements rolev1.RuntimeGatewayService.

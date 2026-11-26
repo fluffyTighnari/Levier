@@ -20,13 +20,13 @@ import (
 	"strings"
 	"time"
 
-	"github.com/fluffyTighnari/levier/internal/runtime/connection"
+	"github.com/fluffyTighnari/levier/internal/ops/selfdesc"
+	statuspkg "github.com/fluffyTighnari/levier/internal/ops/status"
 	"github.com/fluffyTighnari/levier/internal/platform/observe"
+	"github.com/fluffyTighnari/levier/internal/runtime/connection"
 	"github.com/fluffyTighnari/levier/internal/runtime/ports"
 	"github.com/fluffyTighnari/levier/internal/state/register"
 	"github.com/fluffyTighnari/levier/internal/state/runstore"
-	"github.com/fluffyTighnari/levier/internal/ops/selfdesc"
-	statuspkg "github.com/fluffyTighnari/levier/internal/ops/status"
 	"github.com/fluffyTighnari/levier/internal/state/workflow"
 )
 

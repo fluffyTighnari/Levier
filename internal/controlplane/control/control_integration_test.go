@@ -19,14 +19,14 @@ import (
 	"google.golang.org/protobuf/types/known/structpb"
 
 	runtimev1 "github.com/fluffyTighnari/levier/gen/middleware/runtime/v1"
-	"github.com/fluffyTighnari/levier/internal/runtime/connection"
+	"github.com/fluffyTighnari/levier/internal/contract/protocol"
 	"github.com/fluffyTighnari/levier/internal/platform/db"
 	"github.com/fluffyTighnari/levier/internal/platform/id"
-	"github.com/fluffyTighnari/levier/internal/contract/protocol"
+	"github.com/fluffyTighnari/levier/internal/runtime/connection"
 	"github.com/fluffyTighnari/levier/internal/state/runstore"
+	"github.com/fluffyTighnari/levier/internal/state/workflow"
 	"github.com/fluffyTighnari/levier/internal/testing/testutil"
 	"github.com/fluffyTighnari/levier/internal/testing/testutil/fakedaemon"
-	"github.com/fluffyTighnari/levier/internal/state/workflow"
 )
 
 func integrationPool(t *testing.T) *pgxpool.Pool {

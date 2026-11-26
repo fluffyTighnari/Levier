@@ -11,11 +11,11 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/fluffyTighnari/levier/internal/app/appgateway"
-	"github.com/fluffyTighnari/levier/internal/state/cluster"
+	"github.com/fluffyTighnari/levier/internal/app/httpapi"
 	"github.com/fluffyTighnari/levier/internal/platform/config"
 	"github.com/fluffyTighnari/levier/internal/runtime/connection"
-	"github.com/fluffyTighnari/levier/internal/app/httpapi"
 	"github.com/fluffyTighnari/levier/internal/runtime/internalapi"
+	"github.com/fluffyTighnari/levier/internal/state/cluster"
 	"github.com/fluffyTighnari/levier/internal/state/runstore"
 )
 

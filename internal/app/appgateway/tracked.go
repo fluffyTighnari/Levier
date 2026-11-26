@@ -9,9 +9,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/fluffyTighnari/levier/internal/state/cluster"
-	"github.com/fluffyTighnari/levier/internal/runtime/connection"
 	"github.com/fluffyTighnari/levier/internal/platform/id"
+	"github.com/fluffyTighnari/levier/internal/runtime/connection"
+	"github.com/fluffyTighnari/levier/internal/state/cluster"
 	"github.com/fluffyTighnari/levier/internal/state/runstore"
 )
 

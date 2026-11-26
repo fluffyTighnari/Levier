@@ -15,9 +15,9 @@ import (
 	"google.golang.org/protobuf/types/known/structpb"
 
 	runtimev1 "github.com/fluffyTighnari/levier/gen/middleware/runtime/v1"
-	"github.com/fluffyTighnari/levier/internal/runtime/connection"
-	"github.com/fluffyTighnari/levier/internal/platform/observe"
 	"github.com/fluffyTighnari/levier/internal/contract/protocol"
+	"github.com/fluffyTighnari/levier/internal/platform/observe"
+	"github.com/fluffyTighnari/levier/internal/runtime/connection"
 	"github.com/fluffyTighnari/levier/internal/state/register"
 	"github.com/fluffyTighnari/levier/internal/state/runstore"
 	"github.com/fluffyTighnari/levier/internal/state/workflow"
