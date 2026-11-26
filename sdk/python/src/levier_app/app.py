@@ -123,6 +123,8 @@ class LevierApp:
         self._connection_id = ""
         self._resume_cursor: dict[str, Any] | None = None
         self._current_invocation: dict[str, Any] | None = None
+        self._hello_acked = False
+        self._pending_subscriptions: set[str] = set()
 
     @classmethod
     def from_credentials(
@@ -210,8 +212,13 @@ class LevierApp:
         tool_ms: int = 10000,
         idempotency_key: str = "",
     ) -> dict[str, Any]:
-        """Submit a Run using this App's credentials."""
-        return self._client.submit_run(
+        """Submit a Run and subscribe this connection to its live events.
+
+        v2 Apps receive events over the WebSocket; v1 Apps keep using HTTP
+        polling. Subscription is retained across reconnects and re-sent after
+        the next hello acknowledgement.
+        """
+        submitted = self._client.submit_run(
             prompt,
             runtime=runtime,
             runtime_type=runtime_type,
@@ -223,6 +230,25 @@ class LevierApp:
             tool_ms=tool_ms,
             idempotency_key=idempotency_key,
         )
+        run_id = str(submitted.get("run_id") or "")
+        if run_id:
+            self.subscribe_run(run_id)
+        return submitted
+
+    def subscribe_run(self, run_id: str) -> bool:
+        """Subscribe the active WebSocket to one Run's event stream."""
+        run_id = str(run_id or "").strip()
+        if not run_id:
+            return False
+        self._pending_subscriptions.add(run_id)
+        ws = self._active_ws
+        if ws is None or not self._hello_acked or self._protocol < 2:
+            return False
+        try:
+            ws.send_json(_subscription_message(run_id, self._resume_cursor))
+        except (OSError, ProtocolError):
+            return False
+        return True
 
     def wait_run(self, run_id: str, *, timeout: float = 300.0, interval: float = 0.5) -> dict[str, Any]:
         """Wait for one of this App's Runs to finish or enter waiting."""
@@ -371,12 +397,14 @@ class LevierApp:
                             ws.close()
                             ws = None
                             self._active_ws = None
+                            self._hello_acked = False
                     continue
                 except (OSError, ProtocolError) as exc:
                     self.logger.warning("websocket lost: %s", exc)
                     ws.close()
                     ws = None
                     self._active_ws = None
+                    self._hello_acked = False
                     if not self._stop_requested and self._sleep_backoff(backoff):
                         return 0
                     backoff = min(backoff * 2, reconnect_max)
@@ -390,6 +418,7 @@ class LevierApp:
                     ws.close()
                     ws = None
                     self._active_ws = None
+                    self._hello_acked = False
                     if not self._stop_requested and self._sleep_backoff(backoff):
                         return 0
                     backoff = min(backoff * 2, reconnect_max)
@@ -403,6 +432,7 @@ class LevierApp:
             if ws is not None:
                 ws.close()
             self._active_ws = None
+            self._hello_acked = False
             self._connected_event.clear()
             for signum, previous in old_handlers:
                 signal.signal(signum, previous)
@@ -430,6 +460,7 @@ class LevierApp:
         except Exception:
             ws.close()
             raise
+        self._hello_acked = False
         self._connected_event.set()
         self.logger.info("connected", extra={"app_id": self.credentials.app_id})
         return ws
@@ -475,6 +506,14 @@ class LevierApp:
         capabilities = message.get("capabilities")
         if isinstance(capabilities, list):
             self._server_capabilities = {str(item) for item in capabilities}
+        self._hello_acked = True
+        ws = self._active_ws
+        if ws is not None and self._protocol >= 2:
+            for run_id in sorted(self._pending_subscriptions):
+                try:
+                    ws.send_json(_subscription_message(run_id, self._resume_cursor))
+                except (OSError, ProtocolError):
+                    break
         self.logger.info(
             "app bridge negotiated",
             extra={
@@ -569,6 +608,19 @@ class LevierApp:
         while not self._stop_requested and time.monotonic() < deadline:
             time.sleep(min(0.1, deadline - time.monotonic()))
         return self._stop_requested
+
+
+def _subscription_message(run_id: str, cursor: dict[str, Any] | None) -> dict[str, Any]:
+    message: dict[str, Any] = {
+        "type": "subscribe",
+        "run_id": run_id,
+        "last_attempt": 0,
+        "last_seq": 0,
+    }
+    if cursor and cursor.get("run_id") == run_id:
+        message["last_attempt"] = int(cursor.get("last_attempt") or 0)
+        message["last_seq"] = int(cursor.get("last_seq") or 0)
+    return message
 
 
 def _parse_arguments(value: Any) -> dict[str, Any]:

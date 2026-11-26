@@ -7,7 +7,6 @@ import (
 	"context"
 	"log/slog"
 	"net/http"
-	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
@@ -40,7 +39,7 @@ func runAppGatewayOnly(
 		baseHub,
 		store,
 		cfg.Gateway.InstanceID,
-		30*time.Second,
+		cfg.Gateway.LeaseTTL.Std(),
 		logger,
 	)
 	go appHub.RunHeartbeat(ctx)

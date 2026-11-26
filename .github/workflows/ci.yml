@@ -24,6 +24,47 @@ jobs:
       - run: make test
       - run: make build
 
+  go-postgres:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: levier
+          POSTGRES_PASSWORD: levier
+          POSTGRES_DB: levier
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U levier -d levier"
+          --health-interval 3s
+          --health-timeout 3s
+          --health-retries 30
+    env:
+      LEVIER_TEST_POSTGRES: "1"
+      LEVIER_TEST_DATABASE_URL: postgres://levier:levier@127.0.0.1:5432/levier?sslmode=disable
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.26.x"
+          cache: true
+      - run: go test ./...
+      - run: go vet ./...
+
+  i3-multireplica:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.26.x"
+          cache: true
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python tests/e2e/i3_multireplica.py
+
   proto:
     runs-on: ubuntu-latest
     steps:

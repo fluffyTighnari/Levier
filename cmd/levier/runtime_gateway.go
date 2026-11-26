@@ -42,9 +42,9 @@ func runRuntimeGatewayOnly(
 	store := cluster.New(pool)
 	startConnectionReaper(ctx, store, cfg.Workflow.ReapInterval.Std(), cfg.Workflow.ReapLimit, logger)
 	runtimeLeaseTTL := cfg.Gateway.LeaseTTL.Std()
-	if runtimeLeaseTTL < 30*time.Second {
-		// Daemon heartbeats are independent of this process's presence lease.
-		runtimeLeaseTTL = 30 * time.Second
+	if runtimeLeaseTTL < 5*time.Second {
+		// Keep a small floor for tests and very short development leases.
+		runtimeLeaseTTL = 5 * time.Second
 	}
 	registry := runtimegateway.NewRegistry(
 		store,

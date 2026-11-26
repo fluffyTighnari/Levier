@@ -6,7 +6,7 @@
 
 ```text
 contract/   协议黄金测试
-e2e/        mvp-demo / retrofit / mcp / fault-matrix
+e2e/        mvp-demo / retrofit / mcp / fault-matrix / i3-multireplica
 app/        App 接入自检
 checks/     依赖、结构、密钥、规模检查
 ```
@@ -21,6 +21,8 @@ make sdk-test
 make mvp-demo
 make mvp-demo-react
 make fault-matrix
+make i3-multireplica   # 2 control/api + 2 runtime-gateway + 2 app-gateway
+make test-postgres     # Go integration tests; requires LEVIER_TEST_DATABASE_URL
 make retrofit-e2e
 make mcp-e2e
 python3 tests/app/app_check.py --credentials /path/app.json

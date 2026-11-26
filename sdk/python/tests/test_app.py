@@ -140,6 +140,44 @@ class AppToolTest(unittest.TestCase):
         self.assertEqual(run["run_id"], "run-1")
         self.assertEqual(transport.requests[1].url, "http://127.0.0.1:8080/api/v1/runs")
 
+    def test_submit_subscribes_and_reconnect_replays(self) -> None:
+        transport = FakeTransport(
+            response({"run_id": "run-1", "status": "queued", "ws_url": "/ws", "ws_token": "t"}, status=202),
+        )
+        app = LevierApp(
+            Credentials(
+                app_id="app-1",
+                app_name="demo",
+                api_key=Secret("mw_secret"),
+                server="http://127.0.0.1:8080",
+            ),
+            transport=transport,
+        )
+
+        class FakeWS:
+            def __init__(self) -> None:
+                self.sent = []
+
+            def send_json(self, payload) -> None:
+                self.sent.append(payload)
+
+        ws = FakeWS()
+        app._active_ws = ws
+        app._hello_acked = False
+        app.submit_run("hello", runtime="react1")
+        self.assertEqual(ws.sent, [])
+        app._handle_hello_ack({"protocol": 2, "connection_id": "c1"})
+        self.assertEqual(ws.sent[0]["type"], "subscribe")
+        self.assertEqual(ws.sent[0]["run_id"], "run-1")
+
+        app._hello_acked = False
+        app._resume_cursor = {"run_id": "run-1", "last_attempt": 1, "last_seq": 7}
+        ws.sent.clear()
+        app.subscribe_run("run-1")
+        app._handle_hello_ack({"protocol": 2, "connection_id": "c2"})
+        self.assertEqual(ws.sent[0]["last_attempt"], 1)
+        self.assertEqual(ws.sent[0]["last_seq"], 7)
+
     def test_duplicate_tool_is_rejected(self) -> None:
         app = self.app()
 

@@ -37,6 +37,9 @@ type Config struct {
 	SkipHello                  bool
 	HeartbeatInterval          time.Duration
 	DisconnectAfterAssignments int
+	// OnAssign runs after a TaskAssign has been acknowledged. It may start its
+	// own goroutine so RequestTool can receive the matching ToolCallResult.
+	OnAssign func(context.Context, *runtimev1.Envelope, *Daemon) error
 }
 
 // DefaultConfig returns a valid fake daemon configuration.
@@ -198,7 +201,12 @@ func (d *Daemon) WaitReady(grace time.Duration) error {
 
 // RequestTool sends a ToolCallRequest and waits for the matching result.
 func (d *Daemon) RequestTool(ctx context.Context, runID string, attempt int32, leaseEpoch int64, toolName, argumentsJSON string, timeoutMS int64) (*runtimev1.ToolCallResult, error) {
-	invocationID := id.New()
+	return d.RequestToolWithInvocation(ctx, runID, attempt, leaseEpoch, id.New(), toolName, argumentsJSON, timeoutMS)
+}
+
+// RequestToolWithInvocation is RequestTool with a caller-supplied invocation ID,
+// used to exercise cross-replica idempotency.
+func (d *Daemon) RequestToolWithInvocation(ctx context.Context, runID string, attempt int32, leaseEpoch int64, invocationID, toolName, argumentsJSON string, timeoutMS int64) (*runtimev1.ToolCallResult, error) {
 	req := &runtimev1.ToolCallRequest{
 		InvocationId:  invocationID,
 		ToolName:      toolName,
@@ -346,6 +354,9 @@ func (d *Daemon) handleTaskAssign(env *runtimev1.Envelope) error {
 
 	d.running.Add(1)
 	defer d.running.Add(-1)
+	if d.cfg.OnAssign != nil {
+		return d.cfg.OnAssign(context.Background(), env, d)
+	}
 	if d.cfg.AutoEcho {
 		if err := d.SendEvent(assign.GetRunId(), env.GetAttempt(), env.GetLeaseEpoch(), runtimev1.EventType_RUN_STATUS, map[string]any{"status": "running"}); err != nil {
 			return err

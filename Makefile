@@ -27,7 +27,7 @@ LDFLAGS := -X github.com/fluffyTighnari/levier/internal/version.Version=$(VERSIO
 	-X github.com/fluffyTighnari/levier/internal/version.Commit=$(COMMIT) \
 	-X github.com/fluffyTighnari/levier/internal/version.Built=$(BUILD_TIME)
 
-.PHONY: all build install wheels test lint fmt fmt-check vet run clean dev-up dev-down migrate proto proto-check proto-lint contract-check react-runtime-test runtime-sdk-test langgraph-runtime-test mcp-runtime-test sdk-test image-runtime image-mcp-runtime counter-agent counter-agent-test http-smoke retrofit-e2e mcp-e2e global-e2e deps-check structure-check scripts-check size-report daemon-check agent-core-test mvp-demo mvp-demo-react fault-matrix secrets-check docker-up docker-down docker-smoke docker-logs docker-reset release-dist
+.PHONY: all build install wheels test test-postgres lint fmt fmt-check vet run clean dev-up dev-down migrate proto proto-check proto-lint contract-check react-runtime-test runtime-sdk-test langgraph-runtime-test mcp-runtime-test sdk-test image-runtime image-mcp-runtime counter-agent counter-agent-test http-smoke retrofit-e2e mcp-e2e global-e2e deps-check structure-check scripts-check size-report daemon-check agent-core-test mvp-demo mvp-demo-react fault-matrix i3-multireplica secrets-check docker-up docker-down docker-smoke docker-logs docker-reset release-dist
 
 PREFIX ?= $(HOME)/.local/bin
 
@@ -53,6 +53,11 @@ release-dist:
 
 test:
 	$(GO) test ./...
+
+# Requires PostgreSQL and LEVIER_TEST_DATABASE_URL. The schema is isolated per
+# test, so the database only needs to be reachable and empty of test schemas.
+test-postgres:
+	LEVIER_TEST_POSTGRES=1 $(GO) test ./...
 
 lint: fmt-check vet secrets-check structure-check scripts-check
 
@@ -163,6 +168,9 @@ mvp-demo-react:
 
 fault-matrix:
 	python3 tests/e2e/fault_matrix.py
+
+i3-multireplica:
+	python3 tests/e2e/i3_multireplica.py
 
 secrets-check:
 	python3 tests/checks/check_secrets.py
