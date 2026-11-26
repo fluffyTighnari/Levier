@@ -411,7 +411,7 @@ I3.1–I3.6 退出评审通过后启动。若 I4 设计提前启动，至少先�
 - 本次新增的 Runtime、App、Control Plane 决策已合并到本文。
 - I1 执行清单：`docs/I1_CHECKLIST.md`，代码基础已完成，等待退出评审。
 - I2 执行计划：`docs/I2_CHECKLIST.md`，当前详细计划。
-- I3 执行计划：`docs/I3_CHECKLIST.md`，多副本控制面阶段。
+- I3 执行计划：`docs/I3_CHECKLIST.md`，多副本控制面阶段已完成。
 - R1 执行项：见 `docs/I3_CHECKLIST.md` 第 11 节，I3 退出后启动。
 - 后续 checklist 不重新定义本文决策；范围变化先改本文。
 
@@ -422,3 +422,4 @@ I3.1–I3.6 退出评审通过后启动。若 I4 设计提前启动，至少先�
 | 2026-11-22 | 建立工业化路线，确认 I1–I5 版本划分和七项基础决策 |
 | 2026-11-23 | 增加 I2 详细执行计划，关联 I1 完成状态 |
 | 2026-11-26 | 增加 R1 Runtime 接入层收敛：核心与 Agent 框架适配器分层，I3 后置、I4 前完成 |
+| 2026-11-26 | I3 多副本退出评审通过；增加 2×control/2×runtime-gateway/2×app-gateway 故障矩阵；internal 按层归纳 |

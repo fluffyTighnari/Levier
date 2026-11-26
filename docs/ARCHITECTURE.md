@@ -21,27 +21,26 @@ PostgreSQL      runs, events, sessions, apps, tools, registrations
 ## Control-plane packages
 
 ```text
-contract        wire contracts and event names
-runstore        runs / events / sessions / apps persistence
-register        app, tool, MCP, model-provider, material, and secret registration
-workflow        durable run workflow and worker loop
-control         scheduling, attempts, leases, event handling, transitions
-gateway         local/global tool invocation routing
-connection      runtime/app connections and channels
-httpapi         HTTP + WebSocket API
-observe         logs, metrics, health
-cmd/levier      dependency wiring and entry points
+contract/        wire contracts, protocol envelopes, deployable roles
+platform/        clock, config, db, errs, id, observe, version
+state/           cluster leases, register, runstore, workflow
+controlplane/    control, controlremote, controlservice
+runtime/         connection, gateway, internalapi, ports, runtimegateway
+app/             httpapi, appgateway
+ops/             maintenance, selfcheck, selfdesc, status
+testing/         testutil and fakedaemon
+cmd/levier       dependency wiring and entry points
 ```
 
 Dependency direction:
 
 ```text
-httpapi   -> register / runstore / connection / workflow
-control   -> register / runstore / workflow / connection / protocol
-gateway   -> register / connection
-register  -> runstore
-runstore  -> nothing internal
-contract  -> nothing internal
+app/httpapi            -> state/register / state/runstore / state/workflow / runtime/connection
+controlplane/control   -> state/register / state/runstore / state/workflow / runtime/ports
+runtime/gateway        -> state/register / runtime/connection / platform
+state/register         -> state/runstore
+state/runstore         -> platform
+contract / platform    -> nothing higher-level
 ```
 
 `tests/checks/check_deps.sh` enforces this direction.

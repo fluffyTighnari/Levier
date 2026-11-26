@@ -1,6 +1,6 @@
 # I3 执行清单：多副本控制面
 
-> 状态：In Progress  
+> 状态：Complete（2026-11-26）  
 > 分支：`feat/i3-multireplica`  
 > 目标：控制面、Runtime 连接和 App 连接可多副本，同时保持 PostgreSQL 单一事实来源。
 
@@ -342,18 +342,18 @@ request_id
 | Tool invocation owner 字段 | 已完成 | owner gateway/connection、lease epoch、deadline schema |
 | Gateway internal address | 已完成 | `gateway_instances.internal_address` 字段 |
 | I3.0.1 契约补充 | 已完成 | 内部 RPC proto、App Bridge v2、地址/配置接线 |
-| I3.1 角色拆分 | 进行中 | `control+api`、`runtime-gateway`、`app-gateway` 拆分已跑通；不允许未实现的混合角色静默启动 |
-| I3.2 Runtime Gateway | 进行中 | 跨进程路由、Dispatch/daemon-state fencing、outbox、同 daemon 跨 gateway 迁移已验证；故障矩阵待 I3.6 |
+| I3.1 角色拆分 | 已完成 | `all`、`control+api`、`runtime-gateway`、独立 `app-gateway` 均可启动；混合角色静默缺失已禁止 |
+| I3.2 Runtime Gateway | 已完成 | 跨进程路由、Dispatch/daemon-state fencing、durable outbox、同 daemon 跨 gateway 迁移均通过矩阵 |
 | I3.2 跨进程 smoke | 已完成 | split control/api + runtime-gateway + echo runtime 完成一次 Run |
 | I3.2 gateway failover smoke | 已完成 | 杀掉 gateway A 后，同 daemon 以 epoch 2 注册到 gateway B，后续 Run 完成 |
 | Runtime envelope outbox | 已完成 | Runtime Gateway 先落 `gateway_notifications`，Control claim 后应用并标记 published |
 | App Gateway split smoke | 已完成 | app-gateway WS v2 hello/ack；`app_connections` 与 `app_execution_leases` 落库 |
-| App Gateway 多副本 | 待开始 | 需要 2 个 app-gateway 的连接迁移和事件 fanout 验收 |
-| I3.3 App Gateway | 进行中 | app-gateway 拆分、WS v2 handshake、app connection/execution lease 已跑通；多 app-gateway 故障矩阵待完成 |
-| I3.4 Local Tool 路由 | 进行中 | Control 按 execution lease + connection id 定向投递；跨 app-gateway 幂等验收待完成 |
-| I3.5 通知与恢复 | 进行中 | envelope outbox/claim/publish、expired lease reaper、claim TTL 重放测试已完成；claim 后崩溃全链路验收待做 |
-| I3.6 多副本测试 | 待开始 | 需要 2×control、2×runtime-gateway、2×app-gateway 故障矩阵 |
-| I3 退出评审 | 待开始 | 多副本验收 |
+| App Gateway 多副本 | 已完成 | 2 个 app-gateway 的连接迁移、事件 fanout 与执行租约已验收 |
+| I3.3 App Gateway | 已完成 | app-gateway 拆分、v2 handshake/订阅、WSToken 跨副本、连接迁移均通过矩阵 |
+| I3.4 Local Tool 路由 | 已完成 | 定向投递、重复 invocation 去重、App 断线 pending 失败、不跨连接重试均通过 |
+| I3.5 通知与恢复 | 已完成 | outbox/claim TTL 重放、expired lease reaper、跨 Control envelope 消费均通过 |
+| I3.6 多副本测试 | 已完成 | `tests/e2e/i3_multireplica.py` 通过 10 个场景，CI job `i3-multireplica` 通过 |
+| I3 退出评审 | 已完成 | 2026-11-26 通过本地与 GitHub Actions 多副本验收 |
 | R1 Runtime 接入层收敛 | 待开始（I3 后置） | 核心与 Agent 框架适配器分层；不阻塞 I3 退出 |
 
 ## 11. R1：Runtime 接入层收敛（I3 后置）
@@ -450,3 +450,52 @@ L4  sandbox
 - **React / agent_core**：移出默认镜像，保留示例和兼容 shim。
 - **CrewAI**：先示例，不做深度内置；其同步/线程模型和缺少标准 checkpoint 不适合作为核心依赖。
 - **Sandbox**：I4 独立基础设施，不属于 R1，也不属于 Agent 框架。
+
+## 12. 多副本验收记录（2026-11-26）
+
+拓扑为 2×control/api、2×runtime-gateway、2×app-gateway、1×PostgreSQL、1×Runtime daemon、1×App。自动化和真实进程入口：
+
+```sh
+make i3-multireplica
+```
+
+`tests/e2e/i3_multireplica.py` 实际启动独立角色进程，并通过 PostgreSQL 断言状态和事件，覆盖：
+
+| 场景 | 验收点 |
+|---|---|
+| baseline | Run 完成；事件持久化；local tool 仅执行一次；v2 App 收到 WebSocket 事件 |
+| notification_replay | 故意延迟通知 claim 后仍能重放，且不重复写入事件 |
+| cross_replica_cancel | 从 control A 提交，从 control B 取消，Runtime 收到取消且无活动任务 |
+| control_failure | control A 被杀后，control B 继续消费 envelope 并完成 Run |
+| app_disconnect_pending | App 断线后 pending local tool 直接失败，不自动换连接重试 |
+| worker_lease_expiry | 伪造过期 worker lease 后由 reaper 回到 PENDING 并完成 Run |
+| runtime_gateway_failure | 杀掉 runtime-gateway A 后 daemon 迁移到 B，Run 完成 |
+| app_gateway_failure | 杀掉 app-gateway A 后 App 重连 B，执行租约迁移，local tool 与事件继续 |
+| local_tool_idempotency | 同一 invocation 投递两次只产生一次 tool_invocations 记录和一次 App 执行 |
+| v1_app_compat | 不发 hello 的 v1 App 可连接并收到 Run 事件 |
+
+GitHub Actions 同时增加了：
+
+- `go-postgres`：真实 PostgreSQL 下运行 `go test ./...` 与 `go vet ./...`；
+- `i3-multireplica`：执行上述多副本矩阵；
+- 本地 `make test-postgres` 作为同一集成测试入口。
+
+### 12.1 internal 目录归纳
+
+I3 完成后已将平铺的 `internal/` 按层收敛为：
+
+```text
+internal/
+  contract/       contract, protocol, roles
+  platform/       clock, config, db, errs, id, observe, version
+  state/          cluster, register, runstore, workflow
+  controlplane/   control, controlremote, controlservice
+  runtime/        connection, daemoncheck, gateway, internalapi, ports, runtimegateway
+  app/            appgateway, httpapi
+  ops/            maintenance, selfcheck, selfdesc, status
+  testing/        testutil
+```
+
+`make deps-check` 的层依赖规则和所有导入路径已同步更新；该结构不改变 I3 的 wire 契约和部署角色边界。
+
+

@@ -58,11 +58,11 @@ App SDK
 
 | 需求 | 位置 |
 |---|---|
-| HTTP 路由 / 请求校验 | `internal/httpapi/` + `docs/api/openapi.yaml` |
-| Run 状态机 / 调度 / 租约 | `internal/control/` |
-| 工具路由 / 幂等 / 调用记录 | `internal/gateway/` |
-| 持久化 / 查询 / 迁移 | `internal/runstore/` + `internal/db/migrations/` |
-| 事件模型 / 错误码 | `internal/contract/`、`internal/errs/` |
+| HTTP 路由 / 请求校验 | `internal/app/httpapi/` + `docs/api/openapi.yaml` |
+| Run 状态机 / 调度 / 租约 | `internal/controlplane/control/` |
+| 工具路由 / 幂等 / 调用记录 | `internal/runtime/gateway/` |
+| 持久化 / 查询 / 迁移 | `internal/state/runstore/` + `internal/platform/db/migrations/` |
+| 事件模型 / 错误码 | `internal/contract/`、`internal/platform/errs/` |
 | 首次启动 / App 接入 | `docs/ONBOARDING.md` |
 | Python App 接入 | `sdk/python/README.md` + `docs/APP_ADAPTER_CONTRACT.md` |
 | App 协议细节 | `docs/APP_ONBOARDING.md` |
@@ -76,7 +76,7 @@ App SDK
 | React Runtime / Agent ?? | `execution/react_runtime/` |
 | Agent Core 契约 | `execution/agent_core/` + `docs/AGENT_CORE_CONTRACT.md` |
 | MCP 连接 / 会话 | `execution/mcp_runtime/` + `docs/MCP.md` |
-| Daemon 协议自检 | `internal/daemoncheck/` + `cmd/levier/daemon.go` |
+| Daemon 协议自检 | `internal/runtime/daemoncheck/` + `cmd/levier/daemon.go` |
 | 镜像 / Compose / smoke | `deploy/` + `docker-compose.yml` |
 | CI | `.github/workflows/ci.yml` |
 | 单元 / 契约 / E2E 测试 | `tests/` + 各组件 `tests/` |
@@ -85,12 +85,12 @@ App SDK
 ## 4. 依赖方向
 
 ```text
-httpapi   → register / runstore / connection / workflow
-control   → register / runstore / workflow / connection / protocol
-gateway   → register / connection
-register  → runstore
-runstore  → 无 internal 依赖
-contract  → 无 internal 依赖
+app/httpapi            -> state/register / state/runstore / runtime/connection / state/workflow
+controlplane/control   -> state/register / state/runstore / state/workflow / runtime/connection / contract/protocol
+runtime/gateway        -> state/register / runtime/connection
+state/register         -> state/runstore
+state/runstore         -> 无更高层依赖
+contract / platform    -> 无更高层依赖
 
 agent_core → 不依赖 runtime_sdk / mcp_runtime / protobuf
 react_runtime → runtime_sdk / agent_core / mcp client
