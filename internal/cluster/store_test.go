@@ -193,6 +193,80 @@ func TestNotificationClaimAndDedupe(t *testing.T) {
 	}
 }
 
+func TestReapExpiredControlPlaneLeases(t *testing.T) {
+	pool := testPool(t)
+	store := New(pool)
+	ctx := context.Background()
+	gateway, err := store.RegisterGateway(ctx, GatewayRegistration{
+		GatewayID: "gateway-reap", Roles: []string{RoleRuntimeGateway}, Version: "test",
+	}, time.Minute)
+	if err != nil {
+		t.Fatalf("RegisterGateway() error = %v", err)
+	}
+	runtimeConn, err := store.RegisterRuntime(ctx, RuntimeRegistration{
+		DaemonID: "daemon-reap", GatewayID: gateway.GatewayID,
+		RuntimeName: "echo1", RuntimeType: "normal",
+	}, time.Minute)
+	if err != nil {
+		t.Fatalf("RegisterRuntime() error = %v", err)
+	}
+	if _, err := store.AcquireCapacityLease(ctx, runtimeConn.DaemonID, "run-reap", gateway.GatewayID, time.Minute); err != nil {
+		t.Fatalf("AcquireCapacityLease() error = %v", err)
+	}
+	if _, err := pool.Exec(ctx,
+		`UPDATE gateway_instances SET lease_expires_at = now() - interval '1 second' WHERE gateway_id = $1`,
+		gateway.GatewayID,
+	); err != nil {
+		t.Fatalf("expire gateway: %v", err)
+	}
+	if _, err := pool.Exec(ctx,
+		`UPDATE runtime_connections SET lease_expires_at = now() - interval '1 second' WHERE daemon_id = $1`,
+		runtimeConn.DaemonID,
+	); err != nil {
+		t.Fatalf("expire runtime: %v", err)
+	}
+	if _, err := pool.Exec(ctx,
+		`UPDATE runtime_capacity_leases SET expires_at = now() - interval '1 second' WHERE daemon_id = $1`,
+		runtimeConn.DaemonID,
+	); err != nil {
+		t.Fatalf("expire capacity: %v", err)
+	}
+	result, err := store.ReapExpired(ctx, time.Now().UTC().Add(time.Second))
+	if err != nil {
+		t.Fatalf("ReapExpired() error = %v", err)
+	}
+	if result.Gateways != 1 || result.Runtimes != 1 || result.Capacity != 1 {
+		t.Fatalf("ReapExpired() = %+v", result)
+	}
+	if current, _ := store.GetGateway(ctx, gateway.GatewayID); current.Status != StatusOffline {
+		t.Fatalf("gateway status = %q", current.Status)
+	}
+	if current, _ := store.GetRuntime(ctx, runtimeConn.DaemonID); current.Status != StatusOffline {
+		t.Fatalf("runtime status = %q", current.Status)
+	}
+}
+
+func TestNotificationClaimExpiresForReplay(t *testing.T) {
+	store := New(testPool(t))
+	ctx := context.Background()
+	notification, err := store.EnqueueNotification(ctx, "control.envelope", json.RawMessage(`{"daemon_id":"d1"}`))
+	if err != nil {
+		t.Fatalf("EnqueueNotification() error = %v", err)
+	}
+	first, err := store.ClaimNotifications(ctx, "control.envelope", "consumer-1", 10, 20*time.Millisecond)
+	if err != nil || len(first) != 1 {
+		t.Fatalf("first claim = %+v, %v", first, err)
+	}
+	time.Sleep(40 * time.Millisecond)
+	second, err := store.ClaimNotifications(ctx, "control.envelope", "consumer-2", 10, time.Minute)
+	if err != nil || len(second) != 1 || second[0].NotificationID != notification.NotificationID {
+		t.Fatalf("replay claim = %+v, %v", second, err)
+	}
+	if err := store.MarkNotificationPublished(ctx, notification.NotificationID); err != nil {
+		t.Fatalf("MarkNotificationPublished() error = %v", err)
+	}
+}
+
 func TestAppExecutionLeaseAndNotifications(t *testing.T) {
 	pool := testPool(t)
 	store := New(pool)
